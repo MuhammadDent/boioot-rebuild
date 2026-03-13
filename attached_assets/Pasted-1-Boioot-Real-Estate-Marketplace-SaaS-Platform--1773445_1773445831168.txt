@@ -1,0 +1,268 @@
+1️⃣ نظرة عامة على المنصة
+
+Boioot عبارة عن:
+
+Real Estate Marketplace + SaaS Platform
+
+المنصة تربط بين:
+
+الباحثين عن عقار
+
+الملاك
+
+الوكلاء العقاريين
+
+الشركات العقارية
+
+الشركات المطورة للمشاريع
+
+ويكون لديها ثلاث واجهات رئيسية:
+
+Web (Public Site)
+Dashboard (User Panel)
+Backend API
+2️⃣ بنية النظام
+
+شكل النظام الكامل سيكون هكذا:
+
+Users
+   │
+   ▼
+Web (Public Website)
+   │
+   ▼
+Backend API
+   │
+   ├── Properties
+   ├── Projects
+   ├── Companies
+   ├── Agents
+   ├── Requests
+   ├── Messaging
+   ├── Reviews
+   ├── Favorites
+   │
+   ▼
+Database
+
+ولوحة التحكم:
+
+Users / Companies / Agents
+          │
+          ▼
+      Dashboard
+          │
+          ▼
+       Backend API
+3️⃣ واجهة الموقع العام (Web)
+
+هذه هي الواجهة التي يراها الزائر.
+
+الصفحات الرئيسية
+Home
+Properties
+Projects
+Requests
+Companies
+Agents
+Blog
+Home
+
+تحتوي عادة على:
+
+البحث السريع
+
+أبرز العقارات
+
+المشاريع
+
+الشركات
+
+أقسام الموقع
+
+Properties
+
+صفحة عرض العقارات:
+
+قائمة العقارات
+
+فلاتر جانبية
+
+ترتيب النتائج
+
+pagination
+
+الفلاتر مثل:
+
+City
+Price
+Rooms
+Bathrooms
+Area
+Property Type
+Projects
+
+صفحة المشاريع العقارية الجديدة:
+
+مشاريع قيد الإنشاء
+
+مشاريع جاهزة
+
+معلومات المطور
+
+Requests
+
+ميزة مهمة:
+
+المستخدم يكتب:
+
+أريد شقة للإيجار في دمشق بسعر معين
+
+ثم الوكلاء أو الملاك يرون الطلب.
+
+Companies
+
+صفحة تعرض:
+
+الشركات العقارية
+
+مكاتب الوساطة
+
+Agents
+
+صفحة الوكلاء:
+
+ملف الوكيل
+
+إعلاناته
+
+تقييمه
+
+Blog
+
+محتوى مثل:
+
+نصائح شراء عقار
+
+أخبار السوق العقاري
+
+4️⃣ Dashboard (لوحة التحكم)
+
+هذه الواجهة يستخدمها:
+
+المستخدم العادي
+
+الوكيل
+
+الشركة العقارية
+
+الصفحات الأساسية
+Dashboard Home
+My Properties
+My Projects
+My Requests
+Messages
+Favorites
+Reviews
+Settings
+My Properties
+
+إدارة الإعلانات:
+
+Add Property
+Edit Property
+Delete Property
+View Statistics
+My Projects
+
+للشركات المطورة.
+
+Messages
+
+رسائل بين:
+
+المشتري
+
+البائع
+
+الوكيل
+
+Reviews
+
+تقييم الوكلاء أو الشركات.
+
+5️⃣ Admin Panel
+
+قد يكون داخل dashboard أو منفصل منطقيًا.
+
+Users
+Companies
+Agents
+Properties
+Projects
+Requests
+Reviews
+Blog
+Reports
+
+وظيفته:
+
+إدارة المنصة
+
+مراجعة الإعلانات
+
+حظر الحسابات
+
+إدارة المحتوى
+
+6️⃣ الموديولات الأساسية للنظام
+
+هذه هي Modules التي سيبنى عليها backend.
+
+Auth
+Users
+Companies
+Agents
+Properties
+Projects
+Requests
+Messaging
+Reviews
+Favorites
+Notifications
+Blog
+Admin
+7️⃣ أنواع المستخدمين
+Guest
+User
+Agent
+Company
+Admin
+8️⃣ أهم الكيانات في قاعدة البيانات
+
+سنحتاج لاحقًا إلى جداول مثل:
+
+Users
+Companies
+Agents
+Properties
+Projects
+Requests
+Favorites
+Messages
+Reviews
+Notifications
+BlogPosts
+
+لكننا لن نبنيها الآن.
+
+9️⃣ تدفق البيانات
+
+مثال بسيط:
+
+نشر إعلان
+User → Dashboard → Backend → Database
+البحث عن عقار
+Visitor → Web → Backend → Database → Results
+إرسال رسالة
+User → Dashboard → Backend → Message Table → Recipient
