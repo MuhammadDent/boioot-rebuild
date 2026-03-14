@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { UserProfileResponse } from "@/types";
+import { tokenStorage } from "@/lib/token";
 
 interface AuthState {
   user: UserProfileResponse | null;
@@ -24,9 +25,6 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const TOKEN_KEY = "boioot_token";
-const USER_KEY = "boioot_user";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -36,15 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    const userRaw = localStorage.getItem(USER_KEY);
+    const token = tokenStorage.getToken();
+    const userRaw = tokenStorage.getUserRaw();
+
     if (token && userRaw) {
       try {
         const user = JSON.parse(userRaw) as UserProfileResponse;
         setState({ user, token, isLoading: false, isAuthenticated: true });
       } catch {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
+        tokenStorage.clear();
         setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
       }
     } else {
@@ -53,14 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback((token: string, user: UserProfileResponse) => {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    tokenStorage.setToken(token);
+    tokenStorage.setUser(user);
     setState({ user, token, isLoading: false, isAuthenticated: true });
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    tokenStorage.clear();
     setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
   }, []);
 
