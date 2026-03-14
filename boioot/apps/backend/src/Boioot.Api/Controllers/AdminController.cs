@@ -1,6 +1,5 @@
 using Boioot.Application.Features.Admin.DTOs;
 using Boioot.Application.Features.Admin.Interfaces;
-using Boioot.Domain.Constants;
 using Boioot.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -83,7 +82,7 @@ public class AdminController : BaseController
         [FromBody] UpdateUserStatusRequest request,
         CancellationToken ct = default)
     {
-        var result = await _admin.UpdateUserStatusAsync(userId, request.IsActive!.Value, ct);
+        var result = await _admin.UpdateUserStatusAsync(GetUserId(), userId, request.IsActive!.Value, ct);
         return Ok(result);
     }
 

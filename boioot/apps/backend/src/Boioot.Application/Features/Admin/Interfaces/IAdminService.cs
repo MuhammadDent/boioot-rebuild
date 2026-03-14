@@ -25,7 +25,7 @@ public interface IAdminService
         int page, int pageSize, RequestStatus? status, CancellationToken ct = default);
 
     Task<AdminUserResponse> UpdateUserStatusAsync(
-        Guid userId, bool isActive, CancellationToken ct = default);
+        Guid adminUserId, Guid targetUserId, bool isActive, CancellationToken ct = default);
 
     Task<AdminCompanyResponse> VerifyCompanyAsync(
         Guid companyId, bool isVerified, CancellationToken ct = default);

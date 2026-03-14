@@ -54,7 +54,8 @@ public class AdminService : IAdminService
                 Role = u.Role.ToString(),
                 IsActive = u.IsActive,
                 IsDeleted = u.IsDeleted,
-                CreatedAt = u.CreatedAt
+                CreatedAt = u.CreatedAt,
+                UpdatedAt = u.UpdatedAt
             })
             .ToListAsync(ct);
 
@@ -96,7 +97,8 @@ public class AdminService : IAdminService
                 AgentCount = c.Agents.Count(),
                 PropertyCount = c.Properties.Count(p => !p.IsDeleted),
                 ProjectCount = c.Projects.Count(p => !p.IsDeleted),
-                CreatedAt = c.CreatedAt
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt
             })
             .ToListAsync(ct);
 
@@ -122,13 +124,13 @@ public class AdminService : IAdminService
 
         var total = await query.CountAsync(ct);
 
-        var raw = await query
+        var rawItems = await query
             .OrderByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
 
-        var items = raw.Select(p => new PropertyResponse
+        var items = rawItems.Select(p => new PropertyResponse
         {
             Id = p.Id,
             Title = p.Title,
@@ -174,13 +176,13 @@ public class AdminService : IAdminService
 
         var total = await query.CountAsync(ct);
 
-        var rawProjects = await query
+        var rawItems = await query
             .OrderByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
 
-        var items = rawProjects.Select(p => new ProjectResponse
+        var items = rawItems.Select(p => new ProjectResponse
         {
             Id = p.Id,
             Title = p.Title,
@@ -211,8 +213,6 @@ public class AdminService : IAdminService
 
         var query = _context.Requests
             .AsNoTracking()
-            .Include(r => r.Property).ThenInclude(p => p!.Company)
-            .Include(r => r.Project).ThenInclude(p => p!.Company)
             .AsQueryable();
 
         if (status.HasValue)
@@ -247,11 +247,14 @@ public class AdminService : IAdminService
     }
 
     public async Task<AdminUserResponse> UpdateUserStatusAsync(
-        Guid userId, bool isActive, CancellationToken ct = default)
+        Guid adminUserId, Guid targetUserId, bool isActive, CancellationToken ct = default)
     {
+        if (adminUserId == targetUserId)
+            throw new BoiootException("لا يمكن تعديل حالة حسابك الخاص", 400);
+
         var user = await _context.Users
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
             ?? throw new BoiootException("المستخدم غير موجود", 404);
 
         user.IsActive = isActive;
@@ -260,7 +263,8 @@ public class AdminService : IAdminService
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "User {UserId} status updated to IsActive={IsActive}", userId, isActive);
+            "Admin {AdminUserId} updated User {TargetUserId} status to IsActive={IsActive}",
+            adminUserId, targetUserId, isActive);
 
         return new AdminUserResponse
         {
@@ -271,7 +275,8 @@ public class AdminService : IAdminService
             Role = user.Role.ToString(),
             IsActive = user.IsActive,
             IsDeleted = user.IsDeleted,
-            CreatedAt = user.CreatedAt
+            CreatedAt = user.CreatedAt,
+            UpdatedAt = user.UpdatedAt
         };
     }
 
@@ -291,32 +296,26 @@ public class AdminService : IAdminService
         _logger.LogInformation(
             "Company {CompanyId} verification set to {IsVerified}", companyId, isVerified);
 
-        var agentCount = await _context.Agents
+        return await _context.Companies
             .IgnoreQueryFilters()
-            .CountAsync(a => a.CompanyId == companyId, ct);
-
-        var propertyCount = await _context.Properties
-            .IgnoreQueryFilters()
-            .CountAsync(p => p.CompanyId == companyId && !p.IsDeleted, ct);
-
-        var projectCount = await _context.Projects
-            .IgnoreQueryFilters()
-            .CountAsync(p => p.CompanyId == companyId && !p.IsDeleted, ct);
-
-        return new AdminCompanyResponse
-        {
-            Id = company.Id,
-            Name = company.Name,
-            Email = company.Email,
-            Phone = company.Phone,
-            City = company.City,
-            LogoUrl = company.LogoUrl,
-            IsVerified = company.IsVerified,
-            IsDeleted = company.IsDeleted,
-            AgentCount = agentCount,
-            PropertyCount = propertyCount,
-            ProjectCount = projectCount,
-            CreatedAt = company.CreatedAt
-        };
+            .AsNoTracking()
+            .Where(c => c.Id == companyId)
+            .Select(c => new AdminCompanyResponse
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Email = c.Email,
+                Phone = c.Phone,
+                City = c.City,
+                LogoUrl = c.LogoUrl,
+                IsVerified = c.IsVerified,
+                IsDeleted = c.IsDeleted,
+                AgentCount = c.Agents.Count(),
+                PropertyCount = c.Properties.Count(p => !p.IsDeleted),
+                ProjectCount = c.Projects.Count(p => !p.IsDeleted),
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt
+            })
+            .FirstAsync(ct);
     }
 }
