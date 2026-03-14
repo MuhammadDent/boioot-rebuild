@@ -1,4 +1,5 @@
 using Boioot.Application.Common.Models;
+using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
@@ -14,11 +15,16 @@ namespace Boioot.Infrastructure.Features.Properties;
 public class PropertyService : IPropertyService
 {
     private readonly BoiootDbContext _context;
+    private readonly ICompanyOwnershipService _ownership;
     private readonly ILogger<PropertyService> _logger;
 
-    public PropertyService(BoiootDbContext context, ILogger<PropertyService> logger)
+    public PropertyService(
+        BoiootDbContext context,
+        ICompanyOwnershipService ownership,
+        ILogger<PropertyService> logger)
     {
         _context = context;
+        _ownership = ownership;
         _logger = logger;
     }
 
@@ -227,10 +233,7 @@ public class PropertyService : IPropertyService
     private async Task<IQueryable<Property>> BuildCompanyOwnerQueryAsync(
         IQueryable<Property> query, Guid userId, CancellationToken ct)
     {
-        var companyId = await _context.Agents
-            .Where(a => a.UserId == userId)
-            .Select(a => a.CompanyId)
-            .FirstOrDefaultAsync(ct);
+        var companyId = await _ownership.GetCompanyIdForUserAsync(userId, ct);
 
         return companyId.HasValue
             ? query.Where(p => p.CompanyId == companyId.Value)
@@ -257,10 +260,7 @@ public class PropertyService : IPropertyService
 
         if (userRole == RoleNames.CompanyOwner)
         {
-            var ownsCompany = await _context.Agents
-                .AnyAsync(a => a.UserId == userId && a.CompanyId == companyId, ct);
-
-            if (!ownsCompany)
+            if (!await _ownership.UserOwnsCompanyAsync(userId, companyId, ct))
             {
                 _logger.LogWarning(
                     "CompanyOwner {UserId} attempted unauthorized access to company {CompanyId}",
@@ -284,10 +284,7 @@ public class PropertyService : IPropertyService
 
         if (userRole == RoleNames.CompanyOwner)
         {
-            var ownsCompany = await _context.Agents
-                .AnyAsync(a => a.UserId == userId && a.CompanyId == property.CompanyId, ct);
-
-            if (!ownsCompany)
+            if (!await _ownership.UserOwnsCompanyAsync(userId, property.CompanyId, ct))
             {
                 _logger.LogWarning(
                     "CompanyOwner {UserId} attempted unauthorized access to property {PropertyId}",

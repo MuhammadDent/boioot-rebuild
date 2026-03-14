@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Boioot.Api.Controllers.Dashboard;
 
-[Authorize]
+[Authorize(Policy = "AdminOrCompanyOwnerOrAgent")]
 [Route("api/dashboard/properties")]
 public class DashboardPropertiesController : BaseController
 {

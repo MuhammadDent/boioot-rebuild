@@ -32,7 +32,7 @@ public class UpdateProjectRequest
     public DateTime? DeliveryDate { get; set; }
 
     [Required(ErrorMessage = "حالة المشروع مطلوبة")]
-    public ProjectStatus Status { get; set; }
+    public ProjectStatus? Status { get; set; }
 
     public bool IsPublished { get; set; }
 }
