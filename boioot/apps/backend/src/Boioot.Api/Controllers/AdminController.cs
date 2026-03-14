@@ -82,7 +82,10 @@ public class AdminController : BaseController
         [FromBody] UpdateUserStatusRequest request,
         CancellationToken ct = default)
     {
-        var result = await _admin.UpdateUserStatusAsync(GetUserId(), userId, request.IsActive!.Value, ct);
+        if (request.IsActive is null)
+            return BadRequest(new { error = "حقل IsActive مطلوب" });
+
+        var result = await _admin.UpdateUserStatusAsync(GetUserId(), userId, request.IsActive.Value, ct);
         return Ok(result);
     }
 
@@ -92,7 +95,10 @@ public class AdminController : BaseController
         [FromBody] VerifyCompanyRequest request,
         CancellationToken ct = default)
     {
-        var result = await _admin.VerifyCompanyAsync(companyId, request.IsVerified!.Value, ct);
+        if (request.IsVerified is null)
+            return BadRequest(new { error = "حقل IsVerified مطلوب" });
+
+        var result = await _admin.VerifyCompanyAsync(companyId, request.IsVerified.Value, ct);
         return Ok(result);
     }
 }

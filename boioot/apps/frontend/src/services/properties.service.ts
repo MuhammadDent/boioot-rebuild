@@ -33,7 +33,4 @@ export const propertiesService = {
     return api.get<PropertyResponse>(`/properties/${id}`);
   },
 
-  getDashboardList(filters: PropertyFilters = {}): Promise<PagedResult<PropertyResponse>> {
-    return api.get<PagedResult<PropertyResponse>>(`/properties/my${buildQuery(filters)}`);
-  },
 };

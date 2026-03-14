@@ -25,13 +25,13 @@ function formatPrice(price: number): string {
 }
 
 export default function PropertyCard({ property }: { property: PropertyResponse }) {
-  const mainImage = property.images.find((i) => i.isMain) ?? property.images[0];
+  const mainImage = property.images.find((i) => i.isPrimary) ?? property.images[0];
 
   return (
     <Link href={`/properties/${property.id}`} className="card property-card" style={{ textDecoration: "none" }}>
       {mainImage ? (
         <img
-          src={mainImage.url}
+          src={mainImage.imageUrl}
           alt={property.title}
           className="property-card__img"
         />

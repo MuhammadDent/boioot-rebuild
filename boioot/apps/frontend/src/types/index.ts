@@ -10,8 +10,9 @@ export interface PagedResult<T> {
 
 export interface PropertyImageResponse {
   id: string;
-  url: string;
-  isMain: boolean;
+  imageUrl: string;
+  isPrimary: boolean;
+  order: number;
 }
 
 export interface PropertyResponse {
@@ -39,8 +40,9 @@ export interface PropertyResponse {
 
 export interface ProjectImageResponse {
   id: string;
-  url: string;
-  isMain: boolean;
+  imageUrl: string;
+  isPrimary: boolean;
+  order: number;
 }
 
 export interface ProjectResponse {

@@ -49,7 +49,7 @@ export default function PropertyDetailPage() {
     );
   }
 
-  const mainImage = property.images.find((i) => i.isMain) ?? property.images[0];
+  const mainImage = property.images.find((i) => i.isPrimary) ?? property.images[0];
 
   return (
     <div style={{ padding: "2rem 1.5rem" }}>
@@ -59,7 +59,7 @@ export default function PropertyDetailPage() {
         </Link>
 
         {mainImage ? (
-          <img src={mainImage.url} alt={property.title} className="detail-hero" />
+          <img src={mainImage.imageUrl} alt={property.title} className="detail-hero" />
         ) : (
           <div className="detail-hero-placeholder">🏠</div>
         )}
@@ -87,7 +87,7 @@ export default function PropertyDetailPage() {
                 {property.images.map((img) => (
                   <img
                     key={img.id}
-                    src={img.url}
+                    src={img.imageUrl}
                     alt=""
                     style={{ width: 100, height: 70, objectFit: "cover", borderRadius: "var(--radius-md)" }}
                   />

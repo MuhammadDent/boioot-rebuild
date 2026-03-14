@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Boioot.Application.Exceptions;
 using Boioot.Domain.Constants;
 using Boioot.Infrastructure.Extensions;
@@ -9,7 +10,9 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opt =>
+        opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddCors(options =>

@@ -37,7 +37,7 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .Include(p => p.Company)
             .Include(p => p.Images.Where(i => i.IsPrimary))
-            .Where(p => p.Status == PropertyStatus.Active);
+            .Where(p => p.Status == PropertyStatus.Available);
 
         query = ApplyFilters(query, filters);
 
@@ -93,7 +93,7 @@ public class PropertyService : IPropertyService
             Description = request.Description?.Trim(),
             Type = request.Type!.Value,
             ListingType = request.ListingType!.Value,
-            Status = PropertyStatus.Active,
+            Status = PropertyStatus.Available,
             Price = request.Price,
             Area = request.Area,
             Bedrooms = request.Bedrooms,

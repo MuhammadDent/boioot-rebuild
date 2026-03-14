@@ -22,14 +22,14 @@ function formatPrice(price: number): string {
 }
 
 export default function ProjectCard({ project }: { project: ProjectResponse }) {
-  const mainImage = project.images.find((i) => i.isMain) ?? project.images[0];
+  const mainImage = project.images.find((i) => i.isPrimary) ?? project.images[0];
   const statusBadge = STATUS_BADGE[project.status] ?? "badge-gray";
 
   return (
     <Link href={`/projects/${project.id}`} className="card project-card" style={{ textDecoration: "none" }}>
       {mainImage ? (
         <img
-          src={mainImage.url}
+          src={mainImage.imageUrl}
           alt={project.title}
           className="project-card__img"
         />

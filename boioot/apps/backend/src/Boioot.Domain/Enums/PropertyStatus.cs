@@ -2,7 +2,7 @@ namespace Boioot.Domain.Enums;
 
 public enum PropertyStatus
 {
-    Active,
+    Available,
     Inactive,
     Sold,
     Rented

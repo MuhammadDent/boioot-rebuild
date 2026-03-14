@@ -43,7 +43,7 @@ public class RequestService : IRequestService
         if (hasProperty)
         {
             var propertyExists = await _context.Properties
-                .AnyAsync(p => p.Id == request.PropertyId!.Value && p.Status == PropertyStatus.Active, ct);
+                .AnyAsync(p => p.Id == request.PropertyId!.Value && p.Status == PropertyStatus.Available, ct);
 
             if (!propertyExists)
                 throw new BoiootException("العقار غير موجود أو غير متاح", 404);

@@ -1,3 +1,4 @@
+using Boioot.Application.Common.Models;
 using Boioot.Application.Features.Dashboard.DTOs;
 using Boioot.Application.Features.Dashboard.Interfaces;
 using Boioot.Domain.Constants;
@@ -5,18 +6,19 @@ using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Boioot.Infrastructure.Features.Dashboard;
 
 public class DashboardService : IDashboardService
 {
-    private const int DashboardListLimit = 10;
-
     private readonly BoiootDbContext _context;
+    private readonly ILogger<DashboardService> _logger;
 
-    public DashboardService(BoiootDbContext context)
+    public DashboardService(BoiootDbContext context, ILogger<DashboardService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<DashboardSummaryResponse> GetSummaryAsync(
@@ -35,6 +37,11 @@ public class DashboardService : IDashboardService
         var totalConversations = await CountConversationsAsync(userId, ct);
         var unreadMessages     = await CountUnreadMessagesAsync(userId, ct);
 
+        _logger.LogDebug(
+            "Dashboard summary fetched for User: {UserId} | Role: {Role} | " +
+            "Properties: {Props}, Projects: {Projs}, Requests: {Reqs}",
+            userId, userRole, totalProperties, totalProjects, totalRequests);
+
         return new DashboardSummaryResponse
         {
             TotalProperties    = totalProperties,
@@ -46,14 +53,21 @@ public class DashboardService : IDashboardService
         };
     }
 
-    public async Task<IReadOnlyList<DashboardPropertyItem>> GetPropertiesAsync(
-        Guid userId, string userRole, CancellationToken ct = default)
+    public async Task<PagedResult<DashboardPropertyItem>> GetPropertiesAsync(
+        Guid userId, string userRole, int page, int pageSize, CancellationToken ct = default)
     {
-        var scope = await ResolveScopeAsync(userId, userRole, ct);
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
 
-        return await GetScopedPropertyQuery(scope)
+        var scope = await ResolveScopeAsync(userId, userRole, ct);
+        var query = GetScopedPropertyQuery(scope);
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
             .OrderByDescending(p => p.CreatedAt)
-            .Take(DashboardListLimit)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(p => new DashboardPropertyItem
             {
                 Id          = p.Id,
@@ -66,16 +80,25 @@ public class DashboardService : IDashboardService
                 CreatedAt   = p.CreatedAt
             })
             .ToListAsync(ct);
+
+        return new PagedResult<DashboardPropertyItem>(items, page, pageSize, total);
     }
 
-    public async Task<IReadOnlyList<DashboardProjectItem>> GetProjectsAsync(
-        Guid userId, string userRole, CancellationToken ct = default)
+    public async Task<PagedResult<DashboardProjectItem>> GetProjectsAsync(
+        Guid userId, string userRole, int page, int pageSize, CancellationToken ct = default)
     {
-        var scope = await ResolveScopeAsync(userId, userRole, ct);
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
 
-        return await GetScopedProjectQuery(scope)
+        var scope = await ResolveScopeAsync(userId, userRole, ct);
+        var query = GetScopedProjectQuery(scope);
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
             .OrderByDescending(p => p.CreatedAt)
-            .Take(DashboardListLimit)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(p => new DashboardProjectItem
             {
                 Id            = p.Id,
@@ -87,16 +110,25 @@ public class DashboardService : IDashboardService
                 CreatedAt     = p.CreatedAt
             })
             .ToListAsync(ct);
+
+        return new PagedResult<DashboardProjectItem>(items, page, pageSize, total);
     }
 
-    public async Task<IReadOnlyList<DashboardRequestItem>> GetRequestsAsync(
-        Guid userId, string userRole, CancellationToken ct = default)
+    public async Task<PagedResult<DashboardRequestItem>> GetRequestsAsync(
+        Guid userId, string userRole, int page, int pageSize, CancellationToken ct = default)
     {
-        var scope = await ResolveScopeAsync(userId, userRole, ct);
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
 
-        return await GetScopedRequestQuery(scope)
+        var scope = await ResolveScopeAsync(userId, userRole, ct);
+        var query = GetScopedRequestQuery(scope);
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
             .OrderByDescending(r => r.CreatedAt)
-            .Take(DashboardListLimit)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(r => new DashboardRequestItem
             {
                 Id            = r.Id,
@@ -108,6 +140,8 @@ public class DashboardService : IDashboardService
                 CreatedAt     = r.CreatedAt
             })
             .ToListAsync(ct);
+
+        return new PagedResult<DashboardRequestItem>(items, page, pageSize, total);
     }
 
     public async Task<DashboardMessageSummaryResponse> GetMessagesSummaryAsync(
@@ -134,6 +168,12 @@ public class DashboardService : IDashboardService
             .Where(a => a.UserId == userId)
             .Select(a => new { a.Id, a.CompanyId })
             .FirstOrDefaultAsync(ct);
+
+        if (agent is null)
+        {
+            _logger.LogWarning(
+                "No agent record found for User: {UserId} | Role: {Role}", userId, userRole);
+        }
 
         if (userRole == RoleNames.CompanyOwner)
             return new DashboardScope(IsAdmin: false, CompanyId: agent?.CompanyId, AgentId: null);

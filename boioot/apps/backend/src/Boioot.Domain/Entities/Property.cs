@@ -9,7 +9,7 @@ public class Property : BaseEntity, ISoftDeletable
     public string? Description { get; set; }
     public PropertyType Type { get; set; }
     public ListingType ListingType { get; set; }
-    public PropertyStatus Status { get; set; } = PropertyStatus.Active;
+    public PropertyStatus Status { get; set; } = PropertyStatus.Available;
     public decimal Price { get; set; }
     public decimal Area { get; set; }
     public int? Bedrooms { get; set; }

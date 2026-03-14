@@ -23,23 +23,26 @@ public class DashboardController : BaseController
     }
 
     [HttpGet("properties")]
-    public async Task<IActionResult> GetProperties(CancellationToken ct)
+    public async Task<IActionResult> GetProperties(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
     {
-        var result = await _dashboardService.GetPropertiesAsync(GetUserId(), GetUserRole(), ct);
+        var result = await _dashboardService.GetPropertiesAsync(GetUserId(), GetUserRole(), page, pageSize, ct);
         return Ok(result);
     }
 
     [HttpGet("projects")]
-    public async Task<IActionResult> GetProjects(CancellationToken ct)
+    public async Task<IActionResult> GetProjects(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
     {
-        var result = await _dashboardService.GetProjectsAsync(GetUserId(), GetUserRole(), ct);
+        var result = await _dashboardService.GetProjectsAsync(GetUserId(), GetUserRole(), page, pageSize, ct);
         return Ok(result);
     }
 
     [HttpGet("requests")]
-    public async Task<IActionResult> GetRequests(CancellationToken ct)
+    public async Task<IActionResult> GetRequests(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
     {
-        var result = await _dashboardService.GetRequestsAsync(GetUserId(), GetUserRole(), ct);
+        var result = await _dashboardService.GetRequestsAsync(GetUserId(), GetUserRole(), page, pageSize, ct);
         return Ok(result);
     }
 

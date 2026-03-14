@@ -43,7 +43,7 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const mainImage = project.images.find((i) => i.isMain) ?? project.images[0];
+  const mainImage = project.images.find((i) => i.isPrimary) ?? project.images[0];
 
   return (
     <div style={{ padding: "2rem 1.5rem" }}>
@@ -53,7 +53,7 @@ export default function ProjectDetailPage() {
         </Link>
 
         {mainImage ? (
-          <img src={mainImage.url} alt={project.title} className="detail-hero" />
+          <img src={mainImage.imageUrl} alt={project.title} className="detail-hero" />
         ) : (
           <div className="detail-hero-placeholder">🏗️</div>
         )}
@@ -79,7 +79,7 @@ export default function ProjectDetailPage() {
                 {project.images.map((img) => (
                   <img
                     key={img.id}
-                    src={img.url}
+                    src={img.imageUrl}
                     alt=""
                     style={{ width: 100, height: 70, objectFit: "cover", borderRadius: "var(--radius-md)" }}
                   />

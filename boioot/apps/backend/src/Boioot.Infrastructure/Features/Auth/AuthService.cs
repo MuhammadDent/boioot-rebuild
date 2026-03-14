@@ -88,6 +88,9 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new BoiootException("المستخدم غير موجود", 404);
 
+        if (!user.IsActive)
+            throw new BoiootException("الحساب غير مفعّل", 403);
+
         return MapToProfileResponse(user);
     }
 
