@@ -10,4 +10,4 @@ name = "Boioot Frontend"
 paths = ["/"]
 
 [services.development]
-run = "until curl -sf http://localhost:3000 > /dev/null 2>&1; do sleep 1; done && sleep infinity"
+run = "cd /home/runner/workspace/boioot/apps/frontend && rm -f .next/dev/lock && node_modules/.bin/next dev --webpack -p 3000"
