@@ -89,9 +89,17 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="password">
-              كلمة المرور
-            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label className="form-label" htmlFor="password" style={{ margin: 0 }}>
+                كلمة المرور
+              </label>
+              <Link
+                href="/forgot-password"
+                style={{ fontSize: "0.82rem", color: "var(--color-primary)", textDecoration: "none" }}
+              >
+                نسيت كلمة المرور؟
+              </Link>
+            </div>
             <div className="password-wrapper">
               <input
                 id="password"
