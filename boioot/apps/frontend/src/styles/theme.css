@@ -22,7 +22,7 @@
   --color-error: #c62828;
 
   /* Typography */
-  --font-arabic: "Cairo", "Tajawal", system-ui, sans-serif;
+  --font-arabic: var(--font-cairo), "Cairo", "Tajawal", system-ui, sans-serif;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.125rem;
