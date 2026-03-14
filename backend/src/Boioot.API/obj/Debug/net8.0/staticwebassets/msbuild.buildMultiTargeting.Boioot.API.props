@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../build/Boioot.API.props" />
-</Project>
