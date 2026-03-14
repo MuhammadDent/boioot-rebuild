@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
-import { ApiError } from "@/lib/api";
+import { normalizeError } from "@/lib/api";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -49,11 +49,7 @@ export default function LoginPage() {
       login(res.token, res.user);
       router.push(res.user.role === "Admin" ? "/admin/users" : "/dashboard");
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("تعذر الاتصال بالخادم. تأكد من اتصالك بالإنترنت.");
-      }
+      setError(normalizeError(err));
     } finally {
       setSubmitting(false);
     }

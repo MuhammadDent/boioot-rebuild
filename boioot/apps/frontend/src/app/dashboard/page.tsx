@@ -1,20 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isLoading } = useProtectedRoute();
+  const { logout } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/login");
-    }
-  }, [isLoading, isAuthenticated, router]);
 
   if (isLoading || !user) return null;
 

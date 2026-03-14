@@ -8,7 +8,7 @@ import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
-import { ApiError } from "@/lib/api";
+import { normalizeError } from "@/lib/api";
 import type { E164Number } from "libphonenumber-js/core";
 
 type RoleValue = "User" | "Agent" | "CompanyOwner";
@@ -83,13 +83,13 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 interface FormState {
-  username: string;
+  fullName: string;
   email: string;
   password: string;
   confirmPassword: string;
 }
 
-const INITIAL_FORM: FormState = { username: "", email: "", password: "", confirmPassword: "" };
+const INITIAL_FORM: FormState = { fullName: "", email: "", password: "", confirmPassword: "" };
 
 export default function RegisterPage() {
   const { login, isAuthenticated, isLoading } = useAuth();
@@ -132,10 +132,8 @@ export default function RegisterPage() {
 
   function validate(): boolean {
     const errors: Partial<FormState> = {};
-    if (form.username.trim().length < 3) {
-      errors.username = "اسم المستخدم يجب أن لا يقل عن 3 أحرف";
-    } else if (!/^[\w\u0600-\u06FF.-]+$/.test(form.username.trim())) {
-      errors.username = "اسم المستخدم يحتوي على أحرف غير مسموح بها";
+    if (form.fullName.trim().length < 3) {
+      errors.fullName = "الاسم الكامل يجب أن لا يقل عن 3 أحرف";
     }
     if (!form.email.includes("@")) errors.email = "البريد الإلكتروني غير صالح";
     if (form.password.length < 8) errors.password = "كلمة المرور يجب أن لا تقل عن 8 أحرف";
@@ -152,7 +150,7 @@ export default function RegisterPage() {
     try {
       const role = ROLES[selectedRoleIndex!].value;
       const res = await authService.register({
-        fullName: form.username.trim(),
+        fullName: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
         phone: phone || undefined,
@@ -161,8 +159,7 @@ export default function RegisterPage() {
       login(res.token, res.user);
       router.push("/dashboard");
     } catch (err) {
-      if (err instanceof ApiError) setError(err.message);
-      else setError("تعذر الاتصال بالخادم. تأكد من اتصالك بالإنترنت.");
+      setError(normalizeError(err));
     } finally {
       setSubmitting(false);
     }
@@ -278,15 +275,15 @@ export default function RegisterPage() {
 
             <form onSubmit={handleSubmit} noValidate>
               <div className="form-group">
-                <label className="form-label" htmlFor="username">
-                  اسم المستخدم <span style={{ color: "var(--color-error)" }}>*</span>
+                <label className="form-label" htmlFor="fullName">
+                  الاسم الكامل <span style={{ color: "var(--color-error)" }}>*</span>
                 </label>
                 <input
-                  id="username" name="username" type="text" className="form-input"
-                  value={form.username} onChange={handleChange} required
-                  autoComplete="username" placeholder="مثال: ahmad_1990" dir="ltr"
+                  id="fullName" name="fullName" type="text" className="form-input"
+                  value={form.fullName} onChange={handleChange} required
+                  autoComplete="name" placeholder="مثال: أحمد محمد"
                 />
-                {fieldErrors.username && <span className="form-error">{fieldErrors.username}</span>}
+                {fieldErrors.fullName && <span className="form-error">{fieldErrors.fullName}</span>}
               </div>
 
               <div className="form-group">
