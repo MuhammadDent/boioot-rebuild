@@ -21,5 +21,7 @@ public class AgentConfiguration : IEntityTypeConfiguration<Agent>
             .WithMany(c => c.Agents)
             .HasForeignKey(a => a.CompanyId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(a => a.UserId).IsUnique();
     }
 }

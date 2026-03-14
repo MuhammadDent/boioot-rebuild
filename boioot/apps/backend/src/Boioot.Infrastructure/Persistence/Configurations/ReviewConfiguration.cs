@@ -14,6 +14,8 @@ public class ReviewConfiguration : IEntityTypeConfiguration<Review>
         builder.Property(r => r.Rating).IsRequired();
         builder.Property(r => r.Comment).HasMaxLength(1000);
 
+        builder.ToTable(t => t.HasCheckConstraint("CK_Review_Rating", "[Rating] >= 1 AND [Rating] <= 5"));
+
         builder.HasOne(r => r.Reviewer)
             .WithMany(u => u.Reviews)
             .HasForeignKey(r => r.ReviewerId)

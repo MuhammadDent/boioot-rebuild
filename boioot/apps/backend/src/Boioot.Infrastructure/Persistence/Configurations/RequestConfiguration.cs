@@ -27,5 +27,8 @@ public class RequestConfiguration : IEntityTypeConfiguration<Request>
             .WithMany(p => p.Requests)
             .HasForeignKey(r => r.ProjectId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(r => r.UserId);
+        builder.HasIndex(r => r.Status);
     }
 }
