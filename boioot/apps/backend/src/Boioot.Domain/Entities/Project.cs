@@ -1,0 +1,18 @@
+using Boioot.Domain.Enums;
+
+namespace Boioot.Domain.Entities;
+
+public class Project : BaseEntity
+{
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public ProjectStatus Status { get; set; } = ProjectStatus.Upcoming;
+    public string City { get; set; } = string.Empty;
+    public string? Address { get; set; }
+
+    public Guid CompanyId { get; set; }
+
+    public Company Company { get; set; } = null!;
+    public ICollection<ProjectImage> Images { get; set; } = [];
+    public ICollection<Request> Requests { get; set; } = [];
+}
