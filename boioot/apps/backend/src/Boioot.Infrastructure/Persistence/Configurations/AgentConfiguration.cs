@@ -24,6 +24,7 @@ public class AgentConfiguration : IEntityTypeConfiguration<Agent>
 
         builder.HasIndex(a => a.UserId).IsUnique();
 
-        builder.HasQueryFilter(a => !a.User.IsDeleted);
+        builder.HasQueryFilter(a => !a.User.IsDeleted &&
+                                    (a.CompanyId == null || !a.Company!.IsDeleted));
     }
 }

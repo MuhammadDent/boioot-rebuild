@@ -1,8 +1,9 @@
+using Boioot.Domain.Common;
 using Boioot.Domain.Enums;
 
 namespace Boioot.Domain.Entities;
 
-public class Property : BaseEntity
+public class Property : BaseEntity, ISoftDeletable
 {
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }

@@ -1,6 +1,8 @@
+using Boioot.Domain.Common;
+
 namespace Boioot.Domain.Entities;
 
-public class Company : BaseEntity
+public class Company : BaseEntity, ISoftDeletable
 {
     public string Name { get; set; } = string.Empty;
     public string? LogoUrl { get; set; }

@@ -1,8 +1,9 @@
+using Boioot.Domain.Common;
 using Boioot.Domain.Enums;
 
 namespace Boioot.Domain.Entities;
 
-public class User : BaseEntity
+public class User : BaseEntity, ISoftDeletable
 {
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;

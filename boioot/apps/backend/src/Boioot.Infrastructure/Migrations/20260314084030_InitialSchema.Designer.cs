@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Boioot.Infrastructure.Migrations
 {
     [DbContext(typeof(BoiootDbContext))]
-    [Migration("20260314083616_InitialSchema")]
+    [Migration("20260314084030_InitialSchema")]
     partial class InitialSchema
     {
         /// <inheritdoc />
@@ -503,7 +503,8 @@ namespace Boioot.Infrastructure.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(30)

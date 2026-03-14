@@ -34,6 +34,6 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.HasIndex(p => p.Status);
         builder.HasIndex(p => p.Type);
 
-        builder.HasQueryFilter(p => !p.IsDeleted);
+        builder.HasQueryFilter(p => !p.IsDeleted && !p.Company.IsDeleted);
     }
 }
