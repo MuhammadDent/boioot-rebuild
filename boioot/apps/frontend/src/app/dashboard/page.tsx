@@ -72,14 +72,26 @@ export default function DashboardPage() {
               <h1 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>
                 مرحباً، {user.fullName}
               </h1>
-              <span style={{
-                display: "inline-block", marginTop: "0.25rem",
-                backgroundColor: "var(--color-primary-light, #e8f5e9)",
-                color: "var(--color-primary)", padding: "0.15rem 0.65rem",
-                borderRadius: 20, fontSize: "0.78rem", fontWeight: 600,
-              }}>
-                {roleLabel[user.role] ?? user.role}
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", marginTop: "0.35rem", flexWrap: "wrap" }}>
+                <span style={{
+                  backgroundColor: "var(--color-primary-light, #e8f5e9)",
+                  color: "var(--color-primary)", padding: "0.15rem 0.65rem",
+                  borderRadius: 20, fontSize: "0.78rem", fontWeight: 600,
+                }}>
+                  {roleLabel[user.role] ?? user.role}
+                </span>
+                {user.userCode && (
+                  <span style={{
+                    backgroundColor: "#f1f5f9", color: "#475569",
+                    padding: "0.15rem 0.65rem", borderRadius: 20,
+                    fontSize: "0.78rem", fontWeight: 700,
+                    fontFamily: "monospace", letterSpacing: "0.05em",
+                    direction: "ltr",
+                  }}>
+                    #{user.userCode}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

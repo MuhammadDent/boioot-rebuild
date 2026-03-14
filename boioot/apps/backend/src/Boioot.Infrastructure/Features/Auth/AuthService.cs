@@ -45,8 +45,11 @@ public class AuthService : IAuthService
             ? parsedRole
             : UserRole.User;
 
+        var userCode = await GenerateUserCodeAsync(role, ct);
+
         var user = new User
         {
+            UserCode = userCode,
             FullName = request.FullName.Trim(),
             Email = emailLower,
             Phone = request.Phone?.Trim(),
@@ -137,12 +140,30 @@ public class AuthService : IAuthService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    private async Task<string> GenerateUserCodeAsync(UserRole role, CancellationToken ct)
+    {
+        var prefix = role switch
+        {
+            UserRole.Agent        => "A",
+            UserRole.CompanyOwner => "C",
+            UserRole.Admin        => "ADM",
+            _                     => "U",
+        };
+
+        var count = await _context.Users
+            .IgnoreQueryFilters()
+            .CountAsync(u => u.Role == role, ct);
+
+        return $"{prefix}-{(count + 1):D4}";
+    }
+
     private int GetExpiryMinutes() =>
         int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var mins) ? mins : 1440;
 
     private static UserProfileResponse MapToProfileResponse(User user) => new()
     {
         Id = user.Id,
+        UserCode = user.UserCode,
         FullName = user.FullName,
         Email = user.Email,
         Phone = user.Phone,
