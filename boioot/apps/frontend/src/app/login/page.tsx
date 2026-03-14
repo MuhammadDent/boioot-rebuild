@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import { ApiError } from "@/lib/api";
@@ -93,6 +94,23 @@ export default function LoginPage() {
             {submitting ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
           </button>
         </form>
+
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: "1.25rem",
+            fontSize: "0.88rem",
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          ليس لديك حساب؟{" "}
+          <Link
+            href="/register"
+            style={{ color: "var(--color-primary)", fontWeight: 600 }}
+          >
+            إنشاء حساب جديد
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -98,19 +98,19 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {[
-              ["المدينة", project.city],
-              project.address && ["العنوان", project.address],
-              project.deliveryDate && ["تاريخ التسليم", new Date(project.deliveryDate).toLocaleDateString("ar-SY")],
-              ["الشركة", project.companyName],
-            ]
-              .filter(Boolean)
-              .map(([label, value]) => (
-                <div key={label} className="detail-info-row">
-                  <span className="detail-info-label">{label}</span>
-                  <span className="detail-info-value">{value}</span>
-                </div>
-              ))}
+            {(
+              [
+                ["المدينة", project.city],
+                ...(project.address ? [["العنوان", project.address]] : []),
+                ...(project.deliveryDate ? [["تاريخ التسليم", new Date(project.deliveryDate).toLocaleDateString("ar-SY")]] : []),
+                ["الشركة", project.companyName],
+              ] as [string, string][]
+            ).map(([label, value]) => (
+              <div key={label} className="detail-info-row">
+                <span className="detail-info-label">{label}</span>
+                <span className="detail-info-value">{value}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
