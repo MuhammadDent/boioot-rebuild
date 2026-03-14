@@ -2,6 +2,71 @@
 
 ## Overview
 
+This project contains two parts:
+1. **Boioot Backend** — ASP.NET Core 8 Web API (primary backend being built)
+2. **pnpm workspace monorepo** — TypeScript scaffolding (existing placeholder)
+
+---
+
+## Boioot Backend (.NET 8)
+
+### Description
+Boioot is an Arabic-first RTL real estate marketplace + SaaS platform targeting Saudi Arabia & Syria. Combines features from Airbnb, Zillow, and Property Finder. 6 user types: Guest, User, Owner, Agent, CompanyOwner, Admin.
+
+### Stack
+- **Runtime**: .NET 8 / ASP.NET Core Web API
+- **Database**: PostgreSQL via EF Core 8 + Npgsql
+- **Auth**: JWT Bearer tokens
+- **API Docs**: Swagger / Swashbuckle 6.x
+- **Storage**: Cloudinary (images) — abstracted via IFileStorageService
+- **Architecture**: Modular Monolith (Domain / Application / Infrastructure / API / Shared)
+
+### Project Location
+`backend/` — `Boioot.sln`
+
+### Key Files
+- `backend/src/Boioot.API/Program.cs` — Entry point, DI configuration
+- `backend/src/Boioot.API/appsettings.json` — App configuration
+- `backend/src/Boioot.Infrastructure/Persistence/ApplicationDbContext.cs` — EF Core DbContext
+- `backend/src/Boioot.Infrastructure/Persistence/Migrations/` — Database migrations
+- `backend/run-api.sh` — Run script (reads PORT env var)
+
+### Running the API
+```bash
+# Workflow: "Boioot .NET API" on port 8000
+bash backend/run-api.sh
+
+# Or for migrations:
+export DOTNET_ROOT="/nix/store/1blv644vinali34masnw6g5fjjjaa4y6-dotnet-sdk-8.0.416/share/dotnet"
+export PATH="$PATH:/home/runner/.dotnet/tools"
+dotnet ef database update --project backend/src/Boioot.Infrastructure --startup-project backend/src/Boioot.API
+```
+
+### Database Tables (18 entities)
+Users, Companies, Agents, Properties, PropertyImages, PropertyFeatures, Projects, ProjectImages, PropertyRequests, RequestResponses, Reviews, Favorites, Conversations, Messages, Notifications, BlogPosts, SubscriptionPlans, CompanySubscriptions
+
+### Brand Colors
+- Primary: `#2E7D32` (dark green)
+- Secondary: `#A5D6A7` / `#C8E6C9` (light green)
+- Background: `#F5F5F5` (light gray)
+- Text: `#212121`
+
+### Implementation Phases
+- ✅ Phase 1: Foundation (Domain entities, Shared patterns, Infrastructure DbContext, API Program.cs + middleware)
+- 🔄 Phase 2: Identity & Users (Auth, JWT, Roles) — NEXT
+- ⏳ Phase 3: Companies & Agents
+- ⏳ Phase 4: Properties
+- ⏳ Phase 5: Projects
+- ⏳ Phase 6: Requests
+- ⏳ Phase 7: Reviews & Favorites
+- ⏳ Phase 8: Messages
+- ⏳ Phase 9: Blog
+- ⏳ Phase 10: Notifications & Admin
+
+---
+
+## pnpm Monorepo (TypeScript placeholder)
+
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
 ## Stack

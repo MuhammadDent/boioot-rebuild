@@ -1,0 +1,11 @@
+/home/runner/workspace/backend/src/Boioot.Domain/bin/Debug/net8.0/Boioot.Domain.deps.json
+/home/runner/workspace/backend/src/Boioot.Domain/bin/Debug/net8.0/Boioot.Domain.dll
+/home/runner/workspace/backend/src/Boioot.Domain/bin/Debug/net8.0/Boioot.Domain.pdb
+/home/runner/workspace/backend/src/Boioot.Domain/obj/Debug/net8.0/Boioot.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/home/runner/workspace/backend/src/Boioot.Domain/obj/Debug/net8.0/Boioot.Domain.AssemblyInfoInputs.cache
+/home/runner/workspace/backend/src/Boioot.Domain/obj/Debug/net8.0/Boioot.Domain.AssemblyInfo.cs
+/home/runner/workspace/backend/src/Boioot.Domain/obj/Debug/net8.0/Boioot.Domain.csproj.CoreCompileInputs.cache
+/home/runner/workspace/backend/src/Boioot.Domain/obj/Debug/net8.0/Boioot.Domain.dll
+/home/runner/workspace/backend/src/Boioot.Domain/obj/Debug/net8.0/refint/Boioot.Domain.dll
+/home/runner/workspace/backend/src/Boioot.Domain/obj/Debug/net8.0/Boioot.Domain.pdb
+/home/runner/workspace/backend/src/Boioot.Domain/obj/Debug/net8.0/ref/Boioot.Domain.dll
