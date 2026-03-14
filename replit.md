@@ -28,7 +28,6 @@ Boioot is an Arabic-first RTL real estate marketplace + SaaS platform targeting 
 - `backend/src/Boioot.API/Program.cs` — Entry point, DI configuration
 - `backend/src/Boioot.API/appsettings.json` — App configuration
 - `backend/src/Boioot.Infrastructure/Persistence/ApplicationDbContext.cs` — EF Core DbContext
-- `backend/src/Boioot.Infrastructure/Persistence/Migrations/` — Database migrations
 - `backend/run-api.sh` — Run script (reads PORT env var)
 
 ### Running the API
@@ -36,14 +35,14 @@ Boioot is an Arabic-first RTL real estate marketplace + SaaS platform targeting 
 # Workflow: "Boioot .NET API" on port 8000
 bash backend/run-api.sh
 
-# Or for migrations:
+# For migrations (when entities are added in later phases):
 export DOTNET_ROOT="/nix/store/1blv644vinali34masnw6g5fjjjaa4y6-dotnet-sdk-8.0.416/share/dotnet"
 export PATH="$PATH:/home/runner/.dotnet/tools"
 dotnet ef database update --project backend/src/Boioot.Infrastructure --startup-project backend/src/Boioot.API
 ```
 
-### Database Tables (18 entities)
-Users, Companies, Agents, Properties, PropertyImages, PropertyFeatures, Projects, ProjectImages, PropertyRequests, RequestResponses, Reviews, Favorites, Conversations, Messages, Notifications, BlogPosts, SubscriptionPlans, CompanySubscriptions
+### Database
+No tables yet — entities and migrations will be added in Phase 2+.
 
 ### Brand Colors
 - Primary: `#2E7D32` (dark green)
@@ -52,8 +51,8 @@ Users, Companies, Agents, Properties, PropertyImages, PropertyFeatures, Projects
 - Text: `#212121`
 
 ### Implementation Phases
-- ✅ Phase 1: Foundation (Domain entities, Shared patterns, Infrastructure DbContext, API Program.cs + middleware)
-- 🔄 Phase 2: Identity & Users (Auth, JWT, Roles) — NEXT
+- ✅ Phase 1: Foundation (BaseEntity/AuditableEntity/SoftDeletableEntity, Enums, Shared Result patterns, DbContext, Program.cs + Middleware)
+- ⏳ Phase 2: Identity & Users (Auth, JWT, Roles) — NEXT
 - ⏳ Phase 3: Companies & Agents
 - ⏳ Phase 4: Properties
 - ⏳ Phase 5: Projects
