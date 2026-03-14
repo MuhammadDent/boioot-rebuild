@@ -1,0 +1,13 @@
+kind = "web"
+previewPath = "/"
+title = "Boioot"
+version = "1.0.0"
+id = "default-boioot-frontend"
+
+[[services]]
+localPort = 3000
+name = "Boioot Frontend"
+paths = ["/"]
+
+[services.development]
+run = "cd boioot/apps/frontend && npm run dev -- -p 3000"
