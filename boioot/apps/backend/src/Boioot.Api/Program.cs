@@ -1,5 +1,6 @@
 using System.Text;
 using Boioot.Application.Exceptions;
+using Boioot.Domain.Constants;
 using Boioot.Infrastructure.Extensions;
 using Boioot.Infrastructure.Persistence.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -36,10 +37,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOrCompanyOwner", policy =>
-        policy.RequireRole("Admin", "CompanyOwner"));
+        policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner));
 
     options.AddPolicy("AdminOrCompanyOwnerOrAgent", policy =>
-        policy.RequireRole("Admin", "CompanyOwner", "Agent"));
+        policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Agent));
 });
 
 var app = builder.Build();

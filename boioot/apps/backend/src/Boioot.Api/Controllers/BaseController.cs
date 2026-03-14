@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Boioot.Application.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Boioot.Api.Controllers;
@@ -11,12 +12,12 @@ public abstract class BaseController : ControllerBase
         var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(claim, out var id)
             ? id
-            : throw new InvalidOperationException("User ID claim is missing or invalid");
+            : throw new BoiootException("بيانات المصادقة غير صالحة", 401);
     }
 
     protected string GetUserRole()
     {
         return User.FindFirstValue(ClaimTypes.Role)
-            ?? throw new InvalidOperationException("Role claim is missing");
+            ?? throw new BoiootException("بيانات المصادقة غير صالحة", 401);
     }
 }

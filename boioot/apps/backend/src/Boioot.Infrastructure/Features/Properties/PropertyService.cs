@@ -2,6 +2,7 @@ using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
+using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
@@ -29,9 +30,8 @@ public class PropertyService : IPropertyService
 
         var query = _context.Properties
             .Include(p => p.Company)
-            .Include(p => p.Images)
-            .Where(p => p.Status == PropertyStatus.Active)
-            .AsQueryable();
+            .Include(p => p.Images.Where(i => i.IsPrimary))
+            .Where(p => p.Status == PropertyStatus.Active);
 
         query = ApplyFilters(query, filters);
 
@@ -62,18 +62,20 @@ public class PropertyService : IPropertyService
     public async Task<PropertyResponse> CreateAsync(
         Guid userId, string userRole, CreatePropertyRequest request, CancellationToken ct = default)
     {
-        await EnsureCanManageCompanyAsync(userId, userRole, request.CompanyId, ct);
+        var companyId = request.CompanyId!.Value;
 
         var companyExists = await _context.Companies
-            .AnyAsync(c => c.Id == request.CompanyId, ct);
+            .AnyAsync(c => c.Id == companyId, ct);
 
         if (!companyExists)
             throw new BoiootException("الشركة غير موجودة", 404);
 
+        await EnsureCanManageCompanyAsync(userId, userRole, companyId, ct);
+
         if (request.AgentId.HasValue)
         {
             var agentBelongsToCompany = await _context.Agents
-                .AnyAsync(a => a.Id == request.AgentId.Value && a.CompanyId == request.CompanyId, ct);
+                .AnyAsync(a => a.Id == request.AgentId.Value && a.CompanyId == companyId, ct);
 
             if (!agentBelongsToCompany)
                 throw new BoiootException("الوكيل لا ينتمي إلى هذه الشركة", 400);
@@ -94,7 +96,7 @@ public class PropertyService : IPropertyService
             City = request.City.Trim(),
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-            CompanyId = request.CompanyId,
+            CompanyId = companyId,
             AgentId = request.AgentId
         };
 
@@ -175,34 +177,20 @@ public class PropertyService : IPropertyService
 
         var query = _context.Properties
             .Include(p => p.Company)
-            .Include(p => p.Images)
-            .AsQueryable();
+            .Include(p => p.Images.Where(i => i.IsPrimary));
 
-        if (userRole == UserRole.CompanyOwner.ToString())
+        IQueryable<Property> filteredQuery = userRole switch
         {
-            var companyId = await GetCompanyIdForUserAsync(userId, ct);
-            if (companyId is null)
-                return new PagedResult<PropertyResponse>([], page, pageSize, 0);
+            RoleNames.CompanyOwner => await BuildCompanyOwnerQueryAsync(query, userId, ct),
+            RoleNames.Agent => await BuildAgentQueryAsync(query, userId, ct),
+            _ => query
+        };
 
-            query = query.Where(p => p.CompanyId == companyId);
-        }
-        else if (userRole == UserRole.Agent.ToString())
-        {
-            var agent = await _context.Agents
-                .Select(a => new { a.Id, a.UserId })
-                .FirstOrDefaultAsync(a => a.UserId == userId, ct);
+        filteredQuery = ApplyFilters(filteredQuery, filters);
 
-            if (agent is null)
-                return new PagedResult<PropertyResponse>([], page, pageSize, 0);
+        var total = await filteredQuery.CountAsync(ct);
 
-            query = query.Where(p => p.AgentId == agent.Id);
-        }
-
-        query = ApplyFilters(query, filters);
-
-        var total = await query.CountAsync(ct);
-
-        var items = await query
+        var items = await filteredQuery
             .OrderByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -236,42 +224,81 @@ public class PropertyService : IPropertyService
         return query;
     }
 
+    private async Task<IQueryable<Property>> BuildCompanyOwnerQueryAsync(
+        IQueryable<Property> query, Guid userId, CancellationToken ct)
+    {
+        var companyId = await _context.Agents
+            .Where(a => a.UserId == userId)
+            .Select(a => a.CompanyId)
+            .FirstOrDefaultAsync(ct);
+
+        return companyId.HasValue
+            ? query.Where(p => p.CompanyId == companyId.Value)
+            : query.Where(_ => false);
+    }
+
+    private async Task<IQueryable<Property>> BuildAgentQueryAsync(
+        IQueryable<Property> query, Guid userId, CancellationToken ct)
+    {
+        var agentId = await _context.Agents
+            .Where(a => a.UserId == userId)
+            .Select(a => (Guid?)a.Id)
+            .FirstOrDefaultAsync(ct);
+
+        return agentId.HasValue
+            ? query.Where(p => p.AgentId == agentId.Value)
+            : query.Where(_ => false);
+    }
+
     private async Task EnsureCanManageCompanyAsync(
         Guid userId, string userRole, Guid companyId, CancellationToken ct)
     {
-        if (userRole == UserRole.Admin.ToString()) return;
+        if (userRole == RoleNames.Admin) return;
 
-        if (userRole == UserRole.CompanyOwner.ToString())
+        if (userRole == RoleNames.CompanyOwner)
         {
             var ownsCompany = await _context.Agents
                 .AnyAsync(a => a.UserId == userId && a.CompanyId == companyId, ct);
 
             if (!ownsCompany)
+            {
+                _logger.LogWarning(
+                    "CompanyOwner {UserId} attempted unauthorized access to company {CompanyId}",
+                    userId, companyId);
                 throw new BoiootException("ليس لديك صلاحية الإدارة على هذه الشركة", 403);
+            }
 
             return;
         }
 
+        _logger.LogWarning(
+            "User {UserId} with role {Role} attempted to manage company {CompanyId}",
+            userId, userRole, companyId);
         throw new BoiootException("غير مصرح لك بتنفيذ هذا الإجراء", 403);
     }
 
     private async Task EnsureCanManagePropertyAsync(
         Guid userId, string userRole, Property property, CancellationToken ct)
     {
-        if (userRole == UserRole.Admin.ToString()) return;
+        if (userRole == RoleNames.Admin) return;
 
-        if (userRole == UserRole.CompanyOwner.ToString())
+        if (userRole == RoleNames.CompanyOwner)
         {
             var ownsCompany = await _context.Agents
                 .AnyAsync(a => a.UserId == userId && a.CompanyId == property.CompanyId, ct);
 
             if (!ownsCompany)
+            {
+                _logger.LogWarning(
+                    "CompanyOwner {UserId} attempted unauthorized access to property {PropertyId}",
+                    userId, property.Id);
                 throw new BoiootException("ليس لديك صلاحية إدارة هذا العقار", 403);
+            }
 
             return;
         }
 
-        if (userRole == UserRole.Agent.ToString())
+        if (userRole == RoleNames.Agent)
         {
             var agent = await _context.Agents
                 .Select(a => new { a.Id, a.UserId })
@@ -279,17 +306,14 @@ public class PropertyService : IPropertyService
 
             if (agent is not null && property.AgentId == agent.Id) return;
 
+            _logger.LogWarning(
+                "Agent {UserId} attempted unauthorized access to property {PropertyId}",
+                userId, property.Id);
             throw new BoiootException("هذا العقار غير مسند إليك", 403);
         }
 
         throw new BoiootException("غير مصرح لك بتنفيذ هذا الإجراء", 403);
     }
-
-    private async Task<Guid?> GetCompanyIdForUserAsync(Guid userId, CancellationToken ct) =>
-        await _context.Agents
-            .Where(a => a.UserId == userId)
-            .Select(a => a.CompanyId)
-            .FirstOrDefaultAsync(ct);
 
     private async Task<PropertyResponse> LoadAndMapAsync(Guid propertyId, CancellationToken ct)
     {
