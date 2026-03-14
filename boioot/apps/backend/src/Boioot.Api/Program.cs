@@ -14,6 +14,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key is not configured in appsettings");
 
+if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException("Jwt:Key must be at least 32 bytes");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -49,6 +52,9 @@ app.UseExceptionHandler(errorApp =>
         else
         {
             context.Response.StatusCode = 500;
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError(error, "Unhandled exception on {Method} {Path}",
+                context.Request.Method, context.Request.Path);
             await context.Response.WriteAsJsonAsync(new { error = "حدث خطأ داخلي في الخادم" });
         }
     });

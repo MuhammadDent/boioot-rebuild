@@ -4,7 +4,7 @@ namespace Boioot.Application.Features.Auth.Interfaces;
 
 public interface IAuthService
 {
-    Task<AuthResponse> RegisterAsync(RegisterRequest request);
-    Task<AuthResponse> LoginAsync(LoginRequest request);
-    Task<UserProfileResponse> GetProfileAsync(Guid userId);
+    Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default);
+    Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default);
+    Task<UserProfileResponse> GetProfileAsync(Guid userId, CancellationToken ct = default);
 }

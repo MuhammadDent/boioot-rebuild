@@ -5,6 +5,7 @@ namespace Boioot.Application.Features.Auth.DTOs;
 public class RegisterRequest
 {
     [Required(ErrorMessage = "الاسم الكامل مطلوب")]
+    [MinLength(2, ErrorMessage = "الاسم الكامل يجب أن لا يقل عن حرفين")]
     [MaxLength(150, ErrorMessage = "الاسم الكامل يجب أن لا يتجاوز 150 حرفاً")]
     public string FullName { get; set; } = string.Empty;
 

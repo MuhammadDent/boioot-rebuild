@@ -9,6 +9,7 @@ using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Boioot.Infrastructure.Features.Auth;
@@ -17,19 +18,24 @@ public class AuthService : IAuthService
 {
     private readonly BoiootDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<AuthService> _logger;
 
-    public AuthService(BoiootDbContext context, IConfiguration configuration)
+    public AuthService(
+        BoiootDbContext context,
+        IConfiguration configuration,
+        ILogger<AuthService> logger)
     {
         _context = context;
         _configuration = configuration;
+        _logger = logger;
     }
 
-    public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
+    public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
         var emailLower = request.Email.ToLowerInvariant();
 
         var emailExists = await _context.Users
-            .AnyAsync(u => u.Email == emailLower);
+            .AnyAsync(u => u.Email == emailLower, ct);
 
         if (emailExists)
             throw new BoiootException("البريد الإلكتروني مستخدم بالفعل", 409);
@@ -45,30 +51,41 @@ public class AuthService : IAuthService
         };
 
         _context.Users.Add(user);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("New user registered: {Email} | Role: {Role}", emailLower, user.Role);
 
         return BuildAuthResponse(user);
     }
 
-    public async Task<AuthResponse> LoginAsync(LoginRequest request)
+    public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
         var emailLower = request.Email.ToLowerInvariant();
 
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == emailLower);
+            .FirstOrDefaultAsync(u => u.Email == emailLower, ct);
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        {
+            _logger.LogWarning("Failed login attempt: {Email}", emailLower);
             throw new BoiootException("بيانات الدخول غير صحيحة", 401);
+        }
 
         if (!user.IsActive)
+        {
+            _logger.LogWarning("Login attempt on inactive account: {Email}", emailLower);
             throw new BoiootException("الحساب غير مفعّل. يرجى التواصل مع الدعم", 403);
+        }
+
+        _logger.LogInformation("User logged in: {Email} | Role: {Role}", emailLower, user.Role);
 
         return BuildAuthResponse(user);
     }
 
-    public async Task<UserProfileResponse> GetProfileAsync(Guid userId)
+    public async Task<UserProfileResponse> GetProfileAsync(Guid userId, CancellationToken ct = default)
     {
-        var user = await _context.Users.FindAsync(userId)
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new BoiootException("المستخدم غير موجود", 404);
 
         return MapToProfileResponse(user);
@@ -77,28 +94,21 @@ public class AuthService : IAuthService
     private AuthResponse BuildAuthResponse(User user)
     {
         var expiryMinutes = GetExpiryMinutes();
+        var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+
         return new AuthResponse
         {
-            Token = GenerateToken(user),
-            ExpiresInMinutes = expiryMinutes,
+            Token = GenerateToken(user, expiresAt),
+            ExpiresAt = expiresAt,
             User = MapToProfileResponse(user)
         };
     }
 
-    private int GetExpiryMinutes() =>
-        int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var mins) ? mins : 1440;
-
-    private string GenerateToken(User user)
+    private string GenerateToken(User user, DateTime expiresAt)
     {
-        var key = _configuration["Jwt:Key"]
-            ?? throw new InvalidOperationException("مفتاح JWT غير مضبوط في الإعدادات");
-
-        if (Encoding.UTF8.GetByteCount(key) < 32)
-            throw new InvalidOperationException("مفتاح JWT يجب أن لا يقل طوله عن 32 بايت");
-
+        var key = _configuration["Jwt:Key"]!;
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-        var expiryMinutes = GetExpiryMinutes();
 
         var claims = new[]
         {
@@ -113,11 +123,14 @@ public class AuthService : IAuthService
             issuer: _configuration["Jwt:Issuer"] ?? "Boioot",
             audience: _configuration["Jwt:Audience"] ?? "BoiootClient",
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
+            expires: expiresAt,
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    private int GetExpiryMinutes() =>
+        int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var mins) ? mins : 1440;
 
     private static UserProfileResponse MapToProfileResponse(User user) => new()
     {
