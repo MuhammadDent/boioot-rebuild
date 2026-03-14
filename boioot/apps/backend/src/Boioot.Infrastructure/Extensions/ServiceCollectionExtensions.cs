@@ -1,5 +1,7 @@
 using Boioot.Application.Features.Auth.Interfaces;
+using Boioot.Application.Features.Properties.Interfaces;
 using Boioot.Infrastructure.Features.Auth;
+using Boioot.Infrastructure.Features.Properties;
 using Boioot.Infrastructure.Persistence;
 using Boioot.Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +20,7 @@ public static class ServiceCollectionExtensions
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IPropertyService, PropertyService>();
         services.AddScoped<DataSeeder>();
 
         return services;

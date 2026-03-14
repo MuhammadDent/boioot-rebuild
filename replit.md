@@ -65,6 +65,10 @@ boioot/
 - ✅ **Phase 4**: JWT Auth (register / login / me) + BCrypt + role-based authorization
 - ✅ **Phase 4**: DataSeeder للـ admin (من appsettings.Development.json)
 - ✅ **Phase 4**: Global exception handler بردود JSON عربية
+- ✅ **Phase 5**: Properties module — public list/detail + CRUD + dashboard + pagination + filtering
+- ✅ **Phase 5**: Authorization policies: AdminOrCompanyOwner، AdminOrCompanyOwnerOrAgent
+- ✅ **Phase 5**: PagedResult<T> generic wrapper في Application/Common/Models
+- ✅ **Phase 5**: BaseController مشترك لاستخراج JWT claims
 
 ---
 

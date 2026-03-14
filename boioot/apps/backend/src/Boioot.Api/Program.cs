@@ -33,7 +33,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOrCompanyOwner", policy =>
+        policy.RequireRole("Admin", "CompanyOwner"));
+
+    options.AddPolicy("AdminOrCompanyOwnerOrAgent", policy =>
+        policy.RequireRole("Admin", "CompanyOwner", "Agent"));
+});
 
 var app = builder.Build();
 
