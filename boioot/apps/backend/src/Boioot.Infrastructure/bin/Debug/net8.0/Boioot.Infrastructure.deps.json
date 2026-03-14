@@ -1,0 +1,56 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "Boioot.Infrastructure/1.0.0": {
+        "dependencies": {
+          "Boioot.Application": "1.0.0",
+          "Boioot.Domain": "1.0.0"
+        },
+        "runtime": {
+          "Boioot.Infrastructure.dll": {}
+        }
+      },
+      "Boioot.Application/1.0.0": {
+        "dependencies": {
+          "Boioot.Domain": "1.0.0"
+        },
+        "runtime": {
+          "Boioot.Application.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Boioot.Domain/1.0.0": {
+        "runtime": {
+          "Boioot.Domain.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Boioot.Infrastructure/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Boioot.Application/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Boioot.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
