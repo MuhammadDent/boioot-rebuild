@@ -9,6 +9,7 @@ public class Project : BaseEntity
     public ProjectStatus Status { get; set; } = ProjectStatus.Upcoming;
     public string City { get; set; } = string.Empty;
     public string? Address { get; set; }
+    public bool IsDeleted { get; set; } = false;
 
     public Guid CompanyId { get; set; }
 

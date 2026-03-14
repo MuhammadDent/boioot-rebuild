@@ -23,5 +23,7 @@ public class MessageConfiguration : IEntityTypeConfiguration<Message>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(m => m.ConversationId);
+
+        builder.HasQueryFilter(m => !m.Sender.IsDeleted);
     }
 }

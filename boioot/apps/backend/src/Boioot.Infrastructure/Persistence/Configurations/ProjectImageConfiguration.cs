@@ -16,5 +16,7 @@ public class ProjectImageConfiguration : IEntityTypeConfiguration<ProjectImage>
             .WithMany(p => p.Images)
             .HasForeignKey(i => i.ProjectId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(i => !i.Project.IsDeleted);
     }
 }

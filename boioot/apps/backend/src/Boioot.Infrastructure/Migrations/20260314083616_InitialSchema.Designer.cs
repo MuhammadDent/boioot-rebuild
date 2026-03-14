@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Boioot.Infrastructure.Migrations
 {
     [DbContext(typeof(BoiootDbContext))]
-    [Migration("20260314083006_InitialSchema")]
+    [Migration("20260314083616_InitialSchema")]
     partial class InitialSchema
     {
         /// <inheritdoc />
@@ -210,6 +210,9 @@ namespace Boioot.Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(3000)
                         .HasColumnType("nvarchar(3000)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Status")
                         .IsRequired()

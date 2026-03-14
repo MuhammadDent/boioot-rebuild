@@ -23,5 +23,7 @@ public class AgentConfiguration : IEntityTypeConfiguration<Agent>
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasIndex(a => a.UserId).IsUnique();
+
+        builder.HasQueryFilter(a => !a.User.IsDeleted);
     }
 }

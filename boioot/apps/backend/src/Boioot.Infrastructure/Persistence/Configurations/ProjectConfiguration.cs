@@ -23,5 +23,7 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
 
         builder.HasIndex(p => p.City);
         builder.HasIndex(p => p.Status);
+
+        builder.HasQueryFilter(p => !p.IsDeleted && !p.Company.IsDeleted);
     }
 }

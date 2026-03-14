@@ -30,5 +30,7 @@ public class RequestConfiguration : IEntityTypeConfiguration<Request>
 
         builder.HasIndex(r => r.UserId);
         builder.HasIndex(r => r.Status);
+
+        builder.HasQueryFilter(r => !r.User.IsDeleted);
     }
 }

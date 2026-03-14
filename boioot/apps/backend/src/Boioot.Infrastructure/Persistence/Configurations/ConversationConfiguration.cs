@@ -30,11 +30,10 @@ public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
             .HasForeignKey(c => c.ProjectId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // Lookup: conversations for a user
         builder.HasIndex(c => c.User1Id);
         builder.HasIndex(c => c.User2Id);
-
-        // Sort conversations by last activity
         builder.HasIndex(c => c.LastMessageAt);
+
+        builder.HasQueryFilter(c => !c.User1.IsDeleted && !c.User2.IsDeleted);
     }
 }

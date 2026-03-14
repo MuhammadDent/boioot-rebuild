@@ -22,5 +22,7 @@ public class ReviewConfiguration : IEntityTypeConfiguration<Review>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(r => new { r.TargetType, r.TargetId });
+
+        builder.HasQueryFilter(r => !r.Reviewer.IsDeleted);
     }
 }
