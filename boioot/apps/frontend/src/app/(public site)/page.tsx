@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function HomePage() {
   return (
@@ -15,9 +16,7 @@ export default function HomePage() {
         textAlign: "center",
       }}
     >
-      <h1 style={{ fontSize: "2rem", fontWeight: 800, color: "var(--color-primary)" }}>
-        بيوت
-      </h1>
+      <Image src="/logo.png" alt="بيوت" width={160} height={64} style={{ objectFit: "contain" }} priority />
       <p style={{ color: "var(--color-text-muted)", fontSize: "1.1rem" }}>
         منصة العقارات السورية
       </p>

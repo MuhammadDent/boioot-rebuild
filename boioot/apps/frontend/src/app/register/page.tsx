@@ -3,24 +3,26 @@
 import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import { ApiError } from "@/lib/api";
+import type { E164Number } from "libphonenumber-js/core";
 
 interface FormState {
-  fullName: string;
+  username: string;
   email: string;
   password: string;
   confirmPassword: string;
-  phone: string;
 }
 
 const INITIAL_FORM: FormState = {
-  fullName: "",
+  username: "",
   email: "",
   password: "",
   confirmPassword: "",
-  phone: "",
 };
 
 export default function RegisterPage() {
@@ -28,6 +30,7 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [phone, setPhone] = useState<E164Number | undefined>(undefined);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Partial<FormState>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -47,8 +50,10 @@ export default function RegisterPage() {
   function validate(): boolean {
     const errors: Partial<FormState> = {};
 
-    if (form.fullName.trim().length < 2) {
-      errors.fullName = "الاسم الكامل يجب أن لا يقل عن حرفين";
+    if (form.username.trim().length < 3) {
+      errors.username = "اسم المستخدم يجب أن لا يقل عن 3 أحرف";
+    } else if (!/^[\w\u0600-\u06FF.-]+$/.test(form.username.trim())) {
+      errors.username = "اسم المستخدم يحتوي على أحرف غير مسموح بها";
     }
     if (!form.email.includes("@")) {
       errors.email = "البريد الإلكتروني غير صالح";
@@ -73,10 +78,10 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       const res = await authService.register({
-        fullName: form.fullName.trim(),
+        fullName: form.username.trim(),
         email: form.email.trim(),
         password: form.password,
-        phone: form.phone.trim() || undefined,
+        phone: phone || undefined,
       });
       login(res.token, res.user);
       router.push("/dashboard");
@@ -96,29 +101,32 @@ export default function RegisterPage() {
   return (
     <div className="login-page">
       <div className="form-card">
-        <div className="login-page__logo">بيوت</div>
+        <div className="login-page__logo">
+          <Image src="/logo.png" alt="بيوت" width={120} height={48} style={{ objectFit: "contain" }} priority />
+        </div>
         <h1 className="login-page__title">إنشاء حساب جديد</h1>
 
         {error && <div className="error-banner">{error}</div>}
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
-            <label className="form-label" htmlFor="fullName">
-              الاسم الكامل <span style={{ color: "var(--color-error)" }}>*</span>
+            <label className="form-label" htmlFor="username">
+              اسم المستخدم <span style={{ color: "var(--color-error)" }}>*</span>
             </label>
             <input
-              id="fullName"
-              name="fullName"
+              id="username"
+              name="username"
               type="text"
               className="form-input"
-              value={form.fullName}
+              value={form.username}
               onChange={handleChange}
               required
-              autoComplete="name"
-              placeholder="محمد أحمد"
+              autoComplete="username"
+              placeholder="مثال: ahmad_1990"
+              dir="ltr"
             />
-            {fieldErrors.fullName && (
-              <span className="form-error">{fieldErrors.fullName}</span>
+            {fieldErrors.username && (
+              <span className="form-error">{fieldErrors.username}</span>
             )}
           </div>
 
@@ -144,18 +152,16 @@ export default function RegisterPage() {
 
           <div className="form-group">
             <label className="form-label" htmlFor="phone">
-              رقم الهاتف <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
+              رقم الهاتف{" "}
+              <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
             </label>
-            <input
+            <PhoneInput
               id="phone"
-              name="phone"
-              type="tel"
-              className="form-input"
-              value={form.phone}
-              onChange={handleChange}
-              autoComplete="tel"
-              placeholder="+963 9xx xxx xxxx"
-              dir="ltr"
+              international
+              defaultCountry="SY"
+              value={phone}
+              onChange={setPhone}
+              className="phone-input-wrapper"
             />
           </div>
 

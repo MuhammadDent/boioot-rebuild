@@ -3,6 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/auth.service";
 import { ApiError } from "@/lib/api";
@@ -47,7 +48,9 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="form-card">
-        <div className="login-page__logo">بيوت</div>
+        <div className="login-page__logo">
+          <Image src="/logo.png" alt="بيوت" width={120} height={48} style={{ objectFit: "contain" }} priority />
+        </div>
         <h1 className="login-page__title">تسجيل الدخول</h1>
 
         {error && <div className="error-banner">{error}</div>}
