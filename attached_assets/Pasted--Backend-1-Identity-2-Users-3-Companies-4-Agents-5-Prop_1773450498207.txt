@@ -1,0 +1,658 @@
+
+داخل الـ Backend سنعتمد هذه الموديولات:
+1.	Identity
+2.	Users
+3.	Companies
+4.	Agents
+5.	Properties
+6.	Projects
+7.	Requests
+8.	Reviews
+9.	Favorites
+10.	Messaging
+11.	Blog
+12.	Notifications
+13.	Admin
+________________________________________
+1) Identity Module
+هذا الموديول مسؤول عن:
+•	التسجيل
+•	تسجيل الدخول
+•	التحقق من الهوية
+•	الصلاحيات
+•	JWT
+الكيانات الأساسية
+User
+يمثل أي مستخدم في النظام.
+الحقول الأساسية:
+Id
+FullName
+Email
+PhoneNumber
+PasswordHash
+AvatarUrl
+PreferredLanguage
+Status
+CreatedAt
+UpdatedAt
+Role
+يمثل نوع المستخدم.
+الحقول:
+Id
+Name
+Description
+أمثلة:
+•	Admin
+•	User
+•	PropertyOwner
+•	CompanyOwner
+•	Agent
+UserRole
+لربط المستخدم بالأدوار إذا أردنا مرونة أكبر.
+UserId
+RoleId
+RefreshToken
+إذا أردنا نظام Login أكثر احترافية.
+Id
+UserId
+Token
+ExpiresAt
+CreatedAt
+RevokedAt
+________________________________________
+2) Users Module
+هذا الموديول للملف الشخصي وبيانات المستخدم الإضافية.
+الكيانات الأساسية
+UserProfile
+يمكنك إما دمجها مع User أو فصلها.
+أنا أفضل الفصل المنطقي إذا توسعت البيانات.
+Id
+UserId
+Bio
+City
+District
+Address
+DateOfBirth
+Gender
+UserPreference
+لتخزين التفضيلات.
+Id
+UserId
+PreferredLanguage
+PreferredCurrency
+ReceiveNotifications
+ReceiveEmails
+________________________________________
+3) Companies Module
+هذا الموديول خاص بالمكاتب العقارية والشركات المطورة.
+الكيانات الأساسية
+Company
+يمثل المكتب العقاري أو الشركة.
+Id
+OwnerUserId
+NameAr
+NameEn
+Slug
+LogoUrl
+CoverImageUrl
+DescriptionAr
+DescriptionEn
+CompanyType
+Phone
+Email
+Website
+City
+District
+Address
+Latitude
+Longitude
+IsVerified
+Status
+CreatedAt
+UpdatedAt
+ملاحظات
+CompanyType يمكن أن يكون:
+•	RealEstateOffice
+•	DeveloperCompany
+CompanyImage
+إذا أردنا معرض صور للشركة.
+Id
+CompanyId
+ImageUrl
+SortOrder
+________________________________________
+4) Agents Module
+هذا الموديول خاص بالوكلاء الذين يتبعون مكتبًا أو شركة.
+الكيانات الأساسية
+Agent
+يمثل الوكيل العقاري.
+Id
+CompanyId
+UserId
+FullName
+TitleAr
+TitleEn
+BioAr
+BioEn
+Phone
+Email
+PhotoUrl
+City
+District
+AverageRating
+ReviewsCount
+IsActive
+CreatedAt
+UpdatedAt
+ملاحظات
+يمكن ربط Agent بـ User حتى يستطيع الوكيل تسجيل الدخول بحسابه.
+________________________________________
+5) Properties Module
+هذا هو قلب المنصة.
+الكيانات الأساسية
+Property
+أهم كيان في النظام.
+Id
+OwnerUserId
+CompanyId
+AgentId
+TitleAr
+TitleEn
+Slug
+DescriptionAr
+DescriptionEn
+PropertyType
+ListingType
+Purpose
+Price
+Currency
+Area
+Bedrooms
+Bathrooms
+FloorNumber
+YearBuilt
+City
+District
+Address
+Latitude
+Longitude
+MainImageUrl
+IsFurnished
+Status
+PublishStatus
+ViewsCount
+CreatedAt
+UpdatedAt
+PublishedAt
+شرح بعض الحقول
+PropertyType:
+•	Apartment
+•	Villa
+•	House
+•	Land
+•	Office
+•	Shop
+ListingType:
+•	Sale
+•	Rent
+•	DailyRent
+PublishStatus:
+•	Draft
+•	PendingApproval
+•	Published
+•	Rejected
+•	Archived
+________________________________________
+PropertyImage
+Id
+PropertyId
+ImageUrl
+SortOrder
+IsMain
+CreatedAt
+PropertyFeature
+هذا جدول تعريف الميزات.
+Id
+NameAr
+NameEn
+Key
+Category
+مثل:
+•	Elevator
+•	Parking
+•	Balcony
+•	Garden
+•	Security
+•	Pool
+PropertyFeatureValue
+لربط العقار بالميزات.
+Id
+PropertyId
+PropertyFeatureId
+Value
+PropertyView
+لتسجيل المشاهدات لاحقًا.
+Id
+PropertyId
+UserId
+ViewedAt
+IpAddress
+________________________________________
+6) Projects Module
+خاص بالمشاريع العقارية.
+الكيانات الأساسية
+Project
+Id
+CompanyId
+TitleAr
+TitleEn
+Slug
+DescriptionAr
+DescriptionEn
+City
+District
+Address
+Latitude
+Longitude
+StartDate
+ExpectedCompletionDate
+ProjectStatus
+MainImageUrl
+CreatedAt
+UpdatedAt
+ProjectImage
+Id
+ProjectId
+ImageUrl
+SortOrder
+ProjectUnit
+الوحدات الموجودة داخل المشروع.
+Id
+ProjectId
+TitleAr
+TitleEn
+DescriptionAr
+DescriptionEn
+UnitType
+Price
+Area
+Bedrooms
+Bathrooms
+Status
+CreatedAt
+UpdatedAt
+________________________________________
+7) Requests Module
+هذا من أهم مميزات Boioot.
+الكيانات الأساسية
+PropertyRequest
+Id
+UserId
+Title
+Description
+RequestType
+PropertyType
+ListingType
+MinPrice
+MaxPrice
+MinArea
+MaxArea
+Bedrooms
+Bathrooms
+City
+District
+PreferredLocationText
+Status
+ExpiresAt
+CreatedAt
+UpdatedAt
+RequestResponse
+رد مكتب أو شركة أو وكيل على الطلب.
+Id
+RequestId
+ResponderUserId
+CompanyId
+AgentId
+Message
+SuggestedPropertyId
+CreatedAt
+RequestLike
+Id
+RequestId
+UserId
+CreatedAt
+RequestComment
+إذا أردنا فصل التعليقات عن الردود.
+Id
+RequestId
+UserId
+Content
+CreatedAt
+UpdatedAt
+ملاحظة مهمة
+في V1 يمكن دمج التعليقات والردود في جدول واحد إذا أردنا التبسيط.
+________________________________________
+8) Reviews Module
+لتقييم الوكلاء والمكاتب.
+الكيانات الأساسية
+Review
+Id
+ReviewerUserId
+TargetType
+TargetId
+Rating
+Comment
+CreatedAt
+UpdatedAt
+IsApproved
+TargetType:
+•	Agent
+•	Company
+ملاحظة مهمة
+يمكن لاحقًا إضافة:
+•	RelatedConversationId
+•	RelatedRequestId
+لضمان أن التقييم مبني على تفاعل حقيقي.
+________________________________________
+9) Favorites Module
+لحفظ العقارات أو المشاريع.
+الكيانات الأساسية
+Favorite
+Id
+UserId
+TargetType
+TargetId
+CreatedAt
+TargetType:
+•	Property
+•	Project
+في V1 يمكن دعم Property أولًا ثم Project بسهولة لاحقًا.
+________________________________________
+10) Messaging Module
+للمحادثات والرسائل.
+الكيانات الأساسية
+Conversation
+Id
+CreatedByUserId
+Subject
+RelatedType
+RelatedId
+CreatedAt
+UpdatedAt
+RelatedType يمكن أن يكون:
+•	Property
+•	Request
+•	Company
+•	Agent
+ConversationParticipant
+Id
+ConversationId
+UserId
+JoinedAt
+LastReadAt
+Message
+Id
+ConversationId
+SenderUserId
+Content
+MessageType
+CreatedAt
+IsDeleted
+MessageType:
+•	Text
+•	PropertyReference
+•	RequestReference
+________________________________________
+11) Blog Module
+للمحتوى والمقالات.
+الكيانات الأساسية
+BlogCategory
+Id
+NameAr
+NameEn
+Slug
+DescriptionAr
+DescriptionEn
+BlogPost
+Id
+AuthorUserId
+CategoryId
+TitleAr
+TitleEn
+Slug
+ExcerptAr
+ExcerptEn
+ContentAr
+ContentEn
+FeaturedImageUrl
+Status
+PublishedAt
+CreatedAt
+UpdatedAt
+Status:
+•	Draft
+•	Published
+•	Archived
+________________________________________
+12) Notifications Module
+للتنبيهات داخل المنصة.
+الكيانات الأساسية
+Notification
+Id
+UserId
+TitleAr
+TitleEn
+MessageAr
+MessageEn
+Type
+RelatedType
+RelatedId
+IsRead
+CreatedAt
+Type أمثلة:
+•	NewRequestMatch
+•	NewMessage
+•	NewReview
+•	PropertyApproved
+•	PropertyRejected
+________________________________________
+13) Admin Module
+الإدارة غالبًا تعتمد على نفس الجداول، لكن يمكننا إضافة:
+AuditLog
+Id
+UserId
+Action
+EntityName
+EntityId
+OldValues
+NewValues
+CreatedAt
+هذا ليس ضروريًا جدًا من أول يوم، لكن ممتاز لو أضفناه مبكرًا.
+________________________________________
+ثانياً: العلاقات الأساسية بين الكيانات
+الآن سأعطيك الصورة المنطقية للعلاقات:
+المستخدم User
+يرتبط بـ:
+•	Company كمالك
+•	Agent كحساب وكيل
+•	Property كمالك مباشر
+•	PropertyRequest
+•	Review
+•	Favorite
+•	ConversationParticipant
+•	Message
+•	BlogPost كمؤلف
+•	Notification
+________________________________________
+Company
+يرتبط بـ:
+•	Agents
+•	Properties
+•	Projects
+•	Reviews
+________________________________________
+Agent
+يرتبط بـ:
+•	Company
+•	User
+•	Properties
+•	Reviews
+•	RequestResponses
+________________________________________
+Property
+يرتبط بـ:
+•	User
+•	Company
+•	Agent
+•	PropertyImages
+•	PropertyFeatureValues
+•	Favorites
+•	PropertyViews
+________________________________________
+Project
+يرتبط بـ:
+•	Company
+•	ProjectUnits
+•	ProjectImages
+•	Favorites
+________________________________________
+PropertyRequest
+يرتبط بـ:
+•	User
+•	RequestResponses
+•	RequestLikes
+•	RequestComments
+________________________________________
+Conversation
+يرتبط بـ:
+•	Participants
+•	Messages
+________________________________________
+ثالثاً: الكيانات التي يجب أن تدخل V1 فعلًا
+حتى لا نحمّل النسخة الأولى أكثر من اللازم، هذه الكيانات ضرورية:
+ضروري جدًا
+•	User
+•	Role
+•	Company
+•	Agent
+•	Property
+•	PropertyImage
+•	PropertyFeature
+•	PropertyFeatureValue
+•	Project
+•	ProjectImage
+•	ProjectUnit
+•	PropertyRequest
+•	RequestResponse
+•	Review
+•	Favorite
+•	Conversation
+•	ConversationParticipant
+•	Message
+•	BlogCategory
+•	BlogPost
+•	Notification
+اختيارية في أول دفعة
+•	RefreshToken
+•	UserProfile
+•	UserPreference
+•	PropertyView
+•	RequestLike
+•	RequestComment
+•	AuditLog
+•	CompanyImage
+________________________________________
+رابعاً: Enums الأساسية التي سنحتاجها
+هذه مهمة جدًا في مشروع ASP.NET.
+UserStatus
+Active
+Inactive
+Suspended
+CompanyType
+RealEstateOffice
+DeveloperCompany
+PropertyType
+Apartment
+Villa
+House
+Land
+Office
+Shop
+Warehouse
+ListingType
+Sale
+Rent
+DailyRent
+PropertyPublishStatus
+Draft
+PendingApproval
+Published
+Rejected
+Archived
+RequestStatus
+Open
+Closed
+Expired
+ReviewTargetType
+Agent
+Company
+FavoriteTargetType
+Property
+Project
+NotificationType
+NewMessage
+NewReview
+NewRequestResponse
+PropertyApproved
+PropertyRejected
+General
+BlogPostStatus
+Draft
+Published
+Archived
+________________________________________
+خامساً: تقسيم الكيانات على طبقات المشروع
+داخل Boioot.Domain/Entities سيكون مثلًا:
+Entities/
+├── Identity/
+│   ├── User.cs
+│   ├── Role.cs
+│   └── RefreshToken.cs
+├── Users/
+│   ├── UserProfile.cs
+│   └── UserPreference.cs
+├── Companies/
+│   ├── Company.cs
+│   └── CompanyImage.cs
+├── Agents/
+│   └── Agent.cs
+├── Properties/
+│   ├── Property.cs
+│   ├── PropertyImage.cs
+│   ├── PropertyFeature.cs
+│   ├── PropertyFeatureValue.cs
+│   └── PropertyView.cs
+├── Projects/
+│   ├── Project.cs
+│   ├── ProjectImage.cs
+│   └── ProjectUnit.cs
+├── Requests/
+│   ├── PropertyRequest.cs
+│   ├── RequestResponse.cs
+│   ├── RequestLike.cs
+│   └── RequestComment.cs
+├── Reviews/
+│   └── Review.cs
+├── Favorites/
+│   └── Favorite.cs
+├── Messaging/
+│   ├── Conversation.cs
+│   ├── ConversationParticipant.cs
+│   └── Message.cs
+├── Blog/
+│   ├── BlogCategory.cs
+│   └── BlogPost.cs
+├── Notifications/
+│   └── Notification.cs
+└── Admin/
+    └── AuditLog.cs
