@@ -16,7 +16,7 @@ export default function HomePage() {
         textAlign: "center",
       }}
     >
-      <Image src="/logo.png" alt="بيوت" width={160} height={64} style={{ objectFit: "contain" }} priority />
+      <Image src="/logo-boioot.png" alt="بيوت" width={160} height={64} style={{ objectFit: "contain" }} priority />
       <p style={{ color: "var(--color-text-muted)", fontSize: "1.1rem" }}>
         منصة العقارات السورية
       </p>

@@ -102,7 +102,7 @@ export default function RegisterPage() {
     <div className="login-page">
       <div className="form-card">
         <div className="login-page__logo">
-          <Image src="/logo.png" alt="بيوت" width={120} height={48} style={{ objectFit: "contain" }} priority />
+          <Image src="/logo-boioot.png" alt="بيوت" width={120} height={48} style={{ objectFit: "contain" }} priority />
         </div>
         <h1 className="login-page__title">إنشاء حساب جديد</h1>
 
