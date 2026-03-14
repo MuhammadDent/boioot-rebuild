@@ -23,6 +23,7 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
             .HasForeignKey(p => p.CompanyId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasIndex(p => p.CompanyId);
         builder.HasIndex(p => p.City);
         builder.HasIndex(p => p.Status);
         builder.HasIndex(p => p.IsPublished);

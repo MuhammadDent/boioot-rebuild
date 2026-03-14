@@ -1,6 +1,7 @@
 using Boioot.Application.Features.Dashboard.DTOs;
 using Boioot.Application.Features.Dashboard.Interfaces;
 using Boioot.Domain.Constants;
+using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -31,12 +32,8 @@ public class DashboardService : IDashboardService
         var totalProjects      = await projectQuery.CountAsync(ct);
         var totalRequests      = await requestQuery.CountAsync(ct);
         var newRequests        = await requestQuery.CountAsync(r => r.Status == RequestStatus.New, ct);
-        var totalConversations = await _context.Conversations
-            .CountAsync(c => c.User1Id == userId || c.User2Id == userId, ct);
-        var unreadMessages = await _context.Messages
-            .CountAsync(m => m.SenderId != userId
-                          && !m.IsRead
-                          && (m.Conversation.User1Id == userId || m.Conversation.User2Id == userId), ct);
+        var totalConversations = await CountConversationsAsync(userId, ct);
+        var unreadMessages     = await CountUnreadMessagesAsync(userId, ct);
 
         return new DashboardSummaryResponse
         {
@@ -116,18 +113,10 @@ public class DashboardService : IDashboardService
     public async Task<DashboardMessageSummaryResponse> GetMessagesSummaryAsync(
         Guid userId, CancellationToken ct = default)
     {
-        var totalConversations = await _context.Conversations
-            .CountAsync(c => c.User1Id == userId || c.User2Id == userId, ct);
-
-        var unreadMessages = await _context.Messages
-            .CountAsync(m => m.SenderId != userId
-                          && !m.IsRead
-                          && (m.Conversation.User1Id == userId || m.Conversation.User2Id == userId), ct);
-
         return new DashboardMessageSummaryResponse
         {
-            TotalConversations = totalConversations,
-            UnreadMessages     = unreadMessages
+            TotalConversations = await CountConversationsAsync(userId, ct),
+            UnreadMessages     = await CountUnreadMessagesAsync(userId, ct)
         };
     }
 
@@ -154,7 +143,7 @@ public class DashboardService : IDashboardService
 
     // ── Scoped query builders ────────────────────────────────────────────────
 
-    private IQueryable<Boioot.Domain.Entities.Property> GetScopedPropertyQuery(DashboardScope scope)
+    private IQueryable<Property> GetScopedPropertyQuery(DashboardScope scope)
     {
         var query = _context.Properties.AsQueryable();
         if (scope.IsAdmin) return query;
@@ -163,7 +152,7 @@ public class DashboardService : IDashboardService
         return query.Where(_ => false);
     }
 
-    private IQueryable<Boioot.Domain.Entities.Project> GetScopedProjectQuery(DashboardScope scope)
+    private IQueryable<Project> GetScopedProjectQuery(DashboardScope scope)
     {
         var query = _context.Projects.AsQueryable();
         if (scope.IsAdmin) return query;
@@ -171,7 +160,7 @@ public class DashboardService : IDashboardService
         return query.Where(_ => false);
     }
 
-    private IQueryable<Boioot.Domain.Entities.Request> GetScopedRequestQuery(DashboardScope scope)
+    private IQueryable<Request> GetScopedRequestQuery(DashboardScope scope)
     {
         var query = _context.Requests.AsQueryable();
         if (scope.IsAdmin) return query;
@@ -203,4 +192,16 @@ public class DashboardService : IDashboardService
 
         return query.Where(_ => false);
     }
+
+    // ── Messaging count helpers ──────────────────────────────────────────────
+
+    private Task<int> CountConversationsAsync(Guid userId, CancellationToken ct) =>
+        _context.Conversations.CountAsync(
+            c => c.User1Id == userId || c.User2Id == userId, ct);
+
+    private Task<int> CountUnreadMessagesAsync(Guid userId, CancellationToken ct) =>
+        _context.Messages.CountAsync(
+            m => m.SenderId != userId
+              && !m.IsRead
+              && (m.Conversation.User1Id == userId || m.Conversation.User2Id == userId), ct);
 }
