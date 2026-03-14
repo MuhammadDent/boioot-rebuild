@@ -24,7 +24,7 @@ public class MessagingController : BaseController
     }
 
     [HttpPost("conversations")]
-    public async Task<IActionResult> GetOrCreate(
+    public async Task<IActionResult> CreateConversation(
         [FromBody] CreateConversationRequest request, CancellationToken ct)
     {
         var result = await _messagingService.GetOrCreateConversationAsync(

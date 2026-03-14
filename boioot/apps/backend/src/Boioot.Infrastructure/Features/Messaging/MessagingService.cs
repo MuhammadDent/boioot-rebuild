@@ -60,6 +60,9 @@ public class MessagingService : IMessagingService
         if (recipientId == userId)
             throw new BoiootException("لا يمكنك بدء محادثة مع نفسك", 400);
 
+        if (request.PropertyId.HasValue && request.ProjectId.HasValue)
+            throw new BoiootException("لا يمكن ربط المحادثة بعقار ومشروع في نفس الوقت", 400);
+
         var recipientExists = await _context.Users
             .AnyAsync(u => u.Id == recipientId && !u.IsDeleted, ct);
 
@@ -72,8 +75,8 @@ public class MessagingService : IMessagingService
             .Include(c => c.Property)
             .Include(c => c.Project)
             .FirstOrDefaultAsync(c =>
-                (c.User1Id == userId && c.User2Id == recipientId ||
-                 c.User1Id == recipientId && c.User2Id == userId)
+                ((c.User1Id == userId && c.User2Id == recipientId) ||
+                 (c.User1Id == recipientId && c.User2Id == userId))
                 && c.PropertyId == request.PropertyId
                 && c.ProjectId == request.ProjectId, ct);
 
@@ -174,10 +177,15 @@ public class MessagingService : IMessagingService
 
     // ── Private helpers ─────────────────────────────────────────────────────
 
-    private static void EnsureParticipant(Guid userId, Conversation conversation)
+    private void EnsureParticipant(Guid userId, Conversation conversation)
     {
         if (conversation.User1Id != userId && conversation.User2Id != userId)
+        {
+            _logger.LogWarning(
+                "User {UserId} attempted to access conversation {ConversationId} without being a participant",
+                userId, conversation.Id);
             throw new BoiootException("غير مصرح لك بالوصول إلى هذه المحادثة", 403);
+        }
     }
 
     private Task<int> GetUnreadCountAsync(Guid userId, Guid conversationId, CancellationToken ct) =>
