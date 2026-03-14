@@ -81,6 +81,23 @@ boioot/
 
 ---
 
+## بنية التشغيل (Replit Workflows)
+
+| الـ Workflow | الأمر | المنفذ |
+|---|---|---|
+| `Boioot Frontend` | `cd boioot/apps/frontend && npm run dev -- -p 3000` | port 3000 (webview) |
+| `Boioot .NET API` | `bash boioot/apps/backend/run-api.sh` | port 5233 (console) |
+| `artifacts/api-server: API Server` | `pnpm --filter @workspace/api-server run dev` | port 8080 → proxy to :5233 |
+
+**Routing:**
+- المتصفح → `localhost:3000` (Next.js frontend)
+- المتصفح → `/api/*` → Replit proxy → api-server (:8080) → .NET backend (:5233)
+- الـ Next.js `next.config.ts` له rewrite لـ `/api/*` → `:5233` (للـ SSR فقط)
+
+⚠️ بدون SQL Server متاح في Replit، ستفشل جميع عمليات قاعدة البيانات. الـ frontend يعمل، الـ backend يعمل، لكن API calls تعيد خطأ DB.
+
+---
+
 ## الـ Packages المستخدمة
 
 | الحزمة | المشروع | الغرض |
