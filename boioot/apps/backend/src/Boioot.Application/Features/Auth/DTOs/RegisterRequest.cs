@@ -22,4 +22,12 @@ public class RegisterRequest
     [Phone(ErrorMessage = "رقم الهاتف غير صالح")]
     [MaxLength(30, ErrorMessage = "رقم الهاتف يجب أن لا يتجاوز 30 رقماً")]
     public string? Phone { get; set; }
+
+    /// <summary>
+    /// نوع الحساب: User | Agent | CompanyOwner
+    /// </summary>
+    [Required(ErrorMessage = "يرجى تحديد نوع الحساب")]
+    [RegularExpression("^(User|Agent|CompanyOwner)$",
+        ErrorMessage = "نوع الحساب غير صالح")]
+    public string Role { get; set; } = "User";
 }

@@ -11,6 +11,7 @@ export interface RegisterPayload {
   email: string;
   password: string;
   phone?: string;
+  role: "User" | "Agent" | "CompanyOwner";
 }
 
 export const authService = {

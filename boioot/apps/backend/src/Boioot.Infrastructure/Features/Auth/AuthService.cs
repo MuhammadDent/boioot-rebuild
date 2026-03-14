@@ -40,13 +40,18 @@ public class AuthService : IAuthService
         if (emailExists)
             throw new BoiootException("البريد الإلكتروني مستخدم بالفعل", 409);
 
+        var role = Enum.TryParse<UserRole>(request.Role, out var parsedRole)
+            && parsedRole != UserRole.Admin
+            ? parsedRole
+            : UserRole.User;
+
         var user = new User
         {
             FullName = request.FullName.Trim(),
             Email = emailLower,
             Phone = request.Phone?.Trim(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = UserRole.User,
+            Role = role,
             IsActive = true
         };
 
