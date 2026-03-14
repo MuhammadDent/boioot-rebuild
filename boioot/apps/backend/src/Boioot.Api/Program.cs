@@ -36,6 +36,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole(RoleNames.Admin));
+
     options.AddPolicy("AdminOrCompanyOwner", policy =>
         policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner));
 
