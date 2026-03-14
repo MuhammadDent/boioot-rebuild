@@ -22,7 +22,7 @@ public class MessageConfiguration : IEntityTypeConfiguration<Message>
             .HasForeignKey(m => m.SenderId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(m => m.ConversationId);
+        builder.HasIndex(m => new { m.ConversationId, m.CreatedAt });
 
         builder.HasQueryFilter(m => !m.Sender.IsDeleted);
     }

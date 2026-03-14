@@ -2,9 +2,11 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Features.Auth.Interfaces;
 using Boioot.Application.Features.Projects.Interfaces;
 using Boioot.Application.Features.Properties.Interfaces;
+using Boioot.Application.Features.Messaging.Interfaces;
 using Boioot.Application.Features.Requests.Interfaces;
 using Boioot.Infrastructure.Common;
 using Boioot.Infrastructure.Features.Auth;
+using Boioot.Infrastructure.Features.Messaging;
 using Boioot.Infrastructure.Features.Projects;
 using Boioot.Infrastructure.Features.Properties;
 using Boioot.Infrastructure.Features.Requests;
@@ -30,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPropertyService, PropertyService>();
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IRequestService, RequestService>();
+        services.AddScoped<IMessagingService, MessagingService>();
         services.AddScoped<DataSeeder>();
 
         return services;
