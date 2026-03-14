@@ -638,3 +638,30 @@
   outline: none;
   border-color: var(--color-primary);
 }
+
+/* ─────────────── Password Toggle ─────────────── */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-wrapper .form-input {
+  padding-inline-start: 2.75rem;
+  padding-inline-end: 0.875rem;
+}
+.password-toggle {
+  position: absolute;
+  inset-inline-start: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  transition: color 0.2s;
+}
+.password-toggle:hover {
+  color: var(--color-primary);
+}
