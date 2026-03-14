@@ -1,0 +1,144 @@
+
+1) الموقع العام (Web / Public Site)
+الصفحة	الميزة	ما يراه المستخدم	الموديول الخلفي
+Home	Quick Search	البحث السريع عن عقار	Search / Properties
+Home	Featured Properties	عرض عقارات مميزة	Properties
+Home	Featured Projects	عرض مشاريع عقارية	Projects
+Home	Companies Showcase	شركات عقارية مميزة	Companies
+Home	Categories Navigation	تصنيفات العقارات	Properties
+________________________________________
+2) صفحة العقارات (Properties)
+الميزة	الوصف	الموديول
+Property Listing	عرض قائمة العقارات	Properties
+Property Filters	فلترة حسب السعر، المدينة، الغرف	Search
+Property Sorting	ترتيب النتائج	Search
+Property Card	بطاقة العقار	Properties
+Property Details	صفحة تفاصيل العقار	Properties
+Property Gallery	صور العقار	Media
+Contact Owner	التواصل مع المالك	Messaging
+Save Property	إضافة للمفضلة	Favorites
+Share Property	مشاركة الإعلان	Properties
+________________________________________
+3) صفحة المشاريع (Projects)
+الميزة	الوصف	الموديول
+Projects Listing	قائمة المشاريع	Projects
+Project Details	تفاصيل المشروع	Projects
+Project Units	الوحدات داخل المشروع	Properties
+Developer Info	معلومات المطور	Companies
+________________________________________
+4) صفحة الطلبات (Requests)
+ميزة قوية في المنصات العقارية.
+الميزة	الوصف	الموديول
+Post Request	نشر طلب عقار	Requests
+Request Listing	عرض الطلبات	Requests
+Request Details	تفاصيل الطلب	Requests
+Respond to Request	الرد على الطلب	Messaging
+________________________________________
+5) صفحة الشركات (Companies)
+الميزة	الوصف	الموديول
+Companies Listing	عرض الشركات	Companies
+Company Profile	صفحة الشركة	Companies
+Company Properties	إعلانات الشركة	Properties
+Company Agents	وكلاء الشركة	Agents
+Company Reviews	تقييم الشركة	Reviews
+________________________________________
+6) صفحة الوكلاء (Agents)
+الميزة	الوصف	الموديول
+Agents Listing	قائمة الوكلاء	Agents
+Agent Profile	صفحة الوكيل	Agents
+Agent Listings	عقارات الوكيل	Properties
+Agent Reviews	تقييم الوكيل	Reviews
+________________________________________
+7) المدونة (Blog)
+الميزة	الوصف	الموديول
+Blog Listing	عرض المقالات	Blog
+Blog Article	صفحة المقال	Blog
+Blog Categories	تصنيفات المقالات	Blog
+________________________________________
+8) Dashboard (لوحة التحكم)
+الصفحة الرئيسية
+الميزة	الوصف	الموديول
+Overview Stats	إحصائيات الحساب	Analytics
+Notifications	الإشعارات	Notifications
+________________________________________
+إدارة العقارات
+الميزة	الوصف	الموديول
+Add Property	إضافة عقار	Properties
+Edit Property	تعديل عقار	Properties
+Delete Property	حذف عقار	Properties
+Property Media	إدارة الصور	Media
+Property Status	نشر / إيقاف الإعلان	Properties
+________________________________________
+إدارة المشاريع
+الميزة	الوصف	الموديول
+Add Project	إضافة مشروع	Projects
+Manage Units	إدارة الوحدات	Properties
+Project Gallery	صور المشروع	Media
+________________________________________
+الطلبات
+الميزة	الوصف	الموديول
+View Requests	مشاهدة الطلبات	Requests
+Respond to Requests	الرد على الطلب	Messaging
+________________________________________
+الرسائل
+الميزة	الوصف	الموديول
+Conversations	المحادثات	Messaging
+Send Message	إرسال رسالة	Messaging
+________________________________________
+المفضلة
+الميزة	الوصف	الموديول
+Saved Properties	العقارات المحفوظة	Favorites
+________________________________________
+التقييمات
+الميزة	الوصف	الموديول
+Reviews Management	إدارة التقييمات	Reviews
+________________________________________
+الإعدادات
+الميزة	الوصف	الموديول
+Profile Settings	إعدادات الحساب	Users
+Company Settings	إعدادات الشركة	Companies
+________________________________________
+9) لوحة الإدارة (Admin)
+الميزة	الوصف	الموديول
+Manage Users	إدارة المستخدمين	Users
+Manage Properties	إدارة العقارات	Properties
+Manage Projects	إدارة المشاريع	Projects
+Manage Companies	إدارة الشركات	Companies
+Moderate Requests	مراجعة الطلبات	Requests
+Manage Blog	إدارة المقالات	Blog
+Reports	التقارير	Analytics
+________________________________________
+10) الموديولات الخلفية (Backend Modules)
+كل ميزة في الموقع تعتمد على أحد هذه الموديولات:
+Auth
+Users
+Companies
+Agents
+Properties
+Projects
+Requests
+Messaging
+Favorites
+Reviews
+Notifications
+Blog
+Admin
+Analytics
+Media
+Search
+________________________________________
+11) تدفق الميزات (Feature Flow مثال)
+مثال: نشر عقار
+Dashboard
+   │
+Add Property
+   │
+Backend API
+   │
+Properties Module
+   │
+Database
+   │
+Search Index
+   │
+Web Listing
