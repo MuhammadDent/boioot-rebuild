@@ -29,7 +29,7 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         services.AddDbContext<BoiootDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddScoped<ICompanyOwnershipService, CompanyOwnershipService>();
         services.AddScoped<IAuthService, AuthService>();

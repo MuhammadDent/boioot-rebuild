@@ -3,9 +3,11 @@ using System.Text.Json.Serialization;
 using Boioot.Application.Exceptions;
 using Boioot.Domain.Constants;
 using Boioot.Infrastructure.Extensions;
+using Boioot.Infrastructure.Persistence;
 using Boioot.Infrastructure.Persistence.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -89,15 +91,18 @@ app.MapControllers();
 
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<BoiootDbContext>();
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     try
     {
+        await db.Database.EnsureCreatedAsync();
+        logger.LogInformation("Database schema ensured (SQLite)");
         await seeder.SeedAsync();
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "تعذّر تنفيذ بيانات البذر — تأكد من اتصال قاعدة البيانات");
+        logger.LogError(ex, "تعذّر تهيئة قاعدة البيانات أو تنفيذ بيانات البذر");
     }
 }
 
