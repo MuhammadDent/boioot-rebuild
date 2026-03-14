@@ -10,6 +10,11 @@ public class Project : BaseEntity, ISoftDeletable
     public ProjectStatus Status { get; set; } = ProjectStatus.Upcoming;
     public string City { get; set; } = string.Empty;
     public string? Address { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public decimal? StartingPrice { get; set; }
+    public DateTime? DeliveryDate { get; set; }
+    public bool IsPublished { get; set; } = false;
     public bool IsDeleted { get; set; } = false;
 
     public Guid CompanyId { get; set; }

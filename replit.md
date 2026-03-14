@@ -69,6 +69,10 @@ boioot/
 - ✅ **Phase 5**: Authorization policies: AdminOrCompanyOwner، AdminOrCompanyOwnerOrAgent
 - ✅ **Phase 5**: PagedResult<T> generic wrapper في Application/Common/Models
 - ✅ **Phase 5**: BaseController مشترك لاستخراج JWT claims
+- ✅ **Phase 6**: Projects module — public list/detail + CRUD + dashboard + IsPublished flag
+- ✅ **Phase 6**: Project entity ممدودة: StartingPrice, DeliveryDate, Lat/Lon, IsPublished
+- ✅ **Phase 6**: Migration AddProjectExtendedFields — 5 حقول + 3 indexes
+- ✅ **Phase 6**: Authorization: Admin أو CompanyOwner فقط (لا Agent في المشاريع)
 
 ---
 

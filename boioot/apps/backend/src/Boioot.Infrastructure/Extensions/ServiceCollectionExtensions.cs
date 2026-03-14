@@ -1,6 +1,8 @@
 using Boioot.Application.Features.Auth.Interfaces;
+using Boioot.Application.Features.Projects.Interfaces;
 using Boioot.Application.Features.Properties.Interfaces;
 using Boioot.Infrastructure.Features.Auth;
+using Boioot.Infrastructure.Features.Projects;
 using Boioot.Infrastructure.Features.Properties;
 using Boioot.Infrastructure.Persistence;
 using Boioot.Infrastructure.Persistence.Seeding;
@@ -21,6 +23,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPropertyService, PropertyService>();
+        services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<DataSeeder>();
 
         return services;

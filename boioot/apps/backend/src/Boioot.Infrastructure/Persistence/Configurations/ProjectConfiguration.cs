@@ -15,6 +15,8 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(50);
         builder.Property(p => p.City).IsRequired().HasMaxLength(100);
         builder.Property(p => p.Address).HasMaxLength(300);
+        builder.Property(p => p.StartingPrice).HasColumnType("decimal(18,2)");
+        builder.Property(p => p.IsPublished).HasDefaultValue(false);
 
         builder.HasOne(p => p.Company)
             .WithMany(c => c.Projects)
@@ -23,6 +25,8 @@ public class ProjectConfiguration : IEntityTypeConfiguration<Project>
 
         builder.HasIndex(p => p.City);
         builder.HasIndex(p => p.Status);
+        builder.HasIndex(p => p.IsPublished);
+        builder.HasIndex(p => p.CreatedAt);
 
         builder.HasQueryFilter(p => !p.IsDeleted && !p.Company.IsDeleted);
     }
