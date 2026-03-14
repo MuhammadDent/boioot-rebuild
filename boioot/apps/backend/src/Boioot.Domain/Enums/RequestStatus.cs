@@ -2,7 +2,8 @@ namespace Boioot.Domain.Enums;
 
 public enum RequestStatus
 {
-    Pending,
-    InProgress,
+    New,
+    Contacted,
+    Qualified,
     Closed
 }

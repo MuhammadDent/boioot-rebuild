@@ -10,13 +10,11 @@ public class RequestConfiguration : IEntityTypeConfiguration<Request>
     {
         builder.HasKey(r => r.Id);
 
-        builder.Property(r => r.Message).HasMaxLength(1000);
+        builder.Property(r => r.Name).IsRequired().HasMaxLength(200);
+        builder.Property(r => r.Phone).IsRequired().HasMaxLength(50);
+        builder.Property(r => r.Email).HasMaxLength(200);
+        builder.Property(r => r.Message).HasMaxLength(2000);
         builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(50);
-
-        builder.HasOne(r => r.User)
-            .WithMany(u => u.Requests)
-            .HasForeignKey(r => r.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(r => r.Property)
             .WithMany(p => p.Requests)
@@ -28,9 +26,9 @@ public class RequestConfiguration : IEntityTypeConfiguration<Request>
             .HasForeignKey(r => r.ProjectId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasIndex(r => r.UserId);
         builder.HasIndex(r => r.Status);
-
-        builder.HasQueryFilter(r => !r.User.IsDeleted);
+        builder.HasIndex(r => r.PropertyId);
+        builder.HasIndex(r => r.ProjectId);
+        builder.HasIndex(r => r.CreatedAt);
     }
 }

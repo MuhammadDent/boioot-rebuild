@@ -14,6 +14,5 @@ public class User : BaseEntity, ISoftDeletable
     public bool IsDeleted { get; set; } = false;
 
     public Agent? Agent { get; set; }
-    public ICollection<Request> Requests { get; set; } = [];
     public ICollection<Review> Reviews { get; set; } = [];
 }

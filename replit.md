@@ -73,6 +73,11 @@ boioot/
 - ✅ **Phase 6**: Project entity ممدودة: StartingPrice, DeliveryDate, Lat/Lon, IsPublished
 - ✅ **Phase 6**: Migration AddProjectExtendedFields — 5 حقول + 3 indexes
 - ✅ **Phase 6**: Authorization: Admin أو CompanyOwner فقط (لا Agent في المشاريع)
+- ✅ **Phase 7**: Requests/Leads module — anonymous lead capture + dashboard management
+- ✅ **Phase 7**: Request entity بدون UserId — يحمل Name, Phone, Email, Message
+- ✅ **Phase 7**: RequestStatus → New, Contacted, Qualified, Closed
+- ✅ **Phase 7**: Dashboard: Admin كل الطلبات | CompanyOwner طلبات شركته | Agent طلبات عقاراته
+- ✅ **Phase 7**: Migration AddRequestLeadFields — حذف UserId FK + إضافة Name/Phone/Email
 
 ---
 
