@@ -114,4 +114,41 @@ public class AdminController : BaseController
         var result = await _admin.VerifyCompanyAsync(companyId, request.IsVerified.Value, ct);
         return Ok(result);
     }
+
+    // ── Listing Types CRUD ────────────────────────────────────────────────────
+
+    [HttpGet("listing-types")]
+    public async Task<IActionResult> GetListingTypes(CancellationToken ct = default)
+    {
+        var result = await _admin.GetListingTypesAsync(ct);
+        return Ok(result);
+    }
+
+    [HttpPost("listing-types")]
+    public async Task<IActionResult> CreateListingType(
+        [FromBody] UpsertListingTypeRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateListingTypeAsync(request, ct);
+        return Created($"api/admin/listing-types/{result.Id}", result);
+    }
+
+    [HttpPut("listing-types/{id:guid}")]
+    public async Task<IActionResult> UpdateListingType(
+        Guid id,
+        [FromBody] UpsertListingTypeRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateListingTypeAsync(id, request, ct);
+        return Ok(result);
+    }
+
+    [HttpDelete("listing-types/{id:guid}")]
+    public async Task<IActionResult> DeleteListingType(
+        Guid id,
+        CancellationToken ct = default)
+    {
+        await _admin.DeleteListingTypeAsync(id, ct);
+        return NoContent();
+    }
 }

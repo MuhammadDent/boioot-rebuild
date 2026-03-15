@@ -8,12 +8,14 @@ public class Property : BaseEntity, ISoftDeletable
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public PropertyType Type { get; set; }
-    public ListingType ListingType { get; set; }
+    public string ListingType { get; set; } = string.Empty;
     public PropertyStatus Status { get; set; } = PropertyStatus.Available;
     public decimal Price { get; set; }
+    public string Currency { get; set; } = "SYP";
     public decimal Area { get; set; }
     public int? Bedrooms { get; set; }
     public int? Bathrooms { get; set; }
+    public string? Neighborhood { get; set; }
     public string? Address { get; set; }
     public string City { get; set; } = string.Empty;
     public double? Latitude { get; set; }

@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import type {
   PropertyResponse,
   CreatePropertyRequest,
   UpdatePropertyRequest,
+  ListingTypeConfig,
 } from "@/types";
 import {
   PROPERTY_TYPE_LABELS,
-  LISTING_TYPE_LABELS,
   PROPERTY_STATUS_LABELS,
   SYRIAN_CITIES,
+  SYRIAN_NEIGHBORHOODS,
 } from "@/features/properties/constants";
+import ComboSelect from "@/components/dashboard/ComboSelect";
+import { api } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,10 +25,12 @@ interface FormFields {
   listingType: string;
   status: string;
   price: string;
+  currency: string;
   area: string;
   bedrooms: string;
   bathrooms: string;
   city: string;
+  neighborhood: string;
   address: string;
   companyId: string;
 }
@@ -52,10 +57,12 @@ const EMPTY_FIELDS: FormFields = {
   listingType: "",
   status: "",
   price: "",
+  currency: "SYP",
   area: "",
   bedrooms: "",
   bathrooms: "",
   city: "",
+  neighborhood: "",
   address: "",
   companyId: "",
 };
@@ -68,10 +75,12 @@ function fromInitial(data: PropertyResponse): FormFields {
     listingType: data.listingType,
     status: data.status,
     price: String(data.price),
+    currency: data.currency ?? "SYP",
     area: String(data.area),
     bedrooms: data.bedrooms != null ? String(data.bedrooms) : "",
     bathrooms: data.bathrooms != null ? String(data.bathrooms) : "",
     city: data.city,
+    neighborhood: data.neighborhood ?? "",
     address: data.address ?? "",
     companyId: "",
   };
@@ -113,10 +122,9 @@ function validate(fields: FormFields, mode: "create" | "edit"): FormErrors {
       errors.bathrooms = "يجب أن يكون بين 0 و 10";
   }
 
-  if (mode === "create") {
-    const cid = fields.companyId.trim();
-    if (!cid) errors.companyId = "معرف الشركة مطلوب";
-    else if (!UUID_RE.test(cid)) errors.companyId = "صيغة المعرف غير صحيحة — يجب أن يكون UUID";
+  if (mode === "create" && fields.companyId.trim()) {
+    if (!UUID_RE.test(fields.companyId.trim()))
+      errors.companyId = "صيغة المعرف غير صحيحة — يجب أن يكون UUID";
   }
 
   if (fields.description && fields.description.length > 3000)
@@ -141,6 +149,14 @@ export default function PropertyForm({
     initialData ? fromInitial(initialData) : EMPTY_FIELDS
   );
   const [errors, setErrors] = useState<FormErrors>({});
+  const [listingTypes, setListingTypes] = useState<ListingTypeConfig[]>([]);
+
+  useEffect(() => {
+    api
+      .get<ListingTypeConfig[]>("/listing-types")
+      .then((data) => setListingTypes(data))
+      .catch(() => {});
+  }, []);
 
   function set(field: keyof FormFields) {
     return (
@@ -149,6 +165,11 @@ export default function PropertyForm({
       setFields((prev) => ({ ...prev, [field]: e.target.value }));
       if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
     };
+  }
+
+  function setField(field: keyof FormFields, value: string) {
+    setFields((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -164,21 +185,32 @@ export default function PropertyForm({
       type: fields.type,
       listingType: fields.listingType,
       price: Number(fields.price),
+      currency: fields.currency,
       area: Number(fields.area),
       bedrooms: fields.bedrooms !== "" ? Number(fields.bedrooms) : undefined,
       bathrooms: fields.bathrooms !== "" ? Number(fields.bathrooms) : undefined,
+      neighborhood: fields.neighborhood.trim() || undefined,
       address: fields.address.trim() || undefined,
       city: fields.city,
     };
 
     if (mode === "create") {
-      await onSubmit({ ...base, companyId: fields.companyId.trim() } as CreatePropertyRequest);
+      const cid = fields.companyId.trim();
+      await onSubmit({
+        ...base,
+        companyId: cid || undefined,
+      } as CreatePropertyRequest);
     } else {
       await onSubmit({ ...base, status: fields.status } as UpdatePropertyRequest);
     }
   }
 
   const disabled = isSubmitting;
+
+  const neighborhoodOptions =
+    fields.city && SYRIAN_NEIGHBORHOODS[fields.city]
+      ? SYRIAN_NEIGHBORHOODS[fields.city]
+      : [];
 
   return (
     <form onSubmit={handleSubmit} noValidate>
@@ -247,11 +279,21 @@ export default function PropertyForm({
               disabled={disabled}
             >
               <option value="">بيع أم إيجار؟</option>
-              {Object.entries(LISTING_TYPE_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
+              {listingTypes.length > 0
+                ? listingTypes.map((lt) => (
+                    <option key={lt.value} value={lt.value}>
+                      {lt.label}
+                    </option>
+                  ))
+                : [
+                    { value: "Sale", label: "للبيع" },
+                    { value: "Rent", label: "للإيجار" },
+                    { value: "DailyRent", label: "إيجار يومي" },
+                  ].map((lt) => (
+                    <option key={lt.value} value={lt.value}>
+                      {lt.label}
+                    </option>
+                  ))}
             </select>
             {errors.listingType && (
               <p className="form-error">{errors.listingType}</p>
@@ -287,19 +329,52 @@ export default function PropertyForm({
         <Row>
           <div className="form-group">
             <label className="form-label">
-              السعر (ل.س) <Required />
+              السعر <Required />
             </label>
-            <input
-              className="form-input"
-              type="number"
-              min={0}
-              step="any"
-              value={fields.price}
-              onChange={set("price")}
-              placeholder="0"
-              disabled={disabled}
-              dir="ltr"
-            />
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <input
+                className="form-input"
+                type="number"
+                min={0}
+                step="any"
+                value={fields.price}
+                onChange={set("price")}
+                placeholder="0"
+                disabled={disabled}
+                dir="ltr"
+                style={{ flex: 1 }}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  border: "1px solid var(--color-border, #e5e7eb)",
+                  flexShrink: 0,
+                }}
+              >
+                {(["SYP", "USD"] as const).map((cur) => (
+                  <button
+                    key={cur}
+                    type="button"
+                    onClick={() => setField("currency", cur)}
+                    disabled={disabled}
+                    style={{
+                      padding: "0 0.75rem",
+                      background: fields.currency === cur ? "var(--color-accent, #3b82f6)" : "transparent",
+                      color: fields.currency === cur ? "#fff" : "inherit",
+                      border: "none",
+                      cursor: disabled ? "default" : "pointer",
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      transition: "background 0.15s",
+                    }}
+                  >
+                    {cur === "SYP" ? "ل.س" : "$"}
+                  </button>
+                ))}
+              </div>
+            </div>
             {errors.price && <p className="form-error">{errors.price}</p>}
           </div>
 
@@ -326,40 +401,42 @@ export default function PropertyForm({
       {/* ── Section: location ── */}
       <Section label="الموقع">
         <Row>
-          <div className="form-group">
-            <label className="form-label">
-              المدينة <Required />
-            </label>
-            <select
-              className="form-input"
-              value={fields.city}
-              onChange={set("city")}
-              disabled={disabled}
-            >
-              <option value="">اختر المدينة</option>
-              {SYRIAN_CITIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            {errors.city && <p className="form-error">{errors.city}</p>}
-          </div>
+          <ComboSelect
+            label="المدينة"
+            options={SYRIAN_CITIES}
+            value={fields.city}
+            onChange={(val) => {
+              setField("city", val);
+              setField("neighborhood", "");
+            }}
+            placeholder="اختر أو اكتب مدينة..."
+            required
+            error={errors.city}
+          />
 
-          <div className="form-group">
-            <label className="form-label">العنوان التفصيلي</label>
-            <input
-              className="form-input"
-              type="text"
-              value={fields.address}
-              onChange={set("address")}
-              placeholder="مثال: شارع الثورة، بناء رقم 5"
-              maxLength={300}
-              disabled={disabled}
-            />
-            {errors.address && <p className="form-error">{errors.address}</p>}
-          </div>
+          <ComboSelect
+            label="الحي (اختياري)"
+            options={neighborhoodOptions}
+            value={fields.neighborhood}
+            onChange={(val) => setField("neighborhood", val)}
+            placeholder="اختر أو اكتب حياً..."
+            allowCustom
+          />
         </Row>
+
+        <div className="form-group">
+          <label className="form-label">العنوان التفصيلي (اختياري)</label>
+          <input
+            className="form-input"
+            type="text"
+            value={fields.address}
+            onChange={set("address")}
+            placeholder="مثال: شارع الثورة، بناء رقم 5"
+            maxLength={300}
+            disabled={disabled}
+          />
+          {errors.address && <p className="form-error">{errors.address}</p>}
+        </div>
       </Section>
 
       {/* ── Section: rooms (optional) ── */}
@@ -423,13 +500,11 @@ export default function PropertyForm({
         </div>
       </Section>
 
-      {/* ── Section: company (create only) ── */}
+      {/* ── Section: company (create only, optional) ── */}
       {mode === "create" && (
-        <Section label="الشركة">
+        <Section label="الشركة (اختياري)">
           <div className="form-group">
-            <label className="form-label">
-              معرف الشركة (Company ID) <Required />
-            </label>
+            <label className="form-label">معرف الشركة (Company ID)</label>
             <input
               className="form-input"
               type="text"
@@ -447,7 +522,7 @@ export default function PropertyForm({
                 margin: "0.3rem 0 0",
               }}
             >
-              أدخل المعرف الفريد (UUID) للشركة التابع لها هذا العقار.
+              اتركه فارغاً لربط العقار تلقائياً بشركتك — أو أدخل UUID الشركة لتحديدها يدوياً.
             </p>
             {errors.companyId && (
               <p className="form-error">{errors.companyId}</p>

@@ -11,7 +11,7 @@
 |---|---|
 | Frontend | Next.js 16 (App Router, TypeScript) |
 | Backend | ASP.NET Core Web API (.NET 8) |
-| Database | SQL Server + EF Core |
+| Database | SQLite + EF Core (EnsureCreated, manual ALTER TABLE for migrations) |
 | Architecture | Modular Monolith |
 | UI Direction | RTL، عربي أولاً، أخضر `#2E7D32` |
 

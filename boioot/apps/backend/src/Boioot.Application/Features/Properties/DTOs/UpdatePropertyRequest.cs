@@ -17,13 +17,17 @@ public class UpdatePropertyRequest
     public PropertyType? Type { get; set; }
 
     [Required(ErrorMessage = "نوع الإدراج مطلوب")]
-    public ListingType? ListingType { get; set; }
+    [MaxLength(100)]
+    public string ListingType { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "حالة العقار مطلوبة")]
     public PropertyStatus? Status { get; set; }
 
     [Range(0, 9_999_999_999, ErrorMessage = "السعر يجب أن يكون رقماً موجباً")]
     public decimal Price { get; set; }
+
+    [MaxLength(10)]
+    public string Currency { get; set; } = "SYP";
 
     [Range(1, 999_999, ErrorMessage = "المساحة يجب أن تكون أكبر من صفر")]
     public decimal Area { get; set; }
@@ -33,6 +37,9 @@ public class UpdatePropertyRequest
 
     [Range(0, 10, ErrorMessage = "عدد الحمامات يجب أن يكون بين 0 و 10")]
     public int? Bathrooms { get; set; }
+
+    [MaxLength(150, ErrorMessage = "اسم الحي يجب أن لا يتجاوز 150 حرف")]
+    public string? Neighborhood { get; set; }
 
     [MaxLength(300, ErrorMessage = "العنوان التفصيلي يجب أن لا يتجاوز 300 حرف")]
     public string? Address { get; set; }

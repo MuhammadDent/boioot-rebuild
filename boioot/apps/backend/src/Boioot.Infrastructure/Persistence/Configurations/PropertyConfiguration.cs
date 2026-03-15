@@ -13,10 +13,12 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.Property(p => p.Title).IsRequired().HasMaxLength(300);
         builder.Property(p => p.Description).HasMaxLength(3000);
         builder.Property(p => p.Type).HasConversion<string>().HasMaxLength(50);
-        builder.Property(p => p.ListingType).HasConversion<string>().HasMaxLength(50);
+        builder.Property(p => p.ListingType).HasMaxLength(100).IsRequired();
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(50);
         builder.Property(p => p.Price).HasColumnType("decimal(18,2)");
+        builder.Property(p => p.Currency).HasMaxLength(10).HasDefaultValue("SYP").IsRequired();
         builder.Property(p => p.Area).HasColumnType("decimal(10,2)");
+        builder.Property(p => p.Neighborhood).HasMaxLength(150);
         builder.Property(p => p.Address).HasMaxLength(300);
         builder.Property(p => p.City).IsRequired().HasMaxLength(100);
 

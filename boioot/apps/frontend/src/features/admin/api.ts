@@ -6,6 +6,7 @@ import type {
   PropertyResponse,
   ProjectResponse,
   RequestResponse,
+  ListingTypeConfig,
 } from "@/types";
 
 // ── Filter param types ─────────────────────────────────────────────────────────
@@ -36,6 +37,13 @@ export interface AdminProjectsParams {
 export interface AdminRequestsParams {
   /** New | Contacted | Qualified | Closed — empty string means "all" */
   status?: string;
+}
+
+export interface UpsertListingTypePayload {
+  value: string;
+  label: string;
+  order: number;
+  isActive: boolean;
 }
 
 // ── Admin API service ──────────────────────────────────────────────────────────
@@ -100,8 +108,35 @@ export const adminApi = {
     return api.patch(`/admin/users/${userId}/status`, { isActive });
   },
 
+  /** PATCH /api/admin/users/{userId}/role */
+  updateUserRole(userId: string, role: string): Promise<AdminUserResponse> {
+    return api.patch(`/admin/users/${userId}/role`, { role });
+  },
+
   /** PATCH /api/admin/companies/{companyId}/verify */
   verifyCompany(companyId: string, isVerified: boolean): Promise<AdminCompanyResponse> {
     return api.patch(`/admin/companies/${companyId}/verify`, { isVerified });
+  },
+
+  // ── Listing Types ─────────────────────────────────────────────────────────
+
+  /** GET /api/admin/listing-types — all types (admin view, includes inactive) */
+  getListingTypes(): Promise<ListingTypeConfig[]> {
+    return api.get("/admin/listing-types");
+  },
+
+  /** POST /api/admin/listing-types */
+  createListingType(payload: UpsertListingTypePayload): Promise<ListingTypeConfig> {
+    return api.post("/admin/listing-types", payload);
+  },
+
+  /** PUT /api/admin/listing-types/{id} */
+  updateListingType(id: string, payload: UpsertListingTypePayload): Promise<ListingTypeConfig> {
+    return api.put(`/admin/listing-types/${id}`, payload);
+  },
+
+  /** DELETE /api/admin/listing-types/{id} */
+  deleteListingType(id: string): Promise<void> {
+    return api.delete(`/admin/listing-types/${id}`);
   },
 };

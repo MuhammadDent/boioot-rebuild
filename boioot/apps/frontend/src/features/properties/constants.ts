@@ -39,7 +39,33 @@ export const SYRIAN_CITIES: string[] = [
   "الحسكة",
 ];
 
-/** Formats a numeric price to Arabic Syrian locale string. */
-export function formatPrice(price: number): string {
+/** Common Syrian neighborhoods for property forms */
+export const SYRIAN_NEIGHBORHOODS: Record<string, string[]> = {
+  "دمشق": [
+    "المزة", "كفرسوسة", "المالكي", "أبو رمانة", "القصاع", "الشعلان",
+    "البرامكة", "الروضة", "الحمرا", "المهاجرين", "دمر", "جرمانا",
+    "قدسيا", "الزبداني", "ركن الدين", "العمارة", "باب توما", "ساروجة",
+    "القابون", "برزة", "عدرا", "التضامن",
+  ],
+  "حلب": [
+    "العزيزية", "السريان", "الشهباء", "حي الجميلية", "المشارقة",
+    "السليمانية", "الميدان", "صلاح الدين", "الإذاعة", "الحمدانية",
+    "الشيخ مقصود", "حلب الجديدة", "سيف الدولة",
+  ],
+  "حمص": [
+    "الوعر", "عكرمة", "الخضراء", "الإنشاءات", "الزهراء",
+    "الغوطة", "باب السباع", "ديماس",
+  ],
+  "اللاذقية": [
+    "الزراعة", "قنينص", "الرمل الجنوبي", "الرمل الشمالي",
+    "الكورنيش", "صلنفة",
+  ],
+};
+
+/** Formats a numeric price with currency suffix. */
+export function formatPrice(price: number, currency = "SYP"): string {
+  if (currency === "USD") {
+    return "$" + price.toLocaleString("en-US");
+  }
   return price.toLocaleString("ar-SY") + " ل.س";
 }

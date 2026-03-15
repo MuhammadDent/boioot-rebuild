@@ -64,11 +64,13 @@ export interface PropertyResponse {
   title: string;
   description?: string;
   price: number;
+  currency: string;
   area: number;
   type: string;
   listingType: string;
   status: string;
   city: string;
+  neighborhood?: string;
   address?: string;
   latitude?: number;
   longitude?: number;
@@ -82,6 +84,16 @@ export interface PropertyResponse {
   updatedAt: string;
 }
 
+export interface ListingTypeConfig {
+  id: string;
+  value: string;
+  label: string;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DashboardPropertyItem {
   id: string;
   title: string;
@@ -89,9 +101,9 @@ export interface DashboardPropertyItem {
   status: string;
   /** Apartment | Villa | Office | Shop | Land | Building */
   type: string;
-  /** Sale | Rent */
   listingType: string;
   price: number;
+  currency: string;
   city: string;
   createdAt: string;
 }
@@ -139,17 +151,18 @@ export interface CreatePropertyRequest {
   description?: string;
   /** Apartment | Villa | Office | Shop | Land | Building */
   type: string;
-  /** Sale | Rent */
   listingType: string;
   price: number;
+  currency: string;
   area: number;
   bedrooms?: number;
   bathrooms?: number;
+  neighborhood?: string;
   address?: string;
   city: string;
   latitude?: number;
   longitude?: number;
-  companyId: string;
+  companyId?: string;
   agentId?: string;
 }
 
@@ -161,9 +174,11 @@ export interface UpdatePropertyRequest {
   /** Available | Inactive | Sold | Rented */
   status: string;
   price: number;
+  currency: string;
   area: number;
   bedrooms?: number;
   bathrooms?: number;
+  neighborhood?: string;
   address?: string;
   city: string;
   latitude?: number;

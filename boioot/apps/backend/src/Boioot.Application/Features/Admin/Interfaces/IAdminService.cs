@@ -32,4 +32,9 @@ public interface IAdminService
 
     Task<AdminCompanyResponse> VerifyCompanyAsync(
         Guid companyId, bool isVerified, CancellationToken ct = default);
+
+    Task<List<ListingTypeResponse>> GetListingTypesAsync(CancellationToken ct = default);
+    Task<ListingTypeResponse> CreateListingTypeAsync(UpsertListingTypeRequest request, CancellationToken ct = default);
+    Task<ListingTypeResponse> UpdateListingTypeAsync(Guid id, UpsertListingTypeRequest request, CancellationToken ct = default);
+    Task DeleteListingTypeAsync(Guid id, CancellationToken ct = default);
 }

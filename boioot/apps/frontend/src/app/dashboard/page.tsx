@@ -231,6 +231,21 @@ export default function DashboardPage() {
                   </svg>
                 }
               />
+              <NavCard
+                href="/dashboard/admin/listing-types"
+                label="أنواع الإدراج"
+                description="إدارة أنواع الإدراج المعروضة في نماذج العقارات"
+                icon={
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                    <line x1="8" y1="6" x2="21" y2="6" />
+                    <line x1="8" y1="12" x2="21" y2="12" />
+                    <line x1="8" y1="18" x2="21" y2="18" />
+                    <line x1="3" y1="6" x2="3.01" y2="6" />
+                    <line x1="3" y1="12" x2="3.01" y2="12" />
+                    <line x1="3" y1="18" x2="3.01" y2="18" />
+                  </svg>
+                }
+              />
               <p style={{
                 margin: "0.25rem 0 0", fontSize: "0.75rem", fontWeight: 700,
                 color: "var(--color-text-secondary)", textTransform: "uppercase",

@@ -98,6 +98,49 @@ using (var scope = app.Services.CreateScope())
     {
         await db.Database.EnsureCreatedAsync();
         logger.LogInformation("Database schema ensured (SQLite)");
+
+        // ── Manual schema migration for SQLite (EnsureCreated doesn't alter existing tables) ──
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN Neighborhood TEXT"); }
+        catch { /* column already exists */ }
+
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN Currency TEXT NOT NULL DEFAULT 'SYP'"); }
+        catch { /* column already exists */ }
+
+        // Create PropertyListingTypes table if it doesn't exist
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS PropertyListingTypes (
+                Id TEXT NOT NULL PRIMARY KEY,
+                Value TEXT NOT NULL,
+                Label TEXT NOT NULL,
+                [Order] INTEGER NOT NULL DEFAULT 0,
+                IsActive INTEGER NOT NULL DEFAULT 1,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            )");
+
+        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_PropertyListingTypes_Value ON PropertyListingTypes(Value)"); }
+        catch { /* index already exists */ }
+
+        // Seed default listing types if none exist
+        var hasListingTypes = db.PropertyListingTypes.Any();
+        if (!hasListingTypes)
+        {
+            var now = DateTime.UtcNow.ToString("O");
+            var defaults = new[]
+            {
+                (Guid.NewGuid(), "Sale",      "للبيع",       1),
+                (Guid.NewGuid(), "Rent",      "للإيجار",     2),
+                (Guid.NewGuid(), "DailyRent", "إيجار يومي",  3),
+            };
+            foreach (var (id, value, label, order) in defaults)
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "INSERT OR IGNORE INTO PropertyListingTypes (Id, Value, Label, [Order], IsActive, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3}, 1, {4}, {5})",
+                    id.ToString(), value, label, order, now, now);
+            }
+            logger.LogInformation("Seeded default listing types");
+        }
+
         await seeder.SeedAsync();
     }
     catch (Exception ex)

@@ -82,15 +82,32 @@ public class PropertyService : IPropertyService
     public async Task<PropertyResponse> CreateAsync(
         Guid userId, string userRole, CreatePropertyRequest request, CancellationToken ct = default)
     {
-        var companyId = request.CompanyId!.Value;
+        Guid companyId;
 
-        var companyExists = await _context.Companies
-            .AnyAsync(c => c.Id == companyId, ct);
+        if (request.CompanyId.HasValue)
+        {
+            companyId = request.CompanyId.Value;
 
-        if (!companyExists)
-            throw new BoiootException("الشركة غير موجودة", 404);
+            var companyExists = await _context.Companies
+                .AnyAsync(c => c.Id == companyId, ct);
 
-        await EnsureCanManageCompanyAsync(userId, userRole, companyId, ct);
+            if (!companyExists)
+                throw new BoiootException("الشركة غير موجودة", 404);
+
+            await EnsureCanManageCompanyAsync(userId, userRole, companyId, ct);
+        }
+        else
+        {
+            if (userRole == RoleNames.Admin)
+                throw new BoiootException("يجب تحديد الشركة عند إنشاء عقار من حساب المشرف", 400);
+
+            var ownedCompanyId = await _ownership.GetCompanyIdForUserAsync(userId, ct);
+
+            if (!ownedCompanyId.HasValue)
+                throw new BoiootException("لا توجد شركة مرتبطة بحسابك — يرجى إنشاء شركة أولاً أو تحديد معرف الشركة", 400);
+
+            companyId = ownedCompanyId.Value;
+        }
 
         if (request.AgentId.HasValue)
         {
@@ -106,12 +123,14 @@ public class PropertyService : IPropertyService
             Title = request.Title.Trim(),
             Description = request.Description?.Trim(),
             Type = request.Type!.Value,
-            ListingType = request.ListingType!.Value,
+            ListingType = request.ListingType.Trim(),
             Status = PropertyStatus.Available,
             Price = request.Price,
+            Currency = string.IsNullOrWhiteSpace(request.Currency) ? "SYP" : request.Currency.Trim().ToUpper(),
             Area = request.Area,
             Bedrooms = request.Bedrooms,
             Bathrooms = request.Bathrooms,
+            Neighborhood = request.Neighborhood?.Trim(),
             Address = request.Address?.Trim(),
             City = request.City.Trim(),
             Latitude = request.Latitude,
@@ -151,12 +170,14 @@ public class PropertyService : IPropertyService
         property.Title = request.Title.Trim();
         property.Description = request.Description?.Trim();
         property.Type = request.Type!.Value;
-        property.ListingType = request.ListingType!.Value;
+        property.ListingType = request.ListingType.Trim();
         property.Status = request.Status!.Value;
         property.Price = request.Price;
+        property.Currency = string.IsNullOrWhiteSpace(request.Currency) ? "SYP" : request.Currency.Trim().ToUpper();
         property.Area = request.Area;
         property.Bedrooms = request.Bedrooms;
         property.Bathrooms = request.Bathrooms;
+        property.Neighborhood = request.Neighborhood?.Trim();
         property.Address = request.Address?.Trim();
         property.City = request.City.Trim();
         property.Latitude = request.Latitude;
@@ -232,8 +253,8 @@ public class PropertyService : IPropertyService
         if (filters.Type.HasValue)
             query = query.Where(p => p.Type == filters.Type.Value);
 
-        if (filters.ListingType.HasValue)
-            query = query.Where(p => p.ListingType == filters.ListingType.Value);
+        if (!string.IsNullOrWhiteSpace(filters.ListingType))
+            query = query.Where(p => p.ListingType == filters.ListingType.Trim());
 
         if (filters.MinPrice.HasValue)
             query = query.Where(p => p.Price >= filters.MinPrice.Value);
@@ -342,11 +363,13 @@ public class PropertyService : IPropertyService
         Title = p.Title,
         Description = p.Description,
         Price = p.Price,
+        Currency = p.Currency,
         Area = p.Area,
         Type = p.Type.ToString(),
-        ListingType = p.ListingType.ToString(),
+        ListingType = p.ListingType,
         Status = p.Status.ToString(),
         City = p.City,
+        Neighborhood = p.Neighborhood,
         Address = p.Address,
         Latitude = p.Latitude,
         Longitude = p.Longitude,

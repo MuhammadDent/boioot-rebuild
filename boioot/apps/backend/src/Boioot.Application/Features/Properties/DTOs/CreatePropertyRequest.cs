@@ -16,11 +16,15 @@ public class CreatePropertyRequest
     [Required(ErrorMessage = "نوع العقار مطلوب")]
     public PropertyType? Type { get; set; }
 
-    [Required(ErrorMessage = "نوع الإدراج مطلوب (بيع أو إيجار)")]
-    public ListingType? ListingType { get; set; }
+    [Required(ErrorMessage = "نوع الإدراج مطلوب")]
+    [MaxLength(100)]
+    public string ListingType { get; set; } = string.Empty;
 
     [Range(0, 9_999_999_999, ErrorMessage = "السعر يجب أن يكون رقماً موجباً")]
     public decimal Price { get; set; }
+
+    [MaxLength(10)]
+    public string Currency { get; set; } = "SYP";
 
     [Range(1, 999_999, ErrorMessage = "المساحة يجب أن تكون أكبر من صفر")]
     public decimal Area { get; set; }
@@ -30,6 +34,9 @@ public class CreatePropertyRequest
 
     [Range(0, 10, ErrorMessage = "عدد الحمامات يجب أن يكون بين 0 و 10")]
     public int? Bathrooms { get; set; }
+
+    [MaxLength(150, ErrorMessage = "اسم الحي يجب أن لا يتجاوز 150 حرف")]
+    public string? Neighborhood { get; set; }
 
     [MaxLength(300, ErrorMessage = "العنوان التفصيلي يجب أن لا يتجاوز 300 حرف")]
     public string? Address { get; set; }
@@ -44,7 +51,6 @@ public class CreatePropertyRequest
     [Range(-180.0, 180.0, ErrorMessage = "خط الطول يجب أن يكون بين -180 و 180")]
     public double? Longitude { get; set; }
 
-    [Required(ErrorMessage = "معرف الشركة مطلوب")]
     public Guid? CompanyId { get; set; }
 
     public Guid? AgentId { get; set; }

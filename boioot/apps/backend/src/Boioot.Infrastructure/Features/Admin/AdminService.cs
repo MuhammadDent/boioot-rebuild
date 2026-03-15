@@ -5,6 +5,7 @@ using Boioot.Application.Features.Admin.Interfaces;
 using Boioot.Application.Features.Projects.DTOs;
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Requests.DTOs;
+using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -136,11 +137,13 @@ public class AdminService : IAdminService
             Title = p.Title,
             Description = p.Description,
             Price = p.Price,
+            Currency = p.Currency,
             Area = p.Area,
             Type = p.Type.ToString(),
-            ListingType = p.ListingType.ToString(),
+            ListingType = p.ListingType,
             Status = p.Status.ToString(),
             City = p.City,
+            Neighborhood = p.Neighborhood,
             Address = p.Address,
             Latitude = p.Latitude,
             Longitude = p.Longitude,
@@ -354,5 +357,100 @@ public class AdminService : IAdminService
                 UpdatedAt = c.UpdatedAt
             })
             .FirstAsync(ct);
+    }
+
+    // ── Listing Types CRUD ───────────────────────────────────────────────────
+
+    public async Task<List<ListingTypeResponse>> GetListingTypesAsync(CancellationToken ct = default)
+    {
+        return await _context.PropertyListingTypes
+            .AsNoTracking()
+            .OrderBy(t => t.Order)
+            .ThenBy(t => t.CreatedAt)
+            .Select(t => new ListingTypeResponse
+            {
+                Id = t.Id,
+                Value = t.Value,
+                Label = t.Label,
+                Order = t.Order,
+                IsActive = t.IsActive,
+                CreatedAt = t.CreatedAt,
+                UpdatedAt = t.UpdatedAt
+            })
+            .ToListAsync(ct);
+    }
+
+    public async Task<ListingTypeResponse> CreateListingTypeAsync(
+        UpsertListingTypeRequest request, CancellationToken ct = default)
+    {
+        var exists = await _context.PropertyListingTypes
+            .AnyAsync(t => t.Value == request.Value.Trim(), ct);
+
+        if (exists)
+            throw new BoiootException("نوع الإدراج بهذه القيمة موجود مسبقاً", 409);
+
+        var entity = new PropertyListingType
+        {
+            Value = request.Value.Trim(),
+            Label = request.Label.Trim(),
+            Order = request.Order,
+            IsActive = request.IsActive
+        };
+
+        _context.PropertyListingTypes.Add(entity);
+        await _context.SaveChangesAsync(ct);
+
+        return new ListingTypeResponse
+        {
+            Id = entity.Id,
+            Value = entity.Value,
+            Label = entity.Label,
+            Order = entity.Order,
+            IsActive = entity.IsActive,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    public async Task<ListingTypeResponse> UpdateListingTypeAsync(
+        Guid id, UpsertListingTypeRequest request, CancellationToken ct = default)
+    {
+        var entity = await _context.PropertyListingTypes
+            .FirstOrDefaultAsync(t => t.Id == id, ct)
+            ?? throw new BoiootException("نوع الإدراج غير موجود", 404);
+
+        var valueTaken = await _context.PropertyListingTypes
+            .AnyAsync(t => t.Value == request.Value.Trim() && t.Id != id, ct);
+
+        if (valueTaken)
+            throw new BoiootException("نوع الإدراج بهذه القيمة موجود مسبقاً", 409);
+
+        entity.Value = request.Value.Trim();
+        entity.Label = request.Label.Trim();
+        entity.Order = request.Order;
+        entity.IsActive = request.IsActive;
+
+        await _context.SaveChangesAsync(ct);
+
+        return new ListingTypeResponse
+        {
+            Id = entity.Id,
+            Value = entity.Value,
+            Label = entity.Label,
+            Order = entity.Order,
+            IsActive = entity.IsActive,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    public async Task DeleteListingTypeAsync(Guid id, CancellationToken ct = default)
+    {
+        var entity = await _context.PropertyListingTypes
+            .FirstOrDefaultAsync(t => t.Id == id, ct)
+            ?? throw new BoiootException("نوع الإدراج غير موجود", 404);
+
+        _context.PropertyListingTypes.Remove(entity);
+        await _context.SaveChangesAsync(ct);
     }
 }
