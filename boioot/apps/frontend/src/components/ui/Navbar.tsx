@@ -6,10 +6,11 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 const NAV_LINKS = [
-  { href: "/",               label: "الرئيسية",       exact: true  },
-  { href: "/properties",     label: "العقارات",        exact: false },
-  { href: "/daily-rentals",  label: "الإيجار اليومي",  exact: false, highlight: true },
-  { href: "/projects",       label: "المشاريع",        exact: false },
+  { href: "/",                   label: "الرئيسية",       exact: true  },
+  { href: "/properties",         label: "العقارات",        exact: false },
+  { href: "/daily-rentals",      label: "الإيجار اليومي",  exact: false, highlight: true },
+  { href: "/projects",           label: "المشاريع",        exact: false },
+  { href: "/dashboard/requests", label: "طلبات العقار",    exact: false },
 ];
 
 export default function Navbar() {
@@ -29,8 +30,8 @@ export default function Navbar() {
           <Image
             src="/logo-boioot.png"
             alt="بيوت"
-            width={88}
-            height={36}
+            width={120}
+            height={46}
             style={{ objectFit: "contain" }}
             priority
           />

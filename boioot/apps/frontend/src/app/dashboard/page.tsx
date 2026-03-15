@@ -133,7 +133,7 @@ export default function DashboardPage() {
           justifyContent: "space-between",
         }}>
           <Link href="/">
-            <Image src="/logo-boioot.png" alt="بيوت" width={85} height={32} style={{ objectFit: "contain" }} />
+            <Image src="/logo-boioot.png" alt="بيوت" width={115} height={44} style={{ objectFit: "contain" }} />
           </Link>
           <button
             onClick={handleLogout}
@@ -164,10 +164,11 @@ export default function DashboardPage() {
           scrollbarWidth: "none",
         }}>
           {[
-            { href: "/",              label: "الرئيسية" },
-            { href: "/?type=للبيع",   label: "عقارات للبيع" },
-            { href: "/?type=للإيجار", label: "للإيجار" },
-            { href: "/?type=مشاريع",  label: "المشاريع" },
+            { href: "/",                   label: "الرئيسية" },
+            { href: "/properties",         label: "العقارات" },
+            { href: "/daily-rentals",      label: "الإيجار اليومي" },
+            { href: "/projects",           label: "المشاريع" },
+            { href: "/dashboard/requests", label: "طلبات العقار" },
           ].map(({ href, label }) => (
             <Link
               key={href}
