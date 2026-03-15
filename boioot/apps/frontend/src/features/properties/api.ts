@@ -2,6 +2,9 @@ import { api } from "@/lib/api";
 import { buildQueryString } from "@/lib/query-string";
 import type { PagedResult, PropertyResponse } from "@/types";
 
+/** Default page size — matches the backend's default and the filter bar UI. */
+export const PROPERTIES_PAGE_SIZE = 12;
+
 /**
  * Query parameters supported by GET /api/properties.
  * Matches PropertyFilters.cs exactly — do not add fields not in the backend DTO.

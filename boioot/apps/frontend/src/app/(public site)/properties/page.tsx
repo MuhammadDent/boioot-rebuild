@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, type FormEvent } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Spinner from "@/components/ui/Spinner";
 import PropertyCard from "@/components/properties/PropertyCard";
-import { propertiesApi } from "@/features/properties/api";
+import { propertiesApi, PROPERTIES_PAGE_SIZE } from "@/features/properties/api";
 import {
   SYRIAN_CITIES,
   PROPERTY_TYPE_LABELS,
@@ -53,6 +53,7 @@ function PropertiesContent() {
   const [properties, setProperties]   = useState<PropertyResponse[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState("");
+  const [filterError, setFilterError] = useState("");
   const [totalCount, setTotalCount]   = useState(0);
   const [hasNext, setHasNext]         = useState(false);
   const [hasPrev, setHasPrev]         = useState(false);
@@ -76,7 +77,7 @@ function PropertiesContent() {
     propertiesApi
       .getList({
         page:        pageParam,
-        pageSize:    12,
+        pageSize:    PROPERTIES_PAGE_SIZE,
         city:        cityParam        || undefined,
         type:        typeParam        || undefined,
         listingType: listingTypeParam || undefined,
@@ -108,6 +109,18 @@ function PropertiesContent() {
 
   function handleApply(e: FormEvent) {
     e.preventDefault();
+    setFilterError("");
+
+    // Client-side validation: min must not exceed max
+    if (
+      form.minPrice &&
+      form.maxPrice &&
+      Number(form.minPrice) > Number(form.maxPrice)
+    ) {
+      setFilterError("السعر الأدنى لا يمكن أن يكون أكبر من السعر الأقصى");
+      return;
+    }
+
     // Reset to page 1 whenever filters are reapplied
     const qs = buildParams(form, 1).toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
@@ -115,6 +128,7 @@ function PropertiesContent() {
 
   function handleClear() {
     setForm(EMPTY_FILTERS);
+    setFilterError("");
     router.push(pathname);
   }
 
@@ -223,6 +237,13 @@ function PropertiesContent() {
             </div>
 
           </div>
+
+          {/* Price range validation error */}
+          {filterError && (
+            <p style={{ color: "var(--color-error, #c0392b)", fontSize: "0.85rem", margin: 0 }}>
+              {filterError}
+            </p>
+          )}
 
           <div className="filter-bar__actions">
             {hasActiveFilters && (

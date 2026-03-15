@@ -39,11 +39,13 @@ export default function PropertyDetailPage() {
 
   if (error) {
     return (
-      <div className="container" style={{ padding: "3rem 1.5rem" }}>
-        <div className="error-banner">{error}</div>
-        <Link href="/properties" className="btn btn-outline" style={{ marginTop: "1rem" }}>
-          ← العودة إلى العقارات
-        </Link>
+      <div style={{ minHeight: "100vh", background: "var(--color-background)", padding: "2rem 0" }}>
+        <div className="container" style={{ paddingTop: "3rem" }}>
+          <div className="error-banner">{error}</div>
+          <Link href="/properties" className="btn btn-outline" style={{ marginTop: "1rem", display: "inline-block" }}>
+            ← العودة إلى العقارات
+          </Link>
+        </div>
       </div>
     );
   }
