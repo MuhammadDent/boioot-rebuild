@@ -182,13 +182,29 @@ export interface SubmitRequestPayload {
   projectId?: string;
 }
 
+export interface DashboardRequestItem {
+  id: string;
+  name: string;
+  phone: string;
+  /** New | Contacted | Qualified | Closed */
+  status: string;
+  propertyTitle?: string;
+  projectTitle?: string;
+  createdAt: string;
+}
+
+export interface UpdateRequestStatusRequest {
+  /** New | Contacted | Qualified | Closed */
+  status: string;
+}
+
 export interface RequestResponse {
   id: string;
   name: string;
   phone: string;
   email?: string;
   message?: string;
-  /** New | InProgress | Closed */
+  /** New | Contacted | Qualified | Closed */
   status: string;
   propertyId?: string;
   propertyTitle?: string;
