@@ -25,6 +25,33 @@ export interface PagedResult<T> {
   hasPrevious: boolean;
 }
 
+export interface ProjectImageResponse {
+  id: string;
+  imageUrl: string;
+  isPrimary: boolean;
+  order: number;
+}
+
+export interface ProjectResponse {
+  id: string;
+  title: string;
+  description?: string;
+  /** Serialized enum name: Upcoming | UnderConstruction | Completed */
+  status: string;
+  city: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  startingPrice?: number;
+  deliveryDate?: string;
+  isPublished: boolean;
+  companyId: string;
+  companyName: string;
+  images: ProjectImageResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PropertyImageResponse {
   id: string;
   imageUrl: string;

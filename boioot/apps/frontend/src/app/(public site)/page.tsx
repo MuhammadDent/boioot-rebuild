@@ -44,6 +44,20 @@ export default function HomePage() {
           تصفح العقارات
         </Link>
         <Link
+          href="/projects"
+          style={{
+            padding: "0.75rem 2rem",
+            background: "var(--color-primary)",
+            color: "#fff",
+            borderRadius: "8px",
+            fontWeight: 600,
+            textDecoration: "none",
+            opacity: 0.85,
+          }}
+        >
+          تصفح المشاريع
+        </Link>
+        <Link
           href="/login"
           style={{
             padding: "0.75rem 2rem",
