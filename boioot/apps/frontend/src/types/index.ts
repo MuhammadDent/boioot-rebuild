@@ -96,6 +96,44 @@ export interface DashboardPropertyItem {
   createdAt: string;
 }
 
+export interface DashboardProjectItem {
+  id: string;
+  title: string;
+  /** Upcoming | UnderConstruction | Completed */
+  status: string;
+  city: string;
+  startingPrice?: number;
+  isPublished: boolean;
+  createdAt: string;
+}
+
+export interface CreateProjectRequest {
+  title: string;
+  description?: string;
+  city: string;
+  address?: string;
+  startingPrice?: number;
+  /** ISO date string e.g. "2026-12-31" */
+  deliveryDate?: string;
+  /** Upcoming | UnderConstruction | Completed */
+  status: string;
+  isPublished: boolean;
+  companyId: string;
+}
+
+export interface UpdateProjectRequest {
+  title: string;
+  description?: string;
+  city: string;
+  address?: string;
+  startingPrice?: number;
+  /** ISO date string e.g. "2026-12-31" */
+  deliveryDate?: string;
+  /** Upcoming | UnderConstruction | Completed */
+  status: string;
+  isPublished: boolean;
+}
+
 export interface CreatePropertyRequest {
   title: string;
   description?: string;

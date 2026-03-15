@@ -7,6 +7,7 @@ public interface IProjectService
 {
     Task<PagedResult<ProjectResponse>> GetPublicListAsync(ProjectFilters filters, CancellationToken ct = default);
     Task<ProjectResponse> GetByIdPublicAsync(Guid id, CancellationToken ct = default);
+    Task<ProjectResponse> GetByIdDashboardAsync(Guid userId, string userRole, Guid projectId, CancellationToken ct = default);
     Task<ProjectResponse> CreateAsync(Guid userId, string userRole, CreateProjectRequest request, CancellationToken ct = default);
     Task<ProjectResponse> UpdateAsync(Guid userId, string userRole, Guid projectId, UpdateProjectRequest request, CancellationToken ct = default);
     Task DeleteAsync(Guid userId, string userRole, Guid projectId, CancellationToken ct = default);

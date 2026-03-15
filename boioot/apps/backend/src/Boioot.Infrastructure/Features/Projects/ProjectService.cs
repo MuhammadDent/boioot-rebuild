@@ -64,6 +64,20 @@ public class ProjectService : IProjectService
         return MapToResponse(project);
     }
 
+    public async Task<ProjectResponse> GetByIdDashboardAsync(
+        Guid userId, string userRole, Guid projectId, CancellationToken ct = default)
+    {
+        var project = await _context.Projects
+            .Include(p => p.Company)
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Id == projectId, ct)
+            ?? throw new BoiootException("المشروع غير موجود", 404);
+
+        await EnsureCanManageProjectAsync(userId, userRole, project, ct);
+
+        return MapToResponse(project);
+    }
+
     public async Task<ProjectResponse> CreateAsync(
         Guid userId, string userRole, CreateProjectRequest request, CancellationToken ct = default)
     {

@@ -1,4 +1,5 @@
 using Boioot.Application.Features.Dashboard.Interfaces;
+using Boioot.Application.Features.Projects.Interfaces;
 using Boioot.Application.Features.Properties.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,11 +12,16 @@ public class DashboardController : BaseController
 {
     private readonly IDashboardService _dashboardService;
     private readonly IPropertyService _propertyService;
+    private readonly IProjectService _projectService;
 
-    public DashboardController(IDashboardService dashboardService, IPropertyService propertyService)
+    public DashboardController(
+        IDashboardService dashboardService,
+        IPropertyService propertyService,
+        IProjectService projectService)
     {
         _dashboardService = dashboardService;
         _propertyService = propertyService;
+        _projectService = projectService;
     }
 
     [HttpGet("summary")]
@@ -45,6 +51,13 @@ public class DashboardController : BaseController
         [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
     {
         var result = await _dashboardService.GetProjectsAsync(GetUserId(), GetUserRole(), page, pageSize, ct);
+        return Ok(result);
+    }
+
+    [HttpGet("projects/{id:guid}")]
+    public async Task<IActionResult> GetProject(Guid id, CancellationToken ct)
+    {
+        var result = await _projectService.GetByIdDashboardAsync(GetUserId(), GetUserRole(), id, ct);
         return Ok(result);
     }
 

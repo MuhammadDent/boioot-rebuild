@@ -97,50 +97,99 @@ export default function DashboardPage() {
 
         {/* Navigation cards */}
         {(user.role === "Admin" || user.role === "CompanyOwner" || user.role === "Agent") && (
-          <Link
-            href="/dashboard/properties"
-            className="form-card"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "1rem",
-              textDecoration: "none",
-              color: "inherit",
-              padding: "1.1rem 1.25rem",
-              transition: "box-shadow 0.15s",
-            }}
-          >
-            <div style={{
-              width: 44, height: 44, borderRadius: "10px",
-              backgroundColor: "var(--color-primary)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-            }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <div>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: "1rem", color: "var(--color-text-primary)" }}>
-                إدارة العقارات
-              </p>
-              <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--color-text-secondary)", marginTop: "0.2rem" }}>
-                عرض وإضافة وتعديل وحذف العقارات
-              </p>
-            </div>
-            <svg
-              width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2"
-              style={{ marginRight: "auto", color: "var(--color-text-secondary)", transform: "rotate(180deg)" }}
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </Link>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <NavCard
+              href="/dashboard/properties"
+              label="إدارة العقارات"
+              description="عرض وإضافة وتعديل وحذف العقارات"
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              }
+            />
+            <NavCard
+              href="/dashboard/projects"
+              label="إدارة المشاريع"
+              description="عرض وإضافة وتعديل وحذف المشاريع العقارية"
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                  <rect x="2" y="7" width="20" height="14" rx="2" />
+                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                </svg>
+              }
+            />
+          </div>
         )}
 
       </div>
     </div>
+  );
+}
+
+function NavCard({
+  href,
+  label,
+  description,
+  icon,
+}: {
+  href: string;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="form-card"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "1rem",
+        textDecoration: "none",
+        color: "inherit",
+        padding: "1.1rem 1.25rem",
+      }}
+    >
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: "10px",
+          backgroundColor: "var(--color-primary)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </div>
+      <div>
+        <p style={{ margin: 0, fontWeight: 700, fontSize: "1rem", color: "var(--color-text-primary)" }}>
+          {label}
+        </p>
+        <p style={{ margin: "0.2rem 0 0", fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
+          {description}
+        </p>
+      </div>
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        style={{
+          marginRight: "auto",
+          color: "var(--color-text-secondary)",
+          transform: "rotate(180deg)",
+        }}
+      >
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    </Link>
   );
 }
 

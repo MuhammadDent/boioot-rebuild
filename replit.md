@@ -160,3 +160,25 @@ boioot/
 - CompanyId: حقل نصي UUID يظهر في Create فقط (لا يوجد endpoint لجلب companyId المستخدم)
 - Status field: يظهر في Edit فقط (Create يضع Available تلقائياً من الـ backend)
 - الصلاحيات: Admin/CompanyOwner = CRUD كامل | Agent = list + edit فقط
+
+## Dashboard Projects Module (مكتمل)
+**الملفات المُضافة:**
+- `features/dashboard/projects/api.ts` — dashboardProjectsApi: getList, getById, create, update, delete
+- `components/dashboard/projects/ProjectForm.tsx` — نموذج مشترك (create/edit) مع validation كامل
+- `app/dashboard/projects/page.tsx` — قائمة المشاريع مع حذف آمن
+- `app/dashboard/projects/new/page.tsx` — صفحة الإضافة (Admin/CompanyOwner فقط)
+- `app/dashboard/projects/[id]/edit/page.tsx` — صفحة التعديل (Admin/CompanyOwner فقط)
+
+**الملفات المُعدَّلة:**
+- `types/index.ts` — أُضيف: DashboardProjectItem, CreateProjectRequest, UpdateProjectRequest
+- `app/dashboard/page.tsx` — أُضيفت بطاقة "إدارة المشاريع" + إعادة هيكلة NavCard كمكوّن مشترك
+- `IProjectService.cs` — أُضيف GetByIdDashboardAsync
+- `ProjectService.cs` — تُنفَّذ GetByIdDashboardAsync (بدون فلتر IsPublished + التحقق من الصلاحية)
+- `DashboardController.cs` — أُضيف IProjectService injection + GET /api/dashboard/projects/{id:guid}
+
+**الفروق الجوهرية عن وحدة العقارات:**
+- `status` يظهر في Create و Edit معاً (في العقارات: Edit فقط)
+- `isPublished` checkbox بدلاً من status enum
+- لا `listingType` ولا `area` ولا `bedrooms/bathrooms`
+- حقول جديدة: `startingPrice` (اختياري)، `deliveryDate` (تاريخ اختياري)
+- الصلاحيات: Admin/CompanyOwner فقط لـ CRUD (Agent = قائمة للعرض فقط، لا تعديل)
