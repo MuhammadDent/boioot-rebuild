@@ -55,6 +55,9 @@ export default function DashboardPage() {
   // Computed once — drives both SummarySection and management NavCards
   const isManagementRole = canSeeSummary(user.role);
 
+  // Projects are restricted to companies and admins only (not plain agents)
+  const isCompanyOrAdmin = user.role === "Admin" || user.role === "CompanyOwner";
+
   function handleLogout() {
     logout();
     router.push("/login");
@@ -159,6 +162,7 @@ export default function DashboardPage() {
             error={summaryError}
             summary={summary}
             onRetry={loadSummary}
+            isCompanyOrAdmin={isCompanyOrAdmin}
           />
         )}
 
@@ -282,17 +286,19 @@ export default function DashboardPage() {
                   </svg>
                 }
               />
-              <NavCard
-                href="/dashboard/projects"
-                label="إدارة المشاريع"
-                description="عرض وإضافة وتعديل وحذف المشاريع العقارية"
-                icon={
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                    <rect x="2" y="7" width="20" height="14" rx="2" />
-                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-                  </svg>
-                }
-              />
+              {isCompanyOrAdmin && (
+                <NavCard
+                  href="/dashboard/projects"
+                  label="إدارة المشاريع"
+                  description="عرض وإضافة وتعديل وحذف المشاريع العقارية"
+                  icon={
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                      <rect x="2" y="7" width="20" height="14" rx="2" />
+                      <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                    </svg>
+                  }
+                />
+              )}
               <NavCard
                 href="/dashboard/requests"
                 label="الطلبات والاستفسارات"
@@ -320,11 +326,13 @@ function SummarySection({
   error,
   summary,
   onRetry,
+  isCompanyOrAdmin,
 }: {
   loading: boolean;
   error: string;
   summary: DashboardSummary | null;
   onRetry: () => void;
+  isCompanyOrAdmin: boolean;
 }) {
   if (loading) {
     return (
@@ -401,7 +409,7 @@ function SummarySection({
           }
         />
         <StatCard
-          href="/dashboard/projects"
+          href={isCompanyOrAdmin ? "/dashboard/projects" : undefined}
           label="المشاريع"
           value={summary.totalProjects}
           icon={
@@ -447,59 +455,41 @@ function StatCard({
   badge,
   icon,
 }: {
-  href: string;
+  href?: string;
   label: string;
   value: number;
   badge?: { count: number; label: string };
   icon: React.ReactNode;
 }) {
-  return (
-    <Link
-      href={href}
-      className="form-card"
-      style={{
-        textDecoration: "none", color: "inherit",
-        padding: "1rem 1.1rem",
-        display: "flex", flexDirection: "column", gap: "0.35rem",
-      }}
-    >
-      {/* Icon + badge row */}
-      <div style={{
-        display: "flex", alignItems: "center",
-        justifyContent: "space-between",
-      }}>
-        <span style={{ color: "var(--color-primary)", opacity: 0.85 }}>
-          {icon}
-        </span>
+  const cardStyle: React.CSSProperties = {
+    textDecoration: "none", color: "inherit",
+    padding: "1rem 1.1rem",
+    display: "flex", flexDirection: "column", gap: "0.35rem",
+  };
+
+  const inner = (
+    <>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ color: "var(--color-primary)", opacity: 0.85 }}>{icon}</span>
         {badge && (
-          <span style={{
-            backgroundColor: "#fff3cd", color: "#856404",
-            fontSize: "0.68rem", fontWeight: 700,
-            padding: "0.1rem 0.5rem", borderRadius: 20,
-          }}>
+          <span style={{ backgroundColor: "#fff3cd", color: "#856404", fontSize: "0.68rem", fontWeight: 700, padding: "0.1rem 0.5rem", borderRadius: 20 }}>
             {badge.count} {badge.label}
           </span>
         )}
       </div>
-
-      {/* Count */}
-      <p style={{
-        margin: 0, fontSize: "1.75rem", fontWeight: 800,
-        color: "var(--color-text-primary)", lineHeight: 1.1,
-        direction: "ltr", textAlign: "right",
-      }}>
+      <p style={{ margin: 0, fontSize: "1.75rem", fontWeight: 800, color: "var(--color-text-primary)", lineHeight: 1.1, direction: "ltr", textAlign: "right" }}>
         {value.toLocaleString("ar-SY")}
       </p>
-
-      {/* Label */}
-      <p style={{
-        margin: 0, fontSize: "0.82rem",
-        color: "var(--color-text-secondary)", fontWeight: 500,
-      }}>
+      <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--color-text-secondary)", fontWeight: 500 }}>
         {label}
       </p>
-    </Link>
+    </>
   );
+
+  if (href) {
+    return <Link href={href} className="form-card" style={cardStyle}>{inner}</Link>;
+  }
+  return <div className="form-card" style={cardStyle}>{inner}</div>;
 }
 
 // ─── Nav Card ─────────────────────────────────────────────────────────────────

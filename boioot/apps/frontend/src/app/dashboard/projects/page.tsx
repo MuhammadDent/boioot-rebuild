@@ -22,7 +22,7 @@ import type { DashboardProjectItem } from "@/types";
 
 export default function DashboardProjectsPage() {
   const { user, isLoading } = useProtectedRoute({
-    allowedRoles: ["Admin", "CompanyOwner", "Agent"],
+    allowedRoles: ["Admin", "CompanyOwner"],
   });
 
   const [projects, setProjects] = useState<DashboardProjectItem[]>([]);
