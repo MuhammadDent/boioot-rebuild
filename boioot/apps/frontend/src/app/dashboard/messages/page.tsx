@@ -249,7 +249,7 @@ function ConversationRow({ conversation: c }: { conversation: ConversationSummar
   const subjectTag = c.propertyTitle ? "عقار" : c.projectTitle ? "مشروع" : null;
 
   const timeLabel = c.lastMessageAt
-    ? new Date(c.lastMessageAt).toLocaleDateString("ar-SY", {
+    ? new Date(c.lastMessageAt).toLocaleString("ar-SY", {
         month: "short", day: "numeric",
         hour: "2-digit", minute: "2-digit",
       })

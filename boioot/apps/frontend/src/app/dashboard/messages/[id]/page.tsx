@@ -25,22 +25,30 @@ export default function ConversationPage() {
   const [messages, setMessages]       = useState<MessageItem[]>([]);
   const [hasMore, setHasMore]         = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   const [fetching, setFetching]       = useState(true);
   const [fetchError, setFetchError]   = useState("");
 
   // Compose state
-  const [content, setContent]         = useState("");
-  const [sending, setSending]         = useState(false);
-  const [sendError, setSendError]     = useState("");
+  const [content, setContent]   = useState("");
+  const [sending, setSending]   = useState(false);
+  const [sendError, setSendError] = useState("");
 
-  // Auto-scroll ref — points to the bottom sentinel element
+  // Bottom sentinel for auto-scroll
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom helper
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  // Timer ref for post-send scroll — cleaned up on unmount
+  const sendScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (sendScrollTimerRef.current !== null) clearTimeout(sendScrollTimerRef.current);
+    };
   }, []);
 
   // Initial load
@@ -62,10 +70,16 @@ export default function ConversationPage() {
       .finally(() => setFetching(false));
   }, [authLoading, user, id]);
 
-  // Scroll to bottom after initial messages load
+  // Scroll to bottom once after initial load — fires when detail first becomes available.
+  // Uses a ref flag so subsequent detail mutations (e.g. from future realtime updates)
+  // don't trigger an unexpected scroll.
+  const initialScrollDone = useRef(false);
   useEffect(() => {
-    if (!fetching && messages.length > 0) scrollToBottom();
-  }, [fetching]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (detail && !initialScrollDone.current) {
+      initialScrollDone.current = true;
+      scrollToBottom();
+    }
+  }, [detail, scrollToBottom]);
 
   if (authLoading || !user) return null;
 
@@ -102,10 +116,11 @@ export default function ConversationPage() {
 
   if (!detail) return null;
 
-  // ── Load more (older pages in ascending sort = newer messages) ──
+  // ── Load more (next pages = newer messages in oldest-first sort) ──
   async function handleLoadMore() {
     if (loadingMore || !id) return;
     setLoadingMore(true);
+    setLoadMoreError("");
     try {
       const nextPage = currentPage + 1;
       const res = await messagingApi.getConversation(id, nextPage, CONVERSATION_PAGE_SIZE);
@@ -113,7 +128,7 @@ export default function ConversationPage() {
       setHasMore(res.messages.hasNext);
       setCurrentPage(nextPage);
     } catch (e) {
-      setSendError(normalizeError(e));
+      setLoadMoreError(normalizeError(e));
     } finally {
       setLoadingMore(false);
     }
@@ -131,8 +146,9 @@ export default function ConversationPage() {
       const msg = await messagingApi.sendMessage(id, trimmed);
       setMessages(prev => [...prev, msg]);
       setContent("");
-      // Scroll after React re-renders the new message
-      setTimeout(scrollToBottom, 50);
+      // Scroll after React re-renders the new bubble — cleaned up on unmount
+      if (sendScrollTimerRef.current !== null) clearTimeout(sendScrollTimerRef.current);
+      sendScrollTimerRef.current = setTimeout(scrollToBottom, 50);
     } catch (e) {
       setSendError(normalizeError(e));
     } finally {
@@ -148,7 +164,7 @@ export default function ConversationPage() {
     }
   }
 
-  const subject = detail.propertyTitle ?? detail.projectTitle;
+  const subject    = detail.propertyTitle ?? detail.projectTitle;
   const subjectTag = detail.propertyTitle ? "عقار" : detail.projectTitle ? "مشروع" : null;
 
   return (
@@ -156,7 +172,11 @@ export default function ConversationPage() {
       minHeight: "100vh", backgroundColor: "var(--color-bg)",
       display: "flex", flexDirection: "column",
     }}>
-      <div style={{ maxWidth: 720, margin: "0 auto", width: "100%", flex: 1, display: "flex", flexDirection: "column", padding: "2rem 1rem 1rem" }}>
+      <div style={{
+        maxWidth: 720, margin: "0 auto", width: "100%",
+        flex: 1, display: "flex", flexDirection: "column",
+        padding: "2rem 1rem 1rem",
+      }}>
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1rem" }}>
@@ -204,7 +224,7 @@ export default function ConversationPage() {
             </p>
           )}
 
-          {/* ── Load more (next pages = newer messages in oldest-first sort) ── */}
+          {/* ── Load more newer messages ── */}
           {hasMore && (
             <div style={{ textAlign: "center", marginBottom: "0.5rem" }}>
               <button
@@ -213,8 +233,16 @@ export default function ConversationPage() {
                 disabled={loadingMore}
                 onClick={handleLoadMore}
               >
-                {loadingMore ? "جارٍ التحميل..." : "تحميل المزيد من الرسائل"}
+                {loadingMore ? "جارٍ التحميل..." : "تحميل رسائل أحدث"}
               </button>
+              {loadMoreError && (
+                <p style={{
+                  color: "var(--color-error, #c0392b)", fontSize: "0.8rem",
+                  margin: "0.35rem 0 0",
+                }}>
+                  {loadMoreError}
+                </p>
+              )}
             </div>
           )}
 
@@ -270,10 +298,11 @@ export default function ConversationPage() {
           </button>
         </div>
 
-        {/* Character count */}
+        {/* Character count — shown near limit */}
         {content.length > 1800 && (
           <p style={{
-            fontSize: "0.75rem", color: content.length >= 2000 ? "#c62828" : "var(--color-text-secondary)",
+            fontSize: "0.75rem",
+            color: content.length >= 2000 ? "#c62828" : "var(--color-text-secondary)",
             margin: "0.25rem 0 0", textAlign: "left",
           }}>
             {content.length} / 2000
@@ -300,9 +329,7 @@ function MessageBubble({ msg }: { msg: MessageItem }) {
     <div style={{ display: "flex", justifyContent: msg.isOwnMessage ? "flex-start" : "flex-end" }}>
       <div style={{
         maxWidth: "70%",
-        backgroundColor: msg.isOwnMessage
-          ? "var(--color-primary)"
-          : "#fff",
+        backgroundColor: msg.isOwnMessage ? "var(--color-primary)" : "#fff",
         color: msg.isOwnMessage ? "#fff" : "var(--color-text-primary)",
         border: msg.isOwnMessage ? "none" : "1px solid var(--color-border)",
         borderRadius: msg.isOwnMessage
