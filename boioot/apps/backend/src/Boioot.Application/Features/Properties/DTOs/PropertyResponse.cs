@@ -11,6 +11,7 @@ public class PropertyResponse
     public string Type { get; set; } = string.Empty;
     public string ListingType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public string? Province { get; set; }
     public string City { get; set; } = string.Empty;
     public string? Neighborhood { get; set; }
     public string? Address { get; set; }

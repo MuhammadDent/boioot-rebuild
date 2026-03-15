@@ -106,6 +106,40 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN Currency TEXT NOT NULL DEFAULT 'SYP'"); }
         catch { /* column already exists */ }
 
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN Province TEXT"); }
+        catch { /* column already exists */ }
+
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE LocationCities ADD COLUMN Province TEXT NOT NULL DEFAULT ''"); }
+        catch { /* column already exists */ }
+
+        // Update existing cities with their correct provinces
+        var cityProvinceMap = new Dictionary<string, string>
+        {
+            ["دمشق"]        = "دمشق",
+            ["حلب"]         = "حلب",
+            ["حمص"]         = "حمص",
+            ["حماة"]        = "حماة",
+            ["اللاذقية"]    = "اللاذقية",
+            ["طرطوس"]       = "طرطوس",
+            ["دير الزور"]   = "دير الزور",
+            ["الرقة"]       = "الرقة",
+            ["السويداء"]    = "السويداء",
+            ["درعا"]        = "درعا",
+            ["القامشلي"]    = "الحسكة",
+            ["الحسكة"]      = "الحسكة",
+            ["إدلب"]        = "إدلب",
+        };
+        foreach (var kv in cityProvinceMap)
+        {
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "UPDATE LocationCities SET Province = {0} WHERE Name = {1} AND (Province IS NULL OR Province = '')",
+                    kv.Value, kv.Key);
+            }
+            catch { /* ignore */ }
+        }
+
         // Create PropertyListingTypes table if it doesn't exist
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS PropertyListingTypes (

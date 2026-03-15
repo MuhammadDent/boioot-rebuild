@@ -16,24 +16,44 @@ public class LocationsController : BaseController
         _db = db;
     }
 
+    // ─── Provinces ─────────────────────────────────────────────────────────────
+
+    [HttpGet("provinces")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetProvinces(CancellationToken ct = default)
+    {
+        var provinces = await _db.LocationCities
+            .Where(c => !string.IsNullOrEmpty(c.Province))
+            .Select(c => c.Province)
+            .Distinct()
+            .OrderBy(p => p)
+            .ToListAsync(ct);
+        return Ok(provinces);
+    }
+
     // ─── Cities ────────────────────────────────────────────────────────────────
 
     [HttpGet("cities")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetCities(CancellationToken ct = default)
+    public async Task<IActionResult> GetCities([FromQuery] string? province, CancellationToken ct = default)
     {
-        var cities = await _db.LocationCities
+        var query = _db.LocationCities.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(province))
+            query = query.Where(c => c.Province == province);
+
+        var cities = await query
             .OrderBy(c => c.Name)
-            .Select(c => new { c.Id, c.Name })
+            .Select(c => new { c.Id, c.Name, c.Province })
             .ToListAsync(ct);
         return Ok(cities);
     }
 
     [HttpPost("cities")]
     [Authorize]
-    public async Task<IActionResult> AddCity([FromBody] AddLocationRequest req, CancellationToken ct = default)
+    public async Task<IActionResult> AddCity([FromBody] AddCityRequest req, CancellationToken ct = default)
     {
         var name = req.Name?.Trim();
+        var province = req.Province?.Trim() ?? string.Empty;
         if (string.IsNullOrEmpty(name))
             return BadRequest(new { error = "اسم المدينة مطلوب" });
 
@@ -42,16 +62,16 @@ public class LocationsController : BaseController
         {
             var existing = await _db.LocationCities
                 .Where(c => c.Name == name)
-                .Select(c => new { c.Id, c.Name })
+                .Select(c => new { c.Id, c.Name, c.Province })
                 .FirstAsync(ct);
             return Ok(existing);
         }
 
-        var city = new LocationCity { Name = name };
+        var city = new LocationCity { Name = name, Province = province };
         _db.LocationCities.Add(city);
         await _db.SaveChangesAsync(ct);
 
-        return Ok(new { city.Id, city.Name });
+        return Ok(new { city.Id, city.Name, city.Province });
     }
 
     // ─── Neighborhoods ─────────────────────────────────────────────────────────
@@ -100,5 +120,5 @@ public class LocationsController : BaseController
     }
 }
 
-public record AddLocationRequest(string? Name);
+public record AddCityRequest(string? Name, string? Province);
 public record AddNeighborhoodRequest(string? Name, string? City);

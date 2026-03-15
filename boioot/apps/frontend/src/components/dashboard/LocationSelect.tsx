@@ -10,10 +10,18 @@ interface LocationOption {
   name: string;
 }
 
+interface ProvinceSelectProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+}
+
 interface CitySelectProps {
   label: string;
   value: string;
   onChange: (val: string) => void;
+  province?: string;
   required?: boolean;
   error?: string;
   disabled?: boolean;
@@ -76,12 +84,106 @@ const cancelBtnStyle: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
+// ─── ProvinceSelect ───────────────────────────────────────────────────────────
+
+export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSelectProps) {
+  const [provinces, setProvinces] = useState<string[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { fetchProvinces(); }, []);
+  useEffect(() => { if (adding) inputRef.current?.focus(); }, [adding]);
+
+  async function fetchProvinces() {
+    try {
+      const data = await api.get<string[]>("/locations/provinces");
+      setProvinces(data);
+    } catch { /* silent */ }
+  }
+
+  async function handleAdd() {
+    const name = newName.trim();
+    if (!name) { setAddError("اسم المحافظة مطلوب"); return; }
+    setSaving(true); setAddError("");
+    try {
+      await api.post<{ id: string; name: string; province: string }>(
+        "/locations/cities", { name, province: name }
+      );
+      const updated = await api.get<string[]>("/locations/provinces");
+      setProvinces(updated);
+      onChange(name);
+      setAdding(false); setNewName("");
+    } catch {
+      setAddError("تعذّر إضافة المحافظة — حاول مجدداً");
+    } finally { setSaving(false); }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
+    if (e.key === "Escape") { setAdding(false); setNewName(""); setAddError(""); }
+  }
+
+  return (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+        <select
+          className="form-input"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          style={{ flex: 1 }}
+        >
+          <option value="">اختر محافظة...</option>
+          {provinces.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          title="إضافة محافظة جديدة"
+          style={addBtnStyle}
+          disabled={disabled}
+          onClick={() => { setAdding(true); setAddError(""); setNewName(""); }}
+        >+</button>
+      </div>
+      {adding && (
+        <div style={inlineFormStyle}>
+          <input
+            ref={inputRef}
+            className="form-input"
+            style={{ flex: 1, fontSize: "0.9rem" }}
+            placeholder="اكتب اسم المحافظة الجديدة..."
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={saving}
+            maxLength={100}
+          />
+          <button type="button" style={confirmBtnStyle} onClick={handleAdd} disabled={saving}>
+            {saving ? "..." : "حفظ"}
+          </button>
+          <button type="button" style={cancelBtnStyle}
+            onClick={() => { setAdding(false); setNewName(""); setAddError(""); }} disabled={saving}>
+            إلغاء
+          </button>
+        </div>
+      )}
+      {addError && <p className="form-error">{addError}</p>}
+    </div>
+  );
+}
+
 // ─── CitySelect ───────────────────────────────────────────────────────────────
 
 export function CitySelect({
   label,
   value,
   onChange,
+  province,
   required,
   error,
   disabled,
@@ -93,42 +195,31 @@ export function CitySelect({
   const [addError, setAddError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchCities();
-  }, []);
+  useEffect(() => { fetchCities(province); }, [province]);
+  useEffect(() => { if (adding) inputRef.current?.focus(); }, [adding]);
 
-  useEffect(() => {
-    if (adding) inputRef.current?.focus();
-  }, [adding]);
-
-  async function fetchCities() {
+  async function fetchCities(prov?: string) {
     try {
-      const data = await api.get<LocationOption[]>("/locations/cities");
+      const url = prov
+        ? `/locations/cities?province=${encodeURIComponent(prov)}`
+        : "/locations/cities";
+      const data = await api.get<LocationOption[]>(url);
       setCities(data);
-    } catch {
-      // silent
-    }
+    } catch { /* silent */ }
   }
 
   async function handleAdd() {
     const name = newName.trim();
-    if (!name) {
-      setAddError("اسم المدينة مطلوب");
-      return;
-    }
-    setSaving(true);
-    setAddError("");
+    if (!name) { setAddError("اسم المدينة مطلوب"); return; }
+    setSaving(true); setAddError("");
     try {
-      const result = await api.post<LocationOption>("/locations/cities", { name });
-      await fetchCities();
+      const result = await api.post<LocationOption>("/locations/cities", { name, province: province ?? "" });
+      await fetchCities(province);
       onChange(result.name);
-      setAdding(false);
-      setNewName("");
+      setAdding(false); setNewName("");
     } catch {
       setAddError("تعذّر إضافة المدينة — حاول مجدداً");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {

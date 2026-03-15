@@ -69,6 +69,7 @@ export interface PropertyResponse {
   type: string;
   listingType: string;
   status: string;
+  province?: string;
   city: string;
   neighborhood?: string;
   address?: string;
@@ -159,6 +160,7 @@ export interface CreatePropertyRequest {
   bathrooms?: number;
   neighborhood?: string;
   address?: string;
+  province?: string;
   city: string;
   latitude?: number;
   longitude?: number;
@@ -180,6 +182,7 @@ export interface UpdatePropertyRequest {
   bathrooms?: number;
   neighborhood?: string;
   address?: string;
+  province?: string;
   city: string;
   latitude?: number;
   longitude?: number;

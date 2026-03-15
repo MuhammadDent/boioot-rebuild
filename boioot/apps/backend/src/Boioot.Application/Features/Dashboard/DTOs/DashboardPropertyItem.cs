@@ -11,6 +11,7 @@ public class DashboardPropertyItem
     public string ListingType { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string Currency { get; set; } = "SYP";
+    public string? Province { get; set; }
     public string City { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 }

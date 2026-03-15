@@ -41,6 +41,9 @@ public class CreatePropertyRequest
     [MaxLength(300, ErrorMessage = "العنوان التفصيلي يجب أن لا يتجاوز 300 حرف")]
     public string? Address { get; set; }
 
+    [MaxLength(100, ErrorMessage = "اسم المحافظة يجب أن لا يتجاوز 100 حرف")]
+    public string? Province { get; set; }
+
     [Required(ErrorMessage = "المدينة مطلوبة")]
     [MaxLength(100, ErrorMessage = "اسم المدينة يجب أن لا يتجاوز 100 حرف")]
     public string City { get; set; } = string.Empty;

@@ -77,6 +77,7 @@ public class DashboardService : IDashboardService
                 ListingType = p.ListingType,
                 Price       = p.Price,
                 Currency    = p.Currency,
+                Province    = p.Province,
                 City        = p.City,
                 CreatedAt   = p.CreatedAt
             })

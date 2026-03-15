@@ -130,6 +130,7 @@ public class PropertyService : IPropertyService
             Area = request.Area,
             Bedrooms = request.Bedrooms,
             Bathrooms = request.Bathrooms,
+            Province = request.Province?.Trim(),
             Neighborhood = request.Neighborhood?.Trim(),
             Address = request.Address?.Trim(),
             City = request.City.Trim(),
@@ -177,6 +178,7 @@ public class PropertyService : IPropertyService
         property.Area = request.Area;
         property.Bedrooms = request.Bedrooms;
         property.Bathrooms = request.Bathrooms;
+        property.Province = request.Province?.Trim();
         property.Neighborhood = request.Neighborhood?.Trim();
         property.Address = request.Address?.Trim();
         property.City = request.City.Trim();
@@ -247,6 +249,9 @@ public class PropertyService : IPropertyService
     private static IQueryable<Property> ApplyFilters(
         IQueryable<Property> query, PropertyFilters filters)
     {
+        if (!string.IsNullOrWhiteSpace(filters.Province))
+            query = query.Where(p => p.Province == filters.Province.Trim());
+
         if (!string.IsNullOrWhiteSpace(filters.City))
             query = query.Where(p => p.City == filters.City.Trim());
 
@@ -368,6 +373,7 @@ public class PropertyService : IPropertyService
         Type = p.Type.ToString(),
         ListingType = p.ListingType,
         Status = p.Status.ToString(),
+        Province = p.Province,
         City = p.City,
         Neighborhood = p.Neighborhood,
         Address = p.Address,

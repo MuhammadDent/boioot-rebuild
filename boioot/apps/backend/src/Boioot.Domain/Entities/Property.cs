@@ -15,6 +15,7 @@ public class Property : BaseEntity, ISoftDeletable
     public decimal Area { get; set; }
     public int? Bedrooms { get; set; }
     public int? Bathrooms { get; set; }
+    public string? Province { get; set; }
     public string? Neighborhood { get; set; }
     public string? Address { get; set; }
     public string City { get; set; } = string.Empty;

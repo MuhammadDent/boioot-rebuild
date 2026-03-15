@@ -4,6 +4,7 @@ namespace Boioot.Application.Features.Properties.DTOs;
 
 public class PropertyFilters
 {
+    public string? Province { get; set; }
     public string? City { get; set; }
     public PropertyType? Type { get; set; }
     public string? ListingType { get; set; }

@@ -11,7 +11,7 @@ import {
   PROPERTY_TYPE_LABELS,
   PROPERTY_STATUS_LABELS,
 } from "@/features/properties/constants";
-import { CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
+import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import { api } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,6 +27,7 @@ interface FormFields {
   area: string;
   bedrooms: string;
   bathrooms: string;
+  province: string;
   city: string;
   neighborhood: string;
   address: string;
@@ -59,6 +60,7 @@ const EMPTY_FIELDS: FormFields = {
   area: "",
   bedrooms: "",
   bathrooms: "",
+  province: "",
   city: "",
   neighborhood: "",
   address: "",
@@ -77,6 +79,7 @@ function fromInitial(data: PropertyResponse): FormFields {
     area: String(data.area),
     bedrooms: data.bedrooms != null ? String(data.bedrooms) : "",
     bathrooms: data.bathrooms != null ? String(data.bathrooms) : "",
+    province: data.province ?? "",
     city: data.city,
     neighborhood: data.neighborhood ?? "",
     address: data.address ?? "",
@@ -187,6 +190,7 @@ export default function PropertyForm({
       area: Number(fields.area),
       bedrooms: fields.bedrooms !== "" ? Number(fields.bedrooms) : undefined,
       bathrooms: fields.bathrooms !== "" ? Number(fields.bathrooms) : undefined,
+      province: fields.province.trim() || undefined,
       neighborhood: fields.neighborhood.trim() || undefined,
       address: fields.address.trim() || undefined,
       city: fields.city,
@@ -395,6 +399,17 @@ export default function PropertyForm({
       {/* ── Section: location ── */}
       <Section label="الموقع">
         <Row>
+          <ProvinceSelect
+            label="المحافظة (اختياري)"
+            value={fields.province}
+            onChange={(val) => {
+              setField("province", val);
+              setField("city", "");
+              setField("neighborhood", "");
+            }}
+            disabled={disabled}
+          />
+
           <CitySelect
             label="المدينة"
             value={fields.city}
@@ -402,19 +417,21 @@ export default function PropertyForm({
               setField("city", val);
               setField("neighborhood", "");
             }}
+            province={fields.province}
             required
             error={errors.city}
             disabled={disabled}
           />
+        </Row>
 
+        <Row>
           <NeighborhoodSelect
             label="الحي (اختياري)"
             value={fields.neighborhood}
             onChange={(val) => setField("neighborhood", val)}
             city={fields.city}
             disabled={disabled}
-          />
-        </Row>
+          /></Row>
 
         <div className="form-group">
           <label className="form-label">العنوان التفصيلي (اختياري)</label>
