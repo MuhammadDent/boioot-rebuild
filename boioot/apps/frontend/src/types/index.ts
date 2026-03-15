@@ -252,3 +252,14 @@ export interface RequestResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+// ── Dashboard ──────────────────────────────────────────────────────────────────
+
+export interface DashboardSummary {
+  totalProperties: number;
+  totalProjects: number;
+  totalRequests: number;
+  newRequests: number;
+  totalConversations: number;
+  unreadMessages: number;
+}
