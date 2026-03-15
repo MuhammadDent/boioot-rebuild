@@ -216,14 +216,7 @@ export default function RequestDetailPage() {
               </select>
             </div>
 
-            {updateError && (
-              <p style={{
-                color: "var(--color-error, #c0392b)", fontSize: "0.85rem",
-                margin: "0 0 0.75rem",
-              }}>
-                {updateError}
-              </p>
-            )}
+            <InlineBanner message={updateError} />
 
             {updateSuccess && (
               <p style={{

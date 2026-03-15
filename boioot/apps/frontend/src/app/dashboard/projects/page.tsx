@@ -154,9 +154,7 @@ export default function DashboardProjectsPage() {
         <InlineBanner message={fetchError} />
 
         {/* ── Loading ── */}
-        {fetching && (
-          <LoadingRow />
-        )}
+        {fetching && <LoadingRow />}
 
         {/* ── Empty state ── */}
         {!fetching && !fetchError && projects.length === 0 && (

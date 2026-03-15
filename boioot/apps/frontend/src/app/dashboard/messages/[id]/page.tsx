@@ -230,14 +230,7 @@ export default function ConversationPage() {
               >
                 {loadingMore ? "جارٍ التحميل..." : "تحميل رسائل أحدث"}
               </button>
-              {loadMoreError && (
-                <p style={{
-                  color: "var(--color-error, #c0392b)", fontSize: "0.8rem",
-                  margin: "0.35rem 0 0",
-                }}>
-                  {loadMoreError}
-                </p>
-              )}
+              <InlineBanner message={loadMoreError} />
             </div>
           )}
 
@@ -251,14 +244,7 @@ export default function ConversationPage() {
         </div>
 
         {/* ── Send error ── */}
-        {sendError && (
-          <p style={{
-            color: "var(--color-error, #c0392b)", fontSize: "0.85rem",
-            margin: "0.5rem 0 0",
-          }}>
-            {sendError}
-          </p>
-        )}
+        <InlineBanner message={sendError} />
 
         {/* ── Compose area ── */}
         <div style={{

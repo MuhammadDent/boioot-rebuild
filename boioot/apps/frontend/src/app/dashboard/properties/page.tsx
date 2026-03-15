@@ -23,7 +23,7 @@ import type { DashboardPropertyItem } from "@/types";
 
 const STATUS_BADGE: Record<string, string> = {
   Available: "badge badge-green",
-  Sold:      "badge badge-red",
+  Sold:      "badge badge-blue",
   Rented:    "badge badge-yellow",
   Inactive:  "badge badge-gray",
 };
@@ -166,9 +166,7 @@ export default function DashboardPropertiesPage() {
         <InlineBanner message={fetchError} />
 
         {/* ── Loading ── */}
-        {fetching && (
-          <LoadingRow />
-        )}
+        {fetching && <LoadingRow />}
 
         {/* ── Empty state ── */}
         {!fetching && !fetchError && properties.length === 0 && (
