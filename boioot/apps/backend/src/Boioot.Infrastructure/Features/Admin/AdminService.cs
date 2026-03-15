@@ -280,6 +280,43 @@ public class AdminService : IAdminService
         };
     }
 
+    public async Task<AdminUserResponse> UpdateUserRoleAsync(
+        Guid adminUserId, Guid targetUserId, UserRole newRole, CancellationToken ct = default)
+    {
+        if (adminUserId == targetUserId)
+            throw new BoiootException("لا يمكن تعديل دور حسابك الخاص", 400);
+
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
+            ?? throw new BoiootException("المستخدم غير موجود", 404);
+
+        if (user.Role == UserRole.Admin)
+            throw new BoiootException("لا يمكن تعديل دور حساب المشرف", 400);
+
+        user.Role = newRole;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Admin {AdminUserId} updated User {TargetUserId} role to {Role}",
+            adminUserId, targetUserId, newRole);
+
+        return new AdminUserResponse
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Email = user.Email,
+            Phone = user.Phone,
+            Role = user.Role.ToString(),
+            IsActive = user.IsActive,
+            IsDeleted = user.IsDeleted,
+            CreatedAt = user.CreatedAt,
+            UpdatedAt = user.UpdatedAt
+        };
+    }
+
     public async Task<AdminCompanyResponse> VerifyCompanyAsync(
         Guid companyId, bool isVerified, CancellationToken ct = default)
     {

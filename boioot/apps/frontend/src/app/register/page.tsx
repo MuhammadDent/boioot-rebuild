@@ -34,7 +34,7 @@ const ROLES: RoleOption[] = [
     ),
   },
   {
-    value: "User",
+    value: "CompanyOwner",
     label: "مالك عقار",
     desc: "أريد عرض عقاري للبيع أو الإيجار",
     icon: (

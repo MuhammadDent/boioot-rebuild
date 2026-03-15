@@ -89,6 +89,19 @@ public class AdminController : BaseController
         return Ok(result);
     }
 
+    [HttpPatch("users/{userId:guid}/role")]
+    public async Task<IActionResult> UpdateUserRole(
+        Guid userId,
+        [FromBody] UpdateUserRoleRequest request,
+        CancellationToken ct = default)
+    {
+        if (request.Role is null)
+            return BadRequest(new { error = "حقل Role مطلوب" });
+
+        var result = await _admin.UpdateUserRoleAsync(GetUserId(), userId, request.Role.Value, ct);
+        return Ok(result);
+    }
+
     [HttpPatch("companies/{companyId:guid}/verify")]
     public async Task<IActionResult> VerifyCompany(
         Guid companyId,
