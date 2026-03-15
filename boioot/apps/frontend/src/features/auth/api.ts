@@ -14,6 +14,13 @@ export interface RegisterPayload {
   role: "User" | "Agent" | "CompanyOwner";
 }
 
+export interface UpdateProfilePayload {
+  fullName: string;
+  phone?: string;
+  newPassword?: string;
+  currentPassword?: string;
+}
+
 export const authApi = {
   login(payload: LoginPayload): Promise<AuthResponse> {
     return api.post<AuthResponse>("/auth/login", payload);
@@ -25,5 +32,9 @@ export const authApi = {
 
   me(): Promise<UserProfileResponse> {
     return api.get<UserProfileResponse>("/auth/me");
+  },
+
+  updateProfile(payload: UpdateProfilePayload): Promise<UserProfileResponse> {
+    return api.put<UserProfileResponse>("/auth/profile", payload);
   },
 };

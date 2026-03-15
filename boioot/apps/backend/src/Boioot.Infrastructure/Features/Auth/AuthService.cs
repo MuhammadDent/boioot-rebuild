@@ -102,6 +102,36 @@ public class AuthService : IAuthService
         return MapToProfileResponse(user);
     }
 
+    public async Task<UserProfileResponse> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new BoiootException("المستخدم غير موجود", 404);
+
+        if (!user.IsActive)
+            throw new BoiootException("الحساب غير مفعّل", 403);
+
+        if (!string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+                throw new BoiootException("يجب إدخال كلمة المرور الحالية لتغيير كلمة المرور", 400);
+
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+                throw new BoiootException("كلمة المرور الحالية غير صحيحة", 400);
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        }
+
+        user.FullName = request.FullName.Trim();
+        user.Phone    = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Profile updated for user: {UserId}", userId);
+
+        return MapToProfileResponse(user);
+    }
+
     private AuthResponse BuildAuthResponse(User user)
     {
         var expiryMinutes = GetExpiryMinutes();

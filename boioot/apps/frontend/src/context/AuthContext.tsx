@@ -21,6 +21,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (token: string, user: UserProfileResponse, expiresAt?: string) => void;
   logout: () => void;
+  setUser: (user: UserProfileResponse) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -72,8 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
   }, []);
 
+  const setUser = useCallback((user: UserProfileResponse) => {
+    tokenStorage.setUser(user);
+    setState((s) => ({ ...s, user }));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );

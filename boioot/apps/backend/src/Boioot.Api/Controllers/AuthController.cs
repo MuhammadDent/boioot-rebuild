@@ -43,4 +43,17 @@ public class AuthController : ControllerBase
         var profile = await _authService.GetProfileAsync(userId, ct);
         return Ok(profile);
     }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var profile = await _authService.UpdateProfileAsync(userId, request, ct);
+        return Ok(profile);
+    }
 }
