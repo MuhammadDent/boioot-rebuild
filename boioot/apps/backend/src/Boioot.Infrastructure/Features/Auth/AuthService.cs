@@ -154,7 +154,19 @@ public class AuthService : IAuthService
             .IgnoreQueryFilters()
             .CountAsync(u => u.Role == role, ct);
 
-        return $"{prefix}-{(count + 1):D4}";
+        var candidate = count + 1;
+        string code;
+        do
+        {
+            code = $"{prefix}-{candidate:D4}";
+            var exists = await _context.Users
+                .IgnoreQueryFilters()
+                .AnyAsync(u => u.UserCode == code, ct);
+            if (!exists) break;
+            candidate++;
+        } while (true);
+
+        return code;
     }
 
     private int GetExpiryMinutes() =>
