@@ -23,9 +23,9 @@ export default function DashboardPage() {
   const { user, isLoading, logout } = useProtectedRoute();
   const router = useRouter();
 
-  const [summary, setSummary]             = useState<DashboardSummary | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
-  const [summaryError, setSummaryError]   = useState("");
+  const [summary, setSummary]               = useState<DashboardSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError]     = useState("");
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -44,10 +44,15 @@ export default function DashboardPage() {
     if (!user) return;
     if (canSeeSummary(user.role)) {
       loadSummary();
+    } else {
+      setSummaryLoading(false);
     }
   }, [user, loadSummary]);
 
   if (isLoading || !user) return null;
+
+  // Computed once — drives both SummarySection and management NavCards
+  const isManagementRole = canSeeSummary(user.role);
 
   function handleLogout() {
     logout();
@@ -154,7 +159,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Summary Cards (Admin / CompanyOwner / Agent only) ── */}
-        {canSeeSummary(user.role) && (
+        {isManagementRole && (
           <SummarySection
             loading={summaryLoading}
             error={summaryError}
@@ -179,7 +184,7 @@ export default function DashboardPage() {
           />
 
           {/* Management cards — Admin / CompanyOwner / Agent only */}
-          {canSeeSummary(user.role) && (
+          {isManagementRole && (
             <>
               <NavCard
                 href="/dashboard/properties"
