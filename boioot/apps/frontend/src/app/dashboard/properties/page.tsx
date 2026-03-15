@@ -41,13 +41,14 @@ export default function DashboardPropertiesPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [fetching, setFetching] = useState(false);
+  // Start as true to prevent empty-state flash before the first load completes.
+  const [fetching, setFetching] = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
 
-  const canCreate = user?.role === "Admin" || user?.role === "CompanyOwner";
-  const canDelete = user?.role === "Admin" || user?.role === "CompanyOwner";
+  // Admin and CompanyOwner share the same create/delete rights (AdminOrCompanyOwner policy).
+  const canManage = user?.role === "Admin" || user?.role === "CompanyOwner";
 
   const load = useCallback(async (p: number) => {
     setFetching(true);
@@ -150,7 +151,7 @@ export default function DashboardPropertiesPage() {
             )}
           </div>
 
-          {canCreate && (
+          {canManage && (
             <Link
               href="/dashboard/properties/new"
               className="btn btn-primary"
@@ -240,7 +241,7 @@ export default function DashboardPropertiesPage() {
             >
               لا توجد عقارات مسجّلة بعد.
             </p>
-            {canCreate && (
+            {canManage && (
               <Link
                 href="/dashboard/properties/new"
                 className="btn btn-primary"
@@ -259,7 +260,7 @@ export default function DashboardPropertiesPage() {
               <PropertyRow
                 key={p.id}
                 property={p}
-                canDelete={canDelete}
+                canDelete={canManage}
                 isDeleting={deletingId === p.id}
                 onDelete={handleDelete}
               />

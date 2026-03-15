@@ -29,7 +29,11 @@ export default function EditPropertyPage() {
   useEffect(() => {
     if (isLoading || !user || !id) return;
 
-    async function fetch() {
+    // NOTE: propertiesApi.getById uses GET /api/properties/{id} which is a public endpoint
+    // that filters out Inactive properties (status != Inactive). If a dashboard user tries
+    // to edit an Inactive property, this call will return 404 and the edit form cannot load.
+    // A dedicated GET /api/dashboard/properties/{id} endpoint would be needed to fix this.
+    async function loadProperty() {
       setIsLoadingProperty(true);
       setLoadError("");
       try {
@@ -42,7 +46,7 @@ export default function EditPropertyPage() {
       }
     }
 
-    fetch();
+    loadProperty();
   }, [isLoading, user, id]);
 
   async function handleSubmit(data: CreatePropertyRequest | UpdatePropertyRequest) {
