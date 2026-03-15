@@ -156,7 +156,7 @@ boioot/
 - `app/dashboard/page.tsx` — استُبدل placeholder بكارت تنقل "إدارة العقارات"
 
 **ملاحظات:**
-- Edit pre-fill: يُستخدم `GET /api/properties/{id}` (public) من propertiesApi الموجود
+- Edit pre-fill: يُستخدم `GET /api/dashboard/properties/{id}` (dashboard endpoint) — يدعم جميع الحالات بما فيها Inactive
 - CompanyId: حقل نصي UUID يظهر في Create فقط (لا يوجد endpoint لجلب companyId المستخدم)
 - Status field: يظهر في Edit فقط (Create يضع Available تلقائياً من الـ backend)
 - الصلاحيات: Admin/CompanyOwner = CRUD كامل | Agent = list + edit فقط

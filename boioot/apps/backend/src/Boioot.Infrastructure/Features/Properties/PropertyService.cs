@@ -65,6 +65,20 @@ public class PropertyService : IPropertyService
         return MapToResponse(property);
     }
 
+    public async Task<PropertyResponse> GetByIdDashboardAsync(
+        Guid userId, string userRole, Guid propertyId, CancellationToken ct = default)
+    {
+        var property = await _context.Properties
+            .Include(p => p.Company)
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Id == propertyId, ct)
+            ?? throw new BoiootException("العقار غير موجود", 404);
+
+        await EnsureCanManagePropertyAsync(userId, userRole, property, ct);
+
+        return MapToResponse(property);
+    }
+
     public async Task<PropertyResponse> CreateAsync(
         Guid userId, string userRole, CreatePropertyRequest request, CancellationToken ct = default)
     {

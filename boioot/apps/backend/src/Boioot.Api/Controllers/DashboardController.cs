@@ -1,4 +1,5 @@
 using Boioot.Application.Features.Dashboard.Interfaces;
+using Boioot.Application.Features.Properties.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,10 +10,12 @@ namespace Boioot.Api.Controllers;
 public class DashboardController : BaseController
 {
     private readonly IDashboardService _dashboardService;
+    private readonly IPropertyService _propertyService;
 
-    public DashboardController(IDashboardService dashboardService)
+    public DashboardController(IDashboardService dashboardService, IPropertyService propertyService)
     {
         _dashboardService = dashboardService;
+        _propertyService = propertyService;
     }
 
     [HttpGet("summary")]
@@ -27,6 +30,13 @@ public class DashboardController : BaseController
         [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
     {
         var result = await _dashboardService.GetPropertiesAsync(GetUserId(), GetUserRole(), page, pageSize, ct);
+        return Ok(result);
+    }
+
+    [HttpGet("properties/{id:guid}")]
+    public async Task<IActionResult> GetProperty(Guid id, CancellationToken ct)
+    {
+        var result = await _propertyService.GetByIdDashboardAsync(GetUserId(), GetUserRole(), id, ct);
         return Ok(result);
     }
 

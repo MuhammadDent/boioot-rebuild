@@ -5,7 +5,6 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { dashboardPropertiesApi } from "@/features/dashboard/properties/api";
-import { propertiesApi } from "@/features/properties/api";
 import PropertyForm from "@/components/dashboard/properties/PropertyForm";
 import { normalizeError } from "@/lib/api";
 import type { PropertyResponse, CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
@@ -29,15 +28,11 @@ export default function EditPropertyPage() {
   useEffect(() => {
     if (isLoading || !user || !id) return;
 
-    // NOTE: propertiesApi.getById uses GET /api/properties/{id} which is a public endpoint
-    // that filters out Inactive properties (status != Inactive). If a dashboard user tries
-    // to edit an Inactive property, this call will return 404 and the edit form cannot load.
-    // A dedicated GET /api/dashboard/properties/{id} endpoint would be needed to fix this.
     async function loadProperty() {
       setIsLoadingProperty(true);
       setLoadError("");
       try {
-        const data = await propertiesApi.getById(id);
+        const data = await dashboardPropertiesApi.getById(id);
         setProperty(data);
       } catch (e) {
         setLoadError(normalizeError(e));

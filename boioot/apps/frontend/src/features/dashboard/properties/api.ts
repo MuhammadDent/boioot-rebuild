@@ -19,6 +19,10 @@ export const dashboardPropertiesApi = {
     );
   },
 
+  getById(id: string): Promise<PropertyResponse> {
+    return api.get(`/api/dashboard/properties/${id}`);
+  },
+
   create(data: CreatePropertyRequest): Promise<PropertyResponse> {
     return api.post("/api/properties", data);
   },
