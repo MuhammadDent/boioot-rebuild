@@ -193,6 +193,48 @@ export interface DashboardRequestItem {
   createdAt: string;
 }
 
+// ─── Messaging ────────────────────────────────────────────────────────────────
+
+export interface ConversationSummary {
+  id: string;
+  otherUserId: string;
+  otherUserName: string;
+  /** ISO string — undefined when no messages yet */
+  lastMessageAt?: string;
+  unreadCount: number;
+  propertyId?: string;
+  propertyTitle?: string;
+  projectId?: string;
+  projectTitle?: string;
+  createdAt: string;
+}
+
+export interface MessageItem {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  isRead: boolean;
+  /** True when the authenticated user is the sender */
+  isOwnMessage: boolean;
+  createdAt: string;
+}
+
+export interface ConversationDetail {
+  id: string;
+  otherUserId: string;
+  otherUserName: string;
+  propertyId?: string;
+  propertyTitle?: string;
+  projectId?: string;
+  projectTitle?: string;
+  /** Messages sorted oldest-first; page 1 = oldest batch */
+  messages: PagedResult<MessageItem>;
+  createdAt: string;
+}
+
+// ─── Requests ─────────────────────────────────────────────────────────────────
+
 export interface RequestResponse {
   id: string;
   name: string;

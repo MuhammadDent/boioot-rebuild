@@ -96,42 +96,59 @@ export default function DashboardPage() {
         </div>
 
         {/* Navigation cards */}
-        {(user.role === "Admin" || user.role === "CompanyOwner" || user.role === "Agent") && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <NavCard
-              href="/dashboard/properties"
-              label="إدارة العقارات"
-              description="عرض وإضافة وتعديل وحذف العقارات"
-              icon={
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
-              }
-            />
-            <NavCard
-              href="/dashboard/projects"
-              label="إدارة المشاريع"
-              description="عرض وإضافة وتعديل وحذف المشاريع العقارية"
-              icon={
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                  <rect x="2" y="7" width="20" height="14" rx="2" />
-                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-                </svg>
-              }
-            />
-            <NavCard
-              href="/dashboard/requests"
-              label="الطلبات والاستفسارات"
-              description="عرض وإدارة استفسارات العملاء وتحديث حالاتها"
-              icon={
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              }
-            />
-          </div>
-        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+
+          {/* Messages — available for all authenticated roles */}
+          <NavCard
+            href="/dashboard/messages"
+            label="المحادثات والرسائل"
+            description="تواصل مع المستخدمين الآخرين مباشرةً"
+            icon={
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            }
+          />
+
+          {/* Management cards — Admin / CompanyOwner / Agent only */}
+          {(user.role === "Admin" || user.role === "CompanyOwner" || user.role === "Agent") && (
+            <>
+              <NavCard
+                href="/dashboard/properties"
+                label="إدارة العقارات"
+                description="عرض وإضافة وتعديل وحذف العقارات"
+                icon={
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
+                }
+              />
+              <NavCard
+                href="/dashboard/projects"
+                label="إدارة المشاريع"
+                description="عرض وإضافة وتعديل وحذف المشاريع العقارية"
+                icon={
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                    <rect x="2" y="7" width="20" height="14" rx="2" />
+                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                  </svg>
+                }
+              />
+              <NavCard
+                href="/dashboard/requests"
+                label="الطلبات والاستفسارات"
+                description="عرض وإدارة استفسارات العملاء وتحديث حالاتها"
+                icon={
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                }
+              />
+            </>
+          )}
+
+        </div>
 
       </div>
     </div>
