@@ -7,8 +7,10 @@ import Image from "next/image";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { useAuth } from "@/context/AuthContext";
-import { authService } from "@/services/auth.service";
+import { authApi } from "@/features/auth/api";
 import { normalizeError } from "@/lib/api";
+import { EyeIcon } from "@/components/ui/EyeIcon";
+import Spinner from "@/components/ui/Spinner";
 import type { E164Number } from "libphonenumber-js/core";
 
 type RoleValue = "User" | "Agent" | "CompanyOwner";
@@ -68,20 +70,6 @@ const ROLES: RoleOption[] = [
   },
 ];
 
-function EyeIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
-    </svg>
-  ) : (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
-
 interface FormState {
   fullName: string;
   email: string;
@@ -97,7 +85,6 @@ export default function RegisterPage() {
 
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedRoleIndex, setSelectedRoleIndex] = useState<number | null>(null);
-
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [phone, setPhone] = useState<E164Number | undefined>(undefined);
   const [showPassword, setShowPassword] = useState(false);
@@ -148,15 +135,14 @@ export default function RegisterPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      const role = ROLES[selectedRoleIndex!].value;
-      const res = await authService.register({
+      const res = await authApi.register({
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
         phone: phone || undefined,
-        role,
+        role: ROLES[selectedRoleIndex!].value,
       });
-      login(res.token, res.user);
+      login(res.token, res.user, res.expiresAt);
       router.push("/dashboard");
     } catch (err) {
       setError(normalizeError(err));
@@ -165,12 +151,11 @@ export default function RegisterPage() {
     }
   }
 
-  if (isLoading) return null;
+  if (isLoading) return <Spinner />;
 
   return (
     <div className="login-page">
       <div className="form-card">
-        {/* Logo */}
         <div className="login-page__logo">
           <Image src="/logo-boioot.png" alt="بيوت" width={120} height={48} style={{ objectFit: "contain" }} priority />
         </div>
@@ -188,7 +173,13 @@ export default function RegisterPage() {
               }}>
                 {s}
               </div>
-              {s < 2 && <div style={{ width: 32, height: 2, backgroundColor: step > s ? "var(--color-primary)" : "var(--color-border)", transition: "all 0.3s" }} />}
+              {s < 2 && (
+                <div style={{
+                  width: 32, height: 2,
+                  backgroundColor: step > s ? "var(--color-primary)" : "var(--color-border)",
+                  transition: "all 0.3s",
+                }} />
+              )}
             </div>
           ))}
         </div>
@@ -216,8 +207,7 @@ export default function RegisterPage() {
                     borderRadius: 12, cursor: "pointer",
                     backgroundColor: selectedRoleIndex === i ? "var(--color-primary-light, #f0faf0)" : "var(--color-bg)",
                     color: selectedRoleIndex === i ? "var(--color-primary)" : "var(--color-text-primary)",
-                    transition: "all 0.18s", textAlign: "center",
-                    fontFamily: "inherit",
+                    transition: "all 0.18s", textAlign: "center", fontFamily: "inherit",
                   }}
                 >
                   <span style={{ color: selectedRoleIndex === i ? "var(--color-primary)" : "var(--color-text-secondary)" }}>
@@ -231,12 +221,7 @@ export default function RegisterPage() {
               ))}
             </div>
 
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleNextStep}
-              style={{ width: "100%" }}
-            >
+            <button type="button" className="btn btn-primary" onClick={handleNextStep} style={{ width: "100%" }}>
               التالي ←
             </button>
 
@@ -254,11 +239,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => { setStep(1); setError(""); }}
-                style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  color: "var(--color-text-secondary)", padding: "0.25rem",
-                  display: "flex", alignItems: "center",
-                }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-secondary)", padding: "0.25rem", display: "flex", alignItems: "center" }}
                 aria-label="رجوع"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

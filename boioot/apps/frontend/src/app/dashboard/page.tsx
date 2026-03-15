@@ -3,12 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 export default function DashboardPage() {
-  const { user, isLoading } = useProtectedRoute();
-  const { logout } = useAuth();
+  const { user, isLoading, logout } = useProtectedRoute();
   const router = useRouter();
 
   if (isLoading || !user) return null;

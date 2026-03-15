@@ -5,23 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { authService } from "@/services/auth.service";
+import { authApi } from "@/features/auth/api";
 import { normalizeError } from "@/lib/api";
-
-function EyeIcon({ open }: { open: boolean }) {
-  return open ? (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ) : (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
+import { EyeIcon } from "@/components/ui/EyeIcon";
+import Spinner from "@/components/ui/Spinner";
 
 export default function LoginPage() {
   const { login, isAuthenticated, isLoading } = useAuth();
@@ -45,9 +32,9 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      const res = await authService.login({ email, password });
-      login(res.token, res.user);
-      router.push(res.user.role === "Admin" ? "/admin/users" : "/dashboard");
+      const res = await authApi.login({ email, password });
+      login(res.token, res.user, res.expiresAt);
+      router.push(res.user.role === "Admin" ? "/admin" : "/dashboard");
     } catch (err) {
       setError(normalizeError(err));
     } finally {
@@ -55,13 +42,17 @@ export default function LoginPage() {
     }
   }
 
-  if (isLoading) return null;
+  if (isLoading) return <Spinner />;
 
   return (
     <div className="login-page">
       <div className="form-card">
         <div className="login-page__logo">
-          <Image src="/logo-boioot.png" alt="بيوت" width={120} height={48} style={{ objectFit: "contain" }} priority />
+          <Image
+            src="/logo-boioot.png" alt="بيوت"
+            width={120} height={48}
+            style={{ objectFit: "contain" }} priority
+          />
         </div>
         <h1 className="login-page__title">تسجيل الدخول</h1>
 
@@ -128,19 +119,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p
-          style={{
-            textAlign: "center",
-            marginTop: "1.25rem",
-            fontSize: "0.88rem",
-            color: "var(--color-text-secondary)",
-          }}
-        >
+        <p style={{ textAlign: "center", marginTop: "1.25rem", fontSize: "0.88rem", color: "var(--color-text-secondary)" }}>
           ليس لديك حساب؟{" "}
-          <Link
-            href="/register"
-            style={{ color: "var(--color-primary)", fontWeight: 600 }}
-          >
+          <Link href="/register" style={{ color: "var(--color-primary)", fontWeight: 600 }}>
             إنشاء حساب جديد
           </Link>
         </p>

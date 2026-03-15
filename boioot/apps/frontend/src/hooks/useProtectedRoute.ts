@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
@@ -19,18 +19,25 @@ interface Options {
  * Protects a page by redirecting unauthenticated users.
  * Optionally restricts access to specific roles.
  *
+ * Options are treated as static (per-page config) and are
+ * stabilized internally to prevent useEffect re-render loops.
+ *
  * Usage:
  *   const { user, isLoading } = useProtectedRoute();
  *   const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
  */
 export function useProtectedRoute(options: Options = {}) {
+  // Stabilize options — they are static per-page config and should
+  // never be passed as new object literals on every render.
+  const optionsRef = useRef(options);
+
   const {
-    redirectTo = "/login",
+    redirectTo          = "/login",
     allowedRoles,
     unauthorizedRedirect = "/dashboard",
-  } = options;
+  } = optionsRef.current;
 
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -46,5 +53,5 @@ export function useProtectedRoute(options: Options = {}) {
     }
   }, [isLoading, isAuthenticated, user, router, redirectTo, allowedRoles, unauthorizedRedirect]);
 
-  return { user, isLoading, isAuthenticated };
+  return { user, isLoading, isAuthenticated, logout };
 }

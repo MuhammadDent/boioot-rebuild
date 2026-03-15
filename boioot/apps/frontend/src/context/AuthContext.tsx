@@ -19,7 +19,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (token: string, user: UserProfileResponse) => void;
+  login: (token: string, user: UserProfileResponse, expiresAt?: string) => void;
   logout: () => void;
 }
 
@@ -34,8 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    const token = tokenStorage.getToken();
+    const token   = tokenStorage.getToken();
     const userRaw = tokenStorage.getUserRaw();
+
+    // Clear session if token has expired
+    if (tokenStorage.isExpired()) {
+      tokenStorage.clear();
+      setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
+      return;
+    }
 
     if (token && userRaw) {
       try {
@@ -50,11 +57,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback((token: string, user: UserProfileResponse) => {
-    tokenStorage.setToken(token);
-    tokenStorage.setUser(user);
-    setState({ user, token, isLoading: false, isAuthenticated: true });
-  }, []);
+  const login = useCallback(
+    (token: string, user: UserProfileResponse, expiresAt?: string) => {
+      tokenStorage.setToken(token);
+      tokenStorage.setUser(user);
+      if (expiresAt) tokenStorage.setExpiresAt(expiresAt);
+      setState({ user, token, isLoading: false, isAuthenticated: true });
+    },
+    []
+  );
 
   const logout = useCallback(() => {
     tokenStorage.clear();
