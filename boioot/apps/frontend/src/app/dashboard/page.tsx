@@ -165,10 +165,9 @@ export default function DashboardPage() {
         }}>
           {[
             { href: "/",                   label: "الرئيسية" },
-            { href: "/properties",         label: "العقارات" },
             { href: "/daily-rentals",      label: "الإيجار اليومي" },
             { href: "/projects",           label: "المشاريع" },
-            { href: "/dashboard/requests", label: "طلبات العقار" },
+            { href: "/dashboard/requests", label: "الطلبات" },
           ].map(({ href, label }) => (
             <Link
               key={href}
