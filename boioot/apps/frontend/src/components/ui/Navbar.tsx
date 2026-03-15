@@ -58,10 +58,10 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* Auth actions */}
-        {!isLoading && (
-          <div className="navbar__actions">
-            {isAuthenticated ? (
+        {/* Auth actions — always rendered to reserve space and prevent layout shift */}
+        <div className="navbar__actions" style={{ minWidth: "130px", justifyContent: "flex-start" }}>
+          {!isLoading && (
+            isAuthenticated ? (
               <Link
                 href="/dashboard"
                 className="btn btn-primary btn-sm"
@@ -77,9 +77,9 @@ export default function Navbar() {
               >
                 تسجيل الدخول
               </Link>
-            )}
-          </div>
-        )}
+            )
+          )}
+        </div>
 
       </div>
     </nav>

@@ -15,7 +15,7 @@ export interface PropertiesListParams {
   city?: string;
   /** Backend enum name: Apartment | Villa | Office | Shop | Land | Building */
   type?: string;
-  /** Backend enum name: Sale | Rent */
+  /** Backend enum name: Sale | Rent | DailyRent */
   listingType?: string;
   minPrice?: number;
   maxPrice?: number;

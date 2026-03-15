@@ -84,6 +84,19 @@ export default function HomePage() {
         >
           تسجيل الدخول
         </Link>
+        <Link
+          href="/register"
+          style={{
+            padding: "0.75rem 2rem",
+            border: "2px solid var(--color-border)",
+            color: "var(--color-text-secondary)",
+            borderRadius: "8px",
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          إنشاء حساب
+        </Link>
       </div>
     </main>
   );
