@@ -121,31 +121,19 @@ export default function DashboardPage() {
       <div style={{
         backgroundColor: "#fff",
         borderBottom: "1px solid #e2e8f0",
-        padding: "0.75rem 1.25rem",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
         position: "sticky",
         top: 0,
         zIndex: 10,
       }}>
-        <Link href="/">
-          <Image src="/logo-boioot.png" alt="بيوت" width={90} height={34} style={{ objectFit: "contain" }} />
-        </Link>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <Link
-            href="/"
-            style={{
-              fontSize: "0.82rem",
-              color: "var(--color-text-secondary)",
-              textDecoration: "none",
-              padding: "0.35rem 0.8rem",
-              borderRadius: 8,
-              border: "1px solid #e2e8f0",
-              fontWeight: 500,
-            }}
-          >
-            الموقع الرئيسي
+        {/* Row 1: Logo + logout */}
+        <div style={{
+          padding: "0.6rem 1.25rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}>
+          <Link href="/">
+            <Image src="/logo-boioot.png" alt="بيوت" width={85} height={32} style={{ objectFit: "contain" }} />
           </Link>
           <button
             onClick={handleLogout}
@@ -153,16 +141,52 @@ export default function DashboardPage() {
               backgroundColor: "transparent",
               border: "1.5px solid #dc2626",
               color: "#dc2626",
-              padding: "0.35rem 0.9rem",
+              padding: "0.3rem 0.85rem",
               borderRadius: 8,
               cursor: "pointer",
-              fontSize: "0.82rem",
+              fontSize: "0.8rem",
               fontFamily: "inherit",
               fontWeight: 600,
             }}
           >
             تسجيل الخروج
           </button>
+        </div>
+
+        {/* Row 2: Site navigation */}
+        <div style={{
+          borderTop: "1px solid #f1f5f9",
+          padding: "0 1rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "0",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+        }}>
+          {[
+            { href: "/",              label: "الرئيسية" },
+            { href: "/?type=للبيع",   label: "عقارات للبيع" },
+            { href: "/?type=للإيجار", label: "للإيجار" },
+            { href: "/?type=مشاريع",  label: "المشاريع" },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                textDecoration: "none",
+                color: "#475569",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                padding: "0.55rem 0.9rem",
+                whiteSpace: "nowrap",
+                borderBottom: "2px solid transparent",
+                display: "inline-block",
+                transition: "color 0.15s",
+              }}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
       </div>
 
@@ -487,17 +511,6 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* ── Browse section (all roles) ─────────────────────────────────────── */}
-        <div style={{ marginBottom: "1.25rem" }}>
-          <SectionLabel>تصفح الموقع</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
-            <BrowseCard href="/" label="الرئيسية" icon={<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>} />
-            <BrowseCard href="/?type=للبيع" label="عقارات للبيع" icon={<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>} />
-            <BrowseCard href="/?type=للإيجار" label="عقارات للإيجار" icon={<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>} />
-            <BrowseCard href="/?type=مشاريع" label="المشاريع" icon={<><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></>} />
-          </div>
-        </div>
-
       </div>
     </div>
   );
@@ -664,29 +677,3 @@ function QuickActionCard({
   );
 }
 
-// ─── Browse Card ───────────────────────────────────────────────────────────────
-function BrowseCard({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        padding: "0.85rem 1rem",
-        display: "flex",
-        alignItems: "center",
-        gap: "0.65rem",
-        textDecoration: "none",
-        color: "#374151",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-        fontSize: "0.85rem",
-        fontWeight: 600,
-      }}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        {icon}
-      </svg>
-      {label}
-    </Link>
-  );
-}
