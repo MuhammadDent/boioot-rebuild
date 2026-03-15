@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { dashboardSummaryApi } from "@/features/dashboard/summary/api";
+import { ROLE_LABELS } from "@/features/admin/constants";
 import { normalizeError } from "@/lib/api";
 import type { DashboardSummary } from "@/types";
 
@@ -58,13 +59,6 @@ export default function DashboardPage() {
     logout();
     router.push("/login");
   }
-
-  const roleLabel: Record<string, string> = {
-    Admin: "مدير النظام",
-    CompanyOwner: "مالك شركة",
-    Agent: "وكيل عقاري",
-    User: "مستخدم",
-  };
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
@@ -129,7 +123,7 @@ export default function DashboardPage() {
                   color: "var(--color-primary)", padding: "0.15rem 0.65rem",
                   borderRadius: 20, fontSize: "0.78rem", fontWeight: 600,
                 }}>
-                  {roleLabel[user.role] ?? user.role}
+                  {ROLE_LABELS[user.role] ?? user.role}
                 </span>
                 {user.userCode && (
                   <span style={{

@@ -13,6 +13,7 @@ import {
   formatStartingPrice,
 } from "@/features/projects/constants";
 import { SYRIAN_CITIES } from "@/features/properties/constants";
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
 import type { ProjectResponse } from "@/types";
 
@@ -177,7 +178,7 @@ export default function AdminProjectsPage() {
 
         {/* ── Pagination ── */}
         {totalPages > 1 && !fetching && (
-          <Pagination
+          <AdminPagination
             page={page} totalPages={totalPages}
             onPrev={() => load(page - 1, appliedFiltersRef.current)}
             onNext={() => load(page + 1, appliedFiltersRef.current)}
@@ -194,7 +195,7 @@ export default function AdminProjectsPage() {
 function ProjectRow({ project: p }: { project: ProjectResponse }) {
   return (
     <div className="form-card" style={{ padding: "1rem 1.25rem" }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ minWidth: 0 }}>
         <div style={{
           display: "flex", alignItems: "center",
           gap: "0.5rem", marginBottom: "0.4rem", flexWrap: "wrap",
@@ -227,32 +228,6 @@ function ProjectRow({ project: p }: { project: ProjectResponse }) {
           })}</span>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ─── Pagination ───────────────────────────────────────────────────────────────
-
-function Pagination({
-  page, totalPages, onPrev, onNext,
-}: {
-  page: number; totalPages: number;
-  onPrev: () => void; onNext: () => void;
-}) {
-  return (
-    <div style={{
-      display: "flex", justifyContent: "center", alignItems: "center",
-      gap: "0.75rem", marginTop: "2rem",
-    }}>
-      <button className="btn" style={{ padding: "0.4rem 1rem" }} disabled={page <= 1} onClick={onPrev}>
-        السابق
-      </button>
-      <span style={{ fontSize: "0.88rem", color: "var(--color-text-secondary)" }}>
-        صفحة {page} من {totalPages}
-      </span>
-      <button className="btn" style={{ padding: "0.4rem 1rem" }} disabled={page >= totalPages} onClick={onNext}>
-        التالي
-      </button>
     </div>
   );
 }

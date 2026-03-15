@@ -12,6 +12,7 @@ import {
   ROLE_LABELS,
   ROLE_BADGE,
 } from "@/features/admin/constants";
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
 import type { AdminUserResponse } from "@/types";
 
@@ -212,7 +213,7 @@ export default function AdminUsersPage() {
 
         {/* ── Pagination ── */}
         {totalPages > 1 && !fetching && (
-          <Pagination
+          <AdminPagination
             page={page} totalPages={totalPages}
             onPrev={() => load(page - 1, appliedFiltersRef.current)}
             onNext={() => load(page + 1, appliedFiltersRef.current)}
@@ -307,28 +308,3 @@ function UserRow({
   );
 }
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
-
-function Pagination({
-  page, totalPages, onPrev, onNext,
-}: {
-  page: number; totalPages: number;
-  onPrev: () => void; onNext: () => void;
-}) {
-  return (
-    <div style={{
-      display: "flex", justifyContent: "center", alignItems: "center",
-      gap: "0.75rem", marginTop: "2rem",
-    }}>
-      <button className="btn" style={{ padding: "0.4rem 1rem" }} disabled={page <= 1} onClick={onPrev}>
-        السابق
-      </button>
-      <span style={{ fontSize: "0.88rem", color: "var(--color-text-secondary)" }}>
-        صفحة {page} من {totalPages}
-      </span>
-      <button className="btn" style={{ padding: "0.4rem 1rem" }} disabled={page >= totalPages} onClick={onNext}>
-        التالي
-      </button>
-    </div>
-  );
-}

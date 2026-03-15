@@ -15,6 +15,7 @@ import {
   SYRIAN_CITIES,
   formatPrice,
 } from "@/features/properties/constants";
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
 import type { PropertyResponse } from "@/types";
 
@@ -179,7 +180,7 @@ export default function AdminPropertiesPage() {
 
         {/* ── Pagination ── */}
         {totalPages > 1 && !fetching && (
-          <Pagination
+          <AdminPagination
             page={page} totalPages={totalPages}
             onPrev={() => load(page - 1, appliedFiltersRef.current)}
             onNext={() => load(page + 1, appliedFiltersRef.current)}
@@ -196,76 +197,45 @@ export default function AdminPropertiesPage() {
 function PropertyRow({ property: p }: { property: PropertyResponse }) {
   return (
     <div className="form-card" style={{ padding: "1rem 1.25rem" }}>
-      <div style={{
-        display: "flex", justifyContent: "space-between",
-        alignItems: "flex-start", gap: "1rem", flexWrap: "wrap",
-      }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            display: "flex", alignItems: "center",
-            gap: "0.5rem", marginBottom: "0.4rem", flexWrap: "wrap",
-          }}>
-            <p style={{ fontWeight: 700, fontSize: "1rem", margin: 0, color: "var(--color-text-primary)" }}>
-              {p.title}
-            </p>
-            <span className={PROPERTY_STATUS_BADGE[p.status] ?? "badge badge-gray"}>
-              {PROPERTY_STATUS_LABELS[p.status] ?? p.status}
-            </span>
-          </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{
+          display: "flex", alignItems: "center",
+          gap: "0.5rem", marginBottom: "0.4rem", flexWrap: "wrap",
+        }}>
+          <p style={{ fontWeight: 700, fontSize: "1rem", margin: 0, color: "var(--color-text-primary)" }}>
+            {p.title}
+          </p>
+          <span className={PROPERTY_STATUS_BADGE[p.status] ?? "badge badge-gray"}>
+            {PROPERTY_STATUS_LABELS[p.status] ?? p.status}
+          </span>
+        </div>
 
-          <div style={{
-            display: "flex", gap: "0.6rem", flexWrap: "wrap",
-            fontSize: "0.82rem", color: "var(--color-text-secondary)", marginBottom: "0.3rem",
-          }}>
-            <span>📍 {p.city}</span>
-            <span>·</span>
-            <span>{PROPERTY_TYPE_LABELS[p.type] ?? p.type}</span>
-            <span>·</span>
-            <span>{LISTING_TYPE_LABELS[p.listingType] ?? p.listingType}</span>
-          </div>
+        <div style={{
+          display: "flex", gap: "0.6rem", flexWrap: "wrap",
+          fontSize: "0.82rem", color: "var(--color-text-secondary)", marginBottom: "0.3rem",
+        }}>
+          <span>📍 {p.city}</span>
+          <span>·</span>
+          <span>{PROPERTY_TYPE_LABELS[p.type] ?? p.type}</span>
+          <span>·</span>
+          <span>{LISTING_TYPE_LABELS[p.listingType] ?? p.listingType}</span>
+        </div>
 
-          <div style={{
-            display: "flex", gap: "0.75rem", flexWrap: "wrap",
-            fontSize: "0.82rem", color: "var(--color-text-secondary)",
-          }}>
-            <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>
-              {formatPrice(p.price)}
-            </span>
-            <span>·</span>
-            <span>الشركة: {p.companyName}</span>
-            <span>·</span>
-            <span>{new Date(p.createdAt).toLocaleDateString("ar-SY", {
-              year: "numeric", month: "short", day: "numeric",
-            })}</span>
-          </div>
+        <div style={{
+          display: "flex", gap: "0.75rem", flexWrap: "wrap",
+          fontSize: "0.82rem", color: "var(--color-text-secondary)",
+        }}>
+          <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>
+            {formatPrice(p.price)}
+          </span>
+          <span>·</span>
+          <span>الشركة: {p.companyName}</span>
+          <span>·</span>
+          <span>{new Date(p.createdAt).toLocaleDateString("ar-SY", {
+            year: "numeric", month: "short", day: "numeric",
+          })}</span>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ─── Pagination ───────────────────────────────────────────────────────────────
-
-function Pagination({
-  page, totalPages, onPrev, onNext,
-}: {
-  page: number; totalPages: number;
-  onPrev: () => void; onNext: () => void;
-}) {
-  return (
-    <div style={{
-      display: "flex", justifyContent: "center", alignItems: "center",
-      gap: "0.75rem", marginTop: "2rem",
-    }}>
-      <button className="btn" style={{ padding: "0.4rem 1rem" }} disabled={page <= 1} onClick={onPrev}>
-        السابق
-      </button>
-      <span style={{ fontSize: "0.88rem", color: "var(--color-text-secondary)" }}>
-        صفحة {page} من {totalPages}
-      </span>
-      <button className="btn" style={{ padding: "0.4rem 1rem" }} disabled={page >= totalPages} onClick={onNext}>
-        التالي
-      </button>
     </div>
   );
 }

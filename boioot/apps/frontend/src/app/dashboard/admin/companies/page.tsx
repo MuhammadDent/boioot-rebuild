@@ -9,6 +9,7 @@ import {
 } from "@/features/admin/api";
 import { ADMIN_PAGE_SIZE } from "@/features/admin/constants";
 import { SYRIAN_CITIES } from "@/features/properties/constants";
+import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
 import type { AdminCompanyResponse } from "@/types";
 
@@ -113,7 +114,7 @@ export default function AdminCompaniesPage() {
           display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end",
         }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", minWidth: 140 }}>
-            <label className="form-label" style={{ margin: 0 }}>الحالة</label>
+            <label className="form-label" style={{ margin: 0 }}>التوثيق</label>
             <select
               className="form-input"
               style={{ padding: "0.45rem 0.75rem" }}
@@ -205,7 +206,7 @@ export default function AdminCompaniesPage() {
 
         {/* ── Pagination ── */}
         {totalPages > 1 && !fetching && (
-          <Pagination
+          <AdminPagination
             page={page} totalPages={totalPages}
             onPrev={() => load(page - 1, appliedFiltersRef.current)}
             onNext={() => load(page + 1, appliedFiltersRef.current)}
@@ -308,28 +309,3 @@ function CountPill({ label, count }: { label: string; count: number }) {
   );
 }
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
-
-function Pagination({
-  page, totalPages, onPrev, onNext,
-}: {
-  page: number; totalPages: number;
-  onPrev: () => void; onNext: () => void;
-}) {
-  return (
-    <div style={{
-      display: "flex", justifyContent: "center", alignItems: "center",
-      gap: "0.75rem", marginTop: "2rem",
-    }}>
-      <button className="btn" style={{ padding: "0.4rem 1rem" }} disabled={page <= 1} onClick={onPrev}>
-        السابق
-      </button>
-      <span style={{ fontSize: "0.88rem", color: "var(--color-text-secondary)" }}>
-        صفحة {page} من {totalPages}
-      </span>
-      <button className="btn" style={{ padding: "0.4rem 1rem" }} disabled={page >= totalPages} onClick={onNext}>
-        التالي
-      </button>
-    </div>
-  );
-}
