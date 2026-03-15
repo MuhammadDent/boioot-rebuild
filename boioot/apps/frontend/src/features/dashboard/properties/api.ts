@@ -15,23 +15,25 @@ export const dashboardPropertiesApi = {
     pageSize: number = DASHBOARD_PROPERTIES_PAGE_SIZE
   ): Promise<PagedResult<DashboardPropertyItem>> {
     return api.get(
-      `/api/dashboard/properties?page=${page}&pageSize=${pageSize}`
+      `/dashboard/properties?page=${page}&pageSize=${pageSize}`
     );
   },
 
+  // Uses the dashboard-specific endpoint which has no status filter,
+  // allowing editing of Inactive properties (unlike GET /api/properties/{id}).
   getById(id: string): Promise<PropertyResponse> {
-    return api.get(`/api/dashboard/properties/${id}`);
+    return api.get(`/dashboard/properties/${id}`);
   },
 
   create(data: CreatePropertyRequest): Promise<PropertyResponse> {
-    return api.post("/api/properties", data);
+    return api.post("/properties", data);
   },
 
   update(id: string, data: UpdatePropertyRequest): Promise<PropertyResponse> {
-    return api.put(`/api/properties/${id}`, data);
+    return api.put(`/properties/${id}`, data);
   },
 
   delete(id: string): Promise<void> {
-    return api.delete(`/api/properties/${id}`);
+    return api.delete(`/properties/${id}`);
   },
 };
