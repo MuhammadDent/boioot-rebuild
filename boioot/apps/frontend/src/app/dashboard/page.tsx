@@ -171,6 +171,82 @@ export default function DashboardPage() {
         {/* ── Navigation Cards ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
 
+          {/* ── Admin-only section ── */}
+          {user.role === "Admin" && (
+            <>
+              <p style={{
+                margin: "0.25rem 0 0", fontSize: "0.75rem", fontWeight: 700,
+                color: "var(--color-text-secondary)", textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}>
+                إدارة النظام
+              </p>
+              <NavCard
+                href="/dashboard/admin/users"
+                label="المستخدمون"
+                description="عرض وتفعيل وتعطيل حسابات المستخدمين"
+                icon={
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                }
+              />
+              <NavCard
+                href="/dashboard/admin/companies"
+                label="الشركات"
+                description="عرض الشركات وإدارة التوثيق"
+                icon={
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <rect x="9" y="14" width="6" height="7" />
+                  </svg>
+                }
+              />
+              <NavCard
+                href="/dashboard/admin/properties"
+                label="العقارات"
+                description="استعراض جميع العقارات في النظام"
+                icon={
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
+                }
+              />
+              <NavCard
+                href="/dashboard/admin/projects"
+                label="المشاريع"
+                description="استعراض جميع المشاريع العقارية في النظام"
+                icon={
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                    <rect x="2" y="7" width="20" height="14" rx="2" />
+                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                  </svg>
+                }
+              />
+              <NavCard
+                href="/dashboard/admin/requests"
+                label="الطلبات"
+                description="استعراض جميع طلبات العملاء في النظام"
+                icon={
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                }
+              />
+              <p style={{
+                margin: "0.25rem 0 0", fontSize: "0.75rem", fontWeight: 700,
+                color: "var(--color-text-secondary)", textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}>
+                الإدارة العامة
+              </p>
+            </>
+          )}
+
           {/* Messages — all authenticated roles */}
           <NavCard
             href="/dashboard/messages"

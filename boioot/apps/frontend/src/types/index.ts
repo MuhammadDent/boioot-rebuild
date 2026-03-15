@@ -253,6 +253,37 @@ export interface RequestResponse {
   updatedAt: string;
 }
 
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+export interface AdminUserResponse {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  /** Admin | CompanyOwner | Agent | User */
+  role: string;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCompanyResponse {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  logoUrl?: string;
+  isVerified: boolean;
+  isDeleted: boolean;
+  agentCount: number;
+  propertyCount: number;
+  projectCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────────────────
 
 export interface DashboardSummary {

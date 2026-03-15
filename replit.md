@@ -207,3 +207,26 @@ boioot/
 - نجاح → يُستبدل النموذج برسالة شكر (لا redirect — المستخدم يبقى في الصفحة)
 - خطأ → `normalizeError()` يُعرض فوق النموذج
 - الـ endpoint: `POST /api/requests` عام (لا يتطلب تسجيل دخول)
+
+## Admin Panel Module (مكتمل)
+**الملفات المُضافة:**
+- `features/admin/constants.ts` — ADMIN_PAGE_SIZE(20), ROLE_LABELS/BADGE, PROPERTY_STATUS_BADGE, ADMIN_PROJECT_STATUS_BADGE
+- `features/admin/api.ts` — adminApi: getUsers/getCompanies/getProperties/getProjects/getRequests/updateUserStatus/verifyCompany
+- `app/dashboard/admin/users/page.tsx` — قائمة المستخدمين مع فلترة (role, isActive) وتبديل الحالة (Admin فقط)
+- `app/dashboard/admin/companies/page.tsx` — قائمة الشركات مع فلترة (city, isVerified) وتبديل التوثيق (Admin فقط)
+- `app/dashboard/admin/properties/page.tsx` — عرض كل العقارات مع فلترة (status, city) — قراءة فقط
+- `app/dashboard/admin/projects/page.tsx` — عرض كل المشاريع مع فلترة (status, city) — قراءة فقط
+- `app/dashboard/admin/requests/page.tsx` — عرض كل الطلبات مع فلترة (status) — قراءة فقط
+
+**الملفات المُعدَّلة:**
+- `types/index.ts` — أُضيف: AdminUserResponse, AdminCompanyResponse
+- `app/dashboard/page.tsx` — أُضيف قسم "إدارة النظام" بـ 5 NavCards للـ Admin فقط
+
+**الإجراءات المدعومة:**
+- Users: toggle isActive (تفعيل/تعطيل) — المدير لا يستطيع تعطيل حسابه الخاص (isSelf check)
+- Companies: toggle isVerified (توثيق/إلغاء توثيق)
+- Properties/Projects/Requests: قراءة فقط (لا يوجد endpoint تعديل في الـ backend)
+
+**نمط الفلترة:**
+- `appliedFiltersRef` يخزن آخر params مُطبَّقة لإعادة استخدامها في paginator
+- `actionLoading: string | null` يتتبع أيّ عنصر يُعالج حالياً
