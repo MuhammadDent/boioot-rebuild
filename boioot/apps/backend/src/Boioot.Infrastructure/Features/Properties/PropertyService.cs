@@ -255,6 +255,9 @@ public class PropertyService : IPropertyService
         if (!string.IsNullOrWhiteSpace(filters.City))
             query = query.Where(p => p.City == filters.City.Trim());
 
+        if (!string.IsNullOrWhiteSpace(filters.Neighborhood))
+            query = query.Where(p => p.Neighborhood == filters.Neighborhood.Trim());
+
         if (filters.Type.HasValue)
             query = query.Where(p => p.Type == filters.Type.Value);
 
@@ -266,6 +269,12 @@ public class PropertyService : IPropertyService
 
         if (filters.MaxPrice.HasValue)
             query = query.Where(p => p.Price <= filters.MaxPrice.Value);
+
+        if (filters.MinBedrooms.HasValue)
+            query = query.Where(p => p.Bedrooms >= filters.MinBedrooms.Value);
+
+        if (filters.MinBathrooms.HasValue)
+            query = query.Where(p => p.Bathrooms >= filters.MinBathrooms.Value);
 
         return query;
     }

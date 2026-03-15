@@ -12,13 +12,17 @@ export const PROPERTIES_PAGE_SIZE = 12;
 export interface PropertiesListParams {
   page?: number;
   pageSize?: number;
+  province?: string;
   city?: string;
+  neighborhood?: string;
   /** Backend enum name: Apartment | Villa | Office | Shop | Land | Building */
   type?: string;
   /** Backend enum name: Sale | Rent | DailyRent */
   listingType?: string;
   minPrice?: number;
   maxPrice?: number;
+  minBedrooms?: number;
+  minBathrooms?: number;
 }
 
 export const propertiesApi = {
