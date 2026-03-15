@@ -10,8 +10,9 @@ export const PROPERTY_TYPE_LABELS: Record<string, string> = {
 };
 
 export const LISTING_TYPE_LABELS: Record<string, string> = {
-  Sale: "للبيع",
-  Rent: "للإيجار",
+  Sale:      "للبيع",
+  Rent:      "للإيجار",
+  DailyRent: "إيجار يومي",
 };
 
 export const PROPERTY_STATUS_LABELS: Record<string, string> = {
