@@ -55,8 +55,8 @@ const LISTING_TABS = [
 const SECTION_LINKS = [
   { label: "الرئيسية",       href: "/" },
   { label: "الإيجار اليومي", href: "/daily-rentals" },
-  { label: "العقارات",       href: "/properties" },
   { label: "المشاريع",       href: "/projects" },
+  { label: "الطلبات",        href: "/dashboard/requests" },
 ];
 
 // ─── Pill options ─────────────────────────────────────────────────────────────
