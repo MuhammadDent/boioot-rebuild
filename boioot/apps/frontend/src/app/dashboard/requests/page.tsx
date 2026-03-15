@@ -7,24 +7,12 @@ import {
   dashboardRequestsApi,
   DASHBOARD_REQUESTS_PAGE_SIZE,
 } from "@/features/dashboard/requests/api";
+import {
+  REQUEST_STATUS_LABELS,
+  REQUEST_STATUS_BADGE,
+} from "@/features/dashboard/requests/constants";
 import { normalizeError } from "@/lib/api";
 import type { DashboardRequestItem } from "@/types";
-
-// ─── Status display maps ───────────────────────────────────────────────────────
-
-const REQUEST_STATUS_LABELS: Record<string, string> = {
-  New:       "جديد",
-  Contacted: "تم التواصل",
-  Qualified: "مؤهّل",
-  Closed:    "مغلق",
-};
-
-const REQUEST_STATUS_BADGE: Record<string, string> = {
-  New:       "badge badge-blue",
-  Contacted: "badge badge-yellow",
-  Qualified: "badge badge-green",
-  Closed:    "badge badge-gray",
-};
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -167,7 +155,7 @@ export default function DashboardRequestsPage() {
 // ─── Request row ──────────────────────────────────────────────────────────────
 
 function RequestRow({ request: r }: { request: DashboardRequestItem }) {
-  const subject = r.propertyTitle ?? r.projectTitle ?? "—";
+  const subject      = r.propertyTitle ?? r.projectTitle;
   const subjectLabel = r.propertyTitle ? "عقار" : r.projectTitle ? "مشروع" : null;
 
   return (
@@ -195,7 +183,7 @@ function RequestRow({ request: r }: { request: DashboardRequestItem }) {
             📞 {r.phone}
           </p>
 
-          {subjectLabel && (
+          {subjectLabel && subject && (
             <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
               {subjectLabel}: {subject}
             </p>

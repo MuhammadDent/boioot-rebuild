@@ -1,30 +1,17 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { dashboardRequestsApi } from "@/features/dashboard/requests/api";
+import {
+  REQUEST_STATUS_LABELS,
+  REQUEST_STATUS_BADGE,
+  REQUEST_STATUS_OPTIONS,
+} from "@/features/dashboard/requests/constants";
 import { normalizeError } from "@/lib/api";
 import type { RequestResponse } from "@/types";
-
-// ─── Status display maps ───────────────────────────────────────────────────────
-
-const REQUEST_STATUS_LABELS: Record<string, string> = {
-  New:       "جديد",
-  Contacted: "تم التواصل",
-  Qualified: "مؤهّل",
-  Closed:    "مغلق",
-};
-
-const REQUEST_STATUS_BADGE: Record<string, string> = {
-  New:       "badge badge-blue",
-  Contacted: "badge badge-yellow",
-  Qualified: "badge badge-green",
-  Closed:    "badge badge-gray",
-};
-
-const ALL_STATUSES = ["New", "Contacted", "Qualified", "Closed"] as const;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -46,7 +33,15 @@ export default function RequestDetailPage() {
   const [updateError, setUpdateError]       = useState("");
   const [updateSuccess, setUpdateSuccess]   = useState(false);
 
-  // Load on mount
+  // Cleanup success banner timer on unmount to avoid setState on unmounted component
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current !== null) clearTimeout(successTimerRef.current);
+    };
+  }, []);
+
+  // Load on mount (waits for auth to resolve)
   useEffect(() => {
     if (authLoading || !user || !id) return;
 
@@ -76,7 +71,9 @@ export default function RequestDetailPage() {
       setRequest(updated);
       setSelectedStatus(updated.status);
       setUpdateSuccess(true);
-      setTimeout(() => setUpdateSuccess(false), 3000);
+
+      if (successTimerRef.current !== null) clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => setUpdateSuccess(false), 3000);
     } catch (e) {
       setUpdateError(normalizeError(e));
     } finally {
@@ -216,7 +213,7 @@ export default function RequestDetailPage() {
                 }}
                 disabled={updating}
               >
-                {ALL_STATUSES.map((s) => (
+                {REQUEST_STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>
                     {REQUEST_STATUS_LABELS[s]}
                   </option>
@@ -302,9 +299,6 @@ function DetailRow({
       <span style={{
         color: "var(--color-text-primary)", fontWeight: 500, fontSize: "0.92rem",
         direction: ltr ? "ltr" : undefined,
-        textAlign: ltr ? "left" : undefined,
-        marginRight: ltr ? "auto" : undefined,
-        marginLeft: ltr ? "1rem" : undefined,
       }}>
         {value}
       </span>

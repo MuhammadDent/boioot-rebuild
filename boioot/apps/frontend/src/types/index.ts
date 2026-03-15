@@ -193,11 +193,6 @@ export interface DashboardRequestItem {
   createdAt: string;
 }
 
-export interface UpdateRequestStatusRequest {
-  /** New | Contacted | Qualified | Closed */
-  status: string;
-}
-
 export interface RequestResponse {
   id: string;
   name: string;
