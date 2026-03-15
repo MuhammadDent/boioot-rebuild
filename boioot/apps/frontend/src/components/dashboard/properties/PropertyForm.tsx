@@ -10,10 +10,8 @@ import type {
 import {
   PROPERTY_TYPE_LABELS,
   PROPERTY_STATUS_LABELS,
-  SYRIAN_CITIES,
-  SYRIAN_NEIGHBORHOODS,
 } from "@/features/properties/constants";
-import ComboSelect from "@/components/dashboard/ComboSelect";
+import { CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import { api } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -207,10 +205,6 @@ export default function PropertyForm({
 
   const disabled = isSubmitting;
 
-  const neighborhoodOptions =
-    fields.city && SYRIAN_NEIGHBORHOODS[fields.city]
-      ? SYRIAN_NEIGHBORHOODS[fields.city]
-      : [];
 
   return (
     <form onSubmit={handleSubmit} noValidate>
@@ -401,26 +395,24 @@ export default function PropertyForm({
       {/* ── Section: location ── */}
       <Section label="الموقع">
         <Row>
-          <ComboSelect
+          <CitySelect
             label="المدينة"
-            options={SYRIAN_CITIES}
             value={fields.city}
             onChange={(val) => {
               setField("city", val);
               setField("neighborhood", "");
             }}
-            placeholder="اختر أو اكتب مدينة..."
             required
             error={errors.city}
+            disabled={disabled}
           />
 
-          <ComboSelect
+          <NeighborhoodSelect
             label="الحي (اختياري)"
-            options={neighborhoodOptions}
             value={fields.neighborhood}
             onChange={(val) => setField("neighborhood", val)}
-            placeholder="اختر أو اكتب حياً..."
-            allowCustom
+            city={fields.city}
+            disabled={disabled}
           />
         </Row>
 

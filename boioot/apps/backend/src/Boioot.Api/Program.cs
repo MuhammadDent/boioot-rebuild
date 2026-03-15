@@ -141,6 +141,44 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("Seeded default listing types");
         }
 
+        // Create LocationCities table
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS LocationCities (
+                Id TEXT NOT NULL PRIMARY KEY,
+                Name TEXT NOT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            )");
+        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationCities_Name ON LocationCities(Name)"); }
+        catch { /* already exists */ }
+
+        // Seed Syrian cities if none exist
+        var hasCities = db.LocationCities.Any();
+        if (!hasCities)
+        {
+            var now2 = DateTime.UtcNow.ToString("O");
+            var cities = new[] { "دمشق", "حلب", "حمص", "اللاذقية", "طرطوس", "حماة", "دير الزور", "الرقة", "السويداء", "درعا", "القامشلي", "إدلب", "الحسكة" };
+            foreach (var city in cities)
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "INSERT OR IGNORE INTO LocationCities (Id, Name, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3})",
+                    Guid.NewGuid().ToString(), city, now2, now2);
+            }
+            logger.LogInformation("Seeded Syrian cities");
+        }
+
+        // Create LocationNeighborhoods table
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS LocationNeighborhoods (
+                Id TEXT NOT NULL PRIMARY KEY,
+                Name TEXT NOT NULL,
+                City TEXT NOT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            )");
+        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationNeighborhoods_Name_City ON LocationNeighborhoods(Name, City)"); }
+        catch { /* already exists */ }
+
         await seeder.SeedAsync();
     }
     catch (Exception ex)

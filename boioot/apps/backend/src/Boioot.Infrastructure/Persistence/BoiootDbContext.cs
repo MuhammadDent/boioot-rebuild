@@ -19,6 +19,8 @@ public class BoiootDbContext : DbContext
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<PropertyListingType> PropertyListingTypes => Set<PropertyListingType>();
+    public DbSet<LocationCity> LocationCities => Set<LocationCity>();
+    public DbSet<LocationNeighborhood> LocationNeighborhoods => Set<LocationNeighborhood>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
