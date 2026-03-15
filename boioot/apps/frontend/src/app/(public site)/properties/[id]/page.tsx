@@ -4,51 +4,34 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Spinner from "@/components/ui/Spinner";
-import { propertiesService } from "@/services/properties.service";
+import { propertiesApi } from "@/features/properties/api";
+import {
+  PROPERTY_TYPE_LABELS,
+  LISTING_TYPE_LABELS,
+  PROPERTY_STATUS_LABELS,
+  formatPrice,
+} from "@/features/properties/constants";
 import type { PropertyResponse } from "@/types";
-
-const TYPE_LABELS: Record<string, string> = {
-  Apartment: "شقة",
-  Villa: "فيلا",
-  Land: "أرض",
-  Office: "مكتب",
-  Shop: "محل",
-  House: "منزل",
-};
-
-const LISTING_LABELS: Record<string, string> = {
-  ForSale: "للبيع",
-  ForRent: "للإيجار",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  Available: "متاح",
-  Sold: "مباع",
-  Rented: "مؤجر",
-};
-
-function formatPrice(price: number) {
-  return price.toLocaleString("ar-SY") + " ل.س";
-}
 
 export default function PropertyDetailPage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const [property, setProperty] = useState<PropertyResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [property, setProperty]         = useState<PropertyResponse | null>(null);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState("");
+  const [selectedImageIdx, setSelectedImageIdx] = useState(0);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     setError("");
-    propertiesService
+    setSelectedImageIdx(0);
+
+    propertiesApi
       .getById(id)
       .then(setProperty)
-      .catch(() => {
-        setError("تعذّر تحميل بيانات العقار. ربما لم يعد متاحاً.");
-      })
+      .catch(() => setError("تعذّر تحميل بيانات العقار. ربما لم يعد متاحاً."))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -67,12 +50,14 @@ export default function PropertyDetailPage() {
 
   if (!property) return null;
 
-  const mainImage =
-    property.images.find((img) => img.isPrimary) ?? property.images[0];
+  const sortedImages = property.images;
+  const activeImage  = sortedImages[selectedImageIdx] ?? sortedImages[0];
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-background)", padding: "2rem 0" }}>
       <div className="container">
+
+        {/* Back link */}
         <Link
           href="/properties"
           style={{
@@ -82,15 +67,17 @@ export default function PropertyDetailPage() {
             color: "var(--color-text-secondary)",
             fontSize: "0.9rem",
             marginBottom: "1.5rem",
+            textDecoration: "none",
           }}
         >
           ← العودة إلى العقارات
         </Link>
 
-        {mainImage ? (
+        {/* Main image */}
+        {activeImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={mainImage.imageUrl}
+            src={activeImage.imageUrl}
             alt={property.title}
             className="detail-hero"
           />
@@ -98,29 +85,57 @@ export default function PropertyDetailPage() {
           <div className="detail-hero-placeholder">🏠</div>
         )}
 
+        {/* Image gallery thumbnails — only shown when there are multiple images */}
+        {sortedImages.length > 1 && (
+          <div className="gallery-thumbs">
+            {sortedImages.map((img, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={img.id}
+                src={img.imageUrl}
+                alt={`صورة ${i + 1}`}
+                className={`gallery-thumb${i === selectedImageIdx ? " gallery-thumb--active" : ""}`}
+                onClick={() => setSelectedImageIdx(i)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Content grid */}
         <div className="detail-grid">
+
+          {/* Left column — title, price, description */}
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: "0.75rem",
+              flexWrap: "wrap", marginBottom: "1rem",
+            }}>
               <h1 style={{ fontSize: "1.6rem", fontWeight: 800, margin: 0 }}>
                 {property.title}
               </h1>
               {property.listingType && (
                 <span className="badge badge-green">
-                  {LISTING_LABELS[property.listingType] ?? property.listingType}
+                  {LISTING_TYPE_LABELS[property.listingType] ?? property.listingType}
                 </span>
               )}
               {property.type && (
                 <span className="badge badge-gray">
-                  {TYPE_LABELS[property.type] ?? property.type}
+                  {PROPERTY_TYPE_LABELS[property.type] ?? property.type}
                 </span>
               )}
             </div>
 
-            <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-primary)", marginBottom: "1rem" }}>
+            <p style={{
+              fontSize: "1.5rem", fontWeight: 700,
+              color: "var(--color-primary)", marginBottom: "1rem",
+            }}>
               {formatPrice(property.price)}
             </p>
 
-            <p style={{ color: "var(--color-text-secondary)", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+            <p style={{
+              color: "var(--color-text-secondary)", marginBottom: "1.5rem",
+              display: "flex", alignItems: "center", gap: "0.3rem",
+            }}>
               📍 {property.city}
               {property.address && ` — ${property.address}`}
             </p>
@@ -133,55 +148,51 @@ export default function PropertyDetailPage() {
                 padding: "1.5rem",
                 marginBottom: "1.5rem",
               }}>
-                <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem" }}>الوصف</h2>
-                <p style={{ color: "var(--color-text-secondary)", lineHeight: 1.8, margin: 0 }}>
+                <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+                  الوصف
+                </h2>
+                <p style={{
+                  color: "var(--color-text-secondary)",
+                  lineHeight: 1.8, margin: 0,
+                }}>
                   {property.description}
                 </p>
               </div>
             )}
           </div>
 
+          {/* Right column — property details card */}
           <div className="detail-info-card">
             <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>تفاصيل العقار</h2>
 
-            <div className="detail-info-row">
-              <span className="detail-info-label">الحالة</span>
-              <span className="detail-info-value">
-                {STATUS_LABELS[property.status] ?? property.status}
-              </span>
-            </div>
-
-            <div className="detail-info-row">
-              <span className="detail-info-label">المساحة</span>
-              <span className="detail-info-value">{property.area} م²</span>
-            </div>
+            <DetailRow
+              label="الحالة"
+              value={PROPERTY_STATUS_LABELS[property.status] ?? property.status}
+            />
+            <DetailRow label="المساحة" value={`${property.area} م²`} />
 
             {property.bedrooms != null && (
-              <div className="detail-info-row">
-                <span className="detail-info-label">غرف النوم</span>
-                <span className="detail-info-value">{property.bedrooms}</span>
-              </div>
+              <DetailRow label="غرف النوم" value={String(property.bedrooms)} />
             )}
-
             {property.bathrooms != null && (
-              <div className="detail-info-row">
-                <span className="detail-info-label">دورات المياه</span>
-                <span className="detail-info-value">{property.bathrooms}</span>
-              </div>
+              <DetailRow label="دورات المياه" value={String(property.bathrooms)} />
             )}
 
-            <div className="detail-info-row">
-              <span className="detail-info-label">الشركة</span>
-              <span className="detail-info-value">{property.companyName}</span>
-            </div>
-
-            <div className="detail-info-row">
-              <span className="detail-info-label">المدينة</span>
-              <span className="detail-info-value">{property.city}</span>
-            </div>
+            <DetailRow label="الشركة" value={property.companyName} />
+            <DetailRow label="المدينة"  value={property.city} />
           </div>
+
         </div>
       </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="detail-info-row">
+      <span className="detail-info-label">{label}</span>
+      <span className="detail-info-value">{value}</span>
     </div>
   );
 }

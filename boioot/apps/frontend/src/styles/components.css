@@ -639,6 +639,82 @@
   border-color: var(--color-primary);
 }
 
+/* ─────────────── Filter Bar ─────────────── */
+/*
+ * Used by the public properties listing page.
+ * Added to the shared stylesheet because there is no per-page CSS file
+ * and these classes may be reused by the projects listing page.
+ */
+.filter-bar {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.filter-bar__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+.filter-bar__price {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.filter-bar__actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+@media (max-width: 600px) {
+  .filter-bar__grid    { grid-template-columns: 1fr; }
+  .filter-bar__price   { grid-template-columns: 1fr; }
+  .filter-bar__actions { justify-content: flex-start; }
+}
+
+/* ─────────────── Image Gallery (detail page) ─────────────── */
+.gallery-thumbs {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  margin-bottom: 2rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+.gallery-thumb {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+.gallery-thumb:hover        { opacity: 1; }
+.gallery-thumb--active      { border-color: var(--color-primary); opacity: 1; }
+.gallery-thumb-placeholder  {
+  width: 80px;
+  height: 60px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  cursor: default;
+  opacity: 0.5;
+}
+
 /* ─────────────── Password Toggle ─────────────── */
 .password-wrapper {
   position: relative;

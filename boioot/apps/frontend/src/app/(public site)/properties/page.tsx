@@ -1,122 +1,274 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useState, useEffect, Suspense, type FormEvent } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Spinner from "@/components/ui/Spinner";
-import { propertiesService } from "@/services/properties.service";
+import PropertyCard from "@/components/properties/PropertyCard";
+import { propertiesApi } from "@/features/properties/api";
+import {
+  SYRIAN_CITIES,
+  PROPERTY_TYPE_LABELS,
+  LISTING_TYPE_LABELS,
+} from "@/features/properties/constants";
 import type { PropertyResponse } from "@/types";
 
-const TYPE_LABELS: Record<string, string> = {
-  Apartment: "شقة",
-  Villa: "فيلا",
-  Land: "أرض",
-  Office: "مكتب",
-  Shop: "محل",
-  House: "منزل",
-};
+// ─── Filter form shape ────────────────────────────────────────────────────────
 
-const LISTING_LABELS: Record<string, string> = {
-  ForSale: "للبيع",
-  ForRent: "للإيجار",
-};
-
-function formatPrice(price: number) {
-  return price.toLocaleString("ar-SY") + " ل.س";
+interface FilterForm {
+  city: string;
+  type: string;
+  listingType: string;
+  minPrice: string;
+  maxPrice: string;
 }
 
-function PropertyCard({ property }: { property: PropertyResponse }) {
-  const mainImage = property.images.find((img) => img.isPrimary) ?? property.images[0];
+const EMPTY_FILTERS: FilterForm = {
+  city: "", type: "", listingType: "", minPrice: "", maxPrice: "",
+};
 
-  return (
-    <Link href={`/properties/${property.id}`} style={{ textDecoration: "none" }}>
-      <article className="card property-card">
-        {mainImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={mainImage.imageUrl}
-            alt={property.title}
-            className="property-card__img"
-          />
-        ) : (
-          <div className="property-card__img-placeholder">🏠</div>
-        )}
-        <div className="property-card__body">
-          <h3 className="property-card__title">{property.title}</h3>
-          <p className="property-card__price">{formatPrice(property.price)}</p>
-          <p className="property-card__city">📍 {property.city}</p>
-          <div className="property-card__tags">
-            {property.listingType && (
-              <span className="badge badge-green">
-                {LISTING_LABELS[property.listingType] ?? property.listingType}
-              </span>
-            )}
-            {property.type && (
-              <span className="badge badge-gray">
-                {TYPE_LABELS[property.type] ?? property.type}
-              </span>
-            )}
-            {property.area > 0 && (
-              <span className="badge badge-blue">{property.area} م²</span>
-            )}
-          </div>
-        </div>
-      </article>
-    </Link>
-  );
-}
+// ─── Inner component (needs Suspense because it uses useSearchParams) ─────────
 
-export default function PropertiesPage() {
-  const [properties, setProperties] = useState<PropertyResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [page, setPage] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
-  const [hasPrev, setHasPrev] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
+function PropertiesContent() {
+  const searchParams = useSearchParams();
+  const router       = useRouter();
+  const pathname     = usePathname();
 
+  // Applied filter values — derived from URL, used for fetching
+  const cityParam        = searchParams.get("city")        || "";
+  const typeParam        = searchParams.get("type")        || "";
+  const listingTypeParam = searchParams.get("listingType") || "";
+  const minPriceParam    = searchParams.get("minPrice")    || "";
+  const maxPriceParam    = searchParams.get("maxPrice")    || "";
+  const pageParam        = Number(searchParams.get("page") || "1");
+
+  // Draft filter state — local form values before the user submits
+  const [form, setForm] = useState<FilterForm>({
+    city:        cityParam,
+    type:        typeParam,
+    listingType: listingTypeParam,
+    minPrice:    minPriceParam,
+    maxPrice:    maxPriceParam,
+  });
+
+  const [properties, setProperties]   = useState<PropertyResponse[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState("");
+  const [totalCount, setTotalCount]   = useState(0);
+  const [hasNext, setHasNext]         = useState(false);
+  const [hasPrev, setHasPrev]         = useState(false);
+
+  // Sync draft form when URL changes externally (browser back/forward)
+  useEffect(() => {
+    setForm({
+      city:        cityParam,
+      type:        typeParam,
+      listingType: listingTypeParam,
+      minPrice:    minPriceParam,
+      maxPrice:    maxPriceParam,
+    });
+  }, [cityParam, typeParam, listingTypeParam, minPriceParam, maxPriceParam]);
+
+  // Fetch data whenever the applied URL params change
   useEffect(() => {
     setLoading(true);
     setError("");
-    propertiesService
-      .getList({ page, pageSize: 12 })
+
+    propertiesApi
+      .getList({
+        page:        pageParam,
+        pageSize:    12,
+        city:        cityParam        || undefined,
+        type:        typeParam        || undefined,
+        listingType: listingTypeParam || undefined,
+        minPrice:    minPriceParam    ? Number(minPriceParam) : undefined,
+        maxPrice:    maxPriceParam    ? Number(maxPriceParam) : undefined,
+      })
       .then((res) => {
         setProperties(res.items);
+        setTotalCount(res.totalCount);
         setHasNext(res.hasNext);
         setHasPrev(res.hasPrevious);
-        setTotalCount(res.totalCount);
       })
-      .catch(() => {
-        setError("تعذّر تحميل العقارات. يرجى المحاولة مجدداً.");
-      })
+      .catch(() => setError("تعذّر تحميل العقارات. يرجى المحاولة مجدداً."))
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [cityParam, typeParam, listingTypeParam, minPriceParam, maxPriceParam, pageParam]);
+
+  // ── URL helpers ─────────────────────────────────────────────────────────────
+
+  function buildParams(f: FilterForm, page: number): URLSearchParams {
+    const p = new URLSearchParams();
+    if (f.city)        p.set("city",        f.city);
+    if (f.type)        p.set("type",        f.type);
+    if (f.listingType) p.set("listingType", f.listingType);
+    if (f.minPrice)    p.set("minPrice",    f.minPrice);
+    if (f.maxPrice)    p.set("maxPrice",    f.maxPrice);
+    if (page > 1)      p.set("page",        String(page));
+    return p;
+  }
+
+  function handleApply(e: FormEvent) {
+    e.preventDefault();
+    // Reset to page 1 whenever filters are reapplied
+    const qs = buildParams(form, 1).toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  function handleClear() {
+    setForm(EMPTY_FILTERS);
+    router.push(pathname);
+  }
+
+  function goToPage(p: number) {
+    const currentFilters: FilterForm = {
+      city: cityParam, type: typeParam, listingType: listingTypeParam,
+      minPrice: minPriceParam, maxPrice: maxPriceParam,
+    };
+    const qs = buildParams(currentFilters, p).toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  }
+
+  const hasActiveFilters = !!(cityParam || typeParam || listingTypeParam || minPriceParam || maxPriceParam);
+
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-background)" }}>
       <div className="container" style={{ padding: "2.5rem 1.5rem" }}>
+
+        {/* Page Header */}
         <div className="page-header">
           <h1 className="page-header__title">العقارات المتاحة</h1>
           {!loading && !error && (
             <p className="page-header__subtitle">
-              {totalCount > 0 ? `${totalCount} عقار` : "لا توجد عقارات حالياً"}
+              {totalCount > 0
+                ? `${totalCount.toLocaleString("ar-SY")} عقار`
+                : hasActiveFilters ? "لا توجد نتائج" : "لا توجد عقارات حالياً"}
             </p>
           )}
         </div>
 
+        {/* Filter Bar */}
+        <form className="filter-bar" onSubmit={handleApply}>
+          <div className="filter-bar__grid">
+
+            {/* City */}
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" htmlFor="f-city">المدينة</label>
+              <select
+                id="f-city"
+                className="form-input"
+                value={form.city}
+                onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+              >
+                <option value="">الكل</option>
+                {SYRIAN_CITIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Property Type */}
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" htmlFor="f-type">نوع العقار</label>
+              <select
+                id="f-type"
+                className="form-input"
+                value={form.type}
+                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
+              >
+                <option value="">الكل</option>
+                {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Listing Type */}
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" htmlFor="f-listing">للبيع / للإيجار</label>
+              <select
+                id="f-listing"
+                className="form-input"
+                value={form.listingType}
+                onChange={(e) => setForm((p) => ({ ...p, listingType: e.target.value }))}
+              >
+                <option value="">الكل</option>
+                {Object.entries(LISTING_TYPE_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Price Range */}
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">نطاق السعر (ل.س)</label>
+              <div className="filter-bar__price">
+                <input
+                  type="number"
+                  className="form-input"
+                  placeholder="من"
+                  min={0}
+                  value={form.minPrice}
+                  onChange={(e) => setForm((p) => ({ ...p, minPrice: e.target.value }))}
+                />
+                <input
+                  type="number"
+                  className="form-input"
+                  placeholder="إلى"
+                  min={0}
+                  value={form.maxPrice}
+                  onChange={(e) => setForm((p) => ({ ...p, maxPrice: e.target.value }))}
+                />
+              </div>
+            </div>
+
+          </div>
+
+          <div className="filter-bar__actions">
+            {hasActiveFilters && (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={handleClear}>
+                مسح الفلاتر
+              </button>
+            )}
+            <button type="submit" className="btn btn-primary btn-sm">
+              تطبيق
+            </button>
+          </div>
+        </form>
+
+        {/* Loading */}
         {loading && <Spinner />}
 
+        {/* Error */}
         {!loading && error && (
           <div className="error-banner">{error}</div>
         )}
 
+        {/* Empty state */}
         {!loading && !error && properties.length === 0 && (
           <div className="empty-state">
             <div className="empty-state__icon">🏘️</div>
-            <h2 className="empty-state__title">لا توجد عقارات متاحة</h2>
-            <p className="empty-state__desc">لم يتم إضافة أي عقارات حتى الآن.</p>
+            <h2 className="empty-state__title">
+              {hasActiveFilters ? "لا توجد نتائج مطابقة" : "لا توجد عقارات متاحة"}
+            </h2>
+            <p className="empty-state__desc">
+              {hasActiveFilters
+                ? "جرّب تغيير معايير البحث أو مسح الفلاتر."
+                : "لم يتم إضافة أي عقارات حتى الآن."}
+            </p>
+            {hasActiveFilters && (
+              <button
+                className="btn btn-outline"
+                style={{ marginTop: "1rem" }}
+                onClick={handleClear}
+              >
+                مسح الفلاتر
+              </button>
+            )}
           </div>
         )}
 
+        {/* Results grid */}
         {!loading && !error && properties.length > 0 && (
           <>
             <div className="grid-cards">
@@ -130,15 +282,15 @@ export default function PropertiesPage() {
                 <button
                   className="btn btn-outline btn-sm"
                   disabled={!hasPrev}
-                  onClick={() => setPage((p) => p - 1)}
+                  onClick={() => goToPage(pageParam - 1)}
                 >
                   ← السابق
                 </button>
-                <span className="pagination__info">صفحة {page}</span>
+                <span className="pagination__info">صفحة {pageParam}</span>
                 <button
                   className="btn btn-outline btn-sm"
                   disabled={!hasNext}
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={() => goToPage(pageParam + 1)}
                 >
                   التالي →
                 </button>
@@ -146,7 +298,18 @@ export default function PropertiesPage() {
             )}
           </>
         )}
+
       </div>
     </div>
+  );
+}
+
+// ─── Page wrapper — required for useSearchParams ──────────────────────────────
+
+export default function PropertiesPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <PropertiesContent />
+    </Suspense>
   );
 }
