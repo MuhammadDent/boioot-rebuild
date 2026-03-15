@@ -5,8 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Spinner from "@/components/ui/Spinner";
 import ProjectCard from "@/components/projects/ProjectCard";
 import { projectsApi, PROJECTS_PAGE_SIZE } from "@/features/projects/api";
-import { PROJECT_STATUS_LABELS } from "@/features/projects/constants";
-import { SYRIAN_CITIES } from "@/features/properties/constants";
+import { PROJECT_STATUS_LABELS, SYRIAN_CITIES } from "@/features/projects/constants";
 import type { ProjectResponse } from "@/types";
 
 // ─── Filter form shape ────────────────────────────────────────────────────────

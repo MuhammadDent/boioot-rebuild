@@ -1,5 +1,11 @@
 // Project label maps — values match the backend enum names exactly.
 
+// SYRIAN_CITIES is shared data used by both the properties and projects filter
+// bars. It lives in properties/constants because that was the first module to
+// define it. Re-exported here so the projects module has no direct dependency
+// on the properties feature.
+export { SYRIAN_CITIES } from "@/features/properties/constants";
+
 export const PROJECT_STATUS_LABELS: Record<string, string> = {
   Upcoming:           "قادم",
   UnderConstruction:  "قيد الإنشاء",

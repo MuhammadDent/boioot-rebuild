@@ -25,25 +25,24 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           <img
             src={mainImage.imageUrl}
             alt={project.title}
-            className="property-card__img"
+            className="project-card__img"
           />
         ) : (
-          <div className="property-card__img-placeholder">🏗️</div>
+          <div className="project-card__img-placeholder">🏗️</div>
         )}
 
-        <div className="property-card__body">
-          <h3 className="property-card__title">{project.title}</h3>
+        <div className="project-card__body">
+          <h3 className="project-card__title">{project.title}</h3>
 
-          <p className="property-card__price">
+          <p className="project-card__price">
             {formatStartingPrice(project.startingPrice)}
           </p>
 
-          <p className="property-card__city">📍 {project.city}</p>
+          <p className="project-card__city">📍 {project.city}</p>
 
-          <div className="property-card__tags">
-            <span className={`badge ${statusBadge}`}>{statusLabel}</span>
-            <span className="badge badge-gray">{project.companyName}</span>
-          </div>
+          <span className={`badge ${statusBadge}`}>{statusLabel}</span>
+
+          <p className="project-card__company">{project.companyName}</p>
         </div>
       </article>
     </Link>
