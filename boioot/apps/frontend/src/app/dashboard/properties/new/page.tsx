@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { dashboardPropertiesApi } from "@/features/dashboard/properties/api";
 import PropertyForm from "@/components/dashboard/properties/PropertyForm";
 import { normalizeError } from "@/lib/api";
@@ -45,17 +45,7 @@ export default function NewPropertyPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
-          <Link
-            href="/dashboard/properties"
-            style={{
-              fontSize: "0.82rem",
-              color: "var(--color-text-secondary)",
-              marginBottom: "0.35rem",
-              display: "block",
-            }}
-          >
-            ← العقارات
-          </Link>
+          <DashboardBackLink href="/dashboard/properties" label="← العقارات" />
           <h1
             style={{
               fontSize: "1.4rem",

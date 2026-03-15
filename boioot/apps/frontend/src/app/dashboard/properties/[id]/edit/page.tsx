@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
+import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { dashboardPropertiesApi } from "@/features/dashboard/properties/api";
 import PropertyForm from "@/components/dashboard/properties/PropertyForm";
 import { normalizeError } from "@/lib/api";
@@ -71,17 +73,7 @@ export default function EditPropertyPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
-          <Link
-            href="/dashboard/properties"
-            style={{
-              fontSize: "0.82rem",
-              color: "var(--color-text-secondary)",
-              marginBottom: "0.35rem",
-              display: "block",
-            }}
-          >
-            ← العقارات
-          </Link>
+          <DashboardBackLink href="/dashboard/properties" label="← العقارات" />
           <h1
             style={{
               fontSize: "1.4rem",
@@ -95,32 +87,10 @@ export default function EditPropertyPage() {
         </div>
 
         {/* ── Loading property ── */}
-        {isLoadingProperty && (
-          <p
-            style={{
-              textAlign: "center",
-              color: "var(--color-text-secondary)",
-              padding: "3rem 0",
-            }}
-          >
-            جارٍ تحميل بيانات العقار...
-          </p>
-        )}
+        {isLoadingProperty && <LoadingRow message="جارٍ تحميل بيانات العقار..." />}
 
         {/* ── Load error ── */}
-        {loadError && (
-          <div
-            style={{
-              background: "#ffebee",
-              color: "#c62828",
-              padding: "1rem",
-              borderRadius: "8px",
-              marginBottom: "1rem",
-            }}
-          >
-            {loadError}
-          </div>
-        )}
+        <InlineBanner message={loadError} />
 
         {/* ── Form (shown after property loaded) ── */}
         {!isLoadingProperty && property && (

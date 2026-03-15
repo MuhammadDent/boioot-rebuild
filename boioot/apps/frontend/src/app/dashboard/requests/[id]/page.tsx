@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, type FormEvent } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
+import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { dashboardRequestsApi } from "@/features/dashboard/requests/api";
 import {
@@ -88,10 +90,8 @@ export default function RequestDetailPage() {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
-          <BackLink />
-          <p style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: "3rem 0" }}>
-            جارٍ التحميل...
-          </p>
+          <DashboardBackLink href="/dashboard/requests" label="← الطلبات والاستفسارات" marginBottom="1rem" />
+          <LoadingRow />
         </div>
       </div>
     );
@@ -102,13 +102,8 @@ export default function RequestDetailPage() {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
-          <BackLink />
-          <div style={{
-            background: "#ffebee", color: "#c62828",
-            padding: "1rem", borderRadius: "8px", fontSize: "0.9rem",
-          }}>
-            {fetchError}
-          </div>
+          <DashboardBackLink href="/dashboard/requests" label="← الطلبات والاستفسارات" marginBottom="1rem" />
+          <InlineBanner message={fetchError} />
         </div>
       </div>
     );
@@ -122,7 +117,7 @@ export default function RequestDetailPage() {
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
       <div style={{ maxWidth: 680, margin: "0 auto" }}>
 
-        <BackLink />
+        <DashboardBackLink href="/dashboard/requests" label="← الطلبات والاستفسارات" marginBottom="1rem" />
 
         {/* ── Page title ── */}
         <div style={{ marginBottom: "1.5rem" }}>
@@ -267,17 +262,6 @@ export default function RequestDetailPage() {
 }
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
-
-function BackLink() {
-  return (
-    <Link href="/dashboard/requests" style={{
-      fontSize: "0.82rem", color: "var(--color-text-secondary)",
-      marginBottom: "1rem", display: "block",
-    }}>
-      ← الطلبات والاستفسارات
-    </Link>
-  );
-}
 
 function DetailRow({
   label,

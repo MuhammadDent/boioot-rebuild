@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
+import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { dashboardProjectsApi } from "@/features/dashboard/projects/api";
 import ProjectForm from "@/components/dashboard/projects/ProjectForm";
 import { normalizeError } from "@/lib/api";
@@ -77,17 +79,7 @@ export default function EditProjectPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
-          <Link
-            href="/dashboard/projects"
-            style={{
-              fontSize: "0.82rem",
-              color: "var(--color-text-secondary)",
-              marginBottom: "0.35rem",
-              display: "block",
-            }}
-          >
-            ← المشاريع
-          </Link>
+          <DashboardBackLink href="/dashboard/projects" label="← المشاريع" />
           <h1
             style={{
               fontSize: "1.4rem",
@@ -101,32 +93,10 @@ export default function EditProjectPage() {
         </div>
 
         {/* ── Loading project ── */}
-        {isLoadingProject && (
-          <p
-            style={{
-              textAlign: "center",
-              color: "var(--color-text-secondary)",
-              padding: "3rem 0",
-            }}
-          >
-            جارٍ تحميل بيانات المشروع...
-          </p>
-        )}
+        {isLoadingProject && <LoadingRow message="جارٍ تحميل بيانات المشروع..." />}
 
         {/* ── Load error ── */}
-        {loadError && (
-          <div
-            style={{
-              background: "#ffebee",
-              color: "#c62828",
-              padding: "1rem",
-              borderRadius: "8px",
-              marginBottom: "1rem",
-            }}
-          >
-            {loadError}
-          </div>
-        )}
+        <InlineBanner message={loadError} />
 
         {/* ── Form (shown after project loaded) ── */}
         {!isLoadingProject && project && (

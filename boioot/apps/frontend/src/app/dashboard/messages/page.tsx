@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { messagingApi } from "@/features/dashboard/messages/api";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
+import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { normalizeError } from "@/lib/api";
 import type { ConversationSummary } from "@/types";
 
@@ -99,12 +102,7 @@ export default function MessagesPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
-          <Link href="/dashboard" style={{
-            fontSize: "0.82rem", color: "var(--color-text-secondary)",
-            marginBottom: "0.35rem", display: "block",
-          }}>
-            ← لوحة التحكم
-          </Link>
+          <DashboardBackLink href="/dashboard" label="← لوحة التحكم" />
           <div style={{
             display: "flex", alignItems: "center",
             justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem",
@@ -193,22 +191,10 @@ export default function MessagesPage() {
         )}
 
         {/* ── Fetch error ── */}
-        {fetchError && (
-          <div style={{
-            background: "#ffebee", color: "#c62828",
-            padding: "0.75rem 1rem", borderRadius: "8px",
-            marginBottom: "1rem", fontSize: "0.9rem",
-          }}>
-            {fetchError}
-          </div>
-        )}
+        <InlineBanner message={fetchError} />
 
         {/* ── Loading ── */}
-        {fetching && (
-          <p style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: "3rem 0" }}>
-            جارٍ التحميل...
-          </p>
-        )}
+        {fetching && <LoadingRow />}
 
         {/* ── Empty state ── */}
         {!fetching && !fetchError && conversations.length === 0 && (

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
+import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import {
   adminApi,
   type AdminPropertiesParams,
@@ -81,12 +83,7 @@ export default function AdminPropertiesPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
-          <Link href="/dashboard" style={{
-            fontSize: "0.82rem", color: "var(--color-text-secondary)",
-            marginBottom: "0.35rem", display: "block",
-          }}>
-            ← لوحة التحكم
-          </Link>
+          <DashboardBackLink href="/dashboard" label="← لوحة التحكم" />
           <h1 style={{ fontSize: "1.4rem", fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>
             العقارات — عرض الكل
           </h1>
@@ -143,22 +140,10 @@ export default function AdminPropertiesPage() {
         </div>
 
         {/* ── Fetch error ── */}
-        {fetchError && (
-          <div style={{
-            background: "#ffebee", color: "#c62828",
-            padding: "0.75rem 1rem", borderRadius: "8px",
-            marginBottom: "1rem", fontSize: "0.9rem",
-          }}>
-            {fetchError}
-          </div>
-        )}
+        <InlineBanner message={fetchError} />
 
         {/* ── Loading ── */}
-        {fetching && (
-          <p style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: "3rem 0" }}>
-            جارٍ التحميل...
-          </p>
-        )}
+        {fetching && <LoadingRow />}
 
         {/* ── Empty ── */}
         {!fetching && !fetchError && properties.length === 0 && (

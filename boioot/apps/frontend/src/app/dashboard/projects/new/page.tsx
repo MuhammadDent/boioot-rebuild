@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { dashboardProjectsApi } from "@/features/dashboard/projects/api";
 import ProjectForm from "@/components/dashboard/projects/ProjectForm";
 import { normalizeError } from "@/lib/api";
@@ -47,17 +47,7 @@ export default function NewProjectPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
-          <Link
-            href="/dashboard/projects"
-            style={{
-              fontSize: "0.82rem",
-              color: "var(--color-text-secondary)",
-              marginBottom: "0.35rem",
-              display: "block",
-            }}
-          >
-            ← المشاريع
-          </Link>
+          <DashboardBackLink href="/dashboard/projects" label="← المشاريع" />
           <h1
             style={{
               fontSize: "1.4rem",

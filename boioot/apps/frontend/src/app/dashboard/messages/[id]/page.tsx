@@ -7,8 +7,10 @@ import {
   useCallback,
   type KeyboardEvent,
 } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
+import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { messagingApi, CONVERSATION_PAGE_SIZE } from "@/features/dashboard/messages/api";
 import { normalizeError } from "@/lib/api";
@@ -88,10 +90,8 @@ export default function ConversationPage() {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <BackLink />
-          <p style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: "3rem 0" }}>
-            جارٍ التحميل...
-          </p>
+          <DashboardBackLink href="/dashboard/messages" label="← المحادثات" marginBottom="0.75rem" />
+          <LoadingRow />
         </div>
       </div>
     );
@@ -102,13 +102,8 @@ export default function ConversationPage() {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <BackLink />
-          <div style={{
-            background: "#ffebee", color: "#c62828",
-            padding: "1rem", borderRadius: "8px", fontSize: "0.9rem",
-          }}>
-            {fetchError}
-          </div>
+          <DashboardBackLink href="/dashboard/messages" label="← المحادثات" marginBottom="0.75rem" />
+          <InlineBanner message={fetchError} />
         </div>
       </div>
     );
@@ -180,7 +175,7 @@ export default function ConversationPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1rem" }}>
-          <BackLink />
+          <DashboardBackLink href="/dashboard/messages" label="← المحادثات" marginBottom="0.75rem" />
           <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
             <div style={{
               width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
@@ -352,15 +347,3 @@ function MessageBubble({ msg }: { msg: MessageItem }) {
   );
 }
 
-// ─── Back link ────────────────────────────────────────────────────────────────
-
-function BackLink() {
-  return (
-    <Link href="/dashboard/messages" style={{
-      fontSize: "0.82rem", color: "var(--color-text-secondary)",
-      marginBottom: "0.75rem", display: "block",
-    }}>
-      ← المحادثات
-    </Link>
-  );
-}
