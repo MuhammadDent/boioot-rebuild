@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Spinner from "@/components/ui/Spinner";
+import InquiryForm from "@/components/ui/InquiryForm";
 import { projectsApi } from "@/features/projects/api";
 import {
   PROJECT_STATUS_LABELS,
@@ -174,6 +175,15 @@ export default function ProjectDetailPage() {
           </div>
 
         </div>
+
+        {/* ── Inquiry form ── */}
+        <div style={{ marginTop: "2.5rem", paddingTop: "2.5rem", borderTop: "1px solid var(--color-border)" }}>
+          <InquiryForm
+            projectId={project.id}
+            contextTitle={project.title}
+          />
+        </div>
+
       </div>
     </div>
   );

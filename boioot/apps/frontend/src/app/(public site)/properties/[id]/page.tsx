@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Spinner from "@/components/ui/Spinner";
+import InquiryForm from "@/components/ui/InquiryForm";
 import { propertiesApi } from "@/features/properties/api";
 import {
   PROPERTY_TYPE_LABELS,
@@ -185,6 +186,15 @@ export default function PropertyDetailPage() {
           </div>
 
         </div>
+
+        {/* ── Inquiry form ── */}
+        <div style={{ marginTop: "2.5rem", paddingTop: "2.5rem", borderTop: "1px solid var(--color-border)" }}>
+          <InquiryForm
+            propertyId={property.id}
+            contextTitle={property.title}
+          />
+        </div>
+
       </div>
     </div>
   );

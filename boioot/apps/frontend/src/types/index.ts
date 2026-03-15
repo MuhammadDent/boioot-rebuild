@@ -170,3 +170,32 @@ export interface UpdatePropertyRequest {
   longitude?: number;
   agentId?: string;
 }
+
+export interface SubmitRequestPayload {
+  name: string;
+  phone: string;
+  email?: string;
+  message?: string;
+  /** UUID — set when the inquiry is about a specific property */
+  propertyId?: string;
+  /** UUID — set when the inquiry is about a specific project */
+  projectId?: string;
+}
+
+export interface RequestResponse {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  message?: string;
+  /** New | InProgress | Closed */
+  status: string;
+  propertyId?: string;
+  propertyTitle?: string;
+  projectId?: string;
+  projectTitle?: string;
+  companyId?: string;
+  companyName?: string;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -182,3 +182,28 @@ boioot/
 - لا `listingType` ولا `area` ولا `bedrooms/bathrooms`
 - حقول جديدة: `startingPrice` (اختياري)، `deliveryDate` (تاريخ اختياري)
 - الصلاحيات: Admin/CompanyOwner فقط لـ CRUD (Agent = قائمة للعرض فقط، لا تعديل)
+
+## Public Requests / Leads Flow (مكتمل)
+**الملفات المُضافة:**
+- `features/requests/api.ts` — `requestsApi.submit(data)` → `POST /requests` (عام، لا يحتاج auth)
+- `components/ui/InquiryForm.tsx` — مكوّن مشترك: اسم، هاتف، بريد (اختياري)، رسالة (اختياري)، success state
+
+**الملفات المُعدَّلة:**
+- `types/index.ts` — أُضيف: `SubmitRequestPayload`, `RequestResponse`
+- `app/(public site)/properties/[id]/page.tsx` — أُضيف `<InquiryForm propertyId={property.id} contextTitle={property.title} />`
+- `app/(public site)/projects/[id]/page.tsx` — أُضيف `<InquiryForm projectId={project.id} contextTitle={project.title} />`
+
+**Payload المُرسَل للـ backend:**
+```json
+{ "name": "...", "phone": "...", "email?": "...", "message?": "...", "propertyId?": "uuid", "projectId?": "uuid" }
+```
+**Validation (يطابق backend بدقة):**
+- name: required, 2-200 حرف
+- phone: required, 5-50 حرف  
+- email: اختياري، regex صحيح، max 200
+- message: اختياري، max 2000
+
+**Behavior:**
+- نجاح → يُستبدل النموذج برسالة شكر (لا redirect — المستخدم يبقى في الصفحة)
+- خطأ → `normalizeError()` يُعرض فوق النموذج
+- الـ endpoint: `POST /api/requests` عام (لا يتطلب تسجيل دخول)
