@@ -142,3 +142,21 @@ boioot/
 - `PasswordHash` → `nvarchar(500)` في DB
 - GUID fragmentation: `Guid.NewGuid()` في .NET 8 — يُعالج بـ `Guid.CreateVersion7()` عند الترقية لـ .NET 9
 - الـ dashboard ليس تطبيقاً منفصلاً — يعمل داخل نفس Next.js app
+
+## Dashboard Properties Module (مكتمل)
+**الملفات المُضافة:**
+- `features/dashboard/properties/api.ts` — dashboardPropertiesApi: getList, create, update, delete
+- `components/dashboard/properties/PropertyForm.tsx` — نموذج مشترك (create/edit) مع validation كامل
+- `app/dashboard/properties/page.tsx` — قائمة العقارات مع حذف آمن بـ window.confirm
+- `app/dashboard/properties/new/page.tsx` — صفحة الإضافة (Admin/CompanyOwner فقط)
+- `app/dashboard/properties/[id]/edit/page.tsx` — صفحة التعديل (Admin/CompanyOwner/Agent)
+
+**الملفات المُعدَّلة:**
+- `types/index.ts` — أُضيف: DashboardPropertyItem, CreatePropertyRequest, UpdatePropertyRequest
+- `app/dashboard/page.tsx` — استُبدل placeholder بكارت تنقل "إدارة العقارات"
+
+**ملاحظات:**
+- Edit pre-fill: يُستخدم `GET /api/properties/{id}` (public) من propertiesApi الموجود
+- CompanyId: حقل نصي UUID يظهر في Create فقط (لا يوجد endpoint لجلب companyId المستخدم)
+- Status field: يظهر في Edit فقط (Create يضع Available تلقائياً من الـ backend)
+- الصلاحيات: Admin/CompanyOwner = CRUD كامل | Agent = list + edit فقط

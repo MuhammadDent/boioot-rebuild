@@ -81,3 +81,54 @@ export interface PropertyResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface DashboardPropertyItem {
+  id: string;
+  title: string;
+  /** Available | Inactive | Sold | Rented */
+  status: string;
+  /** Apartment | Villa | Office | Shop | Land | Building */
+  type: string;
+  /** Sale | Rent */
+  listingType: string;
+  price: number;
+  city: string;
+  createdAt: string;
+}
+
+export interface CreatePropertyRequest {
+  title: string;
+  description?: string;
+  /** Apartment | Villa | Office | Shop | Land | Building */
+  type: string;
+  /** Sale | Rent */
+  listingType: string;
+  price: number;
+  area: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  address?: string;
+  city: string;
+  latitude?: number;
+  longitude?: number;
+  companyId: string;
+  agentId?: string;
+}
+
+export interface UpdatePropertyRequest {
+  title: string;
+  description?: string;
+  type: string;
+  listingType: string;
+  /** Available | Inactive | Sold | Rented */
+  status: string;
+  price: number;
+  area: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  address?: string;
+  city: string;
+  latitude?: number;
+  longitude?: number;
+  agentId?: string;
+}

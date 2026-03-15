@@ -95,14 +95,49 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Placeholder sections */}
-        <div className="form-card" style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2.5rem 1rem" }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.4, marginBottom: "0.75rem" }}>
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
-          <p style={{ margin: 0, fontSize: "0.95rem" }}>قريباً — لوحة التحكم الكاملة</p>
-        </div>
+        {/* Navigation cards */}
+        {(user.role === "Admin" || user.role === "CompanyOwner" || user.role === "Agent") && (
+          <Link
+            href="/dashboard/properties"
+            className="form-card"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "1rem",
+              textDecoration: "none",
+              color: "inherit",
+              padding: "1.1rem 1.25rem",
+              transition: "box-shadow 0.15s",
+            }}
+          >
+            <div style={{
+              width: 44, height: 44, borderRadius: "10px",
+              backgroundColor: "var(--color-primary)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </div>
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: "1rem", color: "var(--color-text-primary)" }}>
+                إدارة العقارات
+              </p>
+              <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--color-text-secondary)", marginTop: "0.2rem" }}>
+                عرض وإضافة وتعديل وحذف العقارات
+              </p>
+            </div>
+            <svg
+              width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2"
+              style={{ marginRight: "auto", color: "var(--color-text-secondary)", transform: "rotate(180deg)" }}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </Link>
+        )}
 
       </div>
     </div>
