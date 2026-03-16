@@ -328,76 +328,76 @@ export default function PropertyForm({
 
       {/* ── Section: pricing ── */}
       <Section label="السعر والمساحة">
-        <Row>
-          <div className="form-group">
-            <label className="form-label">
-              السعر <Required />
-            </label>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <input
-                className="form-input"
-                type="number"
-                min={0}
-                step="any"
-                value={fields.price}
-                onChange={set("price")}
-                placeholder="0"
-                disabled={disabled}
-                dir="ltr"
-                style={{ flex: 1 }}
-              />
-              <div
-                style={{
-                  display: "flex",
-                  borderRadius: "8px",
-                  overflow: "hidden",
-                  border: "1px solid var(--color-border, #e5e7eb)",
-                  flexShrink: 0,
-                }}
-              >
-                {(["SYP", "USD"] as const).map((cur) => (
-                  <button
-                    key={cur}
-                    type="button"
-                    onClick={() => setField("currency", cur)}
-                    disabled={disabled}
-                    style={{
-                      padding: "0 0.75rem",
-                      background: fields.currency === cur ? "var(--color-accent, #3b82f6)" : "transparent",
-                      color: fields.currency === cur ? "#fff" : "inherit",
-                      border: "none",
-                      cursor: disabled ? "default" : "pointer",
-                      fontWeight: 600,
-                      fontSize: "0.85rem",
-                      transition: "background 0.15s",
-                    }}
-                  >
-                    {cur === "SYP" ? "ل.س" : "$"}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {errors.price && <p className="form-error">{errors.price}</p>}
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              المساحة (م²) <Required />
-            </label>
+        <div className="form-group">
+          <label className="form-label">
+            السعر <Required />
+          </label>
+          <div style={{ display: "flex", borderRadius: "8px", overflow: "hidden", border: "1.5px solid var(--color-border, #e5e7eb)" }}>
             <input
               className="form-input"
               type="number"
-              min={1}
+              min={0}
               step="any"
-              value={fields.area}
-              onChange={set("area")}
-              placeholder="مثال: 120"
+              value={fields.price}
+              onChange={set("price")}
+              placeholder="0"
               disabled={disabled}
               dir="ltr"
+              style={{
+                flex: 1,
+                border: "none",
+                borderRadius: 0,
+                outline: "none",
+                boxShadow: "none",
+                minWidth: 0,
+              }}
             />
-            {errors.area && <p className="form-error">{errors.area}</p>}
+            {(["SYP", "USD"] as const).map((cur) => (
+              <button
+                key={cur}
+                type="button"
+                onClick={() => setField("currency", cur)}
+                disabled={disabled}
+                style={{
+                  padding: "0 1rem",
+                  background: fields.currency === cur ? "var(--color-primary, #16a34a)" : "#f8fafc",
+                  color: fields.currency === cur ? "#fff" : "#64748b",
+                  borderTop: "none",
+                  borderBottom: "none",
+                  borderRight: "none",
+                  borderLeft: cur === "SYP" ? "1.5px solid var(--color-border, #e5e7eb)" : "none",
+                  cursor: disabled ? "default" : "pointer",
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  fontFamily: "inherit",
+                  flexShrink: 0,
+                  transition: "background 0.15s, color 0.15s",
+                }}
+              >
+                {cur === "SYP" ? "ل.س" : "$"}
+              </button>
+            ))}
           </div>
-        </Row>
+          {errors.price && <p className="form-error">{errors.price}</p>}
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">
+            المساحة (م²) <Required />
+          </label>
+          <input
+            className="form-input"
+            type="number"
+            min={1}
+            step="any"
+            value={fields.area}
+            onChange={set("area")}
+            placeholder="مثال: 120"
+            disabled={disabled}
+            dir="ltr"
+          />
+          {errors.area && <p className="form-error">{errors.area}</p>}
+        </div>
       </Section>
 
       {/* ── Section: location ── */}
