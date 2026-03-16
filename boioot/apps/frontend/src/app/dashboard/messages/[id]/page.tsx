@@ -6,6 +6,7 @@ import {
   useRef,
   useCallback,
   type KeyboardEvent,
+  type ChangeEvent,
 } from "react";
 import { useParams } from "next/navigation";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
@@ -15,6 +16,28 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { messagingApi, CONVERSATION_PAGE_SIZE } from "@/features/dashboard/messages/api";
 import { normalizeError } from "@/lib/api";
 import type { ConversationDetail, MessageItem } from "@/types";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 MB (base64 → ~5.3 MB stored)
+
+const ACCEPTED_TYPES = [
+  "image/jpeg", "image/png", "image/gif", "image/webp",
+  "application/pdf",
+];
+
+function readFileAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("فشل قراءة الملف"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function isImage(dataUrl?: string) {
+  return dataUrl?.startsWith("data:image/") ?? false;
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -34,18 +57,23 @@ export default function ConversationPage() {
   const [fetchError, setFetchError]   = useState("");
 
   // Compose state
-  const [content, setContent]   = useState("");
-  const [sending, setSending]   = useState(false);
+  const [content, setContent]     = useState("");
+  const [sending, setSending]     = useState(false);
   const [sendError, setSendError] = useState("");
 
-  // Bottom sentinel for auto-scroll
-  const bottomRef = useRef<HTMLDivElement>(null);
+  // Attachment state
+  const [attachData, setAttachData]   = useState<string | undefined>();
+  const [attachName, setAttachName]   = useState<string | undefined>();
+  const [attachError, setAttachError] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef  = useRef<HTMLTextAreaElement>(null);
+  const bottomRef    = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // Timer ref for post-send scroll — cleaned up on unmount
   const sendScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     return () => {
@@ -72,20 +100,18 @@ export default function ConversationPage() {
       .finally(() => setFetching(false));
   }, [authLoading, user, id]);
 
-  // Scroll to bottom once after initial load — fires when detail first becomes available.
-  // Uses a ref flag so subsequent detail mutations (e.g. from future realtime updates)
-  // don't trigger an unexpected scroll.
+  // Scroll to bottom + focus textarea after initial load
   const initialScrollDone = useRef(false);
   useEffect(() => {
     if (detail && !initialScrollDone.current) {
       initialScrollDone.current = true;
       scrollToBottom();
+      textareaRef.current?.focus();
     }
   }, [detail, scrollToBottom]);
 
   if (authLoading || !user) return null;
 
-  // ── Loading ──
   if (fetching) {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
@@ -97,7 +123,6 @@ export default function ConversationPage() {
     );
   }
 
-  // ── Fetch error ──
   if (fetchError) {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
@@ -111,7 +136,7 @@ export default function ConversationPage() {
 
   if (!detail) return null;
 
-  // ── Load more (next pages = newer messages in oldest-first sort) ──
+  // ── Load more ──
   async function handleLoadMore() {
     if (loadingMore || !id) return;
     setLoadingMore(true);
@@ -129,21 +154,55 @@ export default function ConversationPage() {
     }
   }
 
-  // ── Send message ──
+  // ── File picker ──
+  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+    setAttachError("");
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setAttachError("نوع الملف غير مدعوم. الأنواع المقبولة: صور (JPG/PNG/GIF/WebP) أو PDF");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setAttachError("حجم الملف يتجاوز 4 ميغابايت");
+      e.target.value = "";
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      setAttachData(dataUrl);
+      setAttachName(file.name);
+    } catch {
+      setAttachError("فشل في قراءة الملف");
+    }
+    e.target.value = "";
+  }
+
+  function clearAttachment() {
+    setAttachData(undefined);
+    setAttachName(undefined);
+    setAttachError("");
+  }
+
+  // ── Send ──
   async function handleSend() {
     const trimmed = content.trim();
-    if (!trimmed || sending || !id) return;
+    if (!trimmed && !attachData) return;
+    if (sending || !id) return;
 
     setSending(true);
     setSendError("");
 
     try {
-      const msg = await messagingApi.sendMessage(id, trimmed);
+      const msg = await messagingApi.sendMessage(id, trimmed, attachData, attachName);
       setMessages(prev => [...prev, msg]);
       setContent("");
-      // Scroll after React re-renders the new bubble — cleaned up on unmount
+      clearAttachment();
       if (sendScrollTimerRef.current !== null) clearTimeout(sendScrollTimerRef.current);
       sendScrollTimerRef.current = setTimeout(scrollToBottom, 50);
+      textareaRef.current?.focus();
     } catch (e) {
       setSendError(normalizeError(e));
     } finally {
@@ -151,7 +210,6 @@ export default function ConversationPage() {
     }
   }
 
-  // Enter = send, Shift+Enter = newline
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -161,6 +219,7 @@ export default function ConversationPage() {
 
   const subject    = detail.propertyTitle ?? detail.projectTitle;
   const subjectTag = detail.propertyTitle ? "عقار" : detail.projectTitle ? "مشروع" : null;
+  const canSend    = (content.trim().length > 0 || !!attachData) && !sending;
 
   return (
     <div style={{
@@ -208,8 +267,6 @@ export default function ConversationPage() {
           display: "flex", flexDirection: "column", gap: "0.5rem",
           minHeight: 320,
         }}>
-
-          {/* ── Empty thread ── */}
           {messages.length === 0 && (
             <p style={{
               textAlign: "center", color: "var(--color-text-secondary)",
@@ -219,7 +276,6 @@ export default function ConversationPage() {
             </p>
           )}
 
-          {/* ── Load more newer messages ── */}
           {hasMore && (
             <div style={{ textAlign: "center", marginBottom: "0.5rem" }}>
               <button
@@ -234,24 +290,83 @@ export default function ConversationPage() {
             </div>
           )}
 
-          {/* ── Messages ── */}
           {messages.map((msg) => (
             <MessageBubble key={msg.id} msg={msg} />
           ))}
 
-          {/* ── Bottom sentinel for auto-scroll ── */}
           <div ref={bottomRef} />
         </div>
+
+        {/* ── Attachment preview (before send) ── */}
+        {(attachData || attachError) && (
+          <div style={{
+            marginTop: "0.5rem",
+            padding: "0.6rem 0.85rem",
+            background: attachError ? "#fef2f2" : "#f0fdf4",
+            border: `1px solid ${attachError ? "#fecaca" : "#bbf7d0"}`,
+            borderRadius: 10,
+            display: "flex", alignItems: "center", gap: "0.6rem",
+          }}>
+            {attachError ? (
+              <span style={{ color: "#dc2626", fontSize: "0.85rem", flex: 1 }}>{attachError}</span>
+            ) : (
+              <>
+                {isImage(attachData) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={attachData} alt={attachName} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6 }} />
+                ) : (
+                  <span style={{ fontSize: "1.5rem" }}>📄</span>
+                )}
+                <span style={{ flex: 1, fontSize: "0.85rem", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {attachName}
+                </span>
+                <button
+                  type="button"
+                  onClick={clearAttachment}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: "1.1rem", lineHeight: 1 }}
+                  title="إزالة الملف"
+                >✕</button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* ── Send error ── */}
         <InlineBanner message={sendError} />
 
         {/* ── Compose area ── */}
-        <div style={{
-          display: "flex", gap: "0.6rem", alignItems: "flex-end",
-          marginTop: "0.75rem",
-        }}>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", marginTop: "0.75rem" }}>
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_TYPES.join(",")}
+            style={{ display: "none" }}
+            onChange={handleFileChange}
+          />
+
+          {/* Attach button */}
+          <button
+            type="button"
+            title="إرفاق ملف (صورة أو PDF، حد أقصى 4 ميغابايت)"
+            onClick={() => { setAttachError(""); fileInputRef.current?.click(); }}
+            disabled={sending}
+            style={{
+              flexShrink: 0, width: 42, height: 42,
+              border: "1.5px solid var(--color-border)",
+              borderRadius: 10, background: attachData ? "#f0fdf4" : "var(--color-bg-card)",
+              cursor: sending ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "1.2rem",
+            }}
+          >
+            📎
+          </button>
+
+          {/* Textarea */}
           <textarea
+            ref={textareaRef}
             rows={2}
             className="form-input"
             style={{
@@ -266,6 +381,8 @@ export default function ConversationPage() {
             disabled={sending}
             maxLength={2000}
           />
+
+          {/* Send button */}
           <button
             className="btn btn-primary"
             style={{
@@ -273,13 +390,13 @@ export default function ConversationPage() {
               flexShrink: 0, alignSelf: "flex-end",
             }}
             onClick={handleSend}
-            disabled={sending || !content.trim()}
+            disabled={!canSend}
           >
             {sending ? "..." : "إرسال"}
           </button>
         </div>
 
-        {/* Character count — shown near limit */}
+        {/* Character count */}
         {content.length > 1800 && (
           <p style={{
             fontSize: "0.75rem",
@@ -302,26 +419,63 @@ function MessageBubble({ msg }: { msg: MessageItem }) {
     hour: "2-digit", minute: "2-digit",
   });
 
+  const own = msg.isOwnMessage;
+  const bubbleBg    = own ? "var(--color-primary)" : "#fff";
+  const bubbleColor = own ? "#fff" : "var(--color-text-primary)";
+  const bubbleBorder = own ? "none" : "1px solid var(--color-border)";
+  const bubbleRadius = own ? "16px 4px 16px 16px" : "4px 16px 16px 16px";
+
   return (
-    /*
-     * RTL context: flex-start = right side of screen, flex-end = left side.
-     * Own messages align to the right (flex-start), others to the left (flex-end).
-     */
-    <div style={{ display: "flex", justifyContent: msg.isOwnMessage ? "flex-start" : "flex-end" }}>
+    <div style={{ display: "flex", justifyContent: own ? "flex-start" : "flex-end" }}>
       <div style={{
-        maxWidth: "70%",
-        backgroundColor: msg.isOwnMessage ? "var(--color-primary)" : "#fff",
-        color: msg.isOwnMessage ? "#fff" : "var(--color-text-primary)",
-        border: msg.isOwnMessage ? "none" : "1px solid var(--color-border)",
-        borderRadius: msg.isOwnMessage
-          ? "16px 4px 16px 16px"
-          : "4px 16px 16px 16px",
+        maxWidth: "75%",
+        backgroundColor: bubbleBg,
+        color: bubbleColor,
+        border: bubbleBorder,
+        borderRadius: bubbleRadius,
         padding: "0.6rem 0.85rem",
         boxShadow: "0 1px 2px rgba(0,0,0,0.07)",
       }}>
-        <p style={{ margin: 0, fontSize: "0.92rem", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-          {msg.content}
-        </p>
+
+        {/* Text content */}
+        {msg.content && (
+          <p style={{ margin: 0, fontSize: "0.92rem", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+            {msg.content}
+          </p>
+        )}
+
+        {/* Attachment */}
+        {msg.attachmentData && (
+          <div style={{ marginTop: msg.content ? "0.5rem" : 0 }}>
+            {isImage(msg.attachmentData) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={msg.attachmentData}
+                alt={msg.attachmentName ?? "صورة مرفقة"}
+                style={{
+                  maxWidth: "100%", maxHeight: 280,
+                  borderRadius: 8, display: "block",
+                  cursor: "pointer",
+                }}
+                onClick={() => window.open(msg.attachmentData, "_blank")}
+              />
+            ) : (
+              <a
+                href={msg.attachmentData}
+                download={msg.attachmentName ?? "ملف"}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: "0.4rem",
+                  color: own ? "#fff" : "var(--color-primary)",
+                  textDecoration: "underline", fontSize: "0.88rem", fontWeight: 600,
+                }}
+              >
+                📄 {msg.attachmentName ?? "تحميل الملف"}
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Timestamp */}
         <p style={{
           margin: "0.25rem 0 0", fontSize: "0.7rem",
           opacity: 0.75, textAlign: "left", direction: "ltr",
@@ -332,4 +486,3 @@ function MessageBubble({ msg }: { msg: MessageItem }) {
     </div>
   );
 }
-

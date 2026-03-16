@@ -44,11 +44,20 @@ export const messagingApi = {
 
   /**
    * POST /messages/conversations/{id}/messages — send a new message.
-   * Content must be 1–2000 characters.
+   * At least one of content or attachmentData must be provided.
    * Returns the newly created MessageItem (isOwnMessage = true).
    */
-  sendMessage(conversationId: string, content: string): Promise<MessageItem> {
-    return api.post(`/messages/conversations/${conversationId}/messages`, { content });
+  sendMessage(
+    conversationId: string,
+    content: string,
+    attachmentData?: string,
+    attachmentName?: string
+  ): Promise<MessageItem> {
+    return api.post(`/messages/conversations/${conversationId}/messages`, {
+      content,
+      attachmentData,
+      attachmentName,
+    });
   },
 
   getUnreadCount(): Promise<{ total: number }> {

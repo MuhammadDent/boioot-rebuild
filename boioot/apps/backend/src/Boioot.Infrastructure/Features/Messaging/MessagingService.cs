@@ -158,7 +158,9 @@ public class MessagingService : IMessagingService
         {
             ConversationId = conversationId,
             SenderId = userId,
-            Content = request.Content.Trim()
+            Content = request.Content?.Trim() ?? string.Empty,
+            AttachmentData = request.AttachmentData,
+            AttachmentName = request.AttachmentName
         };
 
         conversation.LastMessageAt = DateTime.UtcNow;
@@ -251,6 +253,8 @@ public class MessagingService : IMessagingService
         Content = m.Content,
         IsRead = m.IsRead,
         IsOwnMessage = m.SenderId == userId,
-        CreatedAt = m.CreatedAt
+        CreatedAt = m.CreatedAt,
+        AttachmentData = m.AttachmentData,
+        AttachmentName = m.AttachmentName
     };
 }

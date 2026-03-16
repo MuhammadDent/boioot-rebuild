@@ -312,6 +312,9 @@ export interface MessageItem {
   /** True when the authenticated user is the sender */
   isOwnMessage: boolean;
   createdAt: string;
+  /** Optional file attachment stored as base64 data URL */
+  attachmentData?: string;
+  attachmentName?: string;
 }
 
 export interface ConversationDetail {

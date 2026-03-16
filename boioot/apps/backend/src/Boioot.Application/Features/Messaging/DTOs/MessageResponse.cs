@@ -9,4 +9,8 @@ public class MessageResponse
     public bool IsRead { get; set; }
     public bool IsOwnMessage { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // Optional attachment
+    public string? AttachmentData { get; set; }
+    public string? AttachmentName { get; set; }
 }
