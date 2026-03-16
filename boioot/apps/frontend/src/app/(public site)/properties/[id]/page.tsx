@@ -299,21 +299,6 @@ export default function PropertyDetailPage() {
           {/* ── Right column ── */}
           <div>
 
-            {/* ── Property details card ── */}
-            <div className="detail-info-card" style={{ marginBottom: "1rem" }}>
-              <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>تفاصيل العقار</h2>
-
-              <DetailRow label="الحالة"  value={PROPERTY_STATUS_LABELS[property.status] ?? property.status} />
-              <DetailRow label="المساحة" value={`${property.area} م²`} />
-              {property.bedrooms  != null && <DetailRow label="غرف النوم"    value={String(property.bedrooms)} />}
-              {property.bathrooms != null && <DetailRow label="دورات المياه" value={String(property.bathrooms)} />}
-              {property.hallsCount != null && <DetailRow label="صالات"       value={String(property.hallsCount)} />}
-              {property.floor && <DetailRow label="الطابق"       value={property.floor} />}
-              {property.propertyAge != null && <DetailRow label="عمر العقار" value={`${property.propertyAge} سنة`} />}
-              {property.ownershipType && <DetailRow label="نوع الملكية" value={property.ownershipType} />}
-              <DetailRow label="المدينة"  value={`${property.province ? property.province + " — " : ""}${property.city}`} />
-            </div>
-
             {/* ── Advertiser card ── */}
             <div style={{ background: "var(--color-bg-card)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "1.25rem", marginBottom: "1rem" }}>
               <h2 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.85rem" }}>المعلن</h2>
@@ -401,7 +386,7 @@ export default function PropertyDetailPage() {
             </div>
 
             {/* ── Reference card ── */}
-            <div style={{ background: "var(--color-bg-card)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "1rem 1.25rem", fontSize: "0.83rem", color: "var(--color-text-secondary)" }}>
+            <div style={{ background: "var(--color-bg-card)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "1rem 1.25rem", marginBottom: "1rem", fontSize: "0.83rem", color: "var(--color-text-secondary)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
                 <span>رقم الإعلان</span>
                 <strong style={{ color: "var(--color-text-primary)", fontFamily: "monospace" }}>#{shortRef(property.id)}</strong>
@@ -416,6 +401,21 @@ export default function PropertyDetailPage() {
                   <span>{property.viewCount.toLocaleString("ar-SY")}</span>
                 </div>
               )}
+            </div>
+
+            {/* ── Property details card ── */}
+            <div className="detail-info-card">
+              <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0 }}>تفاصيل العقار</h2>
+
+              <DetailRow label="الحالة"  value={PROPERTY_STATUS_LABELS[property.status] ?? property.status} />
+              <DetailRow label="المساحة" value={`${property.area} م²`} />
+              {property.bedrooms  != null && <DetailRow label="غرف النوم"    value={String(property.bedrooms)} />}
+              {property.bathrooms != null && <DetailRow label="دورات المياه" value={String(property.bathrooms)} />}
+              {property.hallsCount != null && <DetailRow label="صالات"       value={String(property.hallsCount)} />}
+              {property.floor && <DetailRow label="الطابق"       value={property.floor} />}
+              {property.propertyAge != null && <DetailRow label="عمر العقار" value={`${property.propertyAge} سنة`} />}
+              {property.ownershipType && <DetailRow label="نوع الملكية" value={property.ownershipType} />}
+              <DetailRow label="المدينة"  value={`${property.province ? property.province + " — " : ""}${property.city}`} />
             </div>
 
           </div>
