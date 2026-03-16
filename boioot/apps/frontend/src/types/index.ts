@@ -129,6 +129,27 @@ export interface ListingTypeConfig {
   updatedAt: string;
 }
 
+export interface PropertyTypeConfig {
+  id: string;
+  value: string;
+  label: string;
+  icon: string;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OwnershipTypeConfig {
+  id: string;
+  value: string;
+  label: string;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DashboardPropertyItem {
   id: string;
   title: string;

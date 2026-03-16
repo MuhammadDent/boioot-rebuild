@@ -151,4 +151,58 @@ public class AdminController : BaseController
         await _admin.DeleteListingTypeAsync(id, ct);
         return NoContent();
     }
+
+    // ── Property Types ────────────────────────────────────────────────────────
+
+    [HttpGet("property-types")]
+    public async Task<IActionResult> GetPropertyTypes(CancellationToken ct = default)
+        => Ok(await _admin.GetPropertyTypesAsync(ct));
+
+    [HttpPost("property-types")]
+    public async Task<IActionResult> CreatePropertyType(
+        [FromBody] UpsertPropertyTypeRequest request, CancellationToken ct = default)
+    {
+        var result = await _admin.CreatePropertyTypeAsync(request, ct);
+        return Created($"api/admin/property-types/{result.Id}", result);
+    }
+
+    [HttpPut("property-types/{id:guid}")]
+    public async Task<IActionResult> UpdatePropertyType(
+        Guid id, [FromBody] UpsertPropertyTypeRequest request, CancellationToken ct = default)
+        => Ok(await _admin.UpdatePropertyTypeAsync(id, request, ct));
+
+    [HttpDelete("property-types/{id:guid}")]
+    public async Task<IActionResult> DeletePropertyType(
+        Guid id, CancellationToken ct = default)
+    {
+        await _admin.DeletePropertyTypeAsync(id, ct);
+        return NoContent();
+    }
+
+    // ── Ownership Types ───────────────────────────────────────────────────────
+
+    [HttpGet("ownership-types")]
+    public async Task<IActionResult> GetOwnershipTypes(CancellationToken ct = default)
+        => Ok(await _admin.GetOwnershipTypesAsync(ct));
+
+    [HttpPost("ownership-types")]
+    public async Task<IActionResult> CreateOwnershipType(
+        [FromBody] UpsertOwnershipTypeRequest request, CancellationToken ct = default)
+    {
+        var result = await _admin.CreateOwnershipTypeAsync(request, ct);
+        return Created($"api/admin/ownership-types/{result.Id}", result);
+    }
+
+    [HttpPut("ownership-types/{id:guid}")]
+    public async Task<IActionResult> UpdateOwnershipType(
+        Guid id, [FromBody] UpsertOwnershipTypeRequest request, CancellationToken ct = default)
+        => Ok(await _admin.UpdateOwnershipTypeAsync(id, request, ct));
+
+    [HttpDelete("ownership-types/{id:guid}")]
+    public async Task<IActionResult> DeleteOwnershipType(
+        Guid id, CancellationToken ct = default)
+    {
+        await _admin.DeleteOwnershipTypeAsync(id, ct);
+        return NoContent();
+    }
 }

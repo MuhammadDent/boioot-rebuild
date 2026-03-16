@@ -2,27 +2,7 @@
 
 import { useState, useRef, type ChangeEvent } from "react";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
-import type { ListingTypeConfig } from "@/types";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PROPERTY_TYPES = [
-  { value: "Apartment", label: "شقة", icon: "🏢" },
-  { value: "Villa",     label: "فيلا", icon: "🏡" },
-  { value: "Office",    label: "مكتب", icon: "🏬" },
-  { value: "Shop",      label: "محل تجاري", icon: "🏪" },
-  { value: "Land",      label: "أرض", icon: "🌍" },
-  { value: "Building",  label: "بناء كامل", icon: "🏗️" },
-];
-
-const OWNERSHIP_TYPES = [
-  { value: "GreenDeed",     label: "طابو أخضر" },
-  { value: "BlueDeed",      label: "طابو أزرق" },
-  { value: "CourtOrder",    label: "حكم محكمة" },
-  { value: "Customary",     label: "ملكية عرفية" },
-  { value: "LongTermLease", label: "إيجار طويل الأمد" },
-  { value: "UnderSettlement", label: "قيد تسوية" },
-];
+import type { ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
 
 const FLOOR_OPTIONS = [
   { value: "Ground",      label: "أرضي" },
@@ -163,15 +143,6 @@ function formatPrice(price: string, currency: string) {
   return n.toLocaleString("ar-SY") + " " + (currency === "SYP" ? "ل.س" : "$");
 }
 
-const LISTING_TYPE_LABELS: Record<string, string> = {
-  Sale: "للبيع", Rent: "للإيجار", DailyRent: "إيجار يومي",
-};
-
-const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  Apartment: "شقة", Villa: "فيلا", Office: "مكتب",
-  Shop: "محل تجاري", Land: "أرض", Building: "بناء كامل",
-};
-
 // ─── Step validators ──────────────────────────────────────────────────────────
 
 function validateStep(step: number, data: WizardData): string | null {
@@ -210,13 +181,15 @@ function validateStep(step: number, data: WizardData): string | null {
 
 interface PostAdWizardProps {
   listingTypes: ListingTypeConfig[];
+  propertyTypes: PropertyTypeConfig[];
+  ownershipTypes: OwnershipTypeConfig[];
   onSubmit: (data: WizardData) => Promise<void>;
   isSubmitting: boolean;
   serverError: string;
 }
 
 export default function PostAdWizard({
-  listingTypes, onSubmit, isSubmitting, serverError,
+  listingTypes, propertyTypes, ownershipTypes, onSubmit, isSubmitting, serverError,
 }: PostAdWizardProps) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(EMPTY);
@@ -332,64 +305,72 @@ export default function PostAdWizard({
         <div>
           <StepTitle>نوع العقار والإدراج</StepTitle>
 
-          <Field label="نوع العقار" required>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.6rem" }}>
-              {PROPERTY_TYPES.map((pt) => (
-                <button key={pt.value} type="button" disabled={disabled}
-                  onClick={() => set("propertyType", pt.value)}
-                  style={{
-                    padding: "0.7rem 0.5rem", borderRadius: 10, cursor: "pointer",
-                    border: `2px solid ${data.propertyType === pt.value ? "#16a34a" : "#e2e8f0"}`,
-                    background: data.propertyType === pt.value ? "#f0fdf4" : "#fff",
-                    color: data.propertyType === pt.value ? "#166534" : "#374151",
-                    fontWeight: 600, fontSize: "0.82rem", fontFamily: "inherit",
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  <span style={{ fontSize: "1.5rem" }}>{pt.icon}</span>
-                  {pt.label}
-                </button>
-              ))}
-            </div>
-          </Field>
+          <Row>
+            <Field label="نوع العقار" required>
+              <select className="form-input" value={data.propertyType} disabled={disabled}
+                onChange={(e) => set("propertyType", e.target.value)}>
+                <option value="">— اختر نوع العقار —</option>
+                {(propertyTypes.length > 0
+                  ? propertyTypes
+                  : [
+                      { value: "Apartment", label: "شقة",       icon: "🏢" },
+                      { value: "Villa",     label: "فيلا",      icon: "🏡" },
+                      { value: "Office",    label: "مكتب",      icon: "🏬" },
+                      { value: "Shop",      label: "محل تجاري", icon: "🏪" },
+                      { value: "Land",      label: "أرض",       icon: "🌍" },
+                      { value: "Building",  label: "بناء كامل", icon: "🏗️" },
+                    ]
+                ).map((pt) => (
+                  <option key={pt.value} value={pt.value}>
+                    {pt.icon ? `${pt.icon} ${pt.label}` : pt.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
 
-          <Field label="نوع الإدراج" required>
-            <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-              {(listingTypes.length > 0
-                ? listingTypes.map((lt) => ({ value: lt.value, label: lt.label }))
-                : [{ value: "Sale", label: "للبيع" }, { value: "Rent", label: "للإيجار" }, { value: "DailyRent", label: "إيجار يومي" }]
-              ).map((lt) => (
-                <button key={lt.value} type="button" disabled={disabled}
-                  onClick={() => set("listingType", lt.value)}
-                  style={{
-                    padding: "0.55rem 1.2rem", borderRadius: 99, cursor: "pointer",
-                    border: `2px solid ${data.listingType === lt.value ? "#16a34a" : "#e2e8f0"}`,
-                    background: data.listingType === lt.value ? "#16a34a" : "#fff",
-                    color: data.listingType === lt.value ? "#fff" : "#374151",
-                    fontWeight: 700, fontSize: "0.88rem", fontFamily: "inherit",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {lt.label}
-                </button>
-              ))}
-            </div>
-          </Field>
+            <Field label="نوع الإدراج" required>
+              <select className="form-input" value={data.listingType} disabled={disabled}
+                onChange={(e) => set("listingType", e.target.value)}>
+                <option value="">— اختر نوع الإدراج —</option>
+                {(listingTypes.length > 0
+                  ? listingTypes
+                  : [
+                      { value: "Sale",      label: "للبيع" },
+                      { value: "Rent",      label: "للإيجار" },
+                      { value: "DailyRent", label: "إيجار يومي" },
+                    ]
+                ).map((lt) => (
+                  <option key={lt.value} value={lt.value}>{lt.label}</option>
+                ))}
+              </select>
+            </Field>
+          </Row>
 
           <Row>
             <Field label="نوع الملكية (اختياري)">
               <select className="form-input" value={data.ownershipType} disabled={disabled}
                 onChange={(e) => set("ownershipType", e.target.value)}>
-                <option value="">اختر نوع الملكية</option>
-                {OWNERSHIP_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                <option value="">— اختر نوع الملكية —</option>
+                {(ownershipTypes.length > 0
+                  ? ownershipTypes
+                  : [
+                      { value: "GreenDeed",       label: "طابو أخضر" },
+                      { value: "BlueDeed",        label: "طابو أزرق" },
+                      { value: "CourtOrder",      label: "حكم محكمة" },
+                      { value: "Customary",       label: "ملكية عرفية" },
+                      { value: "LongTermLease",   label: "إيجار طويل الأمد" },
+                      { value: "UnderSettlement", label: "قيد تسوية" },
+                    ]
+                ).map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </select>
             </Field>
 
             <Field label="الدور / الطابق (اختياري)">
               <select className="form-input" value={data.floor} disabled={disabled}
                 onChange={(e) => set("floor", e.target.value)}>
-                <option value="">اختر الدور</option>
+                <option value="">— اختر الدور —</option>
                 {FLOOR_OPTIONS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
             </Field>
@@ -729,9 +710,9 @@ export default function PostAdWizard({
           {/* Summary cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             <ReviewSection title="نوع العقار" onEdit={() => setStep(1)}>
-              <ReviewRow label="نوع العقار"   value={PROPERTY_TYPE_LABELS[data.propertyType] ?? data.propertyType} />
-              <ReviewRow label="الإدراج"       value={LISTING_TYPE_LABELS[data.listingType] ?? data.listingType} />
-              {data.ownershipType && <ReviewRow label="الملكية" value={OWNERSHIP_TYPES.find((o) => o.value === data.ownershipType)?.label ?? data.ownershipType} />}
+              <ReviewRow label="نوع العقار"   value={propertyTypes.find((p) => p.value === data.propertyType)?.label ?? data.propertyType} />
+              <ReviewRow label="الإدراج"       value={listingTypes.find((l) => l.value === data.listingType)?.label ?? data.listingType} />
+              {data.ownershipType && <ReviewRow label="الملكية" value={ownershipTypes.find((o) => o.value === data.ownershipType)?.label ?? data.ownershipType} />}
               {data.floor && <ReviewRow label="الدور" value={FLOOR_OPTIONS.find((f) => f.value === data.floor)?.label ?? data.floor} />}
             </ReviewSection>
 

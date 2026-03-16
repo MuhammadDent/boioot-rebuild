@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { api, normalizeError } from "@/lib/api";
 import PostAdWizard from "@/components/post-ad/PostAdWizard";
-import type { CreatePropertyRequest, ListingTypeConfig } from "@/types";
+import type { CreatePropertyRequest, ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
 import Spinner from "@/components/ui/Spinner";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -21,9 +21,11 @@ export default function PostAdPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [stats, setStats]           = useState<{ used: number; limit: number } | null>(null);
+  const [stats, setStats]               = useState<{ used: number; limit: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [listingTypes, setListingTypes] = useState<ListingTypeConfig[]>([]);
+  const [listingTypes, setListingTypes]   = useState<ListingTypeConfig[]>([]);
+  const [propertyTypes, setPropertyTypes] = useState<PropertyTypeConfig[]>([]);
+  const [ownershipTypes, setOwnershipTypes] = useState<OwnershipTypeConfig[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError]   = useState("");
 
@@ -42,10 +44,9 @@ export default function PostAdPage() {
       .catch(() => {})
       .finally(() => setStatsLoading(false));
 
-    api
-      .get<ListingTypeConfig[]>("/listing-types")
-      .then((data) => setListingTypes(data))
-      .catch(() => {});
+    api.get<ListingTypeConfig[]>("/listing-types").then(setListingTypes).catch(() => {});
+    api.get<PropertyTypeConfig[]>("/property-types").then(setPropertyTypes).catch(() => {});
+    api.get<OwnershipTypeConfig[]>("/ownership-types").then(setOwnershipTypes).catch(() => {});
   }, [user]);
 
   async function handleWizardSubmit(wizardData: {
@@ -193,6 +194,8 @@ export default function PostAdPage() {
           <div className="form-card">
             <PostAdWizard
               listingTypes={listingTypes}
+              propertyTypes={propertyTypes}
+              ownershipTypes={ownershipTypes}
               onSubmit={handleWizardSubmit}
               isSubmitting={isSubmitting}
               serverError={serverError}

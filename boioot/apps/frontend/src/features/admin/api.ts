@@ -7,6 +7,8 @@ import type {
   ProjectResponse,
   RequestResponse,
   ListingTypeConfig,
+  PropertyTypeConfig,
+  OwnershipTypeConfig,
 } from "@/types";
 
 // ── Filter param types ─────────────────────────────────────────────────────────
@@ -40,6 +42,21 @@ export interface AdminRequestsParams {
 }
 
 export interface UpsertListingTypePayload {
+  value: string;
+  label: string;
+  order: number;
+  isActive: boolean;
+}
+
+export interface UpsertPropertyTypePayload {
+  value: string;
+  label: string;
+  icon: string;
+  order: number;
+  isActive: boolean;
+}
+
+export interface UpsertOwnershipTypePayload {
   value: string;
   label: string;
   order: number;
@@ -138,5 +155,35 @@ export const adminApi = {
   /** DELETE /api/admin/listing-types/{id} */
   deleteListingType(id: string): Promise<void> {
     return api.delete(`/admin/listing-types/${id}`);
+  },
+
+  // ── Property Types ────────────────────────────────────────────────────────
+
+  getPropertyTypes(): Promise<PropertyTypeConfig[]> {
+    return api.get("/admin/property-types");
+  },
+  createPropertyType(payload: UpsertPropertyTypePayload): Promise<PropertyTypeConfig> {
+    return api.post("/admin/property-types", payload);
+  },
+  updatePropertyType(id: string, payload: UpsertPropertyTypePayload): Promise<PropertyTypeConfig> {
+    return api.put(`/admin/property-types/${id}`, payload);
+  },
+  deletePropertyType(id: string): Promise<void> {
+    return api.delete(`/admin/property-types/${id}`);
+  },
+
+  // ── Ownership Types ───────────────────────────────────────────────────────
+
+  getOwnershipTypes(): Promise<OwnershipTypeConfig[]> {
+    return api.get("/admin/ownership-types");
+  },
+  createOwnershipType(payload: UpsertOwnershipTypePayload): Promise<OwnershipTypeConfig> {
+    return api.post("/admin/ownership-types", payload);
+  },
+  updateOwnershipType(id: string, payload: UpsertOwnershipTypePayload): Promise<OwnershipTypeConfig> {
+    return api.put(`/admin/ownership-types/${id}`, payload);
+  },
+  deleteOwnershipType(id: string): Promise<void> {
+    return api.delete(`/admin/ownership-types/${id}`);
   },
 };

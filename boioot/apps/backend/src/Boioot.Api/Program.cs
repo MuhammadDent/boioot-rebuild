@@ -228,6 +228,79 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("Seeded default listing types");
         }
 
+        // Create PropertyTypeConfigs table
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS PropertyTypeConfigs (
+                Id TEXT NOT NULL PRIMARY KEY,
+                Value TEXT NOT NULL,
+                Label TEXT NOT NULL,
+                Icon TEXT NOT NULL DEFAULT '',
+                [Order] INTEGER NOT NULL DEFAULT 0,
+                IsActive INTEGER NOT NULL DEFAULT 1,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            )");
+        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_PropertyTypeConfigs_Value ON PropertyTypeConfigs(Value)"); }
+        catch { /* already exists */ }
+
+        var hasPropertyTypes = db.PropertyTypeConfigs.Any();
+        if (!hasPropertyTypes)
+        {
+            var now3 = DateTime.UtcNow.ToString("O");
+            var propTypes = new[]
+            {
+                (Guid.NewGuid(), "Apartment", "شقة",          "🏢", 1),
+                (Guid.NewGuid(), "Villa",     "فيلا",          "🏡", 2),
+                (Guid.NewGuid(), "Office",    "مكتب",          "🏬", 3),
+                (Guid.NewGuid(), "Shop",      "محل تجاري",     "🏪", 4),
+                (Guid.NewGuid(), "Land",      "أرض",           "🌍", 5),
+                (Guid.NewGuid(), "Building",  "بناء كامل",     "🏗️", 6),
+            };
+            foreach (var (id, value, label, icon, order) in propTypes)
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "INSERT OR IGNORE INTO PropertyTypeConfigs (Id, Value, Label, Icon, [Order], IsActive, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3}, {4}, 1, {5}, {6})",
+                    id.ToString(), value, label, icon, order, now3, now3);
+            }
+            logger.LogInformation("Seeded default property types");
+        }
+
+        // Create OwnershipTypeConfigs table
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS OwnershipTypeConfigs (
+                Id TEXT NOT NULL PRIMARY KEY,
+                Value TEXT NOT NULL,
+                Label TEXT NOT NULL,
+                [Order] INTEGER NOT NULL DEFAULT 0,
+                IsActive INTEGER NOT NULL DEFAULT 1,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            )");
+        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_OwnershipTypeConfigs_Value ON OwnershipTypeConfigs(Value)"); }
+        catch { /* already exists */ }
+
+        var hasOwnershipTypes = db.OwnershipTypeConfigs.Any();
+        if (!hasOwnershipTypes)
+        {
+            var now4 = DateTime.UtcNow.ToString("O");
+            var ownershipTypes = new[]
+            {
+                (Guid.NewGuid(), "GreenDeed",       "طابو أخضر",         1),
+                (Guid.NewGuid(), "BlueDeed",        "طابو أزرق",         2),
+                (Guid.NewGuid(), "CourtOrder",      "حكم محكمة",         3),
+                (Guid.NewGuid(), "Customary",       "ملكية عرفية",       4),
+                (Guid.NewGuid(), "LongTermLease",   "إيجار طويل الأمد",  5),
+                (Guid.NewGuid(), "UnderSettlement", "قيد تسوية",         6),
+            };
+            foreach (var (id, value, label, order) in ownershipTypes)
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "INSERT OR IGNORE INTO OwnershipTypeConfigs (Id, Value, Label, [Order], IsActive, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3}, 1, {4}, {5})",
+                    id.ToString(), value, label, order, now4, now4);
+            }
+            logger.LogInformation("Seeded default ownership types");
+        }
+
         // Create LocationCities table
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS LocationCities (

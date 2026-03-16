@@ -37,4 +37,16 @@ public interface IAdminService
     Task<ListingTypeResponse> CreateListingTypeAsync(UpsertListingTypeRequest request, CancellationToken ct = default);
     Task<ListingTypeResponse> UpdateListingTypeAsync(Guid id, UpsertListingTypeRequest request, CancellationToken ct = default);
     Task DeleteListingTypeAsync(Guid id, CancellationToken ct = default);
+
+    // Property types
+    Task<List<PropertyTypeResponse>> GetPropertyTypesAsync(CancellationToken ct = default);
+    Task<PropertyTypeResponse> CreatePropertyTypeAsync(UpsertPropertyTypeRequest request, CancellationToken ct = default);
+    Task<PropertyTypeResponse> UpdatePropertyTypeAsync(Guid id, UpsertPropertyTypeRequest request, CancellationToken ct = default);
+    Task DeletePropertyTypeAsync(Guid id, CancellationToken ct = default);
+
+    // Ownership types
+    Task<List<OwnershipTypeResponse>> GetOwnershipTypesAsync(CancellationToken ct = default);
+    Task<OwnershipTypeResponse> CreateOwnershipTypeAsync(UpsertOwnershipTypeRequest request, CancellationToken ct = default);
+    Task<OwnershipTypeResponse> UpdateOwnershipTypeAsync(Guid id, UpsertOwnershipTypeRequest request, CancellationToken ct = default);
+    Task DeleteOwnershipTypeAsync(Guid id, CancellationToken ct = default);
 }

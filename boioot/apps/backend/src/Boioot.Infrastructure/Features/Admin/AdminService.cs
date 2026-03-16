@@ -453,4 +453,149 @@ public class AdminService : IAdminService
         _context.PropertyListingTypes.Remove(entity);
         await _context.SaveChangesAsync(ct);
     }
+
+    // ─── Property Types ───────────────────────────────────────────────────────
+
+    public async Task<List<PropertyTypeResponse>> GetPropertyTypesAsync(CancellationToken ct = default)
+    {
+        return await _context.PropertyTypeConfigs
+            .AsNoTracking()
+            .OrderBy(t => t.Order)
+            .ThenBy(t => t.CreatedAt)
+            .Select(t => new PropertyTypeResponse
+            {
+                Id = t.Id, Value = t.Value, Label = t.Label, Icon = t.Icon,
+                Order = t.Order, IsActive = t.IsActive,
+                CreatedAt = t.CreatedAt, UpdatedAt = t.UpdatedAt
+            })
+            .ToListAsync(ct);
+    }
+
+    public async Task<PropertyTypeResponse> CreatePropertyTypeAsync(
+        UpsertPropertyTypeRequest request, CancellationToken ct = default)
+    {
+        var exists = await _context.PropertyTypeConfigs
+            .AnyAsync(t => t.Value == request.Value.Trim(), ct);
+        if (exists) throw new BoiootException("نوع العقار بهذه القيمة موجود مسبقاً", 409);
+
+        var entity = new PropertyTypeConfig
+        {
+            Value = request.Value.Trim(), Label = request.Label.Trim(),
+            Icon = request.Icon.Trim(), Order = request.Order, IsActive = request.IsActive
+        };
+        _context.PropertyTypeConfigs.Add(entity);
+        await _context.SaveChangesAsync(ct);
+
+        return new PropertyTypeResponse
+        {
+            Id = entity.Id, Value = entity.Value, Label = entity.Label, Icon = entity.Icon,
+            Order = entity.Order, IsActive = entity.IsActive,
+            CreatedAt = entity.CreatedAt, UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    public async Task<PropertyTypeResponse> UpdatePropertyTypeAsync(
+        Guid id, UpsertPropertyTypeRequest request, CancellationToken ct = default)
+    {
+        var entity = await _context.PropertyTypeConfigs
+            .FirstOrDefaultAsync(t => t.Id == id, ct)
+            ?? throw new BoiootException("نوع العقار غير موجود", 404);
+
+        var taken = await _context.PropertyTypeConfigs
+            .AnyAsync(t => t.Value == request.Value.Trim() && t.Id != id, ct);
+        if (taken) throw new BoiootException("نوع العقار بهذه القيمة موجود مسبقاً", 409);
+
+        entity.Value = request.Value.Trim(); entity.Label = request.Label.Trim();
+        entity.Icon = request.Icon.Trim(); entity.Order = request.Order;
+        entity.IsActive = request.IsActive;
+        await _context.SaveChangesAsync(ct);
+
+        return new PropertyTypeResponse
+        {
+            Id = entity.Id, Value = entity.Value, Label = entity.Label, Icon = entity.Icon,
+            Order = entity.Order, IsActive = entity.IsActive,
+            CreatedAt = entity.CreatedAt, UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    public async Task DeletePropertyTypeAsync(Guid id, CancellationToken ct = default)
+    {
+        var entity = await _context.PropertyTypeConfigs
+            .FirstOrDefaultAsync(t => t.Id == id, ct)
+            ?? throw new BoiootException("نوع العقار غير موجود", 404);
+        _context.PropertyTypeConfigs.Remove(entity);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    // ─── Ownership Types ──────────────────────────────────────────────────────
+
+    public async Task<List<OwnershipTypeResponse>> GetOwnershipTypesAsync(CancellationToken ct = default)
+    {
+        return await _context.OwnershipTypeConfigs
+            .AsNoTracking()
+            .OrderBy(t => t.Order)
+            .ThenBy(t => t.CreatedAt)
+            .Select(t => new OwnershipTypeResponse
+            {
+                Id = t.Id, Value = t.Value, Label = t.Label,
+                Order = t.Order, IsActive = t.IsActive,
+                CreatedAt = t.CreatedAt, UpdatedAt = t.UpdatedAt
+            })
+            .ToListAsync(ct);
+    }
+
+    public async Task<OwnershipTypeResponse> CreateOwnershipTypeAsync(
+        UpsertOwnershipTypeRequest request, CancellationToken ct = default)
+    {
+        var exists = await _context.OwnershipTypeConfigs
+            .AnyAsync(t => t.Value == request.Value.Trim(), ct);
+        if (exists) throw new BoiootException("نوع الملكية بهذه القيمة موجود مسبقاً", 409);
+
+        var entity = new OwnershipTypeConfig
+        {
+            Value = request.Value.Trim(), Label = request.Label.Trim(),
+            Order = request.Order, IsActive = request.IsActive
+        };
+        _context.OwnershipTypeConfigs.Add(entity);
+        await _context.SaveChangesAsync(ct);
+
+        return new OwnershipTypeResponse
+        {
+            Id = entity.Id, Value = entity.Value, Label = entity.Label,
+            Order = entity.Order, IsActive = entity.IsActive,
+            CreatedAt = entity.CreatedAt, UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    public async Task<OwnershipTypeResponse> UpdateOwnershipTypeAsync(
+        Guid id, UpsertOwnershipTypeRequest request, CancellationToken ct = default)
+    {
+        var entity = await _context.OwnershipTypeConfigs
+            .FirstOrDefaultAsync(t => t.Id == id, ct)
+            ?? throw new BoiootException("نوع الملكية غير موجود", 404);
+
+        var taken = await _context.OwnershipTypeConfigs
+            .AnyAsync(t => t.Value == request.Value.Trim() && t.Id != id, ct);
+        if (taken) throw new BoiootException("نوع الملكية بهذه القيمة موجود مسبقاً", 409);
+
+        entity.Value = request.Value.Trim(); entity.Label = request.Label.Trim();
+        entity.Order = request.Order; entity.IsActive = request.IsActive;
+        await _context.SaveChangesAsync(ct);
+
+        return new OwnershipTypeResponse
+        {
+            Id = entity.Id, Value = entity.Value, Label = entity.Label,
+            Order = entity.Order, IsActive = entity.IsActive,
+            CreatedAt = entity.CreatedAt, UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    public async Task DeleteOwnershipTypeAsync(Guid id, CancellationToken ct = default)
+    {
+        var entity = await _context.OwnershipTypeConfigs
+            .FirstOrDefaultAsync(t => t.Id == id, ct)
+            ?? throw new BoiootException("نوع الملكية غير موجود", 404);
+        _context.OwnershipTypeConfigs.Remove(entity);
+        await _context.SaveChangesAsync(ct);
+    }
 }
