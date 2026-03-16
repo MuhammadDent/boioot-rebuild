@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import PropertyCard from "@/components/properties/PropertyCard";
 import { propertiesApi } from "@/features/properties/api";
@@ -107,7 +108,13 @@ const EMPTY_FILTERS: FilterState = {
 // ─── Home page ────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+  const { isAuthenticated, isLoading, logout } = useAuth();
+
+  function handleLogout() {
+    logout();
+    router.push("/");
+  }
 
   // Slider
   const [slideIndex, setSlideIndex] = useState(0);
@@ -253,9 +260,9 @@ export default function HomePage() {
 
       {/* ── TOP HEADER ──────────────────────────────────────────────────────── */}
       <header style={{ background: "#fff", borderBottom: "1px solid var(--color-border)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1.25rem", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
-          <Link href="/" style={{ flexShrink: 0 }}>
-            <Image src="/logo-boioot.png" alt="بيوت" width={96} height={38} style={{ objectFit: "contain" }} priority />
+        <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1.25rem", height: 86, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+          <Link href="/" style={{ flexShrink: 0, lineHeight: 0 }}>
+            <Image src="/logo-boioot.png" alt="بيوت" width={200} height={76} style={{ objectFit: "contain", width: 200, height: 76 }} priority />
           </Link>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
             <Link href="/projects"    style={btnStyle("outline")}>المشاريع العقارية</Link>
@@ -273,6 +280,17 @@ export default function HomePage() {
                 </button>
                 <button style={{ ...iconBtnStyle, background: "none", border: "none", cursor: "pointer" }} title="الإشعارات">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  title="تسجيل الخروج"
+                  style={{ ...iconBtnStyle, background: "none", border: "none", cursor: "pointer", color: "#666" }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
                 </button>
               </>
             ) : (
