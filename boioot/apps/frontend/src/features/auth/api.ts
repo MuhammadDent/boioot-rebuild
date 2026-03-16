@@ -16,7 +16,9 @@ export interface RegisterPayload {
 
 export interface UpdateProfilePayload {
   fullName: string;
+  email?: string;
   phone?: string;
+  profileImageUrl?: string | null;
   newPassword?: string;
   currentPassword?: string;
 }

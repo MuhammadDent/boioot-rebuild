@@ -112,6 +112,9 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE LocationCities ADD COLUMN Province TEXT NOT NULL DEFAULT ''"); }
         catch { /* column already exists */ }
 
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN ProfileImageUrl TEXT"); }
+        catch { /* column already exists */ }
+
         // Update existing cities with their correct provinces
         var cityProvinceMap = new Dictionary<string, string>
         {

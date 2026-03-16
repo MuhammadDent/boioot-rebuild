@@ -28,7 +28,9 @@ export default function DashboardPage() {
 
   const [editOpen, setEditOpen]         = useState(false);
   const [editName, setEditName]         = useState("");
+  const [editEmail, setEditEmail]       = useState("");
   const [editPhone, setEditPhone]       = useState("");
+  const [editAvatar, setEditAvatar]     = useState<string | null>(null);
   const [editCurPwd, setEditCurPwd]     = useState("");
   const [editNewPwd, setEditNewPwd]     = useState("");
   const [editSaving, setEditSaving]     = useState(false);
@@ -56,7 +58,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user && editOpen) {
       setEditName(user.fullName);
+      setEditEmail(user.email);
       setEditPhone(user.phone ?? "");
+      setEditAvatar(user.profileImageUrl ?? null);
       setEditCurPwd("");
       setEditNewPwd("");
       setEditError("");
@@ -82,7 +86,9 @@ export default function DashboardPage() {
     try {
       const updated = await authApi.updateProfile({
         fullName: editName,
+        email: editEmail || undefined,
         phone: editPhone || undefined,
+        profileImageUrl: editAvatar,
         newPassword: editNewPwd || undefined,
         currentPassword: editCurPwd || undefined,
       });
@@ -240,8 +246,15 @@ export default function DashboardPage() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: "#fff", fontSize: "1.8rem", fontWeight: 700, flexShrink: 0,
                 boxShadow: "0 2px 8px rgba(0,128,60,0.25)",
+                overflow: "hidden", position: "relative",
               }}>
-                {initial}
+                {user.profileImageUrl ? (
+                  <img
+                    src={user.profileImageUrl}
+                    alt="صورة الملف الشخصي"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : initial}
               </div>
 
               <div style={{ flex: 1 }}>
@@ -315,6 +328,85 @@ export default function DashboardPage() {
               )}
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
+
+                {/* ── Avatar upload ── */}
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.25rem" }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: "50%",
+                    backgroundColor: "var(--color-primary)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontSize: "1.5rem", fontWeight: 700,
+                    overflow: "hidden", flexShrink: 0,
+                    boxShadow: "0 2px 6px rgba(0,128,60,0.2)",
+                  }}>
+                    {editAvatar ? (
+                      <img src={editAvatar} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : initial}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                    <label
+                      htmlFor="avatar-upload"
+                      style={{
+                        cursor: "pointer",
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        color: "var(--color-primary)",
+                        padding: "0.35rem 0.85rem",
+                        borderRadius: 8,
+                        border: "1.5px solid var(--color-primary)",
+                        backgroundColor: "#fff",
+                        display: "inline-block",
+                      }}
+                    >
+                      رفع صورة الملف الشخصي
+                    </label>
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 3 * 1024 * 1024) {
+                          setEditError("حجم الصورة يجب أن لا يتجاوز 3 ميغابايت");
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          const dataUrl = ev.target?.result as string;
+                          const img = new window.Image();
+                          img.onload = () => {
+                            const canvas = document.createElement("canvas");
+                            const maxSize = 300;
+                            let w = img.width, h = img.height;
+                            if (w > h) { h = Math.round((h / w) * maxSize); w = maxSize; }
+                            else       { w = Math.round((w / h) * maxSize); h = maxSize; }
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+                            setEditAvatar(canvas.toDataURL("image/jpeg", 0.85));
+                          };
+                          img.src = dataUrl;
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    {editAvatar && (
+                      <button
+                        type="button"
+                        onClick={() => setEditAvatar(null)}
+                        style={{
+                          fontSize: "0.78rem", color: "#dc2626",
+                          background: "none", border: "none", cursor: "pointer",
+                          padding: "0", textAlign: "right", fontFamily: "inherit",
+                        }}
+                      >
+                        حذف الصورة
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="form-group">
                   <label className="form-label">الاسم الكامل *</label>
                   <input
@@ -323,6 +415,18 @@ export default function DashboardPage() {
                     onChange={e => setEditName(e.target.value)}
                     required
                     minLength={2}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">البريد الإلكتروني *</label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    value={editEmail}
+                    onChange={e => setEditEmail(e.target.value)}
+                    required
+                    dir="ltr"
+                    placeholder="example@email.com"
                   />
                 </div>
                 <div className="form-group">

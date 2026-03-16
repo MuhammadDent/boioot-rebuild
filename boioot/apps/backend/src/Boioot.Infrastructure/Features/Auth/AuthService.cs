@@ -122,8 +122,24 @@ public class AuthService : IAuthService
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+            if (!normalizedEmail.Equals(user.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                var emailTaken = await _context.Users
+                    .AnyAsync(u => u.Email == normalizedEmail && u.Id != userId, ct);
+                if (emailTaken)
+                    throw new BoiootException("البريد الإلكتروني مستخدم من قِبل حساب آخر", 409);
+                user.Email = normalizedEmail;
+            }
+        }
+
         user.FullName = request.FullName.Trim();
         user.Phone    = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+
+        if (request.ProfileImageUrl != null)
+            user.ProfileImageUrl = string.IsNullOrWhiteSpace(request.ProfileImageUrl) ? null : request.ProfileImageUrl;
 
         await _context.SaveChangesAsync(ct);
 
@@ -210,6 +226,7 @@ public class AuthService : IAuthService
         Email = user.Email,
         Phone = user.Phone,
         Role = user.Role.ToString(),
+        ProfileImageUrl = user.ProfileImageUrl,
         CreatedAt = user.CreatedAt
     };
 }

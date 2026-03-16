@@ -13,6 +13,7 @@ public class User : BaseEntity, ISoftDeletable
     public UserRole Role { get; set; } = UserRole.User;
     public bool IsActive { get; set; } = true;
     public bool IsDeleted { get; set; } = false;
+    public string? ProfileImageUrl { get; set; }
 
     public Agent? Agent { get; set; }
     public ICollection<Review> Reviews { get; set; } = [];

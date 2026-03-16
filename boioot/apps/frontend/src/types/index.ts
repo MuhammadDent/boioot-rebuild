@@ -5,6 +5,7 @@ export interface UserProfileResponse {
   email: string;
   phone?: string;
   role: string;
+  profileImageUrl?: string;
   createdAt: string;
 }
 
