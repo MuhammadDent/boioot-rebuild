@@ -39,6 +39,26 @@ function isImage(dataUrl?: string) {
   return dataUrl?.startsWith("data:image/") ?? false;
 }
 
+/**
+ * Open a base64 data URL in a new tab via a Blob URL.
+ * window.open(dataUrl) fails for large payloads in some browsers.
+ */
+function openDataUrl(dataUrl: string) {
+  try {
+    const [header, b64] = dataUrl.split(",");
+    const mime = header.match(/:(.*?);/)?.[1] ?? "application/octet-stream";
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const blob  = new Blob([bytes], { type: mime });
+    const url   = URL.createObjectURL(blob);
+    const win   = window.open(url, "_blank");
+    // Revoke after the browser has had time to load it
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    if (!win) window.location.href = url; // fallback if popup blocked
+  } catch {
+    window.open(dataUrl, "_blank");
+  }
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ConversationPage() {
@@ -457,20 +477,33 @@ function MessageBubble({ msg }: { msg: MessageItem }) {
                   borderRadius: 8, display: "block",
                   cursor: "pointer",
                 }}
-                onClick={() => window.open(msg.attachmentData, "_blank")}
+                onClick={() => openDataUrl(msg.attachmentData!)}
               />
             ) : (
-              <a
-                href={msg.attachmentData}
-                download={msg.attachmentName ?? "ملف"}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!msg.attachmentData) return;
+                  const [header, b64] = msg.attachmentData.split(",");
+                  const mime = header.match(/:(.*?);/)?.[1] ?? "application/octet-stream";
+                  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+                  const blob  = new Blob([bytes], { type: mime });
+                  const url   = URL.createObjectURL(blob);
+                  const a     = document.createElement("a");
+                  a.href     = url;
+                  a.download = msg.attachmentName ?? "ملف";
+                  a.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+                }}
                 style={{
+                  background: "none", border: "none", padding: 0, cursor: "pointer",
                   display: "inline-flex", alignItems: "center", gap: "0.4rem",
                   color: own ? "#fff" : "var(--color-primary)",
                   textDecoration: "underline", fontSize: "0.88rem", fontWeight: 600,
                 }}
               >
                 📄 {msg.attachmentName ?? "تحميل الملف"}
-              </a>
+              </button>
             )}
           </div>
         )}
