@@ -15,6 +15,8 @@ public class BuyerRequestsController : BaseController
         _service = service;
     }
 
+    // ── Listing ───────────────────────────────────────────────────────────────
+
     [HttpGet]
     [AllowAnonymous]
     public async Task<IActionResult> GetPublic(
@@ -37,6 +39,18 @@ public class BuyerRequestsController : BaseController
         return Ok(result);
     }
 
+    // ── Single request ────────────────────────────────────────────────────────
+
+    [HttpGet("{id:guid}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        var result = await _service.GetByIdAsync(id, ct);
+        return Ok(result);
+    }
+
+    // ── Create / Delete ───────────────────────────────────────────────────────
+
     [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create(
@@ -51,6 +65,33 @@ public class BuyerRequestsController : BaseController
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await _service.DeleteAsync(GetUserId(), id, ct);
+        return NoContent();
+    }
+
+    // ── Comments ──────────────────────────────────────────────────────────────
+
+    [HttpGet("{id:guid}/comments")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetComments(Guid id, CancellationToken ct)
+    {
+        var result = await _service.GetCommentsAsync(id, ct);
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPost("{id:guid}/comments")]
+    public async Task<IActionResult> AddComment(
+        Guid id, [FromBody] AddCommentDto dto, CancellationToken ct)
+    {
+        var result = await _service.AddCommentAsync(GetUserId(), id, dto, ct);
+        return StatusCode(201, result);
+    }
+
+    [Authorize]
+    [HttpDelete("comments/{commentId:guid}")]
+    public async Task<IActionResult> DeleteComment(Guid commentId, CancellationToken ct)
+    {
+        await _service.DeleteCommentAsync(GetUserId(), commentId, ct);
         return NoContent();
     }
 }

@@ -11,6 +11,7 @@ public class BuyerRequestResponse
     public bool IsPublished { get; set; }
     public Guid UserId { get; set; }
     public string UserName { get; set; } = string.Empty;
+    public int CommentsCount { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

@@ -34,6 +34,7 @@ interface BuyerRequest {
   city?: string;
   neighborhood?: string;
   userName: string;
+  commentsCount: number;
   createdAt: string;
 }
 
@@ -314,18 +315,30 @@ function RequestsContent() {
             {requests.map(req => {
               const colors = PROPERTY_TYPE_COLORS[req.propertyType] ?? PROPERTY_TYPE_COLORS.Building;
               return (
-                <div key={req.id} style={{
-                  backgroundColor: "#fff", borderRadius: 14,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-                  padding: "1.1rem 1.2rem",
-                  display: "flex", flexDirection: "column", gap: "0.6rem",
-                  transition: "box-shadow 0.15s",
-                }}>
-                  {/* Type badge */}
+                <Link
+                  key={req.id}
+                  href={`/requests/${req.id}`}
+                  style={{
+                    backgroundColor: "#fff", borderRadius: 14,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+                    padding: "1.1rem 1.2rem",
+                    display: "flex", flexDirection: "column", gap: "0.6rem",
+                    textDecoration: "none", color: "inherit",
+                    transition: "box-shadow 0.15s, transform 0.15s",
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.12)";
+                    (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.07)";
+                    (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                  }}
+                >
+                  {/* Type badge + date */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{
-                      backgroundColor: colors.bg,
-                      color: colors.color,
+                      backgroundColor: colors.bg, color: colors.color,
                       border: `1px solid ${colors.border}`,
                       borderRadius: 20, padding: "0.18rem 0.7rem",
                       fontSize: "0.74rem", fontWeight: 700,
@@ -338,54 +351,47 @@ function RequestsContent() {
                   </div>
 
                   {/* Title */}
-                  <h2 style={{
-                    margin: 0, fontSize: "0.95rem", fontWeight: 700,
-                    color: "#1e293b", lineHeight: 1.45,
-                  }}>
+                  <h2 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700, color: "#1e293b", lineHeight: 1.45 }}>
                     {req.title}
                   </h2>
 
                   {/* Description */}
                   <p style={{
-                    margin: 0, fontSize: "0.82rem", color: "#64748b",
-                    lineHeight: 1.55,
-                    display: "-webkit-box",
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
+                    margin: 0, fontSize: "0.82rem", color: "#64748b", lineHeight: 1.55,
+                    display: "-webkit-box", WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical", overflow: "hidden",
                   }}>
                     {req.description}
                   </p>
 
                   {/* Footer */}
                   <div style={{
-                    display: "flex", alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingTop: "0.5rem",
-                    borderTop: "1px solid #f1f5f9",
-                    marginTop: "auto",
+                    display: "flex", alignItems: "center", gap: "0.75rem",
+                    paddingTop: "0.5rem", borderTop: "1px solid #f1f5f9", marginTop: "auto",
                   }}>
                     {/* Location */}
-                    <span style={{
-                      fontSize: "0.76rem", color: "#64748b",
-                      display: "flex", alignItems: "center", gap: "0.2rem",
-                    }}>
-                      {(req.city || req.neighborhood) && (
-                        <>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                            <circle cx="12" cy="10" r="3"/>
-                          </svg>
+                    {(req.city || req.neighborhood) && (
+                      <span style={{ fontSize: "0.76rem", color: "#64748b", display: "flex", alignItems: "center", gap: "0.2rem", flex: 1, minWidth: 0, overflow: "hidden" }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" style={{ flexShrink: 0 }}>
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                          <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {[req.city, req.neighborhood].filter(Boolean).join(" / ")}
-                        </>
-                      )}
+                        </span>
+                      </span>
+                    )}
+
+                    {/* Comments count */}
+                    <span style={{ fontSize: "0.74rem", color: "#64748b", display: "flex", alignItems: "center", gap: "0.25rem", flexShrink: 0 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      {req.commentsCount}
                     </span>
 
                     {/* Publisher */}
-                    <span style={{
-                      fontSize: "0.74rem", color: "#94a3b8",
-                      display: "flex", alignItems: "center", gap: "0.2rem",
-                    }}>
+                    <span style={{ fontSize: "0.74rem", color: "#94a3b8", display: "flex", alignItems: "center", gap: "0.2rem", flexShrink: 0 }}>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                         <circle cx="12" cy="7" r="4"/>
@@ -393,7 +399,7 @@ function RequestsContent() {
                       {req.userName}
                     </span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

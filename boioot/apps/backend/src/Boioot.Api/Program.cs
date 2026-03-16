@@ -248,6 +248,19 @@ using (var scope = app.Services.CreateScope())
                 FOREIGN KEY (UserId) REFERENCES Users(Id)
             )");
 
+        // Create BuyerRequestComments table
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS BuyerRequestComments (
+                Id TEXT NOT NULL PRIMARY KEY,
+                Content TEXT NOT NULL,
+                BuyerRequestId TEXT NOT NULL,
+                UserId TEXT NOT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                FOREIGN KEY (BuyerRequestId) REFERENCES BuyerRequests(Id) ON DELETE CASCADE,
+                FOREIGN KEY (UserId) REFERENCES Users(Id)
+            )");
+
         await seeder.SeedAsync();
     }
     catch (Exception ex)
