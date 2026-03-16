@@ -57,7 +57,7 @@ const SECTION_LINKS = [
   { label: "الرئيسية",       href: "/" },
   { label: "الإيجار اليومي", href: "/daily-rentals" },
   { label: "المشاريع",       href: "/projects" },
-  { label: "الطلبات",        href: "/dashboard/my-requests" },
+  { label: "الطلبات",        href: "/requests" },
 ];
 
 // ─── Pill options ─────────────────────────────────────────────────────────────
