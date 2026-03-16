@@ -15,6 +15,7 @@ public class Property : BaseEntity, ISoftDeletable
     public decimal Area { get; set; }
     public int? Bedrooms { get; set; }
     public int? Bathrooms { get; set; }
+    public int? HallsCount { get; set; }
     public string? Province { get; set; }
     public string? Neighborhood { get; set; }
     public string? Address { get; set; }
@@ -22,6 +23,22 @@ public class Property : BaseEntity, ISoftDeletable
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public bool IsDeleted { get; set; } = false;
+
+    // Payment details
+    public string PaymentType { get; set; } = "OneTime"; // OneTime | Installments
+    public int? InstallmentsCount { get; set; }
+    public bool HasCommission { get; set; } = false;
+    public string? CommissionType { get; set; } // Percentage | Fixed
+    public decimal? CommissionValue { get; set; }
+
+    // Property characteristics
+    public string? OwnershipType { get; set; }
+    public string? Floor { get; set; }
+    public int? PropertyAge { get; set; }
+    public string? Features { get; set; } // JSON TEXT array
+
+    // Media
+    public string? VideoUrl { get; set; }
 
     public Guid CompanyId { get; set; }
     public Guid? AgentId { get; set; }

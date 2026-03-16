@@ -19,11 +19,29 @@ public class PropertyResponse
     public double? Longitude { get; set; }
     public int? Bedrooms { get; set; }
     public int? Bathrooms { get; set; }
+    public int? HallsCount { get; set; }
     public Guid CompanyId { get; set; }
     public string CompanyName { get; set; } = string.Empty;
     public Guid? AgentId { get; set; }
     public string? OwnerId { get; set; }
     public bool IsPersonalListing { get; set; }
+
+    // Payment
+    public string PaymentType { get; set; } = "OneTime";
+    public int? InstallmentsCount { get; set; }
+    public bool HasCommission { get; set; }
+    public string? CommissionType { get; set; }
+    public decimal? CommissionValue { get; set; }
+
+    // Property characteristics
+    public string? OwnershipType { get; set; }
+    public string? Floor { get; set; }
+    public int? PropertyAge { get; set; }
+    public List<string> Features { get; set; } = [];
+
+    // Media
+    public string? VideoUrl { get; set; }
+
     public IReadOnlyList<PropertyImageResponse> Images { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

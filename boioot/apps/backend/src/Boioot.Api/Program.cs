@@ -121,6 +121,30 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN OwnerId TEXT"); }
         catch { /* column already exists */ }
 
+        // New property detail columns
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN HallsCount INTEGER"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN PaymentType TEXT NOT NULL DEFAULT 'OneTime'"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN InstallmentsCount INTEGER"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN HasCommission INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN CommissionType TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN CommissionValue REAL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN OwnershipType TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN Floor TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN PropertyAge INTEGER"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN Features TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN VideoUrl TEXT"); }
+        catch { /* column already exists */ }
+
         // Seed the personal listings sentinel company (fixed GUID)
         var personalCompanyId = "00000000-0000-0000-0000-000000000001";
         var now0 = DateTime.UtcNow.ToString("O");

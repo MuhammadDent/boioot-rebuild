@@ -5,26 +5,27 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { api, normalizeError } from "@/lib/api";
-import PropertyForm from "@/components/dashboard/properties/PropertyForm";
-import type { CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
+import PostAdWizard from "@/components/post-ad/PostAdWizard";
+import type { CreatePropertyRequest, ListingTypeConfig } from "@/types";
 import Spinner from "@/components/ui/Spinner";
 
 const ROLE_LABELS: Record<string, string> = {
-  User: "مستخدم عادي",
-  Owner: "مالك عقار",
-  Agent: "وسيط عقاري",
+  User:         "مستخدم عادي",
+  Owner:        "مالك عقار",
+  Agent:        "وسيط عقاري",
   CompanyOwner: "مالك شركة",
-  Admin: "مشرف",
+  Admin:        "مشرف",
 };
 
 export default function PostAdPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [stats, setStats] = useState<{ used: number; limit: number } | null>(null);
+  const [stats, setStats]           = useState<{ used: number; limit: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [listingTypes, setListingTypes] = useState<ListingTypeConfig[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError]   = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -34,18 +35,62 @@ export default function PostAdPage() {
 
   useEffect(() => {
     if (!user) return;
+
     api
       .get<{ used: number; limit: number }>("/properties/my-listings/stats")
       .then((data) => setStats(data))
       .catch(() => {})
       .finally(() => setStatsLoading(false));
+
+    api
+      .get<ListingTypeConfig[]>("/listing-types")
+      .then((data) => setListingTypes(data))
+      .catch(() => {});
   }, [user]);
 
-  async function handleSubmit(data: CreatePropertyRequest | UpdatePropertyRequest) {
+  async function handleWizardSubmit(wizardData: {
+    propertyType: string; listingType: string; ownershipType: string; floor: string;
+    title: string; area: string; bedrooms: string; bathrooms: string;
+    hallsCount: string; propertyAge: string; description: string;
+    price: string; currency: "SYP" | "USD"; paymentType: "OneTime" | "Installments";
+    installmentsCount: string; hasCommission: boolean; commissionType: "Percentage" | "Fixed";
+    commissionValue: string; province: string; city: string; neighborhood: string;
+    address: string; features: string[]; images: string[]; videoUrl: string;
+  }) {
     setIsSubmitting(true);
     setServerError("");
     try {
-      await api.post("/properties/post", data);
+      const payload: CreatePropertyRequest = {
+        type:             wizardData.propertyType,
+        listingType:      wizardData.listingType,
+        ownershipType:    wizardData.ownershipType || undefined,
+        floor:            wizardData.floor || undefined,
+        title:            wizardData.title.trim(),
+        area:             Number(wizardData.area),
+        bedrooms:         wizardData.bedrooms         ? Number(wizardData.bedrooms)         : undefined,
+        bathrooms:        wizardData.bathrooms        ? Number(wizardData.bathrooms)        : undefined,
+        hallsCount:       wizardData.hallsCount       ? Number(wizardData.hallsCount)       : undefined,
+        propertyAge:      wizardData.propertyAge      ? Number(wizardData.propertyAge)      : undefined,
+        description:      wizardData.description.trim() || undefined,
+        price:            Number(wizardData.price),
+        currency:         wizardData.currency,
+        paymentType:      wizardData.paymentType,
+        installmentsCount: wizardData.paymentType === "Installments" && wizardData.installmentsCount
+                              ? Number(wizardData.installmentsCount) : undefined,
+        hasCommission:    wizardData.hasCommission,
+        commissionType:   wizardData.hasCommission ? wizardData.commissionType : undefined,
+        commissionValue:  wizardData.hasCommission && wizardData.commissionValue
+                              ? Number(wizardData.commissionValue) : undefined,
+        province:         wizardData.province    || undefined,
+        city:             wizardData.city,
+        neighborhood:     wizardData.neighborhood || undefined,
+        address:          wizardData.address      || undefined,
+        features:         wizardData.features.length > 0 ? wizardData.features : undefined,
+        images:           wizardData.images.length > 0 ? wizardData.images : undefined,
+        videoUrl:         wizardData.videoUrl.trim() || undefined,
+      };
+
+      await api.post("/properties/post", payload);
       router.push("/dashboard/my-listings?success=1");
     } catch (e) {
       setServerError(normalizeError(e));
@@ -97,7 +142,7 @@ export default function PostAdPage() {
               <p style={{ margin: "0 0 0.2rem", fontWeight: 700, fontSize: "0.92rem", color: limitReached ? "#dc2626" : "#166534" }}>
                 {limitReached
                   ? "وصلت إلى الحد الأقصى من الإعلانات هذا الشهر"
-                  : `متبقٍّ لك ${stats.limit - stats.used} إعلان${stats.limit - stats.used === 1 ? "" : ""} هذا الشهر`}
+                  : `متبقٍّ لك ${stats.limit - stats.used} إعلان هذا الشهر`}
               </p>
               <p style={{ margin: 0, fontSize: "0.8rem", color: "#6b7280" }}>
                 استخدمت {stats.used} من أصل {stats.limit} إعلان شهرياً
@@ -126,8 +171,8 @@ export default function PostAdPage() {
             </h2>
             <p style={{ margin: "0 0 1.5rem", color: "#64748b", lineHeight: 1.7 }}>
               لقد استخدمت إعلاناتك الشهرية كاملةً.
-              لإضافة المزيد من الإعلانات، قم بترقية عضويتك إلى <strong>مالك عقار</strong> (5 إعلانات/شهر)
-              أو <strong>وسيط عقاري</strong>.
+              لإضافة المزيد من الإعلانات، قم بترقية عضويتك إلى{" "}
+              <strong>مالك عقار</strong> (5 إعلانات/شهر) أو <strong>وسيط عقاري</strong>.
             </p>
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
               <Link
@@ -146,13 +191,11 @@ export default function PostAdPage() {
           </div>
         ) : (
           <div className="form-card">
-            <PropertyForm
-              mode="create"
-              onSubmit={handleSubmit}
+            <PostAdWizard
+              listingTypes={listingTypes}
+              onSubmit={handleWizardSubmit}
               isSubmitting={isSubmitting}
               serverError={serverError}
-              hideCompany
-              submitLabel="نشر الإعلان"
             />
           </div>
         )}

@@ -95,11 +95,25 @@ export interface PropertyResponse {
   longitude?: number;
   bedrooms?: number;
   bathrooms?: number;
+  hallsCount?: number;
   companyId: string;
   companyName: string;
   agentId?: string;
   ownerId?: string;
   isPersonalListing?: boolean;
+  // Payment
+  paymentType?: string;
+  installmentsCount?: number;
+  hasCommission?: boolean;
+  commissionType?: string;
+  commissionValue?: number;
+  // Characteristics
+  ownershipType?: string;
+  floor?: string;
+  propertyAge?: number;
+  features?: string[];
+  // Media
+  videoUrl?: string;
   images: PropertyImageResponse[];
   createdAt: string;
   updatedAt: string;
@@ -178,6 +192,7 @@ export interface CreatePropertyRequest {
   area: number;
   bedrooms?: number;
   bathrooms?: number;
+  hallsCount?: number;
   neighborhood?: string;
   address?: string;
   province?: string;
@@ -186,6 +201,20 @@ export interface CreatePropertyRequest {
   longitude?: number;
   companyId?: string;
   agentId?: string;
+  // Payment
+  paymentType?: string;
+  installmentsCount?: number;
+  hasCommission?: boolean;
+  commissionType?: string;
+  commissionValue?: number;
+  // Characteristics
+  ownershipType?: string;
+  floor?: string;
+  propertyAge?: number;
+  features?: string[];
+  // Media
+  images?: string[];
+  videoUrl?: string;
 }
 
 export interface UpdatePropertyRequest {

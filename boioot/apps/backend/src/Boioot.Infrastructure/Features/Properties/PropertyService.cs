@@ -280,28 +280,63 @@ public class PropertyService : IPropertyService
 
         var property = new Property
         {
-            Title       = request.Title.Trim(),
-            Description = request.Description?.Trim(),
-            Type        = request.Type!.Value,
-            ListingType = request.ListingType.Trim(),
-            Status      = PropertyStatus.Available,
-            Price       = request.Price,
-            Currency    = string.IsNullOrWhiteSpace(request.Currency) ? "SYP" : request.Currency.Trim().ToUpper(),
-            Area        = request.Area,
-            Bedrooms    = request.Bedrooms,
-            Bathrooms   = request.Bathrooms,
-            Province    = request.Province?.Trim(),
-            Neighborhood= request.Neighborhood?.Trim(),
-            Address     = request.Address?.Trim(),
-            City        = request.City.Trim(),
-            Latitude    = request.Latitude,
-            Longitude   = request.Longitude,
-            CompanyId   = PersonalCompanyId,
-            OwnerId     = userId.ToString()
+            Title             = request.Title.Trim(),
+            Description       = request.Description?.Trim(),
+            Type              = request.Type!.Value,
+            ListingType       = request.ListingType.Trim(),
+            Status            = PropertyStatus.Available,
+            Price             = request.Price,
+            Currency          = string.IsNullOrWhiteSpace(request.Currency) ? "SYP" : request.Currency.Trim().ToUpper(),
+            Area              = request.Area,
+            Bedrooms          = request.Bedrooms,
+            Bathrooms         = request.Bathrooms,
+            HallsCount        = request.HallsCount,
+            Province          = request.Province?.Trim(),
+            Neighborhood      = request.Neighborhood?.Trim(),
+            Address           = request.Address?.Trim(),
+            City              = request.City.Trim(),
+            Latitude          = request.Latitude,
+            Longitude         = request.Longitude,
+            CompanyId         = PersonalCompanyId,
+            OwnerId           = userId.ToString(),
+            // Payment
+            PaymentType       = string.IsNullOrWhiteSpace(request.PaymentType) ? "OneTime" : request.PaymentType.Trim(),
+            InstallmentsCount = request.PaymentType == "Installments" ? request.InstallmentsCount : null,
+            HasCommission     = request.HasCommission,
+            CommissionType    = request.HasCommission ? request.CommissionType?.Trim() : null,
+            CommissionValue   = request.HasCommission ? request.CommissionValue : null,
+            // Characteristics
+            OwnershipType     = request.OwnershipType?.Trim(),
+            Floor             = request.Floor?.Trim(),
+            PropertyAge       = request.PropertyAge,
+            Features          = request.Features != null && request.Features.Count > 0
+                                    ? System.Text.Json.JsonSerializer.Serialize(request.Features)
+                                    : null,
+            VideoUrl          = request.VideoUrl?.Trim(),
         };
 
         _context.Properties.Add(property);
         await _context.SaveChangesAsync(ct);
+
+        // Save images
+        if (request.Images != null && request.Images.Count > 0)
+        {
+            var now = DateTime.UtcNow;
+            for (int i = 0; i < request.Images.Count; i++)
+            {
+                _context.Set<PropertyImage>().Add(new PropertyImage
+                {
+                    Id = Guid.NewGuid(),
+                    PropertyId = property.Id,
+                    ImageUrl = request.Images[i],
+                    IsPrimary = i == 0,
+                    Order = i,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            }
+            await _context.SaveChangesAsync(ct);
+        }
 
         _logger.LogInformation(
             "User listing created: {PropertyId} | By: {UserId}",
@@ -499,11 +534,26 @@ public class PropertyService : IPropertyService
         Longitude = p.Longitude,
         Bedrooms = p.Bedrooms,
         Bathrooms = p.Bathrooms,
+        HallsCount = p.HallsCount,
         CompanyId = p.CompanyId,
         CompanyName = p.Company?.Name ?? string.Empty,
         AgentId = p.AgentId,
         OwnerId = p.OwnerId,
         IsPersonalListing = p.OwnerId != null,
+        // Payment
+        PaymentType = p.PaymentType,
+        InstallmentsCount = p.InstallmentsCount,
+        HasCommission = p.HasCommission,
+        CommissionType = p.CommissionType,
+        CommissionValue = p.CommissionValue,
+        // Characteristics
+        OwnershipType = p.OwnershipType,
+        Floor = p.Floor,
+        PropertyAge = p.PropertyAge,
+        Features = string.IsNullOrWhiteSpace(p.Features)
+            ? []
+            : System.Text.Json.JsonSerializer.Deserialize<List<string>>(p.Features) ?? [],
+        VideoUrl = p.VideoUrl,
         Images = p.Images
             .OrderBy(i => i.Order)
             .Select(i => new PropertyImageResponse
