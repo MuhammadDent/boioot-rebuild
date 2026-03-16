@@ -134,7 +134,7 @@ export default function ConversationPage() {
 
   if (fetching) {
     return (
-      <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "1.5rem 1rem" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
           <DashboardBackLink href="/dashboard/messages" label="← المحادثات" marginBottom="0.75rem" />
           <LoadingRow />
@@ -145,7 +145,7 @@ export default function ConversationPage() {
 
   if (fetchError) {
     return (
-      <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "1.5rem 1rem" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
           <DashboardBackLink href="/dashboard/messages" label="← المحادثات" marginBottom="0.75rem" />
           <InlineBanner message={fetchError} />
@@ -249,7 +249,7 @@ export default function ConversationPage() {
       <div style={{
         maxWidth: 720, margin: "0 auto", width: "100%",
         flex: 1, display: "flex", flexDirection: "column",
-        padding: "2rem 1rem 1rem",
+        padding: "1.5rem 1rem 1rem",
       }}>
 
         {/* ── Header ── */}
