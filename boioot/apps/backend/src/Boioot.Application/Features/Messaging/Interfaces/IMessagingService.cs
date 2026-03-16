@@ -8,4 +8,5 @@ public interface IMessagingService
     Task<ConversationSummaryResponse> GetOrCreateConversationAsync(Guid userId, CreateConversationRequest request, CancellationToken ct = default);
     Task<ConversationDetailResponse> GetConversationAsync(Guid userId, Guid conversationId, int page, int pageSize, CancellationToken ct = default);
     Task<MessageResponse> SendMessageAsync(Guid userId, Guid conversationId, SendMessageRequest request, CancellationToken ct = default);
+    Task<int> GetTotalUnreadCountAsync(Guid userId, CancellationToken ct = default);
 }

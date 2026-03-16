@@ -52,4 +52,11 @@ public class MessagingController : BaseController
             GetUserId(), id, request, ct);
         return StatusCode(201, result);
     }
+
+    [HttpGet("unread-count")]
+    public async Task<IActionResult> GetUnreadCount(CancellationToken ct)
+    {
+        var count = await _messagingService.GetTotalUnreadCountAsync(GetUserId(), ct);
+        return Ok(new { total = count });
+    }
 }

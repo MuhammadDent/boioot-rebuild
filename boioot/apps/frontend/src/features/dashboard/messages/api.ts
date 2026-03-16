@@ -50,4 +50,8 @@ export const messagingApi = {
   sendMessage(conversationId: string, content: string): Promise<MessageItem> {
     return api.post(`/messages/conversations/${conversationId}/messages`, { content });
   },
+
+  getUnreadCount(): Promise<{ total: number }> {
+    return api.get("/messages/unread-count");
+  },
 };

@@ -29,7 +29,7 @@ public class RequestService : IRequestService
     }
 
     public async Task<RequestResponse> SubmitAsync(
-        SubmitRequestRequest request, CancellationToken ct = default)
+        SubmitRequestRequest request, Guid? userId, CancellationToken ct = default)
     {
         var hasProperty = request.PropertyId.HasValue;
         var hasProject = request.ProjectId.HasValue;
@@ -66,7 +66,8 @@ public class RequestService : IRequestService
             Message = request.Message?.Trim(),
             PropertyId = request.PropertyId,
             ProjectId = request.ProjectId,
-            Status = RequestStatus.New
+            Status = RequestStatus.New,
+            UserId = userId
         };
 
         _context.Requests.Add(entity);
@@ -77,6 +78,31 @@ public class RequestService : IRequestService
             entity.Id, entity.PropertyId, entity.ProjectId);
 
         return await LoadAndMapAsync(entity.Id, ct);
+    }
+
+    public async Task<PagedResult<RequestResponse>> GetMyRequestsAsync(
+        Guid userId, int page, int pageSize, CancellationToken ct = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var query = _context.Requests
+            .Include(r => r.Property).ThenInclude(p => p!.Company)
+            .Include(r => r.Project).ThenInclude(p => p!.Company)
+            .Where(r => r.UserId == userId)
+            .OrderByDescending(r => r.CreatedAt)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync(ct);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var responses = items.Select(MapToResponse).ToList();
+        return new PagedResult<RequestResponse>(responses, totalCount, page, pageSize);
     }
 
     public async Task<PagedResult<RequestResponse>> GetDashboardListAsync(

@@ -115,6 +115,9 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN ProfileImageUrl TEXT"); }
         catch { /* column already exists */ }
 
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Requests ADD COLUMN UserId TEXT"); }
+        catch { /* column already exists */ }
+
         try
         {
             await db.Database.ExecuteSqlRawAsync(@"

@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { dashboardSummaryApi } from "@/features/dashboard/summary/api";
 import { authApi } from "@/features/auth/api";
 import { favoritesApi } from "@/features/favorites/api";
+import { messagingApi } from "@/features/dashboard/messages/api";
 import { ROLE_LABELS } from "@/features/admin/constants";
 import { normalizeError } from "@/lib/api";
 import { formatPrice, LISTING_TYPE_LABELS, PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
@@ -30,6 +31,8 @@ export default function DashboardPage() {
 
   const [favorites, setFavorites]       = useState<FavoriteResponse[]>([]);
   const [favLoading, setFavLoading]     = useState(true);
+
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const [editOpen, setEditOpen]         = useState(false);
   const [editName, setEditName]         = useState("");
@@ -67,6 +70,13 @@ export default function DashboardPage() {
       .then(setFavorites)
       .catch(() => setFavorites([]))
       .finally(() => setFavLoading(false));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    messagingApi.getUnreadCount()
+      .then(d => setUnreadMessages(d.total))
+      .catch(() => setUnreadMessages(0));
   }, [user]);
 
   useEffect(() => {
@@ -187,7 +197,7 @@ export default function DashboardPage() {
             { href: "/",                   label: "الرئيسية" },
             { href: "/daily-rentals",      label: "الإيجار اليومي" },
             { href: "/projects",           label: "المشاريع" },
-            { href: "/dashboard/requests", label: "الطلبات" },
+            { href: "/dashboard/my-requests", label: "الطلبات" },
           ].map(({ href, label }) => (
             <Link
               key={href}
@@ -618,6 +628,17 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ── My Requests (all roles) ────────────────────────────────────────── */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <SectionLabel>طلباتي</SectionLabel>
+          <NavCard
+            href="/dashboard/my-requests"
+            label="طلباتي"
+            description="الطلبات والاستفسارات التي أرسلتها عن العقارات"
+            icon={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>}
+          />
+        </div>
+
         {/* ── Messages (all roles) ───────────────────────────────────────────── */}
         <div style={{ marginBottom: "1.25rem" }}>
           <SectionLabel>التواصل</SectionLabel>
@@ -625,6 +646,7 @@ export default function DashboardPage() {
             href="/dashboard/messages"
             label="المحادثات والرسائل"
             description="تواصل مع المستخدمين الآخرين مباشرةً"
+            badge={unreadMessages}
             icon={<path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>}
           />
         </div>
@@ -810,12 +832,13 @@ function StatCard({
 
 // ─── Nav Card ──────────────────────────────────────────────────────────────────
 function NavCard({
-  href, label, description, icon,
+  href, label, description, icon, badge,
 }: {
   href: string;
   label: string;
   description: string;
   icon: React.ReactNode;
+  badge?: number;
 }) {
   return (
     <Link
@@ -844,7 +867,19 @@ function NavCard({
         </svg>
       </div>
       <div style={{ flex: 1 }}>
-        <p style={{ margin: 0, fontWeight: 700, fontSize: "0.92rem", color: "#1e293b" }}>{label}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: "0.92rem", color: "#1e293b" }}>{label}</p>
+          {badge && badge > 0 && (
+            <span style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              minWidth: 20, height: 20, borderRadius: 10,
+              backgroundColor: "#ef4444", color: "#fff",
+              fontSize: "0.68rem", fontWeight: 700, padding: "0 5px",
+            }}>
+              {badge > 99 ? "99+" : badge}
+            </span>
+          )}
+        </div>
         <p style={{ margin: "0.15rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>{description}</p>
       </div>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" style={{ flexShrink: 0, transform: "rotate(180deg)" }}>

@@ -188,6 +188,12 @@ public class MessagingService : IMessagingService
         }
     }
 
+    public Task<int> GetTotalUnreadCountAsync(Guid userId, CancellationToken ct) =>
+        _context.Messages.CountAsync(
+            m => (m.Conversation.User1Id == userId || m.Conversation.User2Id == userId)
+              && m.SenderId != userId
+              && !m.IsRead, ct);
+
     private Task<int> GetUnreadCountAsync(Guid userId, Guid conversationId, CancellationToken ct) =>
         _context.Messages.CountAsync(
             m => m.ConversationId == conversationId

@@ -12,7 +12,9 @@ public class Request : BaseEntity
 
     public Guid? PropertyId { get; set; }
     public Guid? ProjectId { get; set; }
+    public Guid? UserId { get; set; }
 
     public Property? Property { get; set; }
     public Project? Project { get; set; }
+    public User? User { get; set; }
 }

@@ -15,6 +15,12 @@ public abstract class BaseController : ControllerBase
             : throw new BoiootException("بيانات المصادقة غير صالحة", 401);
     }
 
+    protected Guid? GetOptionalUserId()
+    {
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(claim, out var id) ? id : null;
+    }
+
     protected string GetUserRole()
     {
         return User.FindFirstValue(ClaimTypes.Role)

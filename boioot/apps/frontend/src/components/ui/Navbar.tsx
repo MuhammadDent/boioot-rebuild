@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { href: "/",                   label: "الرئيسية",       exact: true  },
   { href: "/daily-rentals",      label: "الإيجار اليومي",  exact: false, highlight: true },
   { href: "/projects",           label: "المشاريع",        exact: false },
-  { href: "/dashboard/requests", label: "الطلبات",         exact: false },
+  { href: "/dashboard/my-requests", label: "الطلبات",       exact: false },
 ];
 
 export default function Navbar() {
