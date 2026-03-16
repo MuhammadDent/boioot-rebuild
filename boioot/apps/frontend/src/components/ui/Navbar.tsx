@@ -29,8 +29,8 @@ export default function Navbar() {
           <Image
             src="/logo-boioot.png"
             alt="بيوت"
-            width={120}
-            height={46}
+            width={160}
+            height={62}
             style={{ objectFit: "contain" }}
             priority
           />

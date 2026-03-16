@@ -346,9 +346,37 @@ export default function RequestDetailPage() {
             {comments.length === 0 ? "لا توجد ردود بعد — كن أول من يرد" : `${comments.length} رد`}
           </p>
 
-          {/* Add comment form */}
+          {/* Comments error */}
+          {cmtError && (
+            <p style={{ fontSize: "0.82rem", color: "#dc2626", margin: "0 0 0.75rem" }}>{cmtError}</p>
+          )}
+
+          {/* Comments list */}
+          {cmtLoading ? (
+            <div style={{ display: "flex", justifyContent: "center", padding: "1.5rem 0" }}>
+              <Spinner />
+            </div>
+          ) : comments.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "1.5rem 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+              لا توجد ردود حتى الآن
+            </div>
+          ) : (
+            <div style={{ marginBottom: "1.25rem" }}>
+              {comments.map(c => (
+                <CommentCard
+                  key={c.id}
+                  comment={c}
+                  currentUserId={user?.id}
+                  onDelete={handleDeleteComment}
+                  deletingId={deletingId}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Add comment form — below the list */}
           {user ? (
-            <form onSubmit={handlePostComment} style={{ marginBottom: "1.25rem" }}>
+            <form onSubmit={handlePostComment} style={{ borderTop: comments.length > 0 ? "1px solid #f1f5f9" : "none", paddingTop: comments.length > 0 ? "1.1rem" : 0 }}>
               <div style={{ display: "flex", gap: "0.65rem", alignItems: "flex-start" }}>
                 <Avatar name={user.fullName} size={36} />
                 <div style={{ flex: 1 }}>
@@ -394,41 +422,15 @@ export default function RequestDetailPage() {
           ) : (
             <div style={{
               backgroundColor: "#f8fafc", borderRadius: 10,
-              padding: "0.85rem 1rem", marginBottom: "1.25rem",
+              padding: "0.85rem 1rem",
+              borderTop: comments.length > 0 ? "1px solid #f1f5f9" : "none",
+              marginTop: comments.length > 0 ? "0.5rem" : 0,
               textAlign: "center", fontSize: "0.85rem", color: "#64748b",
             }}>
               <Link href="/login" style={{ color: "var(--color-primary)", fontWeight: 700 }}>
                 سجّل دخولك
               </Link>
               {" "}للرد على هذا الطلب
-            </div>
-          )}
-
-          {/* Comments error */}
-          {cmtError && (
-            <p style={{ fontSize: "0.82rem", color: "#dc2626", margin: "0 0 0.75rem" }}>{cmtError}</p>
-          )}
-
-          {/* Comments list */}
-          {cmtLoading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: "1.5rem 0" }}>
-              <Spinner />
-            </div>
-          ) : comments.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "1.5rem 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-              لا توجد ردود حتى الآن
-            </div>
-          ) : (
-            <div>
-              {comments.map(c => (
-                <CommentCard
-                  key={c.id}
-                  comment={c}
-                  currentUserId={user?.id}
-                  onDelete={handleDeleteComment}
-                  deletingId={deletingId}
-                />
-              ))}
             </div>
           )}
         </div>
