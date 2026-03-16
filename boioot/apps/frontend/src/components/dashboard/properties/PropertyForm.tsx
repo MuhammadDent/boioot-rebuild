@@ -345,7 +345,10 @@ export default function PropertyForm({
               dir="ltr"
               style={{
                 flex: 1,
-                border: "none",
+                borderTop: "none",
+                borderBottom: "none",
+                borderRight: "none",
+                borderLeft: "none",
                 borderRadius: 0,
                 outline: "none",
                 boxShadow: "none",
