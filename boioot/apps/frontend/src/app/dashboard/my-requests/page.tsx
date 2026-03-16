@@ -2,15 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { api, normalizeError } from "@/lib/api";
 import {
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_BADGE,
 } from "@/features/dashboard/requests/constants";
-import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
-import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import type { RequestResponse, PagedResult } from "@/types";
 
 const PAGE_SIZE = 10;
@@ -24,7 +23,8 @@ const myRequestsApi = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyRequestsPage() {
-  const { user, isLoading } = useProtectedRoute();
+  const router = useRouter();
+  const { user, isLoading, logout } = useProtectedRoute();
 
   const [requests, setRequests]     = useState<RequestResponse[]>([]);
   const [page, setPage]             = useState(1);
@@ -55,34 +55,141 @@ export default function MyRequestsPage() {
 
   if (isLoading || !user) return null;
 
+  async function handleLogout() {
+    await logout();
+    router.push("/login");
+  }
+
   return (
     <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", paddingBottom: "2rem" }}>
-      {/* Header */}
+
+      {/* ── Sticky Header ───────────────────────────────────────────────────── */}
       <div style={{
         backgroundColor: "#fff",
         borderBottom: "1px solid #e2e8f0",
-        padding: "1rem 1.25rem",
-        display: "flex",
-        alignItems: "center",
-        gap: "0.75rem",
         position: "sticky",
         top: 0,
         zIndex: 10,
       }}>
-        <DashboardBackLink href="/dashboard" />
-        <div>
-          <h1 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#1e293b" }}>
-            طلباتي
-          </h1>
-          {!fetching && (
-            <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748b" }}>
-              {totalCount} طلب مُرسَل
-            </p>
-          )}
+        {/* Top row: back + title + logout */}
+        <div style={{
+          padding: "0.75rem 1.25rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.6rem",
+        }}>
+          {/* Back to previous page */}
+          <button
+            onClick={() => router.back()}
+            style={{
+              background: "#f1f5f9", border: "none", borderRadius: 8,
+              width: 36, height: 36, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}
+            title="السابق"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+
+          {/* Title */}
+          <div style={{ flex: 1 }}>
+            <h1 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1e293b" }}>
+              طلباتي
+            </h1>
+            {!fetching && (
+              <p style={{ margin: 0, fontSize: "0.74rem", color: "#64748b" }}>
+                {totalCount} طلب مُرسَل
+              </p>
+            )}
+          </div>
+
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            style={{
+              background: "#fee2e2", border: "none", borderRadius: 8,
+              padding: "0.4rem 0.85rem", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: "0.35rem",
+              color: "#dc2626", fontSize: "0.78rem", fontWeight: 700,
+              fontFamily: "inherit",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            خروج
+          </button>
+        </div>
+
+        {/* Bottom row: quick nav links */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0",
+          padding: "0 1rem",
+          borderTop: "1px solid #f1f5f9",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+        }}>
+          {[
+            { href: "/",             label: "الرئيسية" },
+            { href: "/dashboard",    label: "ملفي الشخصي" },
+            { href: "/daily-rentals", label: "الإيجار اليومي" },
+            { href: "/projects",     label: "المشاريع" },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                textDecoration: "none",
+                color: "#475569",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                padding: "0.5rem 0.9rem",
+                whiteSpace: "nowrap",
+                display: "inline-block",
+              }}
+            >
+              {label}
+            </Link>
+          ))}
         </div>
       </div>
 
+      {/* ── Content ─────────────────────────────────────────────────────────── */}
       <div style={{ padding: "1rem 1.25rem" }}>
+
+        {/* "Add Request" CTA */}
+        <Link
+          href="/"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.5rem",
+            width: "100%",
+            padding: "0.75rem",
+            backgroundColor: "var(--color-primary)",
+            color: "#fff",
+            borderRadius: 12,
+            textDecoration: "none",
+            fontWeight: 700,
+            fontSize: "0.92rem",
+            marginBottom: "1rem",
+            boxShadow: "0 2px 8px rgba(34,197,94,0.25)",
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          أضف طلب جديد
+        </Link>
+
         <InlineBanner message={fetchError} />
 
         {/* Loading skeleton */}
