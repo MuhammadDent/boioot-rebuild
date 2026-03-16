@@ -232,6 +232,22 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationNeighborhoods_Name_City ON LocationNeighborhoods(Name, City)"); }
         catch { /* already exists */ }
 
+        // Create BuyerRequests table
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS BuyerRequests (
+                Id TEXT NOT NULL PRIMARY KEY,
+                Title TEXT NOT NULL,
+                PropertyType TEXT NOT NULL,
+                Description TEXT NOT NULL,
+                City TEXT,
+                Neighborhood TEXT,
+                IsPublished INTEGER NOT NULL DEFAULT 1,
+                UserId TEXT NOT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                FOREIGN KEY (UserId) REFERENCES Users(Id)
+            )");
+
         await seeder.SeedAsync();
     }
     catch (Exception ex)
