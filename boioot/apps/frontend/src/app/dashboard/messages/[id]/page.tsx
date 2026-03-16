@@ -432,9 +432,52 @@ export default function ConversationPage() {
   );
 }
 
+// ─── Image lightbox ───────────────────────────────────────────────────────────
+
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,0.88)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        style={{
+          position: "absolute", top: 16, right: 16,
+          background: "rgba(255,255,255,0.15)", border: "none",
+          color: "#fff", fontSize: "1.6rem", lineHeight: 1,
+          width: 40, height: 40, borderRadius: "50%",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+        title="إغلاق"
+      >✕</button>
+
+      {/* Image — stop propagation so clicking image doesn't close */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        onClick={e => e.stopPropagation()}
+        style={{
+          maxWidth: "92vw", maxHeight: "88vh",
+          borderRadius: 10, objectFit: "contain",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+        }}
+      />
+    </div>
+  );
+}
+
 // ─── Message bubble ───────────────────────────────────────────────────────────
 
 function MessageBubble({ msg }: { msg: MessageItem }) {
+  const [lightbox, setLightbox] = useState(false);
+
   const timeLabel = new Date(msg.createdAt).toLocaleTimeString("ar-SY", {
     hour: "2-digit", minute: "2-digit",
   });
@@ -464,6 +507,15 @@ function MessageBubble({ msg }: { msg: MessageItem }) {
           </p>
         )}
 
+        {/* Lightbox */}
+        {lightbox && msg.attachmentData && (
+          <ImageLightbox
+            src={msg.attachmentData}
+            alt={msg.attachmentName ?? "صورة مرفقة"}
+            onClose={() => setLightbox(false)}
+          />
+        )}
+
         {/* Attachment */}
         {msg.attachmentData && (
           <div style={{ marginTop: msg.content ? "0.5rem" : 0 }}>
@@ -475,9 +527,9 @@ function MessageBubble({ msg }: { msg: MessageItem }) {
                 style={{
                   maxWidth: "100%", maxHeight: 280,
                   borderRadius: 8, display: "block",
-                  cursor: "pointer",
+                  cursor: "zoom-in",
                 }}
-                onClick={() => openDataUrl(msg.attachmentData!)}
+                onClick={() => setLightbox(true)}
               />
             ) : (
               <button
