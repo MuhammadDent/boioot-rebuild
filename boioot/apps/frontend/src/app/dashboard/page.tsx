@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, type FormEvent } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { dashboardSummaryApi } from "@/features/dashboard/summary/api";
@@ -22,9 +20,8 @@ function canSeeSummary(role: string): role is SummaryRole {
 }
 
 export default function DashboardPage() {
-  const { user, isLoading, logout } = useProtectedRoute();
+  const { user, isLoading } = useProtectedRoute();
   const { setUser } = useAuth();
-  const router = useRouter();
 
   const [summary, setSummary]           = useState<DashboardSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -97,11 +94,6 @@ export default function DashboardPage() {
   const isManagementRole = canSeeSummary(user.role);
   const isCompanyOrAdmin = user.role === "Admin" || user.role === "CompanyOwner";
 
-  function handleLogout() {
-    logout();
-    router.push("/login");
-  }
-
   async function handleEditSave(e: FormEvent) {
     e.preventDefault();
     setEditError("");
@@ -147,79 +139,6 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#f0f4f0", direction: "rtl" }}>
 
-      {/* ══ Top bar ══════════════════════════════════════════════════════════ */}
-      <div style={{
-        backgroundColor: "#fff",
-        borderBottom: "1px solid #e2e8f0",
-        position: "sticky",
-        top: 0,
-        zIndex: 10,
-      }}>
-        {/* Row 1: Logo + logout */}
-        <div style={{
-          padding: "0.6rem 1.25rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}>
-          <Link href="/">
-            <Image src="/logo-boioot.png" alt="بيوت" width={115} height={44} style={{ objectFit: "contain" }} />
-          </Link>
-          <button
-            onClick={handleLogout}
-            style={{
-              backgroundColor: "transparent",
-              border: "1.5px solid #dc2626",
-              color: "#dc2626",
-              padding: "0.3rem 0.85rem",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontSize: "0.8rem",
-              fontFamily: "inherit",
-              fontWeight: 600,
-            }}
-          >
-            تسجيل الخروج
-          </button>
-        </div>
-
-        {/* Row 2: Site navigation */}
-        <div style={{
-          borderTop: "1px solid #f1f5f9",
-          padding: "0 1rem",
-          display: "flex",
-          alignItems: "center",
-          gap: "0",
-          overflowX: "auto",
-          scrollbarWidth: "none",
-        }}>
-          {[
-            { href: "/",                   label: "الرئيسية" },
-            { href: "/daily-rentals",      label: "الإيجار اليومي" },
-            { href: "/projects",           label: "المشاريع" },
-            { href: "/dashboard/my-requests", label: "الطلبات" },
-            { href: "/dashboard/my-listings", label: "إعلاناتي" },
-          ].map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              style={{
-                textDecoration: "none",
-                color: "#475569",
-                fontSize: "0.82rem",
-                fontWeight: 600,
-                padding: "0.55rem 0.9rem",
-                whiteSpace: "nowrap",
-                borderBottom: "2px solid transparent",
-                display: "inline-block",
-                transition: "color 0.15s",
-              }}
-            >
-              {label}
-            </Link>
-          ))}
-        </div>
-      </div>
 
       {/* ══ Body ═════════════════════════════════════════════════════════════ */}
       <div style={{ maxWidth: 700, margin: "0 auto", padding: "1.5rem 1rem 3rem" }}>

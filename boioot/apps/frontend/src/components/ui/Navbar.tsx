@@ -79,9 +79,9 @@ export default function Navbar() {
                 <button
                   onClick={handleLogout}
                   className="btn btn-sm"
-                  style={{ padding: "0.4rem 0.85rem", cursor: "pointer", background: "#e53935", color: "#fff", border: "none", borderRadius: "6px" }}
+                  style={{ padding: "0.4rem 0.85rem", cursor: "pointer", background: "transparent", color: "#dc2626", border: "1.5px solid #dc2626", borderRadius: "6px" }}
                 >
-                  خروج
+                  تسجيل الخروج
                 </button>
               </>
             ) : (
