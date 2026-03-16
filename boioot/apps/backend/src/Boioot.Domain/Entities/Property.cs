@@ -26,6 +26,9 @@ public class Property : BaseEntity, ISoftDeletable
     public Guid CompanyId { get; set; }
     public Guid? AgentId { get; set; }
 
+    // Personal listing (User-posted) — null means it belongs to a company
+    public string? OwnerId { get; set; }
+
     public Company Company { get; set; } = null!;
     public Agent? Agent { get; set; }
     public ICollection<PropertyImage> Images { get; set; } = [];

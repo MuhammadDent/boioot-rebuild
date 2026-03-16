@@ -259,8 +259,8 @@ export default function HomePage() {
           </Link>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
             <Link href="/projects"    style={btnStyle("outline")}>المشاريع العقارية</Link>
-            <Link href="/properties"  style={btnStyle("green")}>أضف إعلانك</Link>
-            <Link href="/properties"  style={btnStyle("dark")}>أضف طلب</Link>
+            <Link href="/post-ad"      style={btnStyle("green")}>أضف إعلانك</Link>
+            <Link href="/dashboard/my-requests/new" style={btnStyle("dark")}>أضف طلب</Link>
           </div>
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
             {!isLoading && (isAuthenticated ? (

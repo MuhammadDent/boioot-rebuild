@@ -118,6 +118,16 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Requests ADD COLUMN UserId TEXT"); }
         catch { /* column already exists */ }
 
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN OwnerId TEXT"); }
+        catch { /* column already exists */ }
+
+        // Seed the personal listings sentinel company (fixed GUID)
+        var personalCompanyId = "00000000-0000-0000-0000-000000000001";
+        var now0 = DateTime.UtcNow.ToString("O");
+        await db.Database.ExecuteSqlRawAsync(
+            "INSERT OR IGNORE INTO Companies (Id, Name, IsVerified, IsDeleted, CreatedAt, UpdatedAt) VALUES ({0}, {1}, 0, 0, {2}, {3})",
+            personalCompanyId, "إعلانات شخصية", now0, now0);
+
         try
         {
             await db.Database.ExecuteSqlRawAsync(@"

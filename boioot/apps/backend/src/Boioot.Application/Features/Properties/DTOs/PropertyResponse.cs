@@ -22,6 +22,8 @@ public class PropertyResponse
     public Guid CompanyId { get; set; }
     public string CompanyName { get; set; } = string.Empty;
     public Guid? AgentId { get; set; }
+    public string? OwnerId { get; set; }
+    public bool IsPersonalListing { get; set; }
     public IReadOnlyList<PropertyImageResponse> Images { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

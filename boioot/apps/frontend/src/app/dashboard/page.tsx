@@ -198,6 +198,7 @@ export default function DashboardPage() {
             { href: "/daily-rentals",      label: "الإيجار اليومي" },
             { href: "/projects",           label: "المشاريع" },
             { href: "/dashboard/my-requests", label: "الطلبات" },
+            { href: "/dashboard/my-listings", label: "إعلاناتي" },
           ].map(({ href, label }) => (
             <Link
               key={href}
@@ -627,6 +628,17 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* ── My Listings (all roles) ────────────────────────────────────────── */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <SectionLabel>إعلاناتي</SectionLabel>
+          <NavCard
+            href="/dashboard/my-listings"
+            label="إعلاناتي"
+            description="الإعلانات العقارية التي نشرتها بشكل شخصي"
+            icon={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>}
+          />
+        </div>
 
         {/* ── My Requests (all roles) ────────────────────────────────────────── */}
         <div style={{ marginBottom: "1.25rem" }}>

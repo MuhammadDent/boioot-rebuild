@@ -244,6 +244,115 @@ public class PropertyService : IPropertyService
             page, pageSize, total);
     }
 
+    // ── Personal listings (User-posted) ─────────────────────────────────────
+
+    // Sentinel company for all personal listings — seeded in Program.cs
+    private static readonly Guid PersonalCompanyId = new Guid("00000000-0000-0000-0000-000000000001");
+
+    private static int GetMonthlyLimit(string userRole) => userRole switch
+    {
+        RoleNames.Admin => 999,
+        RoleNames.User  => 2,
+        _               => 5   // CompanyOwner, Agent — can always post more
+    };
+
+    public async Task<(int used, int limit)> GetMonthlyListingStatsAsync(
+        Guid userId, string userRole, CancellationToken ct = default)
+    {
+        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var ownerIdStr = userId.ToString();
+
+        var used = await _context.Properties
+            .CountAsync(p => p.OwnerId == ownerIdStr && p.CreatedAt >= startOfMonth && !p.IsDeleted, ct);
+
+        return (used, GetMonthlyLimit(userRole));
+    }
+
+    public async Task<PropertyResponse> CreateUserListingAsync(
+        Guid userId, string userRole, CreatePropertyRequest request, CancellationToken ct = default)
+    {
+        var (used, limit) = await GetMonthlyListingStatsAsync(userId, userRole, ct);
+
+        if (used >= limit)
+            throw new BoiootException(
+                $"لقد وصلت إلى الحد الأقصى من الإعلانات هذا الشهر ({limit} إعلانات). يرجى ترقية عضويتك لإضافة المزيد.",
+                429);
+
+        var property = new Property
+        {
+            Title       = request.Title.Trim(),
+            Description = request.Description?.Trim(),
+            Type        = request.Type!.Value,
+            ListingType = request.ListingType.Trim(),
+            Status      = PropertyStatus.Available,
+            Price       = request.Price,
+            Currency    = string.IsNullOrWhiteSpace(request.Currency) ? "SYP" : request.Currency.Trim().ToUpper(),
+            Area        = request.Area,
+            Bedrooms    = request.Bedrooms,
+            Bathrooms   = request.Bathrooms,
+            Province    = request.Province?.Trim(),
+            Neighborhood= request.Neighborhood?.Trim(),
+            Address     = request.Address?.Trim(),
+            City        = request.City.Trim(),
+            Latitude    = request.Latitude,
+            Longitude   = request.Longitude,
+            CompanyId   = PersonalCompanyId,
+            OwnerId     = userId.ToString()
+        };
+
+        _context.Properties.Add(property);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "User listing created: {PropertyId} | By: {UserId}",
+            property.Id, userId);
+
+        return await LoadAndMapAsync(property.Id, ct);
+    }
+
+    public async Task<PagedResult<PropertyResponse>> GetMyListingsAsync(
+        Guid userId, int page, int pageSize, CancellationToken ct = default)
+    {
+        page     = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var ownerIdStr = userId.ToString();
+
+        var query = _context.Properties
+            .Include(p => p.Company)
+            .Include(p => p.Images.Where(i => i.IsPrimary))
+            .Where(p => p.OwnerId == ownerIdStr && !p.IsDeleted);
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return new PagedResult<PropertyResponse>(
+            items.Select(MapToResponse).ToList(),
+            page, pageSize, total);
+    }
+
+    public async Task DeleteMyListingAsync(
+        Guid userId, Guid propertyId, CancellationToken ct = default)
+    {
+        var ownerIdStr = userId.ToString();
+
+        var property = await _context.Properties
+            .FirstOrDefaultAsync(p => p.Id == propertyId && p.OwnerId == ownerIdStr && !p.IsDeleted, ct)
+            ?? throw new BoiootException("الإعلان غير موجود أو لا تملك صلاحية حذفه", 404);
+
+        property.IsDeleted = true;
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "User listing deleted: {PropertyId} | By: {UserId}",
+            propertyId, userId);
+    }
+
     // ── Private helpers ─────────────────────────────────────────────────────
 
     private static IQueryable<Property> ApplyFilters(
@@ -393,6 +502,8 @@ public class PropertyService : IPropertyService
         CompanyId = p.CompanyId,
         CompanyName = p.Company?.Name ?? string.Empty,
         AgentId = p.AgentId,
+        OwnerId = p.OwnerId,
+        IsPersonalListing = p.OwnerId != null,
         Images = p.Images
             .OrderBy(i => i.Order)
             .Select(i => new PropertyImageResponse

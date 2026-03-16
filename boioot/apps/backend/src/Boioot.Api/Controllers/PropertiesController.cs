@@ -52,4 +52,40 @@ public class PropertiesController : BaseController
         await _propertyService.DeleteAsync(GetUserId(), GetUserRole(), id, ct);
         return NoContent();
     }
+
+    // ── Personal listing endpoints (any authenticated user) ──────────────────
+
+    [Authorize]
+    [HttpPost("post")]
+    public async Task<IActionResult> PostUserListing(
+        [FromBody] CreatePropertyRequest request, CancellationToken ct)
+    {
+        var result = await _propertyService.CreateUserListingAsync(GetUserId(), GetUserRole(), request, ct);
+        return StatusCode(201, result);
+    }
+
+    [Authorize]
+    [HttpGet("my-listings")]
+    public async Task<IActionResult> GetMyListings(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var result = await _propertyService.GetMyListingsAsync(GetUserId(), page, pageSize, ct);
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpDelete("my-listings/{id:guid}")]
+    public async Task<IActionResult> DeleteMyListing(Guid id, CancellationToken ct)
+    {
+        await _propertyService.DeleteMyListingAsync(GetUserId(), id, ct);
+        return NoContent();
+    }
+
+    [Authorize]
+    [HttpGet("my-listings/stats")]
+    public async Task<IActionResult> GetMyListingStats(CancellationToken ct)
+    {
+        var (used, limit) = await _propertyService.GetMonthlyListingStatsAsync(GetUserId(), GetUserRole(), ct);
+        return Ok(new { used, limit });
+    }
 }

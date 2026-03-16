@@ -42,6 +42,8 @@ interface PropertyFormProps {
   onSubmit: (data: CreatePropertyRequest | UpdatePropertyRequest) => Promise<void>;
   isSubmitting: boolean;
   serverError: string;
+  hideCompany?: boolean;
+  submitLabel?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -145,6 +147,8 @@ export default function PropertyForm({
   onSubmit,
   isSubmitting,
   serverError,
+  hideCompany = false,
+  submitLabel,
 }: PropertyFormProps) {
   const [fields, setFields] = useState<FormFields>(
     initialData ? fromInitial(initialData) : EMPTY_FIELDS
@@ -510,7 +514,7 @@ export default function PropertyForm({
       </Section>
 
       {/* ── Section: company (create only, optional) ── */}
-      {mode === "create" && (
+      {mode === "create" && !hideCompany && (
         <Section label="الشركة (اختياري)">
           <div className="form-group">
             <label className="form-label">معرف الشركة (Company ID)</label>
@@ -548,7 +552,9 @@ export default function PropertyForm({
         style={{ width: "100%", marginTop: "0.5rem", fontSize: "1rem", padding: "0.85rem" }}
       >
         {isSubmitting
-          ? "جارٍ الحفظ..."
+          ? "جارٍ النشر..."
+          : submitLabel
+          ? submitLabel
           : mode === "create"
           ? "إضافة العقار"
           : "حفظ التعديلات"}

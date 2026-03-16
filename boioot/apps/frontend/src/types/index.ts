@@ -98,6 +98,8 @@ export interface PropertyResponse {
   companyId: string;
   companyName: string;
   agentId?: string;
+  ownerId?: string;
+  isPersonalListing?: boolean;
   images: PropertyImageResponse[];
   createdAt: string;
   updatedAt: string;
