@@ -78,8 +78,8 @@ export default function Navbar() {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="btn btn-outline btn-sm"
-                  style={{ padding: "0.4rem 0.85rem", cursor: "pointer" }}
+                  className="btn btn-sm"
+                  style={{ padding: "0.4rem 0.85rem", cursor: "pointer", background: "#e53935", color: "#fff", border: "none", borderRadius: "6px" }}
                 >
                   خروج
                 </button>
