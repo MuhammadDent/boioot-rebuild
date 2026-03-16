@@ -75,12 +75,13 @@ public class PropertyService : IPropertyService
         {
             var user = await _context.Users
                 .AsNoTracking()
-                .Select(u => new { u.Id, u.FullName, u.Phone })
+                .Select(u => new { u.Id, u.FullName, u.Phone, u.ProfileImageUrl })
                 .FirstOrDefaultAsync(u => u.Id == ownerGuid, ct);
             if (user != null)
             {
                 response.OwnerName  = user.FullName;
                 response.OwnerPhone = user.Phone;
+                response.OwnerPhoto = user.ProfileImageUrl;
             }
         }
         else

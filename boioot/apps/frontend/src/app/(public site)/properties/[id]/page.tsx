@@ -316,13 +316,31 @@ export default function PropertyDetailPage() {
 
             {/* ── Advertiser card ── */}
             <div style={{ background: "var(--color-bg-card)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "1.25rem", marginBottom: "1rem" }}>
-              <h2 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.75rem" }}>المعلن</h2>
+              <h2 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.85rem" }}>المعلن</h2>
 
-              {property.ownerName && (
-                <p style={{ margin: "0 0 0.6rem", fontWeight: 600, fontSize: "1rem" }}>
-                  👤 {property.ownerName}
-                </p>
-              )}
+              {/* Photo + name row */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.85rem" }}>
+                {property.ownerPhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={property.ownerPhoto} alt={property.ownerName ?? "المعلن"}
+                    style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-border)", flexShrink: 0 }}
+                  />
+                ) : (
+                  <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>
+                    👤
+                  </div>
+                )}
+                <div>
+                  {property.ownerName && (
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: "0.95rem" }}>{property.ownerName}</p>
+                  )}
+                  {property.ownerPhone && (
+                    <p style={{ margin: "0.15rem 0 0", color: "var(--color-text-secondary)", fontSize: "0.85rem", direction: "ltr", textAlign: "right" }}>
+                      {property.ownerPhone}
+                    </p>
+                  )}
+                </div>
+              </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
 

@@ -120,6 +120,7 @@ export interface PropertyResponse {
   // Advertiser
   ownerName?: string;
   ownerPhone?: string;
+  ownerPhoto?: string;
   // Analytics
   viewCount?: number;
 }

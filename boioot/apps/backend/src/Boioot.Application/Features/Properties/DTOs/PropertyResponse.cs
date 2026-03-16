@@ -49,6 +49,7 @@ public class PropertyResponse
     // Advertiser info (filled only on public detail view)
     public string? OwnerName { get; set; }
     public string? OwnerPhone { get; set; }
+    public string? OwnerPhoto { get; set; }
 
     // Analytics
     public int ViewCount { get; set; }
