@@ -3,7 +3,7 @@ export const ADMIN_PAGE_SIZE = 20;
 export const ROLE_LABELS: Record<string, string> = {
   Admin:        "مدير النظام",
   CompanyOwner: "مالك شركة",
-  Agent:        "وسيط / مالك",
+  Agent:        "وسيط",
   User:         "مستخدم",
 };
 
