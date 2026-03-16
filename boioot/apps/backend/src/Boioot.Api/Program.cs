@@ -115,6 +115,19 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN ProfileImageUrl TEXT"); }
         catch { /* column already exists */ }
 
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS Favorites (
+                    Id TEXT NOT NULL PRIMARY KEY,
+                    UserId TEXT NOT NULL,
+                    PropertyId TEXT NOT NULL,
+                    CreatedAt TEXT NOT NULL DEFAULT '',
+                    UpdatedAt TEXT NOT NULL DEFAULT ''
+                )");
+        }
+        catch { /* table already exists */ }
+
         // Update existing cities with their correct provinces
         var cityProvinceMap = new Dictionary<string, string>
         {

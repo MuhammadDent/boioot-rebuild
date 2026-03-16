@@ -18,6 +18,7 @@ public class BoiootDbContext : DbContext
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<PropertyListingType> PropertyListingTypes => Set<PropertyListingType>();
     public DbSet<LocationCity> LocationCities => Set<LocationCity>();
     public DbSet<LocationNeighborhood> LocationNeighborhoods => Set<LocationNeighborhood>();

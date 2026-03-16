@@ -5,6 +5,7 @@ using Boioot.Application.Features.Projects.Interfaces;
 using Boioot.Application.Features.Properties.Interfaces;
 using Boioot.Application.Features.Dashboard.Interfaces;
 using Boioot.Application.Features.Messaging.Interfaces;
+using Boioot.Application.Features.Favorites.Interfaces;
 using Boioot.Application.Features.Requests.Interfaces;
 using Boioot.Infrastructure.Common;
 using Boioot.Infrastructure.Features.Admin;
@@ -13,6 +14,7 @@ using Boioot.Infrastructure.Features.Dashboard;
 using Boioot.Infrastructure.Features.Messaging;
 using Boioot.Infrastructure.Features.Projects;
 using Boioot.Infrastructure.Features.Properties;
+using Boioot.Infrastructure.Features.Favorites;
 using Boioot.Infrastructure.Features.Requests;
 using Boioot.Infrastructure.Persistence;
 using Boioot.Infrastructure.Persistence.Seeding;
@@ -38,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRequestService, RequestService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IMessagingService, MessagingService>();
+        services.AddScoped<IFavoriteService, FavoriteService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<DataSeeder>();
 

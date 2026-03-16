@@ -9,6 +9,23 @@ export interface UserProfileResponse {
   createdAt: string;
 }
 
+export interface FavoriteResponse {
+  favoriteId: string;
+  propertyId: string;
+  title: string;
+  price: number;
+  currency: string;
+  city: string;
+  province?: string;
+  neighborhood?: string;
+  listingType: string;
+  type: string;
+  thumbnailUrl?: string;
+  bedrooms?: number;
+  area: number;
+  addedAt: string;
+}
+
 export interface AuthResponse {
   token: string;
   tokenType: string;

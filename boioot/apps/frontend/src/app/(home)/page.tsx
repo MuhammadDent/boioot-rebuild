@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import PropertyCard from "@/components/properties/PropertyCard";
 import { propertiesApi } from "@/features/properties/api";
+import { favoritesApi } from "@/features/favorites/api";
 import { api } from "@/lib/api";
 import type { PropertyResponse } from "@/types";
 import { SYRIAN_CITIES, PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
@@ -134,6 +135,9 @@ export default function HomePage() {
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
 
+  // Favorites
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
   // ── Auto-advance slider ─────────────────────────────────────────────────────
 
   const startTimer = useCallback(() => {
@@ -159,6 +163,15 @@ export default function HomePage() {
       .then((res) => setNeighborhoods(res.map((n) => n.name)))
       .catch(() => setNeighborhoods([]));
   }, [draft.city]);
+
+  // ── Load favorite IDs when authenticated ────────────────────────────────────
+
+  useEffect(() => {
+    if (!isAuthenticated) { setFavoriteIds(new Set()); return; }
+    favoritesApi.ids()
+      .then(ids => setFavoriteIds(new Set(ids)))
+      .catch(() => setFavoriteIds(new Set()));
+  }, [isAuthenticated]);
 
   // ── Load properties when tab or applied filters change ──────────────────────
 
@@ -398,7 +411,13 @@ export default function HomePage() {
           {!loading && displayed.length > 0 && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem", marginBottom: "1.25rem" }}>
-                {displayed.map((p) => <PropertyCard key={p.id} property={p} />)}
+                {displayed.map((p) => (
+                  <PropertyCard
+                    key={p.id}
+                    property={p}
+                    initialIsFavorited={favoriteIds.has(p.id)}
+                  />
+                ))}
               </div>
               {hasNext && (
                 <div style={{ textAlign: "center" }}>

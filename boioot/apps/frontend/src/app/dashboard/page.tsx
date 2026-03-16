@@ -8,9 +8,11 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { dashboardSummaryApi } from "@/features/dashboard/summary/api";
 import { authApi } from "@/features/auth/api";
+import { favoritesApi } from "@/features/favorites/api";
 import { ROLE_LABELS } from "@/features/admin/constants";
 import { normalizeError } from "@/lib/api";
-import type { DashboardSummary } from "@/types";
+import { formatPrice, LISTING_TYPE_LABELS, PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
+import type { DashboardSummary, FavoriteResponse } from "@/types";
 
 const SUMMARY_ROLES = ["Admin", "CompanyOwner", "Agent"] as const;
 type SummaryRole = (typeof SUMMARY_ROLES)[number];
@@ -25,6 +27,9 @@ export default function DashboardPage() {
 
   const [summary, setSummary]           = useState<DashboardSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
+
+  const [favorites, setFavorites]       = useState<FavoriteResponse[]>([]);
+  const [favLoading, setFavLoading]     = useState(true);
 
   const [editOpen, setEditOpen]         = useState(false);
   const [editName, setEditName]         = useState("");
@@ -54,6 +59,15 @@ export default function DashboardPage() {
     if (canSeeSummary(user.role)) loadSummary();
     else setSummaryLoading(false);
   }, [user, loadSummary]);
+
+  useEffect(() => {
+    if (!user) return;
+    setFavLoading(true);
+    favoritesApi.list()
+      .then(setFavorites)
+      .catch(() => setFavorites([]))
+      .finally(() => setFavLoading(false));
+  }, [user]);
 
   useEffect(() => {
     if (user && editOpen) {
@@ -613,6 +627,110 @@ export default function DashboardPage() {
             description="تواصل مع المستخدمين الآخرين مباشرةً"
             icon={<path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>}
           />
+        </div>
+
+        {/* ── Favorites (all roles) ──────────────────────────────────────────── */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.6rem" }}>
+            <SectionLabel>المفضلة</SectionLabel>
+            {favorites.length > 0 && (
+              <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 600 }}>
+                {favorites.length} عقار
+              </span>
+            )}
+          </div>
+
+          {favLoading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              {[0, 1].map(i => (
+                <div key={i} style={{
+                  height: 80, borderRadius: 12,
+                  background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",
+                  backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite",
+                }} />
+              ))}
+            </div>
+          ) : favorites.length === 0 ? (
+            <div style={{
+              backgroundColor: "#fff", borderRadius: 12, padding: "1.5rem",
+              textAlign: "center", color: "#94a3b8",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+            }}>
+              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🤍</div>
+              <p style={{ margin: 0, fontSize: "0.85rem" }}>لا توجد عقارات في المفضلة بعد</p>
+              <Link href="/" style={{ fontSize: "0.82rem", color: "var(--color-primary)", textDecoration: "none", fontWeight: 600, display: "inline-block", marginTop: "0.6rem" }}>
+                تصفح العقارات
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              {favorites.map(fav => (
+                <div key={fav.favoriteId} style={{
+                  backgroundColor: "#fff",
+                  borderRadius: 12,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                  overflow: "hidden",
+                  display: "flex",
+                  gap: "0",
+                }}>
+                  {/* Thumbnail */}
+                  <Link href={`/properties/${fav.propertyId}`} style={{
+                    width: 90, minHeight: 80, flexShrink: 0,
+                    backgroundColor: "#f1f5f9", display: "block", textDecoration: "none",
+                  }}>
+                    {fav.thumbnailUrl ? (
+                      <img src={fav.thumbnailUrl} alt={fav.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>🏠</div>
+                    )}
+                  </Link>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, padding: "0.7rem 0.85rem", minWidth: 0 }}>
+                    <Link href={`/properties/${fav.propertyId}`} style={{ textDecoration: "none", color: "#1e293b" }}>
+                      <p style={{ margin: "0 0 0.25rem", fontWeight: 700, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {fav.title}
+                      </p>
+                    </Link>
+                    <p style={{ margin: "0 0 0.35rem", fontSize: "0.82rem", color: "var(--color-primary)", fontWeight: 700 }}>
+                      {formatPrice(fav.price)} {fav.currency === "USD" ? "$" : ""}
+                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "0.75rem", color: "#64748b" }}>📍 {fav.city}</span>
+                      {fav.listingType && (
+                        <span className="badge badge-green" style={{ fontSize: "0.7rem", padding: "0.1rem 0.5rem" }}>
+                          {LISTING_TYPE_LABELS[fav.listingType] ?? fav.listingType}
+                        </span>
+                      )}
+                      {fav.area > 0 && (
+                        <span className="badge badge-blue" style={{ fontSize: "0.7rem", padding: "0.1rem 0.5rem" }}>
+                          {fav.area} م²
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Remove button */}
+                  <button
+                    onClick={async () => {
+                      await favoritesApi.toggle(fav.propertyId);
+                      setFavorites(prev => prev.filter(f => f.favoriteId !== fav.favoriteId));
+                    }}
+                    title="إزالة من المفضلة"
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      padding: "0.75rem 0.85rem", color: "#ef4444",
+                      display: "flex", alignItems: "center", flexShrink: 0,
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
