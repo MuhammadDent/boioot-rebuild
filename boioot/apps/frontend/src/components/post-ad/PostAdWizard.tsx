@@ -180,16 +180,16 @@ function validateStep(step: number, data: WizardData): string | null {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface PostAdWizardProps {
-  listingTypes: ListingTypeConfig[];
-  propertyTypes: PropertyTypeConfig[];
-  ownershipTypes: OwnershipTypeConfig[];
+  listingTypes?: ListingTypeConfig[];
+  propertyTypes?: PropertyTypeConfig[];
+  ownershipTypes?: OwnershipTypeConfig[];
   onSubmit: (data: WizardData) => Promise<void>;
   isSubmitting: boolean;
   serverError: string;
 }
 
 export default function PostAdWizard({
-  listingTypes, propertyTypes, ownershipTypes, onSubmit, isSubmitting, serverError,
+  listingTypes = [], propertyTypes = [], ownershipTypes = [], onSubmit, isSubmitting, serverError,
 }: PostAdWizardProps) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(EMPTY);
