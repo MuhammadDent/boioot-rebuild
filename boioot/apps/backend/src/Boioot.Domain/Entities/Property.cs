@@ -46,6 +46,9 @@ public class Property : BaseEntity, ISoftDeletable
     // Personal listing (User-posted) — null means it belongs to a company
     public string? OwnerId { get; set; }
 
+    // Analytics
+    public int ViewCount { get; set; } = 0;
+
     public Company Company { get; set; } = null!;
     public Agent? Agent { get; set; }
     public ICollection<PropertyImage> Images { get; set; } = [];

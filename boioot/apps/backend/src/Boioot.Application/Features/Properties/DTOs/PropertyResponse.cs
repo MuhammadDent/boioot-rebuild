@@ -45,4 +45,11 @@ public class PropertyResponse
     public IReadOnlyList<PropertyImageResponse> Images { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    // Advertiser info (filled only on public detail view)
+    public string? OwnerName { get; set; }
+    public string? OwnerPhone { get; set; }
+
+    // Analytics
+    public int ViewCount { get; set; }
 }

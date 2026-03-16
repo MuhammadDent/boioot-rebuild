@@ -117,6 +117,11 @@ export interface PropertyResponse {
   images: PropertyImageResponse[];
   createdAt: string;
   updatedAt: string;
+  // Advertiser
+  ownerName?: string;
+  ownerPhone?: string;
+  // Analytics
+  viewCount?: number;
 }
 
 export interface ListingTypeConfig {

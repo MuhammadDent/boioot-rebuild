@@ -62,7 +62,34 @@ public class PropertyService : IPropertyService
             .FirstOrDefaultAsync(p => p.Id == id && p.Status != PropertyStatus.Inactive, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
 
-        return MapToResponse(property);
+        // Increment view counter
+        await _context.Database.ExecuteSqlRawAsync(
+            $"UPDATE Properties SET ViewCount = COALESCE(ViewCount, 0) + 1 WHERE Id = '{id}'", ct);
+        property.ViewCount++;
+
+        var response = MapToResponse(property);
+
+        // Attach advertiser info
+        if (!string.IsNullOrEmpty(property.OwnerId) &&
+            Guid.TryParse(property.OwnerId, out var ownerGuid))
+        {
+            var user = await _context.Users
+                .AsNoTracking()
+                .Select(u => new { u.Id, u.FullName, u.Phone })
+                .FirstOrDefaultAsync(u => u.Id == ownerGuid, ct);
+            if (user != null)
+            {
+                response.OwnerName  = user.FullName;
+                response.OwnerPhone = user.Phone;
+            }
+        }
+        else
+        {
+            response.OwnerName  = property.Company?.Name;
+            response.OwnerPhone = property.Company?.Phone;
+        }
+
+        return response;
     }
 
     public async Task<PropertyResponse> GetByIdDashboardAsync(
@@ -564,6 +591,7 @@ public class PropertyService : IPropertyService
                 Order = i.Order
             })
             .ToList(),
+        ViewCount = p.ViewCount,
         CreatedAt = p.CreatedAt,
         UpdatedAt = p.UpdatedAt
     };

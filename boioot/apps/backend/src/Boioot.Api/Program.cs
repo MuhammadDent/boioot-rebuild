@@ -144,6 +144,8 @@ using (var scope = app.Services.CreateScope())
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN VideoUrl TEXT"); }
         catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN ViewCount INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
 
         // Seed the personal listings sentinel company (fixed GUID)
         var personalCompanyId = "00000000-0000-0000-0000-000000000001";
