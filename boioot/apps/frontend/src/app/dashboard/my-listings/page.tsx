@@ -30,7 +30,7 @@ function formatPrice(price: number, currency: string) {
 }
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString("ar-SY", { year: "numeric", month: "long", day: "numeric" });
+  return new Date(d).toLocaleDateString("en-GB", { year: "numeric", month: "numeric", day: "numeric" });
 }
 
 export default function MyListingsPage() {

@@ -313,7 +313,7 @@ export default function MyRequestsPage() {
                     </span>
                   )}
                   <span style={{ fontSize: "0.74rem", color: "#94a3b8", marginRight: "auto" }}>
-                    {new Date(req.createdAt).toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" })}
+                    {new Date(req.createdAt).toLocaleDateString("en-GB", { year: "numeric", month: "numeric", day: "numeric" })}
                   </span>
                   <button
                     onClick={() => handleDelete(req.id)}

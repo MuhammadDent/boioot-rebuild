@@ -346,7 +346,7 @@ function RequestsContent() {
                       {PROPERTY_TYPE_LABELS[req.propertyType] ?? req.propertyType}
                     </span>
                     <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                      {new Date(req.createdAt).toLocaleDateString("ar-SY", { month: "short", day: "numeric" })}
+                      {new Date(req.createdAt).toLocaleDateString("en-GB", { month: "numeric", day: "numeric" })}
                     </span>
                   </div>
 

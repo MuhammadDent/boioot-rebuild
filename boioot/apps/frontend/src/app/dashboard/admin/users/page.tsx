@@ -256,8 +256,8 @@ function UserRow({
             </p>
           )}
           <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-            انضم في: {new Date(u.createdAt).toLocaleDateString("ar-SY", {
-              year: "numeric", month: "short", day: "numeric",
+            انضم في: {new Date(u.createdAt).toLocaleDateString("en-GB", {
+              year: "numeric", month: "numeric", day: "numeric",
             })}
           </p>
         </div>

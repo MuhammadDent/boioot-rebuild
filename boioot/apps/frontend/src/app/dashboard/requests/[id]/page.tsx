@@ -129,8 +129,8 @@ export default function RequestDetailPage() {
               {REQUEST_STATUS_LABELS[request.status] ?? request.status}
             </span>
             <span style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-              {new Date(request.createdAt).toLocaleDateString("ar-SY", {
-                year: "numeric", month: "long", day: "numeric",
+              {new Date(request.createdAt).toLocaleDateString("en-GB", {
+                year: "numeric", month: "numeric", day: "numeric",
                 hour: "2-digit", minute: "2-digit",
               })}
             </span>
@@ -242,8 +242,8 @@ export default function RequestDetailPage() {
             margin: "1rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)",
           }}>
             آخر تحديث:{" "}
-            {new Date(request.updatedAt).toLocaleDateString("ar-SY", {
-              year: "numeric", month: "short", day: "numeric",
+            {new Date(request.updatedAt).toLocaleDateString("en-GB", {
+              year: "numeric", month: "numeric", day: "numeric",
               hour: "2-digit", minute: "2-digit",
             })}
           </p>

@@ -90,8 +90,8 @@ function CommentCard({
             {comment.userName}
           </span>
           <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-            {new Date(comment.createdAt).toLocaleDateString("ar-SY", {
-              year: "numeric", month: "short", day: "numeric",
+            {new Date(comment.createdAt).toLocaleDateString("en-GB", {
+              year: "numeric", month: "numeric", day: "numeric",
               hour: "2-digit", minute: "2-digit",
             })}
           </span>
@@ -262,8 +262,8 @@ export default function RequestDetailPage() {
               {PROPERTY_TYPE_LABELS[request.propertyType] ?? request.propertyType}
             </span>
             <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
-              {new Date(request.createdAt).toLocaleDateString("ar-SY", {
-                year: "numeric", month: "long", day: "numeric",
+              {new Date(request.createdAt).toLocaleDateString("en-GB", {
+                year: "numeric", month: "numeric", day: "numeric",
               })}
             </span>
           </div>

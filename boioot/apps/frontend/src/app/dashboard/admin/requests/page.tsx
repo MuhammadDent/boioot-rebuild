@@ -194,8 +194,8 @@ function RequestRow({ request: r }: { request: RequestResponse }) {
             </>
           )}
           <span>·</span>
-          <span>{new Date(r.createdAt).toLocaleDateString("ar-SY", {
-            year: "numeric", month: "short", day: "numeric",
+          <span>{new Date(r.createdAt).toLocaleDateString("en-GB", {
+            year: "numeric", month: "numeric", day: "numeric",
           })}</span>
         </div>
       </div>

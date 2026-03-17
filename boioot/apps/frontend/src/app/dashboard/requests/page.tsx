@@ -176,8 +176,8 @@ function RequestRow({ request: r }: { request: DashboardRequestItem }) {
           )}
 
           <p style={{ margin: "0.35rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-            {new Date(r.createdAt).toLocaleDateString("ar-SY", {
-              year: "numeric", month: "short", day: "numeric",
+            {new Date(r.createdAt).toLocaleDateString("en-GB", {
+              year: "numeric", month: "numeric", day: "numeric",
             })}
           </p>
         </div>

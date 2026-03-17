@@ -208,8 +208,8 @@ function ProjectRow({ project: p }: { project: ProjectResponse }) {
           <span>·</span>
           <span>الشركة: {p.companyName}</span>
           <span>·</span>
-          <span>{new Date(p.createdAt).toLocaleDateString("ar-SY", {
-            year: "numeric", month: "short", day: "numeric",
+          <span>{new Date(p.createdAt).toLocaleDateString("en-GB", {
+            year: "numeric", month: "numeric", day: "numeric",
           })}</span>
         </div>
       </div>

@@ -36,5 +36,5 @@ export function formatDeliveryDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "غير محدد";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "غير محدد";
-  return d.toLocaleDateString("ar-SY", { year: "numeric", month: "long" });
+  return d.toLocaleDateString("en-GB", { year: "numeric", month: "numeric" });
 }

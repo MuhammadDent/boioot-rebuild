@@ -324,9 +324,9 @@ function ProjectRow({
             }}
           >
             {formatStartingPrice(p.startingPrice)} &bull; {p.city} &bull;{" "}
-            {new Date(p.createdAt).toLocaleDateString("ar-SY", {
+            {new Date(p.createdAt).toLocaleDateString("en-GB", {
               year: "numeric",
-              month: "short",
+              month: "numeric",
               day: "numeric",
             })}
           </p>

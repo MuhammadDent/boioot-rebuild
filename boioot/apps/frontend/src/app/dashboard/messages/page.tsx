@@ -235,12 +235,12 @@ function ConversationRow({ conversation: c }: { conversation: ConversationSummar
   const subjectTag = c.propertyTitle ? "عقار" : c.projectTitle ? "مشروع" : null;
 
   const timeLabel = c.lastMessageAt
-    ? new Date(c.lastMessageAt).toLocaleString("ar-SY", {
-        month: "short", day: "numeric",
+    ? new Date(c.lastMessageAt).toLocaleString("en-GB", {
+        month: "numeric", day: "numeric",
         hour: "2-digit", minute: "2-digit",
       })
-    : new Date(c.createdAt).toLocaleDateString("ar-SY", {
-        month: "short", day: "numeric",
+    : new Date(c.createdAt).toLocaleDateString("en-GB", {
+        month: "numeric", day: "numeric",
       });
 
   return (

@@ -24,8 +24,8 @@ function shortRef(id: string) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ar-SY", {
-    year: "numeric", month: "long", day: "numeric",
+  return new Date(iso).toLocaleDateString("en-GB", {
+    year: "numeric", month: "numeric", day: "numeric",
   });
 }
 

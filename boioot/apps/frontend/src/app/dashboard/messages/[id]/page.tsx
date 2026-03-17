@@ -478,7 +478,7 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
 function MessageBubble({ msg }: { msg: MessageItem }) {
   const [lightbox, setLightbox] = useState(false);
 
-  const timeLabel = new Date(msg.createdAt).toLocaleTimeString("ar-SY", {
+  const timeLabel = new Date(msg.createdAt).toLocaleTimeString("en-GB", {
     hour: "2-digit", minute: "2-digit",
   });
 
