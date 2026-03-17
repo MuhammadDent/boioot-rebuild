@@ -7,6 +7,7 @@ public class ProjectResponse
     public string? Description { get; set; }
     public string Status { get; set; } = string.Empty;
     public string City { get; set; } = string.Empty;
+    public string? Province { get; set; }
     public string? Address { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }

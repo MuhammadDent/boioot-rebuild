@@ -56,6 +56,7 @@ export interface ProjectResponse {
   description?: string;
   /** Serialized enum name: Upcoming | UnderConstruction | Completed */
   status: string;
+  province?: string;
   city: string;
   address?: string;
   latitude?: number;
@@ -184,6 +185,7 @@ export interface DashboardProjectItem {
 export interface CreateProjectRequest {
   title: string;
   description?: string;
+  province?: string;
   city: string;
   address?: string;
   startingPrice?: number;
@@ -198,6 +200,7 @@ export interface CreateProjectRequest {
 export interface UpdateProjectRequest {
   title: string;
   description?: string;
+  province?: string;
   city: string;
   address?: string;
   startingPrice?: number;

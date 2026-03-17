@@ -147,6 +147,8 @@ using (var scope = app.Services.CreateScope())
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN ViewCount INTEGER NOT NULL DEFAULT 0"); }
         catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Projects ADD COLUMN Province TEXT"); }
+        catch { /* column already exists */ }
 
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Messages ADD COLUMN AttachmentData TEXT"); }
         catch { /* column already exists */ }

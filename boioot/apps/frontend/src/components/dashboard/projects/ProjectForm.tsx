@@ -7,7 +7,7 @@ import type {
   UpdateProjectRequest,
 } from "@/types";
 import { PROJECT_STATUS_LABELS } from "@/features/projects/constants";
-import { CitySelect } from "@/components/dashboard/LocationSelect";
+import { ProvinceSelect, CitySelect } from "@/components/dashboard/LocationSelect";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +15,7 @@ interface FormFields {
   title: string;
   description: string;
   status: string;
+  province: string;
   city: string;
   address: string;
   startingPrice: string;
@@ -42,6 +43,7 @@ const EMPTY_FIELDS: FormFields = {
   title: "",
   description: "",
   status: "Upcoming",
+  province: "",
   city: "",
   address: "",
   startingPrice: "",
@@ -55,6 +57,7 @@ function fromInitial(data: ProjectResponse): FormFields {
     title: data.title,
     description: data.description ?? "",
     status: data.status,
+    province: data.province ?? "",
     city: data.city,
     address: data.address ?? "",
     startingPrice: data.startingPrice != null ? String(data.startingPrice) : "",
@@ -146,6 +149,7 @@ export default function ProjectForm({
       title: fields.title.trim(),
       description: fields.description.trim() || undefined,
       status: fields.status,
+      province: fields.province.trim() || undefined,
       city: fields.city,
       address: fields.address.trim() || undefined,
       startingPrice:
@@ -222,10 +226,20 @@ export default function ProjectForm({
             {errors.status && <p className="form-error">{errors.status}</p>}
           </div>
 
+          <ProvinceSelect
+            label="المحافظة"
+            value={fields.province}
+            onChange={(val) => setFields((p) => ({ ...p, province: val, city: "" }))}
+            disabled={disabled}
+          />
+        </Row>
+
+        <Row>
           <CitySelect
             label="المدينة *"
             value={fields.city}
             onChange={(val) => setFields((p) => ({ ...p, city: val }))}
+            province={fields.province}
             required
             error={errors.city}
             disabled={disabled}

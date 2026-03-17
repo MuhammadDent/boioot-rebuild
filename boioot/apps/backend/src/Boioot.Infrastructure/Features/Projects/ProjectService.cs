@@ -97,6 +97,7 @@ public class ProjectService : IProjectService
             Description = request.Description?.Trim(),
             Status = request.Status,
             City = request.City.Trim(),
+            Province = request.Province?.Trim(),
             Address = request.Address?.Trim(),
             Latitude = request.Latitude,
             Longitude = request.Longitude,
@@ -129,6 +130,7 @@ public class ProjectService : IProjectService
         project.Description = request.Description?.Trim();
         project.Status = request.Status!.Value;
         project.City = request.City.Trim();
+        project.Province = request.Province?.Trim();
         project.Address = request.Address?.Trim();
         project.Latitude = request.Latitude;
         project.Longitude = request.Longitude;
@@ -280,6 +282,7 @@ public class ProjectService : IProjectService
         Description = p.Description,
         Status = p.Status.ToString(),
         City = p.City,
+        Province = p.Province,
         Address = p.Address,
         Latitude = p.Latitude,
         Longitude = p.Longitude,

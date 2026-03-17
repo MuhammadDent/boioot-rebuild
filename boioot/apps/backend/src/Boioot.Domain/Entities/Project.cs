@@ -9,6 +9,7 @@ public class Project : BaseEntity, ISoftDeletable
     public string? Description { get; set; }
     public ProjectStatus Status { get; set; } = ProjectStatus.Upcoming;
     public string City { get; set; } = string.Empty;
+    public string? Province { get; set; }
     public string? Address { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
