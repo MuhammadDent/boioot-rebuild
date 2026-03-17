@@ -123,9 +123,13 @@ public class PlanEntitlementService : IPlanEntitlementService
         if (limit == -1) return true;   // unlimited
         if (limit == 0)  return false;  // no access
 
-        // Fix 2: IsDeleted == false (explicit) instead of !IsDeleted
+        // Quota rule: count listings that still occupy a slot (Available + Inactive).
+        // Sold and Rented are completed transactions and release their slot.
         var activeCount = await _db.Properties
-            .Where(p => p.AccountId == accountId && p.IsDeleted == false)
+            .Where(p => p.AccountId == accountId
+                     && p.IsDeleted == false
+                     && (p.Status == PropertyStatus.Available ||
+                         p.Status == PropertyStatus.Inactive))
             .CountAsync(ct);
 
         return activeCount < (int)limit;
