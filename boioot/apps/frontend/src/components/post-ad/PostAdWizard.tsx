@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, type ChangeEvent } from "react";
+import { apiConfig } from "@/lib/api-config";
+import { tokenStorage } from "@/lib/token";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import { FEATURES_LIST } from "@/features/properties/constants";
 import type { ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
@@ -173,7 +175,11 @@ export default function PostAdWizard({
   const [data, setData] = useState<WizardData>(EMPTY);
   const [stepError, setStepError] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [videoMode, setVideoMode] = useState<"url" | "file">("url");
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoFileRef = useRef<HTMLInputElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   function set<K extends keyof WizardData>(key: K, value: WizardData[K]) {
@@ -222,6 +228,45 @@ export default function PostAdWizard({
 
   function removeImage(idx: number) {
     setData((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }));
+  }
+
+  async function handleVideoFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) {
+      setVideoError("حجم الفيديو يتجاوز 50MB");
+      return;
+    }
+    setVideoError(null);
+    setVideoLoading(true);
+    try {
+      const token = tokenStorage.getToken();
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${apiConfig.baseUrl}/upload/video`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token ?? ""}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setVideoError((body as { error?: string }).error ?? "فشل رفع الفيديو");
+        return;
+      }
+      const { url } = await res.json() as { url: string };
+      set("videoUrl", url);
+    } catch {
+      setVideoError("حدث خطأ أثناء رفع الفيديو");
+    } finally {
+      setVideoLoading(false);
+      if (videoFileRef.current) videoFileRef.current.value = "";
+    }
+  }
+
+  function removeVideo() {
+    set("videoUrl", "");
+    setVideoError(null);
+    if (videoFileRef.current) videoFileRef.current.value = "";
   }
 
   async function handleSubmit() {
@@ -665,15 +710,82 @@ export default function PostAdWizard({
             )}
           </div>
 
-          {/* Video URL */}
-          <Field label="رابط الفيديو (اختياري)">
-            <input className="form-input" type="url" dir="ltr" disabled={disabled}
-              value={data.videoUrl} onChange={(e) => set("videoUrl", e.target.value)}
-              placeholder="https://youtube.com/... أو رابط مباشر للفيديو" />
-            <p style={{ fontSize: "0.78rem", color: "#64748b", margin: "0.3rem 0 0" }}>
-              أدخل رابط فيديو من يوتيوب أو أي منصة أخرى لعرضه مع الإعلان
-            </p>
-          </Field>
+          {/* Video section */}
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label className="form-label" style={{ marginBottom: "0.5rem", display: "block" }}>
+              فيديو العقار <span style={{ color: "#94a3b8", fontWeight: 400 }}>(اختياري)</span>
+            </label>
+
+            {/* Mode toggle */}
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.85rem" }}>
+              {(["url", "file"] as const).map((m) => (
+                <button key={m} type="button"
+                  onClick={() => { setVideoMode(m); removeVideo(); }}
+                  style={{
+                    padding: "0.4rem 0.9rem", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600,
+                    border: `1.5px solid ${videoMode === m ? "#16a34a" : "#e2e8f0"}`,
+                    background: videoMode === m ? "#f0fdf4" : "#f8fafc",
+                    color: videoMode === m ? "#16a34a" : "#64748b",
+                    cursor: "pointer",
+                  }}
+                >
+                  {m === "url" ? "🔗 إدخال رابط" : "📁 رفع من الجهاز"}
+                </button>
+              ))}
+            </div>
+
+            {videoMode === "url" ? (
+              <>
+                <input className="form-input" type="url" dir="ltr" disabled={disabled}
+                  value={data.videoUrl} onChange={(e) => set("videoUrl", e.target.value)}
+                  placeholder="https://youtube.com/... أو رابط مباشر للفيديو" />
+                <p style={{ fontSize: "0.78rem", color: "#64748b", margin: "0.3rem 0 0" }}>
+                  أدخل رابط فيديو من يوتيوب أو أي منصة أخرى
+                </p>
+              </>
+            ) : (
+              <>
+                {/* Uploaded video preview */}
+                {data.videoUrl && data.videoUrl.includes("/videos/") ? (
+                  <div style={{ position: "relative", marginBottom: "0.5rem" }}>
+                    <video
+                      src={data.videoUrl}
+                      controls
+                      style={{ width: "100%", borderRadius: 10, maxHeight: 240, background: "#000" }}
+                    />
+                    <button type="button" onClick={removeVideo}
+                      style={{
+                        position: "absolute", top: 6, left: 6,
+                        background: "rgba(0,0,0,0.6)", color: "#fff",
+                        border: "none", borderRadius: "50%", width: 28, height: 28,
+                        cursor: "pointer", fontSize: "0.8rem", lineHeight: 1,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>✕</button>
+                  </div>
+                ) : (
+                  <label style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    border: "2px dashed #d1d5db", borderRadius: 12, padding: "1.5rem",
+                    cursor: disabled || videoLoading ? "default" : "pointer",
+                    background: "#f9fafb", color: "#6b7280", gap: "0.4rem",
+                  }}>
+                    <span style={{ fontSize: "1.8rem" }}>{videoLoading ? "⏳" : "🎬"}</span>
+                    <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>
+                      {videoLoading ? "جاري الرفع..." : "اضغط لاختيار فيديو"}
+                    </span>
+                    <span style={{ fontSize: "0.78rem" }}>MP4، WebM، MOV — حتى 50MB</span>
+                    <input ref={videoFileRef} type="file"
+                      accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo"
+                      hidden disabled={disabled || videoLoading}
+                      onChange={handleVideoFile} />
+                  </label>
+                )}
+                {videoError && (
+                  <p style={{ fontSize: "0.8rem", color: "#dc2626", margin: "0.35rem 0 0" }}>{videoError}</p>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
 

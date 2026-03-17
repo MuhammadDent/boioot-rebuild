@@ -1,11 +1,19 @@
 {
   "Version": 1,
-  "Hash": "kG0gEzDzCeIvspxhAJTuwxbnLyKZiVYIhyca6DiZ3uk=",
+  "Hash": "KFGzTgtMb6Qf9q4aeU2xn7HOUnV0VHgjA43fskVwQKc=",
   "Source": "Boioot.Api",
   "BasePath": "_content/Boioot.Api",
   "Mode": "Default",
   "ManifestType": "Build",
   "ReferencedProjectsConfiguration": [],
-  "DiscoveryPatterns": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "Boioot.Api/wwwroot",
+      "Source": "Boioot.Api",
+      "ContentRoot": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/",
+      "BasePath": "_content/Boioot.Api",
+      "Pattern": "**"
+    }
+  ],
   "Assets": []
 }
