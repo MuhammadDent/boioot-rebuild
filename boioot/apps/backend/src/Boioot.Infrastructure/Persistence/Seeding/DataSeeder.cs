@@ -25,6 +25,7 @@ public class DataSeeder
     public async Task SeedAsync()
     {
         await SeedAdminUserAsync();
+        await SeedSyrianCitiesAsync();
     }
 
     private async Task SeedAdminUserAsync()
@@ -64,5 +65,52 @@ public class DataSeeder
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Admin user seeded: {Email}", emailLower);
+    }
+
+    private async Task SeedSyrianCitiesAsync()
+    {
+        var defaults = new[]
+        {
+            ("دمشق",       "دمشق"),
+            ("حلب",        "حلب"),
+            ("حمص",        "حمص"),
+            ("حماة",       "حماة"),
+            ("اللاذقية",   "اللاذقية"),
+            ("طرطوس",      "طرطوس"),
+            ("دير الزور",  "دير الزور"),
+            ("الرقة",      "الرقة"),
+            ("درعا",       "درعا"),
+            ("السويداء",   "السويداء"),
+            ("القنيطرة",   "القنيطرة"),
+            ("إدلب",       "إدلب"),
+            ("الحسكة",     "الحسكة"),
+            ("ريف دمشق",   "ريف دمشق"),
+        };
+
+        var existing = await _context.LocationCities
+            .Select(c => c.Name)
+            .ToListAsync();
+
+        var existingSet = new HashSet<string>(existing);
+        int added = 0;
+
+        foreach (var (name, province) in defaults)
+        {
+            if (!existingSet.Contains(name))
+            {
+                _context.LocationCities.Add(new LocationCity { Name = name, Province = province });
+                added++;
+            }
+        }
+
+        if (added > 0)
+        {
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Syrian cities seeded: {Count} new cities added", added);
+        }
+        else
+        {
+            _logger.LogDebug("All default Syrian cities already exist — skipping city seed");
+        }
     }
 }

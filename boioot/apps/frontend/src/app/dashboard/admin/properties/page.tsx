@@ -14,9 +14,9 @@ import {
   PROPERTY_STATUS_LABELS,
   PROPERTY_TYPE_LABELS,
   LISTING_TYPE_LABELS,
-  SYRIAN_CITIES,
   formatPrice,
 } from "@/features/properties/constants";
+import { useCities } from "@/hooks/useCities";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
 import type { PropertyResponse } from "@/types";
@@ -27,6 +27,7 @@ const PROPERTY_STATUSES = ["Available", "Inactive", "Sold", "Rented"] as const;
 
 export default function AdminPropertiesPage() {
   const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { cities } = useCities();
 
   const [properties, setProperties] = useState<PropertyResponse[]>([]);
   const [page, setPage]             = useState(1);
@@ -123,7 +124,7 @@ export default function AdminPropertiesPage() {
               onChange={e => setPendingCity(e.target.value)}
             >
               <option value="">كل المدن</option>
-              {SYRIAN_CITIES.map(c => (
+              {cities.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>

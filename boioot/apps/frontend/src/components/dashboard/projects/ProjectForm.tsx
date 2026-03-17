@@ -6,10 +6,8 @@ import type {
   CreateProjectRequest,
   UpdateProjectRequest,
 } from "@/types";
-import {
-  PROJECT_STATUS_LABELS,
-  SYRIAN_CITIES,
-} from "@/features/projects/constants";
+import { PROJECT_STATUS_LABELS } from "@/features/projects/constants";
+import { CitySelect } from "@/components/dashboard/LocationSelect";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -224,25 +222,14 @@ export default function ProjectForm({
             {errors.status && <p className="form-error">{errors.status}</p>}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              المدينة <Required />
-            </label>
-            <select
-              className="form-input"
-              value={fields.city}
-              onChange={set("city")}
-              disabled={disabled}
-            >
-              <option value="">اختر المدينة</option>
-              {SYRIAN_CITIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            {errors.city && <p className="form-error">{errors.city}</p>}
-          </div>
+          <CitySelect
+            label="المدينة *"
+            value={fields.city}
+            onChange={(val) => setFields((p) => ({ ...p, city: val }))}
+            required
+            error={errors.city}
+            disabled={disabled}
+          />
         </Row>
 
         <div className="form-group">

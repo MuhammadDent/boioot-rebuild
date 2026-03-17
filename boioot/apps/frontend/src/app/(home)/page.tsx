@@ -10,7 +10,8 @@ import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { api } from "@/lib/api";
 import type { PropertyResponse } from "@/types";
-import { SYRIAN_CITIES, PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
+import { PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
+import { useCities } from "@/hooks/useCities";
 
 // ─── Slider data ──────────────────────────────────────────────────────────────
 
@@ -110,6 +111,7 @@ const EMPTY_FILTERS: FilterState = {
 export default function HomePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, logout } = useAuth();
+  const { cities } = useCities();
 
   function handleLogout() {
     logout();
@@ -482,7 +484,7 @@ export default function HomePage() {
           <FilterSection label="المدينة">
             <select value={draft.city} onChange={(e) => { setDraftField("city", e.target.value); setDraftField("neighborhood", ""); }} style={selectStyle}>
               <option value="">الكل</option>
-              {SYRIAN_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {cities.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </FilterSection>
 

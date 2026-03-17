@@ -6,10 +6,10 @@ import Spinner from "@/components/ui/Spinner";
 import PropertyCard from "@/components/properties/PropertyCard";
 import { propertiesApi, PROPERTIES_PAGE_SIZE } from "@/features/properties/api";
 import {
-  SYRIAN_CITIES,
   PROPERTY_TYPE_LABELS,
   LISTING_TYPE_LABELS,
 } from "@/features/properties/constants";
+import { useCities } from "@/hooks/useCities";
 import type { PropertyResponse } from "@/types";
 
 // ─── Filter form shape ────────────────────────────────────────────────────────
@@ -32,6 +32,7 @@ function PropertiesContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const pathname     = usePathname();
+  const { cities }   = useCities();
 
   // Applied filter values — derived from URL, used for fetching
   const cityParam        = searchParams.get("city")        || "";
@@ -226,7 +227,7 @@ function PropertiesContent() {
               <select id="f-city" className="form-input" value={form.city}
                 onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}>
                 <option value="">الكل</option>
-                {SYRIAN_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
 

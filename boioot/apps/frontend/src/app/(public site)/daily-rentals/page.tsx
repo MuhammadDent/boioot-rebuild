@@ -5,7 +5,8 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Spinner from "@/components/ui/Spinner";
 import PropertyCard from "@/components/properties/PropertyCard";
 import { propertiesApi, PROPERTIES_PAGE_SIZE } from "@/features/properties/api";
-import { SYRIAN_CITIES, PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
+import { PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
+import { useCities } from "@/hooks/useCities";
 import type { PropertyResponse } from "@/types";
 
 // ─── Type chips ───────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ function DailyRentalsContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const pathname     = usePathname();
+  const { cities }   = useCities();
 
   const cityParam     = searchParams.get("city")     || "";
   const typeParam     = searchParams.get("type")     || "";
@@ -195,7 +197,7 @@ function DailyRentalsContent() {
                 onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
               >
                 <option value="">الكل</option>
-                {SYRIAN_CITIES.map((c) => (
+                {cities.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>

@@ -5,7 +5,8 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Spinner from "@/components/ui/Spinner";
 import ProjectCard from "@/components/projects/ProjectCard";
 import { projectsApi, PROJECTS_PAGE_SIZE } from "@/features/projects/api";
-import { PROJECT_STATUS_LABELS, SYRIAN_CITIES } from "@/features/projects/constants";
+import { PROJECT_STATUS_LABELS } from "@/features/projects/constants";
+import { useCities } from "@/hooks/useCities";
 import type { ProjectResponse } from "@/types";
 
 // ─── Filter form shape ────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ function ProjectsContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const pathname     = usePathname();
+  const { cities }   = useCities();
 
   // Applied filter values — derived from URL, used for fetching
   const cityParam   = searchParams.get("city")   || "";
@@ -130,7 +132,7 @@ function ProjectsContent() {
                 onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
               >
                 <option value="">الكل</option>
-                {SYRIAN_CITIES.map((c) => (
+                {cities.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>

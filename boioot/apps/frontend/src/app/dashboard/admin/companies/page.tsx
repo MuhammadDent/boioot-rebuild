@@ -10,7 +10,7 @@ import {
   type AdminCompaniesParams,
 } from "@/features/admin/api";
 import { ADMIN_PAGE_SIZE } from "@/features/admin/constants";
-import { SYRIAN_CITIES } from "@/features/properties/constants";
+import { useCities } from "@/hooks/useCities";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
 import type { AdminCompanyResponse } from "@/types";
@@ -19,6 +19,7 @@ import type { AdminCompanyResponse } from "@/types";
 
 export default function AdminCompaniesPage() {
   const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { cities } = useCities();
 
   const [companies, setCompanies]   = useState<AdminCompanyResponse[]>([]);
   const [page, setPage]             = useState(1);
@@ -133,7 +134,7 @@ export default function AdminCompaniesPage() {
               onChange={e => setPendingCity(e.target.value)}
             >
               <option value="">كل المدن</option>
-              {SYRIAN_CITIES.map(c => (
+              {cities.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>

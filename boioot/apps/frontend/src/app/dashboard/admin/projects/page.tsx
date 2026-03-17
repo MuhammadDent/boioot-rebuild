@@ -14,7 +14,7 @@ import {
   PROJECT_STATUS_LABELS,
   formatStartingPrice,
 } from "@/features/projects/constants";
-import { SYRIAN_CITIES } from "@/features/properties/constants";
+import { useCities } from "@/hooks/useCities";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
 import type { ProjectResponse } from "@/types";
@@ -25,6 +25,7 @@ const PROJECT_STATUSES = ["Upcoming", "UnderConstruction", "Completed"] as const
 
 export default function AdminProjectsPage() {
   const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { cities } = useCities();
 
   const [projects, setProjects]     = useState<ProjectResponse[]>([]);
   const [page, setPage]             = useState(1);
@@ -121,7 +122,7 @@ export default function AdminProjectsPage() {
               onChange={e => setPendingCity(e.target.value)}
             >
               <option value="">كل المدن</option>
-              {SYRIAN_CITIES.map(c => (
+              {cities.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
