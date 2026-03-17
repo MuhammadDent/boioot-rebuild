@@ -38,6 +38,8 @@ public class AgentManagementService : IAgentManagementService
         Guid managerId, string managerRole, CreateAgentRequest request, CancellationToken ct = default)
     {
         // ── فحص حد الوكلاء في خطة الاشتراك ─────────────────────────────
+        // Fallback: إذا لم يكن للمدير حساب مرتبط (CompanyOwner قبل ربط الحساب)،
+        // يُسمح بإضافة الوكيل بدون فحص الحصة (سلوك متساهل للمرحلة الانتقالية).
         var accountId = await _accountResolver.ResolveAccountIdAsync(managerId, ct);
         if (accountId.HasValue)
         {
@@ -46,6 +48,7 @@ public class AgentManagementService : IAgentManagementService
                 throw new BoiootException(
                     "لقد وصلت إلى الحد الأقصى في خطتك. يرجى ترقية خطتك للمتابعة.", 403);
         }
+        // accountId == null → allow (no active account membership found)
 
         var emailLower = request.Email.ToLowerInvariant();
 

@@ -1,8 +1,8 @@
 using Boioot.Application.Common.Models;
 using Boioot.Application.Features.Dashboard.DTOs;
 using Boioot.Application.Features.Dashboard.Interfaces;
+using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
-using Boioot.Infrastructure.Features.Subscriptions;
 using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
@@ -61,15 +61,15 @@ public class DashboardService : IDashboardService
             planName = await _accountResolver.GetPlanNameAsync(accountId.Value, ct);
 
             var rawListingsLimit = await _entitlement.GetLimitAsync(
-                accountId.Value, PlanEntitlementService.KeyMaxActiveListings, ct);
+                accountId.Value, SubscriptionKeys.MaxActiveListings, ct);
             listingsLimit = (int)rawListingsLimit;
 
             var rawAgentsLimit = await _entitlement.GetLimitAsync(
-                accountId.Value, PlanEntitlementService.KeyMaxAgents, ct);
+                accountId.Value, SubscriptionKeys.MaxAgents, ct);
             agentsLimit = (int)rawAgentsLimit;
 
             hasAnalytics = await _entitlement.HasFeatureAsync(
-                accountId.Value, PlanEntitlementService.KeyAnalyticsDashboard, ct);
+                accountId.Value, SubscriptionKeys.AnalyticsDashboard, ct);
 
             listingsUsed = await _context.Properties
                 .Where(p => p.AccountId == accountId.Value

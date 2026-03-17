@@ -1,3 +1,4 @@
+using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
@@ -8,11 +9,6 @@ namespace Boioot.Infrastructure.Features.Subscriptions;
 
 public class PlanEntitlementService : IPlanEntitlementService
 {
-    // Stable limit/feature keys — must match what is seeded in LimitDefinitions/FeatureDefinitions
-    public const string KeyMaxActiveListings  = "max_active_listings";
-    public const string KeyMaxAgents          = "max_agents";
-    public const string KeyAnalyticsDashboard = "analytics_dashboard";
-
     private readonly BoiootDbContext _db;
     private readonly ILogger<PlanEntitlementService> _logger;
 
@@ -119,7 +115,7 @@ public class PlanEntitlementService : IPlanEntitlementService
     // ── CanCreatePropertyAsync ────────────────────────────────────────────
     public async Task<bool> CanCreatePropertyAsync(Guid accountId, CancellationToken ct = default)
     {
-        var limit = await GetLimitAsync(accountId, KeyMaxActiveListings, ct);
+        var limit = await GetLimitAsync(accountId, SubscriptionKeys.MaxActiveListings, ct);
 
         if (limit == -1) return true;   // unlimited
         if (limit == 0)  return false;  // no access
@@ -139,7 +135,7 @@ public class PlanEntitlementService : IPlanEntitlementService
     // ── CanAddAgentAsync ──────────────────────────────────────────────────
     public async Task<bool> CanAddAgentAsync(Guid accountId, CancellationToken ct = default)
     {
-        var limit = await GetLimitAsync(accountId, KeyMaxAgents, ct);
+        var limit = await GetLimitAsync(accountId, SubscriptionKeys.MaxAgents, ct);
 
         if (limit == -1) return true;   // unlimited
         if (limit == 0)  return false;  // no access

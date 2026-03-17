@@ -145,6 +145,8 @@ public class PropertyService : IPropertyService
         }
 
         // ── فحص حد الإعلانات في خطة الاشتراك ───────────────────────────
+        // Fallback: إذا لم يكن للمستخدم حساب مرتبط (مثل Admin أو قبل ربط الحساب)،
+        // يُسمح بالعملية بدون فحص الحصة (سلوك متساهل للمرحلة الانتقالية).
         var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
         if (accountId.HasValue)
         {
@@ -153,6 +155,7 @@ public class PropertyService : IPropertyService
                 throw new BoiootException(
                     "لقد وصلت إلى الحد الأقصى في خطتك. يرجى ترقية خطتك للمتابعة.", 403);
         }
+        // accountId == null → allow (no active account membership found)
 
         if (request.AgentId.HasValue)
         {
@@ -347,6 +350,7 @@ public class PropertyService : IPropertyService
         Guid userId, string userRole, CreatePropertyRequest request, CancellationToken ct = default)
     {
         // ── فحص حد الاشتراك (النظام الجديد) ──────────────────────────────
+        // Fallback: بدون حساب مرتبط → يُسمح (المالك الشخصي قبل ربط الحساب).
         var acctId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
         if (acctId.HasValue)
         {
@@ -355,6 +359,7 @@ public class PropertyService : IPropertyService
                 throw new BoiootException(
                     "لقد وصلت إلى الحد الأقصى في خطتك. يرجى ترقية خطتك للمتابعة.", 403);
         }
+        // acctId == null → allow
 
         // ── فحص الحد الشهري (النظام القديم) ─────────────────────────────
         var (used, limit) = await GetMonthlyListingStatsAsync(userId, userRole, ct);
