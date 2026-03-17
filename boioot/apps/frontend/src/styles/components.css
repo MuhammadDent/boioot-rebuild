@@ -943,3 +943,41 @@
   color: var(--color-primary);
   font-weight: 700;
 }
+
+/* ── Dashboard Secondary Nav ──────────────────────────── */
+.dash-sec-nav {
+  background: #f8f9fa;
+  border-bottom: 1px solid var(--color-border);
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dash-sec-nav::-webkit-scrollbar { display: none; }
+.dash-sec-nav__inner {
+  display: flex;
+  gap: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+.dash-sec-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.dash-sec-nav__link:hover {
+  color: var(--color-primary);
+}
+.dash-sec-nav__link--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 700;
+}
