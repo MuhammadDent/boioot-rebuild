@@ -645,18 +645,21 @@
 
 /* ─────────────── Properties Layout (sidebar + content) ─────────────── */
 .properties-layout {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 230px;
+  grid-template-areas: "content filter";
   gap: 1.5rem;
   align-items: flex-start;
 }
-/* Main content area (cards) — takes remaining space */
+/* Main content area (cards) — left column in grid = RIGHT visually in RTL */
 .properties-content {
-  flex: 1;
+  grid-area: content;
   min-width: 0;
 }
 
 /* ─────────────── Filter Sidebar ─────────────── */
 .filter-sidebar {
+  grid-area: filter;
   width: 230px;
   flex-shrink: 0;
   background: var(--color-bg-card);
@@ -709,7 +712,10 @@
 /* ─── Mobile: stack vertically, filter on top ─── */
 @media (max-width: 768px) {
   .properties-layout {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "filter"
+      "content";
   }
   .filter-sidebar {
     width: 100%;
