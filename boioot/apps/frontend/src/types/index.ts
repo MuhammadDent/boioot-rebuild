@@ -395,4 +395,45 @@ export interface DashboardSummary {
   newRequests: number;
   totalConversations: number;
   unreadMessages: number;
+  planName?: string;
+  listingsUsed: number;
+  listingsLimit: number;
+  agentsUsed: number;
+  agentsLimit: number;
+  hasAnalyticsDashboard: boolean;
+}
+
+// ── Admin Plans ────────────────────────────────────────────────────────────────
+
+export interface PlanLimitItem {
+  limitDefinitionId: string;
+  key: string;
+  name: string;
+  unit?: string;
+  /** -1 = unlimited */
+  value: number;
+}
+
+export interface PlanFeatureItem {
+  featureDefinitionId: string;
+  key: string;
+  name: string;
+  featureGroup?: string;
+  isEnabled: boolean;
+}
+
+export interface AdminPlanSummary {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  basePriceMonthly: number;
+  basePriceYearly: number;
+  applicableAccountType?: string;
+  createdAt: string;
+}
+
+export interface AdminPlanDetail extends AdminPlanSummary {
+  limits: PlanLimitItem[];
+  features: PlanFeatureItem[];
 }

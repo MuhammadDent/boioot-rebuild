@@ -9,6 +9,10 @@ import type {
   ListingTypeConfig,
   PropertyTypeConfig,
   OwnershipTypeConfig,
+  AdminPlanSummary,
+  AdminPlanDetail,
+  PlanLimitItem,
+  PlanFeatureItem,
 } from "@/types";
 
 // ── Filter param types ─────────────────────────────────────────────────────────
@@ -185,5 +189,55 @@ export const adminApi = {
   },
   deleteOwnershipType(id: string): Promise<void> {
     return api.delete(`/admin/ownership-types/${id}`);
+  },
+
+  // ── Plans ─────────────────────────────────────────────────────────────────
+
+  /** GET /api/admin/plans */
+  getPlans(): Promise<AdminPlanSummary[]> {
+    return api.get("/admin/plans");
+  },
+
+  /** GET /api/admin/plans/{id} */
+  getPlanDetail(id: string): Promise<AdminPlanDetail> {
+    return api.get(`/admin/plans/${id}`);
+  },
+
+  /** POST /api/admin/plans */
+  createPlan(payload: {
+    name: string;
+    description?: string;
+    basePriceMonthly: number;
+    basePriceYearly: number;
+    applicableAccountType?: string;
+  }): Promise<AdminPlanDetail> {
+    return api.post("/admin/plans", payload);
+  },
+
+  /** PUT /api/admin/plans/{id} */
+  updatePlan(id: string, payload: {
+    name: string;
+    description?: string;
+    basePriceMonthly: number;
+    basePriceYearly: number;
+    isActive: boolean;
+    applicableAccountType?: string;
+  }): Promise<AdminPlanDetail> {
+    return api.put(`/admin/plans/${id}`, payload);
+  },
+
+  /** DELETE /api/admin/plans/{id} */
+  deletePlan(id: string): Promise<void> {
+    return api.delete(`/admin/plans/${id}`);
+  },
+
+  /** PUT /api/admin/plans/{id}/limits/{limitKey} */
+  setPlanLimit(id: string, limitKey: string, value: number): Promise<PlanLimitItem> {
+    return api.put(`/admin/plans/${id}/limits/${limitKey}`, { value });
+  },
+
+  /** PUT /api/admin/plans/{id}/features/{featureKey} */
+  setPlanFeature(id: string, featureKey: string, isEnabled: boolean): Promise<PlanFeatureItem> {
+    return api.put(`/admin/plans/${id}/features/${featureKey}`, { isEnabled });
   },
 };
