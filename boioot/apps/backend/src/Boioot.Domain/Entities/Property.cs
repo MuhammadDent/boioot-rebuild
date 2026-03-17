@@ -46,6 +46,9 @@ public class Property : BaseEntity, ISoftDeletable
     // Personal listing (User-posted) — null means it belongs to a company
     public string? OwnerId { get; set; }
 
+    // Phase A: future ownership source — will replace CompanyId in Phase C
+    public Guid? AccountId { get; set; }
+
     // Analytics
     public int ViewCount { get; set; } = 0;
 

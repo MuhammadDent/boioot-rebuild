@@ -217,6 +217,10 @@ using (var scope = app.Services.CreateScope())
                 UpdatedAt   TEXT NOT NULL
             )");
 
+        // Property.AccountId — future ownership source (replaces CompanyId in Phase C)
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN AccountId TEXT"); }
+        catch { /* column already exists */ }
+
         // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");
         await db.Database.ExecuteSqlRawAsync(@"

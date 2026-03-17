@@ -34,6 +34,7 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
 
         builder.HasIndex(p => p.CompanyId);
         builder.HasIndex(p => p.AgentId);
+        builder.HasIndex(p => p.AccountId);
         builder.HasIndex(p => p.City);
         builder.HasIndex(p => p.Status);
         builder.HasIndex(p => p.Type);
