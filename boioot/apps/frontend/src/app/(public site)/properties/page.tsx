@@ -164,7 +164,59 @@ function PropertiesContent() {
         {/* ── Two-column layout: filter sidebar (right) + content (left) ── */}
         <div className="properties-layout">
 
-          {/* Filter Sidebar — first in DOM = RIGHT side in RTL */}
+          {/* Content — first in DOM = RIGHT side in RTL (main reading area) */}
+          <div className="properties-content">
+
+            {/* Loading */}
+            {loading && <Spinner />}
+
+            {/* Error */}
+            {!loading && error && <div className="error-banner">{error}</div>}
+
+            {/* Empty state */}
+            {!loading && !error && properties.length === 0 && (
+              <div className="empty-state">
+                <div className="empty-state__icon">🏘️</div>
+                <h2 className="empty-state__title">
+                  {hasActiveFilters ? "لا توجد نتائج مطابقة" : "لا توجد عقارات متاحة"}
+                </h2>
+                <p className="empty-state__desc">
+                  {hasActiveFilters
+                    ? "جرّب تغيير معايير البحث أو مسح الفلاتر."
+                    : "لم يتم إضافة أي عقارات حتى الآن."}
+                </p>
+                {hasActiveFilters && (
+                  <button className="btn btn-outline" style={{ marginTop: "1rem" }} onClick={handleClear}>
+                    مسح الفلاتر
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Results grid */}
+            {!loading && !error && properties.length > 0 && (
+              <>
+                <div className="grid-cards">
+                  {properties.map((p) => (
+                    <PropertyCard key={p.id} property={p} />
+                  ))}
+                </div>
+
+                {(hasPrev || hasNext) && (
+                  <div className="pagination">
+                    <button className="btn btn-outline btn-sm" disabled={!hasPrev}
+                      onClick={() => goToPage(pageParam - 1)}>← السابق</button>
+                    <span className="pagination__info">صفحة {pageParam}</span>
+                    <button className="btn btn-outline btn-sm" disabled={!hasNext}
+                      onClick={() => goToPage(pageParam + 1)}>التالي →</button>
+                  </div>
+                )}
+              </>
+            )}
+
+          </div>
+
+          {/* Filter Sidebar — second in DOM = LEFT side in RTL */}
           <form className="filter-sidebar" onSubmit={handleApply}>
             <p className="filter-sidebar__title">فلتر بحث</p>
 
@@ -231,57 +283,6 @@ function PropertiesContent() {
             </div>
           </form>
 
-          {/* Content — second in DOM = LEFT side in RTL */}
-          <div className="properties-content">
-
-            {/* Loading */}
-            {loading && <Spinner />}
-
-            {/* Error */}
-            {!loading && error && <div className="error-banner">{error}</div>}
-
-            {/* Empty state */}
-            {!loading && !error && properties.length === 0 && (
-              <div className="empty-state">
-                <div className="empty-state__icon">🏘️</div>
-                <h2 className="empty-state__title">
-                  {hasActiveFilters ? "لا توجد نتائج مطابقة" : "لا توجد عقارات متاحة"}
-                </h2>
-                <p className="empty-state__desc">
-                  {hasActiveFilters
-                    ? "جرّب تغيير معايير البحث أو مسح الفلاتر."
-                    : "لم يتم إضافة أي عقارات حتى الآن."}
-                </p>
-                {hasActiveFilters && (
-                  <button className="btn btn-outline" style={{ marginTop: "1rem" }} onClick={handleClear}>
-                    مسح الفلاتر
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Results grid */}
-            {!loading && !error && properties.length > 0 && (
-              <>
-                <div className="grid-cards">
-                  {properties.map((p) => (
-                    <PropertyCard key={p.id} property={p} />
-                  ))}
-                </div>
-
-                {(hasPrev || hasNext) && (
-                  <div className="pagination">
-                    <button className="btn btn-outline btn-sm" disabled={!hasPrev}
-                      onClick={() => goToPage(pageParam - 1)}>← السابق</button>
-                    <span className="pagination__info">صفحة {pageParam}</span>
-                    <button className="btn btn-outline btn-sm" disabled={!hasNext}
-                      onClick={() => goToPage(pageParam + 1)}>التالي →</button>
-                  </div>
-                )}
-              </>
-            )}
-
-          </div>
         </div>
 
       </div>
