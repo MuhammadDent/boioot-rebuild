@@ -1,6 +1,8 @@
 using Boioot.Application.Common.Models;
 using Boioot.Application.Features.Dashboard.DTOs;
 using Boioot.Application.Features.Dashboard.Interfaces;
+using Boioot.Application.Features.Subscriptions.Interfaces;
+using Boioot.Infrastructure.Features.Subscriptions;
 using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
@@ -13,12 +15,20 @@ namespace Boioot.Infrastructure.Features.Dashboard;
 public class DashboardService : IDashboardService
 {
     private readonly BoiootDbContext _context;
+    private readonly IPlanEntitlementService _entitlement;
+    private readonly IAccountResolver _accountResolver;
     private readonly ILogger<DashboardService> _logger;
 
-    public DashboardService(BoiootDbContext context, ILogger<DashboardService> logger)
+    public DashboardService(
+        BoiootDbContext context,
+        IPlanEntitlementService entitlement,
+        IAccountResolver accountResolver,
+        ILogger<DashboardService> logger)
     {
-        _context = context;
-        _logger = logger;
+        _context         = context;
+        _entitlement     = entitlement;
+        _accountResolver = accountResolver;
+        _logger          = logger;
     }
 
     public async Task<DashboardSummaryResponse> GetSummaryAsync(
@@ -37,6 +47,43 @@ public class DashboardService : IDashboardService
         var totalConversations = await CountConversationsAsync(userId, ct);
         var unreadMessages     = await CountUnreadMessagesAsync(userId, ct);
 
+        // ── بيانات خطة الاشتراك ──────────────────────────────────────────
+        var planName         = (string?)null;
+        var listingsUsed     = 0;
+        var listingsLimit    = 0;
+        var agentsUsed       = 0;
+        var agentsLimit      = 0;
+        var hasAnalytics     = false;
+
+        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (accountId.HasValue)
+        {
+            planName = await _accountResolver.GetPlanNameAsync(accountId.Value, ct);
+
+            var rawListingsLimit = await _entitlement.GetLimitAsync(
+                accountId.Value, PlanEntitlementService.KeyMaxActiveListings, ct);
+            listingsLimit = (int)rawListingsLimit;
+
+            var rawAgentsLimit = await _entitlement.GetLimitAsync(
+                accountId.Value, PlanEntitlementService.KeyMaxAgents, ct);
+            agentsLimit = (int)rawAgentsLimit;
+
+            hasAnalytics = await _entitlement.HasFeatureAsync(
+                accountId.Value, PlanEntitlementService.KeyAnalyticsDashboard, ct);
+
+            listingsUsed = await _context.Properties
+                .Where(p => p.AccountId == accountId.Value
+                         && p.IsDeleted == false
+                         && (p.Status == PropertyStatus.Available || p.Status == PropertyStatus.Inactive))
+                .CountAsync(ct);
+
+            agentsUsed = await _context.AccountUsers
+                .Where(au => au.AccountId == accountId.Value
+                          && au.OrganizationUserRole == OrganizationUserRole.Agent
+                          && au.IsActive == true)
+                .CountAsync(ct);
+        }
+
         _logger.LogDebug(
             "Dashboard summary fetched for User: {UserId} | Role: {Role} | " +
             "Properties: {Props}, Projects: {Projs}, Requests: {Reqs}",
@@ -49,7 +96,13 @@ public class DashboardService : IDashboardService
             TotalRequests      = totalRequests,
             NewRequests        = newRequests,
             TotalConversations = totalConversations,
-            UnreadMessages     = unreadMessages
+            UnreadMessages     = unreadMessages,
+            PlanName           = planName,
+            ListingsUsed       = listingsUsed,
+            ListingsLimit      = listingsLimit,
+            AgentsUsed         = agentsUsed,
+            AgentsLimit        = agentsLimit,
+            HasAnalyticsDashboard = hasAnalytics
         };
     }
 

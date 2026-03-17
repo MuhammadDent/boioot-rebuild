@@ -51,6 +51,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IAgentManagementService, AgentManagementService>();
         services.AddScoped<IPlanEntitlementService, PlanEntitlementService>();
+        services.AddScoped<IAccountResolver, AccountResolver>();
         services.AddScoped<DataSeeder>();
 
         return services;

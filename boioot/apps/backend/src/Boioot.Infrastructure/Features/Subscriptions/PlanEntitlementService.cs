@@ -9,8 +9,9 @@ namespace Boioot.Infrastructure.Features.Subscriptions;
 public class PlanEntitlementService : IPlanEntitlementService
 {
     // Stable limit/feature keys — must match what is seeded in LimitDefinitions/FeatureDefinitions
-    public const string KeyMaxActiveListings = "max_active_listings";
-    public const string KeyMaxAgents         = "max_agents";
+    public const string KeyMaxActiveListings  = "max_active_listings";
+    public const string KeyMaxAgents          = "max_agents";
+    public const string KeyAnalyticsDashboard = "analytics_dashboard";
 
     private readonly BoiootDbContext _db;
     private readonly ILogger<PlanEntitlementService> _logger;

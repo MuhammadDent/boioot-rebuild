@@ -2,6 +2,7 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.AgentManagement.DTOs;
 using Boioot.Application.Features.AgentManagement.Interfaces;
+using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
@@ -15,21 +16,37 @@ public class AgentManagementService : IAgentManagementService
 {
     private readonly BoiootDbContext _context;
     private readonly ICompanyOwnershipService _ownership;
+    private readonly IPlanEntitlementService _entitlement;
+    private readonly IAccountResolver _accountResolver;
     private readonly ILogger<AgentManagementService> _logger;
 
     public AgentManagementService(
         BoiootDbContext context,
         ICompanyOwnershipService ownership,
+        IPlanEntitlementService entitlement,
+        IAccountResolver accountResolver,
         ILogger<AgentManagementService> logger)
     {
-        _context = context;
-        _ownership = ownership;
-        _logger = logger;
+        _context         = context;
+        _ownership       = ownership;
+        _entitlement     = entitlement;
+        _accountResolver = accountResolver;
+        _logger          = logger;
     }
 
     public async Task<AgentSummaryResponse> CreateAgentAsync(
         Guid managerId, string managerRole, CreateAgentRequest request, CancellationToken ct = default)
     {
+        // ── فحص حد الوكلاء في خطة الاشتراك ─────────────────────────────
+        var accountId = await _accountResolver.ResolveAccountIdAsync(managerId, ct);
+        if (accountId.HasValue)
+        {
+            var canAdd = await _entitlement.CanAddAgentAsync(accountId.Value, ct);
+            if (!canAdd)
+                throw new BoiootException(
+                    "لقد وصلت إلى الحد الأقصى في خطتك. يرجى ترقية خطتك للمتابعة.", 403);
+        }
+
         var emailLower = request.Email.ToLowerInvariant();
 
         if (await _context.Users.AnyAsync(u => u.Email == emailLower, ct))

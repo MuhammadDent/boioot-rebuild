@@ -3,6 +3,7 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
+using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
@@ -16,16 +17,22 @@ public class PropertyService : IPropertyService
 {
     private readonly BoiootDbContext _context;
     private readonly ICompanyOwnershipService _ownership;
+    private readonly IPlanEntitlementService _entitlement;
+    private readonly IAccountResolver _accountResolver;
     private readonly ILogger<PropertyService> _logger;
 
     public PropertyService(
         BoiootDbContext context,
         ICompanyOwnershipService ownership,
+        IPlanEntitlementService entitlement,
+        IAccountResolver accountResolver,
         ILogger<PropertyService> logger)
     {
-        _context = context;
-        _ownership = ownership;
-        _logger = logger;
+        _context        = context;
+        _ownership      = ownership;
+        _entitlement    = entitlement;
+        _accountResolver = accountResolver;
+        _logger         = logger;
     }
 
     public async Task<PagedResult<PropertyResponse>> GetPublicListAsync(
@@ -135,6 +142,16 @@ public class PropertyService : IPropertyService
                 throw new BoiootException("لا توجد شركة مرتبطة بحسابك — يرجى إنشاء شركة أولاً أو تحديد معرف الشركة", 400);
 
             companyId = ownedCompanyId.Value;
+        }
+
+        // ── فحص حد الإعلانات في خطة الاشتراك ───────────────────────────
+        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (accountId.HasValue)
+        {
+            var canCreate = await _entitlement.CanCreatePropertyAsync(accountId.Value, ct);
+            if (!canCreate)
+                throw new BoiootException(
+                    "لقد وصلت إلى الحد الأقصى في خطتك. يرجى ترقية خطتك للمتابعة.", 403);
         }
 
         if (request.AgentId.HasValue)
@@ -329,6 +346,17 @@ public class PropertyService : IPropertyService
     public async Task<PropertyResponse> CreateUserListingAsync(
         Guid userId, string userRole, CreatePropertyRequest request, CancellationToken ct = default)
     {
+        // ── فحص حد الاشتراك (النظام الجديد) ──────────────────────────────
+        var acctId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (acctId.HasValue)
+        {
+            var canCreate = await _entitlement.CanCreatePropertyAsync(acctId.Value, ct);
+            if (!canCreate)
+                throw new BoiootException(
+                    "لقد وصلت إلى الحد الأقصى في خطتك. يرجى ترقية خطتك للمتابعة.", 403);
+        }
+
+        // ── فحص الحد الشهري (النظام القديم) ─────────────────────────────
         var (used, limit) = await GetMonthlyListingStatsAsync(userId, userRole, ct);
 
         if (used >= limit)
