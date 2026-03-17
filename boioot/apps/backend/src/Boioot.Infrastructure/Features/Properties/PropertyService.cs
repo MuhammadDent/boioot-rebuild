@@ -310,7 +310,7 @@ public class PropertyService : IPropertyService
         RoleNames.Broker       => 999,
         RoleNames.Agent        => 999,
         RoleNames.User         => 2,
-        RoleNames.Owner        => 2,
+        RoleNames.Owner        => 5,
         _                      => 2
     };
 
