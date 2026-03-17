@@ -259,17 +259,17 @@ export default function HomePage() {
     <div style={{ direction: "rtl", fontFamily: "var(--font-arabic)", minHeight: "100vh", background: "var(--color-background)" }}>
 
       {/* ── TOP HEADER ──────────────────────────────────────────────────────── */}
-      <header style={{ background: "#fff", borderBottom: "1px solid var(--color-border)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1.25rem", height: 86, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
-          <Link href="/" style={{ flexShrink: 0, lineHeight: 0 }}>
+      <header className="home-hdr">
+        <div className="home-hdr__inner">
+          <Link href="/" className="home-hdr__logo" style={{ flexShrink: 0, lineHeight: 0 }}>
             <Image src="/logo-boioot.png" alt="بيوت" width={200} height={76} style={{ objectFit: "contain", width: 200, height: 76 }} priority />
           </Link>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-            <Link href="/projects"    style={btnStyle("outline")}>المشاريع العقارية</Link>
-            <Link href="/post-ad"      style={btnStyle("green")}>أضف إعلانك</Link>
+          <div className="home-hdr__mid">
+            <Link href="/projects" className="home-hdr__projects-hide" style={btnStyle("outline")}>المشاريع العقارية</Link>
+            <Link href="/post-ad"  style={btnStyle("green")}>أضف إعلانك</Link>
             <Link href="/dashboard/my-requests/new" style={btnStyle("dark")}>أضف طلب</Link>
           </div>
-          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+          <div className="home-hdr__auth">
             {!isLoading && (isAuthenticated ? (
               <>
                 <Link href="/dashboard" title="لوحة التحكم" style={iconBtnStyle}>
