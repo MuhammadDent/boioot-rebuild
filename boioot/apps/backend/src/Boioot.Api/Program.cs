@@ -233,6 +233,10 @@ using (var scope = app.Services.CreateScope())
                 UpdatedAt   TEXT NOT NULL
             )");
 
+        // Subscriptions.IsActive — explicit active flag (default true for existing rows)
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Subscriptions ADD COLUMN IsActive INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* column already exists */ }
+
         // ── Plan column additions ────────────────────────────────────────────
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN ImageLimitPerListing INTEGER NOT NULL DEFAULT 5"); }
         catch { /* column already exists */ }

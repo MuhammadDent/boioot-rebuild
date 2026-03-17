@@ -26,6 +26,7 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
         builder.HasIndex(s => s.AccountId);
         builder.HasIndex(s => s.Status);
         builder.HasIndex(s => s.EndDate);
+        builder.HasIndex(s => s.IsActive);
 
         // Mirror Account's query filter chain to prevent EF warning 10622
         builder.HasQueryFilter(s => !s.Account.CreatedByUser.IsDeleted);

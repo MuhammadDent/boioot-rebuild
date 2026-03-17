@@ -21,11 +21,19 @@ public class PlanEntitlementService : IPlanEntitlementService
         _logger = logger;
     }
 
+    // ── Shared filter: what counts as an "active" subscription ────────────
+    // Fix 1: added s.IsActive = true in all methods (ChatGPT suggestion)
+    private static bool IsActiveSubscription(Domain.Entities.Subscription s) =>
+        s.IsActive &&
+        (s.Status == SubscriptionStatus.Trial || s.Status == SubscriptionStatus.Active) &&
+        (s.EndDate == null || s.EndDate > DateTime.UtcNow);
+
     // ── Core: resolve the active SubscriptionPlanId for an account ────────
     private async Task<Guid?> GetActivePlanIdAsync(Guid accountId, CancellationToken ct)
     {
         return await _db.Subscriptions
             .Where(s => s.AccountId == accountId
+                     && s.IsActive
                      && (s.Status == SubscriptionStatus.Trial ||
                          s.Status == SubscriptionStatus.Active)
                      && (s.EndDate == null || s.EndDate > DateTime.UtcNow))
@@ -40,8 +48,10 @@ public class PlanEntitlementService : IPlanEntitlementService
         try
         {
             // Single query: Subscriptions → PlanFeatures → FeatureDefinitions
+            // Fix 1: s.IsActive == true added
             var isEnabled = await _db.Subscriptions
                 .Where(s => s.AccountId == accountId
+                         && s.IsActive == true
                          && (s.Status == SubscriptionStatus.Trial ||
                              s.Status == SubscriptionStatus.Active)
                          && (s.EndDate == null || s.EndDate > DateTime.UtcNow))
@@ -74,8 +84,10 @@ public class PlanEntitlementService : IPlanEntitlementService
         try
         {
             // Single query: Subscriptions → PlanLimits → LimitDefinitions
+            // Fix 1: s.IsActive == true added
             var value = await _db.Subscriptions
                 .Where(s => s.AccountId == accountId
+                         && s.IsActive == true
                          && (s.Status == SubscriptionStatus.Trial ||
                              s.Status == SubscriptionStatus.Active)
                          && (s.EndDate == null || s.EndDate > DateTime.UtcNow))
@@ -93,7 +105,7 @@ public class PlanEntitlementService : IPlanEntitlementService
                 .Select(x => (decimal?)x.Value)
                 .FirstOrDefaultAsync(ct);
 
-            // null = no subscription or limit not configured → safest default is 0
+            // null = no active subscription or limit not configured → safest default is 0
             return value ?? 0m;
         }
         catch (Exception ex)
@@ -111,8 +123,9 @@ public class PlanEntitlementService : IPlanEntitlementService
         if (limit == -1) return true;   // unlimited
         if (limit == 0)  return false;  // no access
 
+        // Fix 2: IsDeleted == false (explicit) instead of !IsDeleted
         var activeCount = await _db.Properties
-            .Where(p => p.AccountId == accountId && !p.IsDeleted)
+            .Where(p => p.AccountId == accountId && p.IsDeleted == false)
             .CountAsync(ct);
 
         return activeCount < (int)limit;
@@ -129,7 +142,7 @@ public class PlanEntitlementService : IPlanEntitlementService
         var agentCount = await _db.AccountUsers
             .Where(au => au.AccountId == accountId
                       && au.OrganizationUserRole == OrganizationUserRole.Agent
-                      && au.IsActive)
+                      && au.IsActive == true)
             .CountAsync(ct);
 
         return agentCount < (int)limit;
