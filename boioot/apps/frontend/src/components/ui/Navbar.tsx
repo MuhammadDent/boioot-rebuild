@@ -69,13 +69,15 @@ export default function Navbar() {
           {!isLoading && (
             isAuthenticated ? (
               <>
-                <Link
-                  href="/dashboard"
-                  className="btn btn-primary btn-sm"
-                  style={{ textDecoration: "none", padding: "0.4rem 1rem" }}
-                >
-                  لوحة التحكم
-                </Link>
+                {!pathname.startsWith("/dashboard") && (
+                  <Link
+                    href="/dashboard"
+                    className="btn btn-primary btn-sm"
+                    style={{ textDecoration: "none", padding: "0.4rem 1rem" }}
+                  >
+                    لوحة التحكم
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="btn btn-sm"

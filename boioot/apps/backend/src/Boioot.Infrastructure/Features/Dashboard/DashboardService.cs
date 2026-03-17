@@ -158,13 +158,13 @@ public class DashboardService : IDashboardService
 
     // ── Scope resolution ────────────────────────────────────────────────────
 
-    private record DashboardScope(bool IsAdmin, Guid? CompanyId, Guid? AgentId);
+    private record DashboardScope(bool IsAdmin, Guid UserId, Guid? CompanyId, Guid? AgentId);
 
     private async Task<DashboardScope> ResolveScopeAsync(
         Guid userId, string userRole, CancellationToken ct)
     {
         if (userRole == RoleNames.Admin)
-            return new DashboardScope(IsAdmin: true, CompanyId: null, AgentId: null);
+            return new DashboardScope(IsAdmin: true, UserId: userId, CompanyId: null, AgentId: null);
 
         var agent = await _context.Agents
             .Where(a => a.UserId == userId)
@@ -178,9 +178,9 @@ public class DashboardService : IDashboardService
         }
 
         if (userRole == RoleNames.CompanyOwner)
-            return new DashboardScope(IsAdmin: false, CompanyId: agent?.CompanyId, AgentId: null);
+            return new DashboardScope(IsAdmin: false, UserId: userId, CompanyId: agent?.CompanyId, AgentId: null);
 
-        return new DashboardScope(IsAdmin: false, CompanyId: agent?.CompanyId, AgentId: agent?.Id);
+        return new DashboardScope(IsAdmin: false, UserId: userId, CompanyId: agent?.CompanyId, AgentId: agent?.Id);
     }
 
     // ── Scoped query builders ────────────────────────────────────────────────
@@ -189,9 +189,20 @@ public class DashboardService : IDashboardService
     {
         var query = _context.Properties.AsQueryable();
         if (scope.IsAdmin) return query;
-        if (scope.AgentId.HasValue) return query.Where(p => p.AgentId == scope.AgentId.Value);
-        if (scope.CompanyId.HasValue) return query.Where(p => p.CompanyId == scope.CompanyId.Value);
-        return query.Where(_ => false);
+
+        var ownerIdStr = scope.UserId.ToString();
+
+        if (scope.AgentId.HasValue)
+            return query.Where(p =>
+                p.AgentId == scope.AgentId.Value ||
+                p.OwnerId == ownerIdStr);
+
+        if (scope.CompanyId.HasValue)
+            return query.Where(p =>
+                p.CompanyId == scope.CompanyId.Value ||
+                p.OwnerId == ownerIdStr);
+
+        return query.Where(p => p.OwnerId == ownerIdStr);
     }
 
     private IQueryable<Project> GetScopedProjectQuery(DashboardScope scope)
