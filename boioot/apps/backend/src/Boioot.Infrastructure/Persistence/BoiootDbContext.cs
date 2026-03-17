@@ -33,6 +33,7 @@ public class BoiootDbContext : DbContext
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<FeatureDefinition> FeatureDefinitions => Set<FeatureDefinition>();
     public DbSet<LimitDefinition> LimitDefinitions => Set<LimitDefinition>();
+    public DbSet<PlanFeature> PlanFeatures => Set<PlanFeature>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
