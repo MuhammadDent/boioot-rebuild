@@ -57,6 +57,7 @@ const addBtnStyle: React.CSSProperties = {
 
 const inlineFormStyle: React.CSSProperties = {
   display: "flex",
+  flexWrap: "wrap",
   gap: "0.5rem",
   marginTop: "0.4rem",
   alignItems: "center",
@@ -155,7 +156,7 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
           <input
             ref={inputRef}
             className="form-input"
-            style={{ flex: 1, fontSize: "0.9rem" }}
+            style={{ width: "100%", fontSize: "0.9rem" }}
             placeholder="اكتب اسم المحافظة الجديدة..."
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
@@ -265,7 +266,7 @@ export function CitySelect({
           <input
             ref={inputRef}
             className="form-input"
-            style={{ flex: 1, fontSize: "0.9rem" }}
+            style={{ width: "100%", fontSize: "0.9rem" }}
             placeholder="اكتب اسم المدينة الجديدة..."
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
@@ -402,7 +403,7 @@ export function NeighborhoodSelect({
           <input
             ref={inputRef}
             className="form-input"
-            style={{ flex: 1, fontSize: "0.9rem" }}
+            style={{ width: "100%", fontSize: "0.9rem" }}
             placeholder="اكتب اسم الحي الجديد..."
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
