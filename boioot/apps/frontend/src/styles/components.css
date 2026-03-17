@@ -861,6 +861,54 @@
   .home-hdr__projects-hide { display: none !important; }
 }
 
+/* ── Home main content layout ── */
+.home-main-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+.home-filter-toggle {
+  display: none;
+}
+.home-filter-panel {
+  width: 270px;
+  flex-shrink: 0;
+}
+@media (max-width: 768px) {
+  .home-main-layout {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .home-filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    padding: 0.55rem 1rem;
+    background: #f0fdf4;
+    color: var(--color-primary);
+    border: 1.5px solid var(--color-primary);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    justify-content: center;
+  }
+  .home-filter-panel {
+    width: 100%;
+    position: static !important;
+    max-height: none !important;
+    order: -1;
+  }
+  .home-filter-panel--hidden {
+    display: none !important;
+  }
+  /* Hide notification & favorites icons on mobile */
+  .home-hdr-icon-secondary { display: none !important; }
+}
+
 /* ─────────────── Daily-Rentals type chips ─────────────── */
 .type-chips {
   display: flex;

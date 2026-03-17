@@ -123,6 +123,9 @@ export default function HomePage() {
   // Listing tabs
   const [activeTab, setActiveTab] = useState(0);
 
+  // Filter panel visibility (mobile toggle)
+  const [showFilter, setShowFilter] = useState(false);
+
   // Search
   const [search, setSearch] = useState("");
 
@@ -275,10 +278,10 @@ export default function HomePage() {
                 <Link href="/dashboard" title="لوحة التحكم" style={iconBtnStyle}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                 </Link>
-                <button style={{ ...iconBtnStyle, color: "#e53935", background: "none", border: "none", cursor: "pointer" }} title="المفضلة">
+                <button className="home-hdr-icon-secondary" style={{ ...iconBtnStyle, color: "#e53935", background: "none", border: "none", cursor: "pointer" }} title="المفضلة">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 </button>
-                <button style={{ ...iconBtnStyle, background: "none", border: "none", cursor: "pointer" }} title="الإشعارات">
+                <button className="home-hdr-icon-secondary" style={{ ...iconBtnStyle, background: "none", border: "none", cursor: "pointer" }} title="الإشعارات">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 </button>
                 <button
@@ -404,8 +407,18 @@ export default function HomePage() {
       </div>
 
       {/* ── MAIN CONTENT ─────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "1.5rem 1.25rem", display: "flex", gap: "1.5rem", alignItems: "flex-start" }}>
+      <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "1.5rem 1.25rem" }} className="home-main-wrap">
 
+        {/* ── Mobile filter toggle ── */}
+        <button
+          className="home-filter-toggle"
+          onClick={() => setShowFilter((v) => !v)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+          {showFilter ? "إخفاء الفلتر" : "فلتر البحث"}
+        </button>
+
+        <div className="home-main-layout">
         {/* ── LISTINGS ── */}
         <div style={{ flex: "1 1 0", minWidth: 0 }}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--color-text)", marginBottom: "1rem", paddingBottom: "0.5rem", borderBottom: "2px solid var(--color-primary)" }}>
@@ -449,7 +462,7 @@ export default function HomePage() {
         </div>
 
         {/* ── FILTER PANEL ── */}
-        <aside style={{ width: 270, flexShrink: 0, background: "#fff", border: "1px solid var(--color-border)", borderRadius: 12, padding: "1.25rem", position: "sticky", top: 88, maxHeight: "calc(100vh - 110px)", overflowY: "auto" }}>
+        <aside className={`home-filter-panel${showFilter ? "" : " home-filter-panel--hidden"}`} style={{ background: "#fff", border: "1px solid var(--color-border)", borderRadius: 12, padding: "1.25rem", position: "sticky", top: 88, maxHeight: "calc(100vh - 110px)", overflowY: "auto" }}>
 
           <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-primary)", marginBottom: "1rem", paddingBottom: "0.5rem", borderBottom: "2px solid var(--color-primary)" }}>
             فلتر بحث
@@ -548,7 +561,8 @@ export default function HomePage() {
           </div>
 
         </aside>
-      </div>
+        </div>{/* home-main-layout */}
+      </div>{/* home-main-wrap */}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
