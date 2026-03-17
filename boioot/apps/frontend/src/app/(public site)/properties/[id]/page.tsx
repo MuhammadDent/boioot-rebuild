@@ -12,6 +12,7 @@ import {
   PROPERTY_TYPE_LABELS,
   LISTING_TYPE_LABELS,
   PROPERTY_STATUS_LABELS,
+  FEATURE_LABEL,
   formatPrice,
 } from "@/features/properties/constants";
 import type { PropertyResponse } from "@/types";
@@ -261,7 +262,9 @@ export default function PropertyDetailPage() {
                 <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem" }}>المميزات</h2>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                   {property.features.map((f) => (
-                    <span key={f} style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 20, padding: "0.2rem 0.75rem", fontSize: "0.82rem", fontWeight: 600 }}>{f}</span>
+                    <span key={f} style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 20, padding: "0.2rem 0.75rem", fontSize: "0.82rem", fontWeight: 600 }}>
+                      {FEATURE_LABEL[f] ?? f}
+                    </span>
                   ))}
                 </div>
               </div>

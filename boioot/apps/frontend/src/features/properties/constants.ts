@@ -62,6 +62,35 @@ export const SYRIAN_NEIGHBORHOODS: Record<string, string[]> = {
   ],
 };
 
+/** Feature/amenity keys with Arabic labels and icons. */
+export const FEATURES_LIST = [
+  { key: "Pool",           label: "مسبح",            icon: "🏊" },
+  { key: "Garden",         label: "حديقة",            icon: "🌿" },
+  { key: "Elevator",       label: "مصعد",             icon: "🛗" },
+  { key: "Parking",        label: "موقف سيارات",      icon: "🅿️" },
+  { key: "Security",       label: "حراسة أمنية",      icon: "🔒" },
+  { key: "Generator",      label: "مولد كهربائي",     icon: "⚡" },
+  { key: "CentralAC",      label: "تكييف مركزي",      icon: "❄️" },
+  { key: "CentralHeating", label: "تدفئة مركزية",     icon: "🔥" },
+  { key: "Balcony",        label: "شرفة",             icon: "🏙️" },
+  { key: "Storage",        label: "مستودع",           icon: "📦" },
+  { key: "MaidRoom",       label: "غرفة خدم",         icon: "🛏️" },
+  { key: "Gym",            label: "نادي رياضي",       icon: "💪" },
+  { key: "EquippedKitchen",label: "مطبخ مجهز",        icon: "🍳" },
+  { key: "Furnished",      label: "مؤثث بالكامل",     icon: "🪑" },
+  { key: "NearSchools",    label: "مدارس قريبة",      icon: "🏫" },
+  { key: "NearHospital",   label: "مستشفى قريب",      icon: "🏥" },
+  { key: "NearMalls",      label: "مراكز تسوق قريبة", icon: "🛍️" },
+  { key: "InternetReady",  label: "إنترنت جاهز",      icon: "📡" },
+  { key: "Playground",     label: "ملعب أطفال",       icon: "🎠" },
+  { key: "SmartHome",      label: "منزل ذكي",         icon: "📱" },
+];
+
+/** Map from feature key → Arabic label (for quick lookup). */
+export const FEATURE_LABEL: Record<string, string> = Object.fromEntries(
+  FEATURES_LIST.map(({ key, label }) => [key, label])
+);
+
 /** Formats a numeric price with currency suffix. */
 export function formatPrice(price: number, currency = "SYP"): string {
   if (currency === "USD") {
