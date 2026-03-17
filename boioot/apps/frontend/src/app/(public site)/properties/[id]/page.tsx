@@ -150,8 +150,8 @@ export default function PropertyDetailPage() {
       <div style={{ minHeight: "100vh", background: "var(--color-background)", padding: "2rem 0" }}>
         <div className="container" style={{ paddingTop: "3rem" }}>
           <div className="error-banner">{error}</div>
-          <Link href="/properties" className="btn btn-outline" style={{ marginTop: "1rem", display: "inline-block" }}>
-            ← العودة إلى العقارات
+          <Link href="/" className="btn btn-outline" style={{ marginTop: "1rem", display: "inline-block" }}>
+            ← العودة إلى الرئيسية
           </Link>
         </div>
       </div>
@@ -172,12 +172,12 @@ export default function PropertyDetailPage() {
       <div className="container">
 
         {/* Back link */}
-        <Link href="/properties" style={{
+        <Link href="/" style={{
           display: "inline-flex", alignItems: "center", gap: "0.4rem",
           color: "var(--color-text-secondary)", fontSize: "0.9rem",
           marginBottom: "1.5rem", textDecoration: "none",
         }}>
-          ← العودة إلى العقارات
+          ← العودة إلى الرئيسية
         </Link>
 
         {/* ── Hero image ── */}
