@@ -94,7 +94,7 @@ export const FEATURE_LABEL: Record<string, string> = Object.fromEntries(
 /** Formats a numeric price with currency suffix. */
 export function formatPrice(price: number, currency = "SYP"): string {
   if (currency === "USD") {
-    return "$" + price.toLocaleString("en-US");
+    return "$" + price.toLocaleString("en");
   }
-  return price.toLocaleString("ar-SY") + " ل.س";
+  return price.toLocaleString("en") + " ل.س";
 }

@@ -26,7 +26,7 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
 
 function formatPrice(price: number, currency: string) {
   if (currency === "USD") return `$${price.toLocaleString("en")}`;
-  return `${price.toLocaleString("ar-SY")} ل.س`;
+  return `${price.toLocaleString("en")} ل.س`;
 }
 
 function formatDate(d: string) {

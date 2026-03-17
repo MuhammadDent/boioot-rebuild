@@ -110,7 +110,7 @@ function ProjectsContent() {
           {!loading && !error && (
             <p className="page-header__subtitle">
               {totalCount > 0
-                ? `${totalCount.toLocaleString("ar-SY")} مشروع`
+                ? `${totalCount.toLocaleString("en")} مشروع`
                 : hasActiveFilters ? "لا توجد نتائج" : "لا توجد مشاريع حالياً"}
             </p>
           )}

@@ -229,7 +229,7 @@ export default function PropertyDetailPage() {
               </span>
               {property.viewCount != null && (
                 <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                  👁️ {property.viewCount.toLocaleString("ar-SY")} مشاهدة
+                  👁️ {property.viewCount.toLocaleString("en")} مشاهدة
                 </span>
               )}
             </div>
@@ -401,7 +401,7 @@ export default function PropertyDetailPage() {
               {property.viewCount != null && (
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span>عدد المشاهدات</span>
-                  <span>{property.viewCount.toLocaleString("ar-SY")}</span>
+                  <span>{property.viewCount.toLocaleString("en")}</span>
                 </div>
               )}
             </div>

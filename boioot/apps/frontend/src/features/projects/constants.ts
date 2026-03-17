@@ -25,7 +25,7 @@ export const PROJECT_STATUS_BADGE: Record<string, string> = {
  */
 export function formatStartingPrice(price: number | null | undefined): string {
   if (price == null) return "السعر عند الطلب";
-  return "يبدأ من " + price.toLocaleString("ar-SY") + " ل.س";
+  return "يبدأ من " + price.toLocaleString("en") + " ل.س";
 }
 
 /**

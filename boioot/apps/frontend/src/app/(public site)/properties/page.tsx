@@ -155,7 +155,7 @@ function PropertiesContent() {
           {!loading && !error && (
             <p className="page-header__subtitle">
               {totalCount > 0
-                ? `${totalCount.toLocaleString("ar-SY")} عقار`
+                ? `${totalCount.toLocaleString("en")} عقار`
                 : hasActiveFilters ? "لا توجد نتائج" : "لا توجد عقارات حالياً"}
             </p>
           )}

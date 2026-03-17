@@ -744,7 +744,7 @@ function StatCard({
         )}
       </div>
       <p style={{ margin: 0, fontSize: "1.8rem", fontWeight: 800, color: "#1e293b", lineHeight: 1, direction: "ltr", textAlign: "right" }}>
-        {value.toLocaleString("ar-SY")}
+        {value.toLocaleString("en")}
       </p>
       <p style={{ margin: "0.2rem 0 0", fontSize: "0.8rem", color: "#64748b", fontWeight: 500 }}>
         {label}

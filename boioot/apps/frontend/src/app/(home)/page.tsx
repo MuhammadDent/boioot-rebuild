@@ -423,7 +423,7 @@ export default function HomePage() {
         <div style={{ flex: "1 1 0", minWidth: 0 }}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--color-text)", marginBottom: "1rem", paddingBottom: "0.5rem", borderBottom: "2px solid var(--color-primary)" }}>
             الإعلانات المتاحة
-            {!loading && <span style={{ color: "var(--color-text-muted)", fontWeight: 400, fontSize: "0.9rem", marginRight: "0.5rem" }}>({totalCount.toLocaleString("ar-SY")})</span>}
+            {!loading && <span style={{ color: "var(--color-text-muted)", fontWeight: 400, fontSize: "0.9rem", marginRight: "0.5rem" }}>({totalCount.toLocaleString("en")})</span>}
           </h2>
 
           {loading && (

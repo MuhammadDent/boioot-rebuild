@@ -145,7 +145,7 @@ function DailyRentalsContent() {
           {!loading && !error && (
             <p className="page-header__subtitle">
               {totalCount > 0
-                ? `${totalCount.toLocaleString("ar-SY")} عرض إيجار يومي`
+                ? `${totalCount.toLocaleString("en")} عرض إيجار يومي`
                 : hasActiveFilters ? "لا توجد نتائج" : "لا توجد عروض حالياً"}
             </p>
           )}

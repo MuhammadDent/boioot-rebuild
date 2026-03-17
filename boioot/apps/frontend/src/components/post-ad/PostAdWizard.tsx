@@ -118,7 +118,7 @@ async function resizeImage(file: File, maxPx = 1200): Promise<string> {
 function formatPrice(price: string, currency: string) {
   const n = Number(price);
   if (!price || isNaN(n)) return "—";
-  return n.toLocaleString("ar-SY") + " " + (currency === "SYP" ? "ل.س" : "$");
+  return n.toLocaleString("en") + " " + (currency === "SYP" ? "ل.س" : "$");
 }
 
 // ─── Step validators ──────────────────────────────────────────────────────────
