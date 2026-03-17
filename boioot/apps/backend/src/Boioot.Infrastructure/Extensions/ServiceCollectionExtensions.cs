@@ -9,7 +9,9 @@ using Boioot.Application.Features.Messaging.Interfaces;
 using Boioot.Application.Features.BuyerRequests.Interfaces;
 using Boioot.Application.Features.Favorites.Interfaces;
 using Boioot.Application.Features.Requests.Interfaces;
+using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Infrastructure.Common;
+using Boioot.Infrastructure.Features.Subscriptions;
 using Boioot.Infrastructure.Features.Admin;
 using Boioot.Infrastructure.Features.AgentManagement;
 using Boioot.Infrastructure.Features.Auth;
@@ -48,6 +50,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBuyerRequestService, BuyerRequestService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IAgentManagementService, AgentManagementService>();
+        services.AddScoped<IPlanEntitlementService, PlanEntitlementService>();
         services.AddScoped<DataSeeder>();
 
         return services;
