@@ -224,6 +224,12 @@ export default function MyListingsPage() {
                   >
                     عرض
                   </Link>
+                  <Link
+                    href={`/dashboard/properties/${p.id}/edit`}
+                    style={{ padding: "0.45rem 0.9rem", borderRadius: 7, border: "1.5px solid #bbf7d0", color: "#16a34a", textDecoration: "none", fontWeight: 600, fontSize: "0.82rem" }}
+                  >
+                    تعديل
+                  </Link>
                   <button
                     onClick={() => handleDelete(p.id)}
                     disabled={deletingId === p.id}

@@ -516,6 +516,9 @@ public class PropertyService : IPropertyService
             return;
         }
 
+        // Allow access if the user is the personal owner (posted via my-listings)
+        if (property.OwnerId == userId.ToString()) return;
+
         if (userRole == RoleNames.Agent)
         {
             var agent = await _context.Agents
