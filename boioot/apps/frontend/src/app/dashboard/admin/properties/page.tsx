@@ -211,7 +211,7 @@ function PropertyRow({ property: p }: { property: PropertyResponse }) {
           fontSize: "0.82rem", color: "var(--color-text-secondary)",
         }}>
           <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>
-            {formatPrice(p.price)}
+            {formatPrice(p.price, p.currency)}
           </span>
           <span>·</span>
           <span>الشركة: {p.companyName}</span>

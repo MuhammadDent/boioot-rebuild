@@ -1,0 +1,25 @@
+{
+  "Files": [
+    {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/videos/3827ac4b-511b-45af-9f22-1e2787ea6329.mp4",
+      "PackagePath": "staticwebassets/videos/3827ac4b-511b-45af-9f22-1e2787ea6329.mp4"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.Boioot.Api.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.build.Boioot.Api.props",
+      "PackagePath": "build\\Boioot.Api.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildMultiTargeting.Boioot.Api.props",
+      "PackagePath": "buildMultiTargeting\\Boioot.Api.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildTransitive.Boioot.Api.props",
+      "PackagePath": "buildTransitive\\Boioot.Api.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

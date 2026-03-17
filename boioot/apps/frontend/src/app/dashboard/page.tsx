@@ -652,7 +652,7 @@ export default function DashboardPage() {
                       </p>
                     </Link>
                     <p style={{ margin: "0 0 0.35rem", fontSize: "0.82rem", color: "var(--color-primary)", fontWeight: 700 }}>
-                      {formatPrice(fav.price)} {fav.currency === "USD" ? "$" : ""}
+                      {formatPrice(fav.price, fav.currency)}
                     </p>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
                       <span style={{ fontSize: "0.75rem", color: "#64748b" }}>📍 {fav.city}</span>

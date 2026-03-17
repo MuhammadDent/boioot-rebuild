@@ -236,7 +236,7 @@ export default function PropertyDetailPage() {
 
             {/* Price */}
             <p style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--color-primary)", marginBottom: "1rem" }}>
-              {formatPrice(property.price)}
+              {formatPrice(property.price, property.currency)}
             </p>
 
             {/* Location */}

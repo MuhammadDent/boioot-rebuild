@@ -100,7 +100,7 @@ export default function PropertyCard({ property, initialIsFavorited = false }: P
 
         <div className="property-card__body">
           <h3 className="property-card__title">{property.title}</h3>
-          <p className="property-card__price">{formatPrice(property.price)}</p>
+          <p className="property-card__price">{formatPrice(property.price, property.currency)}</p>
           <p className="property-card__city">📍 {property.city}</p>
 
           <div className="property-card__tags">

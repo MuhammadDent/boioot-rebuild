@@ -329,7 +329,7 @@ function PropertyRow({
               color: "var(--color-text-secondary)",
             }}
           >
-            {formatPrice(p.price)} &bull; {p.city} &bull;{" "}
+            {formatPrice(p.price, p.currency)} &bull; {p.city} &bull;{" "}
             {new Date(p.createdAt).toLocaleDateString("en-GB", {
               year: "numeric",
               month: "numeric",
