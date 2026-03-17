@@ -1,0 +1,100 @@
+We need to implement initial seed data for the subscription system.
+
+Goal:
+Initialize the database with required default data so the subscription enforcement system works correctly.
+
+Scope:
+Seed the following tables:
+- FeatureDefinitions
+- LimitDefinitions
+- Plans
+- PlanFeatures
+- PlanLimits
+
+Requirements:
+
+1. FeatureDefinitions:
+Create these features:
+- analytics_dashboard
+- priority_support
+- featured_listings
+
+2. LimitDefinitions:
+Create these limits:
+- max_active_listings
+- max_agents
+- max_projects
+
+3. Plans:
+Create these plans:
+- OwnerPro
+- AgentPro
+- AgentPremium
+- OfficeStarter
+- BusinessGrowth
+
+4. PlanLimits:
+Assign limits per plan:
+
+OwnerPro:
+- max_active_listings = 5
+- max_agents = 0
+
+AgentPro:
+- max_active_listings = 20
+- max_agents = 3
+
+AgentPremium:
+- max_active_listings = 50
+- max_agents = 10
+
+OfficeStarter:
+- max_active_listings = 100
+- max_agents = 20
+
+BusinessGrowth:
+- max_active_listings = -1 (unlimited)
+- max_agents = -1 (unlimited)
+
+5. PlanFeatures:
+Assign features to plans:
+
+OwnerPro:
+- analytics_dashboard
+
+AgentPro:
+- analytics_dashboard
+
+AgentPremium:
+- analytics_dashboard
+- featured_listings
+
+OfficeStarter:
+- analytics_dashboard
+- featured_listings
+- priority_support
+
+BusinessGrowth:
+- all features
+
+Implementation rules:
+
+- Seed data must be idempotent (do not duplicate data if it already exists)
+- Use existing entity models (Plan, FeatureDefinition, LimitDefinition, PlanLimit, PlanFeature)
+- Ensure all foreign keys are valid
+- Place seeding logic inside Program.cs using a scoped service
+- Call db.Database.EnsureCreated() before seeding if needed
+- Save changes properly
+
+Important:
+
+- Do NOT change database schema
+- Do NOT refactor existing logic
+- Only add seed data logic
+- Use consistent IDs (strings like "max_active_listings", not random GUIDs)
+
+Return:
+
+- Full seed implementation code
+- Where exactly it was added (Program.cs or Seeder class)
+- Confirmation that the system now works with sample data
