@@ -191,18 +191,34 @@ using (var scope = app.Services.CreateScope())
                 UpdatedAt     TEXT NOT NULL
             )");
 
-        // Enforce 1-account-per-user at DB level (EF config alone is not enough for SQLite)
+        // Remove old UNIQUE constraint on OwnerUserId (OwnerUserId concept retired)
         await db.Database.ExecuteSqlRawAsync(
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_accounts_owneruserid ON Accounts(OwnerUserId)");
+            "DROP INDEX IF EXISTS ix_accounts_owneruserid");
+
+        // ── Accounts: add new columns (OwnerUserId stays as orphaned column in SQLite) ──
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Accounts ADD COLUMN CreatedByUserId TEXT NOT NULL DEFAULT ''"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Accounts ADD COLUMN PrimaryAdminUserId TEXT"); }
+        catch { /* column already exists */ }
 
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS AccountUsers (
-                AccountId TEXT NOT NULL REFERENCES Accounts(Id) ON DELETE CASCADE,
-                UserId    TEXT NOT NULL REFERENCES Users(Id) ON DELETE CASCADE,
-                Role      TEXT NOT NULL DEFAULT 'Member',
-                JoinedAt  TEXT NOT NULL,
+                AccountId            TEXT NOT NULL REFERENCES Accounts(Id) ON DELETE CASCADE,
+                UserId               TEXT NOT NULL REFERENCES Users(Id) ON DELETE CASCADE,
+                OrganizationUserRole TEXT NOT NULL DEFAULT 'Agent',
+                IsPrimary            INTEGER NOT NULL DEFAULT 0,
+                IsActive             INTEGER NOT NULL DEFAULT 1,
+                JoinedAt             TEXT NOT NULL,
                 PRIMARY KEY (AccountId, UserId)
             )");
+
+        // AccountUsers column additions (for tables created in an older schema)
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE AccountUsers ADD COLUMN OrganizationUserRole TEXT NOT NULL DEFAULT 'Agent'"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE AccountUsers ADD COLUMN IsPrimary INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE AccountUsers ADD COLUMN IsActive INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* column already exists */ }
 
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS Subscriptions (
@@ -217,7 +233,7 @@ using (var scope = app.Services.CreateScope())
                 UpdatedAt   TEXT NOT NULL
             )");
 
-        // ── Plan column additions (new limits + features) ────────────────────
+        // ── Plan column additions ────────────────────────────────────────────
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN ImageLimitPerListing INTEGER NOT NULL DEFAULT 5"); }
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN VideoAllowed INTEGER NOT NULL DEFAULT 0"); }
@@ -226,38 +242,50 @@ using (var scope = app.Services.CreateScope())
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN Features TEXT"); }
         catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN Description TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN ApplicableAccountType TEXT"); }
+        catch { /* column already exists */ }
 
-        // Update seeded plans with full limits and feature lists
+        // Update seeded plans with full data
         await db.Database.ExecuteSqlRawAsync(@"
             UPDATE Plans SET
-                ImageLimitPerListing = 5,
-                VideoAllowed         = 0,
-                AnalyticsAccess      = 0,
-                Features             = '[""2 إعلانات شهرياً"",""5 صور لكل إعلان"",""بحث وتصفح عادي""]'
+                ImageLimitPerListing  = 5,
+                VideoAllowed          = 0,
+                AnalyticsAccess       = 0,
+                Description           = 'للمستخدمين الأفراد الذين يرغبون في نشر إعلانات محدودة',
+                ApplicableAccountType = 'Individual',
+                Features              = '[""2 إعلانات شهرياً"",""5 صور لكل إعلان"",""بحث وتصفح عادي""]'
             WHERE Id = '00000001-0000-0000-0000-000000000000'");
 
         await db.Database.ExecuteSqlRawAsync(@"
             UPDATE Plans SET
-                ImageLimitPerListing = 10,
-                VideoAllowed         = 0,
-                AnalyticsAccess      = 0,
-                Features             = '[""5 إعلانات شهرياً"",""10 صور لكل إعلان"",""3 وكلاء"",""إعلان مميز واحد"",""دعم فني""]'
+                ImageLimitPerListing  = 10,
+                VideoAllowed          = 0,
+                AnalyticsAccess       = 0,
+                Description           = 'للمكاتب العقارية الصغيرة والوسيطة',
+                ApplicableAccountType = 'Office',
+                Features              = '[""5 إعلانات شهرياً"",""10 صور لكل إعلان"",""3 وكلاء"",""إعلان مميز واحد"",""دعم فني""]'
             WHERE Id = '00000002-0000-0000-0000-000000000000'");
 
         await db.Database.ExecuteSqlRawAsync(@"
             UPDATE Plans SET
-                ImageLimitPerListing = 20,
-                VideoAllowed         = 1,
-                AnalyticsAccess      = 1,
-                Features             = '[""20 إعلاناً شهرياً"",""20 صورة لكل إعلان"",""رفع فيديو"",""10 وكلاء"",""5 إعلانات مميزة"",""لوحة إحصائيات"",""2 مشروع""]'
+                ImageLimitPerListing  = 20,
+                VideoAllowed          = 1,
+                AnalyticsAccess       = 1,
+                Description           = 'للمكاتب والشركات العقارية المتوسطة والكبيرة',
+                ApplicableAccountType = NULL,
+                Features              = '[""20 إعلاناً شهرياً"",""20 صورة لكل إعلان"",""رفع فيديو"",""10 وكلاء"",""5 إعلانات مميزة"",""لوحة إحصائيات"",""2 مشروع""]'
             WHERE Id = '00000003-0000-0000-0000-000000000000'");
 
         await db.Database.ExecuteSqlRawAsync(@"
             UPDATE Plans SET
-                ImageLimitPerListing = -1,
-                VideoAllowed         = 1,
-                AnalyticsAccess      = 1,
-                Features             = '[""إعلانات غير محدودة"",""صور غير محدودة"",""رفع فيديو"",""وكلاء غير محدودون"",""إعلانات مميزة 20"",""لوحة إحصائيات متقدمة"",""مشاريع غير محدودة"",""دعم أولوية""]'
+                ImageLimitPerListing  = -1,
+                VideoAllowed          = 1,
+                AnalyticsAccess       = 1,
+                Description           = 'للشركات الكبرى وشركات التطوير العقاري',
+                ApplicableAccountType = 'Company',
+                Features              = '[""إعلانات غير محدودة"",""صور غير محدودة"",""رفع فيديو"",""وكلاء غير محدودون"",""إعلانات مميزة 20"",""لوحة إحصائيات متقدمة"",""مشاريع غير محدودة"",""دعم أولوية""]'
             WHERE Id = '00000004-0000-0000-0000-000000000000'");
 
         // Property.AccountId — future ownership source (replaces CompanyId in Phase C)

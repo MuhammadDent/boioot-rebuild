@@ -1,8 +1,19 @@
+using Boioot.Domain.Enums;
+
 namespace Boioot.Domain.Entities;
 
 public class Plan : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Marketing description shown on the pricing page.</summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Which account type this plan applies to.
+    /// Null = available for all account types.
+    /// </summary>
+    public AccountType? ApplicableAccountType { get; set; }
 
     // ── Limits ────────────────────────────────────────────────────
     /// <summary>Monthly listing limit. -1 = unlimited.</summary>
@@ -27,9 +38,11 @@ public class Plan : BaseEntity
     public bool AnalyticsAccess { get; set; } = false;
 
     // ── Pricing ───────────────────────────────────────────────────
-    public decimal PriceMonthly { get; set; } = 0;
+    /// <summary>Base monthly price before any discounts or add-ons.</summary>
+    public decimal BasePriceMonthly { get; set; } = 0;
 
-    public decimal PriceYearly { get; set; } = 0;
+    /// <summary>Base yearly price before any discounts or add-ons.</summary>
+    public decimal BasePriceYearly { get; set; } = 0;
 
     // ── Display ───────────────────────────────────────────────────
     /// <summary>JSON TEXT array of marketing feature strings shown on the pricing page.</summary>

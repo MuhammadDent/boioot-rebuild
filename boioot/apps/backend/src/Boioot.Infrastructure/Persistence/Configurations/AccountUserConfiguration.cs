@@ -10,7 +10,9 @@ public class AccountUserConfiguration : IEntityTypeConfiguration<AccountUser>
     {
         builder.HasKey(au => new { au.AccountId, au.UserId });
 
-        builder.Property(au => au.Role).HasConversion<string>().HasMaxLength(50);
+        builder.Property(au => au.OrganizationUserRole)
+            .HasConversion<string>()
+            .HasMaxLength(50);
 
         builder.HasOne(au => au.Account)
             .WithMany(a => a.AccountUsers)
@@ -22,6 +24,7 @@ public class AccountUserConfiguration : IEntityTypeConfiguration<AccountUser>
             .HasForeignKey(au => au.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasQueryFilter(au => !au.Account.OwnerUser.IsDeleted);
+        // Mirror Account's query filter chain to prevent EF warning 10622
+        builder.HasQueryFilter(au => !au.Account.CreatedByUser.IsDeleted);
     }
 }
