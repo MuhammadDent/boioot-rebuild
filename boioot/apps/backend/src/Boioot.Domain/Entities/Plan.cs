@@ -53,4 +53,5 @@ public class Plan : BaseEntity
     public ICollection<Account> Accounts { get; set; } = [];
     public ICollection<Subscription> Subscriptions { get; set; } = [];
     public ICollection<PlanFeature> PlanFeatures { get; set; } = [];
+    public ICollection<PlanLimit> PlanLimits { get; set; } = [];
 }

@@ -358,6 +358,25 @@ using (var scope = app.Services.CreateScope())
         await db.Database.ExecuteSqlRawAsync(
             "CREATE INDEX IF NOT EXISTS ix_planfeatures_featureid ON PlanFeatures(FeatureDefinitionId)");
 
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS PlanLimits (
+                Id                 TEXT NOT NULL PRIMARY KEY,
+                SubscriptionPlanId TEXT NOT NULL REFERENCES Plans(Id) ON DELETE CASCADE,
+                LimitDefinitionId  TEXT NOT NULL REFERENCES LimitDefinitions(Id) ON DELETE RESTRICT,
+                Value              REAL NOT NULL,
+                CreatedAt          TEXT NOT NULL,
+                UpdatedAt          TEXT NOT NULL
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_planlimits_plan_limit ON PlanLimits(SubscriptionPlanId, LimitDefinitionId)");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_planlimits_subscriptionplanid ON PlanLimits(SubscriptionPlanId)");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_planlimits_limitdefinitionid ON PlanLimits(LimitDefinitionId)");
+
         // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");
         await db.Database.ExecuteSqlRawAsync(@"

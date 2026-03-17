@@ -34,6 +34,7 @@ public class BoiootDbContext : DbContext
     public DbSet<FeatureDefinition> FeatureDefinitions => Set<FeatureDefinition>();
     public DbSet<LimitDefinition> LimitDefinitions => Set<LimitDefinition>();
     public DbSet<PlanFeature> PlanFeatures => Set<PlanFeature>();
+    public DbSet<PlanLimit> PlanLimits => Set<PlanLimit>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
