@@ -292,6 +292,25 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN AccountId TEXT"); }
         catch { /* column already exists */ }
 
+        // ── Phase B: FeatureDefinitions catalog ──────────────────────────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS FeatureDefinitions (
+                Id           TEXT NOT NULL PRIMARY KEY,
+                Key          TEXT NOT NULL,
+                Name         TEXT NOT NULL,
+                Description  TEXT,
+                FeatureGroup TEXT,
+                IsActive     INTEGER NOT NULL DEFAULT 1,
+                CreatedAt    TEXT NOT NULL,
+                UpdatedAt    TEXT NOT NULL
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_featuredefinitions_key ON FeatureDefinitions(Key)");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_featuredefinitions_group ON FeatureDefinitions(FeatureGroup)");
+
         // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");
         await db.Database.ExecuteSqlRawAsync(@"

@@ -31,6 +31,7 @@ public class BoiootDbContext : DbContext
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<AccountUser> AccountUsers => Set<AccountUser>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<FeatureDefinition> FeatureDefinitions => Set<FeatureDefinition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
