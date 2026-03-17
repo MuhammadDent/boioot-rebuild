@@ -190,8 +190,10 @@ public class AuthService : IAuthService
     {
         var prefix = role switch
         {
-            UserRole.Agent        => "A",
-            UserRole.CompanyOwner => "C",
+            UserRole.Owner        => "OWN",
+            UserRole.Broker       => "BRK",
+            UserRole.Agent        => "AGT",
+            UserRole.CompanyOwner => "CO",
             UserRole.Admin        => "ADM",
             _                     => "U",
         };

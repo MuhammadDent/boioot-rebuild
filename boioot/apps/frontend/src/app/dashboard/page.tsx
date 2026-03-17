@@ -13,7 +13,7 @@ import { normalizeError } from "@/lib/api";
 import { formatPrice, LISTING_TYPE_LABELS, PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
 import type { DashboardSummary, FavoriteResponse } from "@/types";
 
-const SUMMARY_ROLES = ["Admin", "CompanyOwner", "Agent"] as const;
+const SUMMARY_ROLES = ["Admin", "CompanyOwner", "Broker", "Agent"] as const;
 type SummaryRole = (typeof SUMMARY_ROLES)[number];
 function canSeeSummary(role: string): role is SummaryRole {
   return (SUMMARY_ROLES as readonly string[]).includes(role);
@@ -93,6 +93,7 @@ export default function DashboardPage() {
 
   const isManagementRole = canSeeSummary(user.role);
   const isCompanyOrAdmin = user.role === "Admin" || user.role === "CompanyOwner";
+  const canManageAgents  = user.role === "Broker" || user.role === "CompanyOwner" || user.role === "Admin";
 
   async function handleEditSave(e: FormEvent) {
     e.preventDefault();
@@ -124,13 +125,17 @@ export default function DashboardPage() {
   const roleColor: Record<string, string> = {
     Admin:        "#dc2626",
     CompanyOwner: "#2563eb",
+    Broker:       "#7c3aed",
     Agent:        "#d97706",
+    Owner:        "#059669",
     User:         "#6b7280",
   };
   const roleBg: Record<string, string> = {
     Admin:        "#fef2f2",
     CompanyOwner: "#eff6ff",
+    Broker:       "#f5f3ff",
     Agent:        "#fffbeb",
+    Owner:        "#ecfdf5",
     User:         "#f9fafb",
   };
 
@@ -519,7 +524,7 @@ export default function DashboardPage() {
           <div style={{ marginBottom: "1.25rem" }}>
             <SectionLabel>إدارة الإعلانات</SectionLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              {(user.role === "CompanyOwner" || user.role === "Admin") && (
+              {(user.role === "CompanyOwner" || user.role === "Broker" || user.role === "Admin") && (
                 <QuickActionCard
                   href="/dashboard/properties/new"
                   label="إضافة عقار جديد"
@@ -546,6 +551,11 @@ export default function DashboardPage() {
                     icon={<><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></>}
                   />
                 </>
+              )}
+              {canManageAgents && (
+                <NavCard href="/dashboard/agents" label="إدارة الوكلاء" description="إنشاء وإدارة الوكلاء التابعين للمكتب أو الشركة"
+                  icon={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>}
+                />
               )}
               <NavCard href="/dashboard/requests" label="الطلبات والاستفسارات" description="عرض وإدارة استفسارات العملاء"
                 icon={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>}

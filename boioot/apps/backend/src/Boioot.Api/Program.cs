@@ -55,6 +55,12 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("AdminOrCompanyOwnerOrAgent", policy =>
         policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Agent));
+
+    options.AddPolicy("BrokerOrCompanyOwner", policy =>
+        policy.RequireRole(RoleNames.Broker, RoleNames.CompanyOwner, RoleNames.Admin));
+
+    options.AddPolicy("CanListProperty", policy =>
+        policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Broker, RoleNames.Agent, RoleNames.Owner, RoleNames.User));
 });
 
 var app = builder.Build();
@@ -148,6 +154,8 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN ViewCount INTEGER NOT NULL DEFAULT 0"); }
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Projects ADD COLUMN Province TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Agents ADD COLUMN BrokerId TEXT"); }
         catch { /* column already exists */ }
 
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Messages ADD COLUMN AttachmentData TEXT"); }

@@ -24,10 +24,11 @@ public class RegisterRequest
     public string? Phone { get; set; }
 
     /// <summary>
-    /// نوع الحساب: User | Agent | CompanyOwner
+    /// نوع الحساب: User | Owner | Broker | CompanyOwner
+    /// ملاحظة: Agent لا يُنشأ عبر التسجيل العام — يُنشئه المكتب أو الشركة فقط
     /// </summary>
     [Required(ErrorMessage = "يرجى تحديد نوع الحساب")]
-    [RegularExpression("^(User|Agent|CompanyOwner)$",
+    [RegularExpression("^(User|Owner|Broker|CompanyOwner)$",
         ErrorMessage = "نوع الحساب غير صالح")]
     public string Role { get; set; } = "User";
 }

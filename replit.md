@@ -78,6 +78,13 @@ boioot/
 - ✅ **Phase 7**: RequestStatus → New, Contacted, Qualified, Closed
 - ✅ **Phase 7**: Dashboard: Admin كل الطلبات | CompanyOwner طلبات شركته | Agent طلبات عقاراته
 - ✅ **Phase 7**: Migration AddRequestLeadFields — حذف UserId FK + إضافة Name/Phone/Email
+- ✅ **Phase 8**: نظام الأدوار المحدّث — 6 أدوار: User, Owner, Broker, Agent, CompanyOwner, Admin
+- ✅ **Phase 8**: Broker (مكتب عقاري) — ينشئ وكلاء تحته، يرى إعلاناته + إعلانات وكلائه
+- ✅ **Phase 8**: Owner (مالك عقار) — حد 2 إعلان/شهر كالـ User، توثيق اختياري لاحقاً
+- ✅ **Phase 8**: Agent — يُنشأ فقط من Broker أو CompanyOwner (لا تسجيل مستقل)
+- ✅ **Phase 8**: AgentManagement API — POST /api/agents، GET /api/agents/my-agents، PATCH toggle-active
+- ✅ **Phase 8**: Agents.BrokerId — عمود جديد يربط الوكيل بالمكتب (أو CompanyId بالشركة)
+- ✅ **Phase 8**: صفحة /dashboard/agents — إدارة الوكلاء للمكتب والشركة
 
 ---
 

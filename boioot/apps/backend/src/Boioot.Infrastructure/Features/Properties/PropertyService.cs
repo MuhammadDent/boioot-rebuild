@@ -278,8 +278,9 @@ public class PropertyService : IPropertyService
         IQueryable<Property> filteredQuery = userRole switch
         {
             RoleNames.CompanyOwner => await BuildCompanyOwnerQueryAsync(query, userId, ct),
-            RoleNames.Agent => await BuildAgentQueryAsync(query, userId, ct),
-            _ => query
+            RoleNames.Agent        => await BuildAgentQueryAsync(query, userId, ct),
+            RoleNames.Broker       => await BuildBrokerQueryAsync(query, userId, ct),
+            _                      => query.Where(p => p.OwnerId == userId.ToString())
         };
 
         filteredQuery = ApplyFilters(filteredQuery, filters);
@@ -304,9 +305,13 @@ public class PropertyService : IPropertyService
 
     private static int GetMonthlyLimit(string userRole) => userRole switch
     {
-        RoleNames.Admin => 999,
-        RoleNames.User  => 2,
-        _               => 5   // CompanyOwner, Agent — can always post more
+        RoleNames.Admin        => 999,
+        RoleNames.CompanyOwner => 999,
+        RoleNames.Broker       => 999,
+        RoleNames.Agent        => 999,
+        RoleNames.User         => 2,
+        RoleNames.Owner        => 2,
+        _                      => 2
     };
 
     public async Task<(int used, int limit)> GetMonthlyListingStatsAsync(
@@ -499,6 +504,23 @@ public class PropertyService : IPropertyService
             : query.Where(_ => false);
     }
 
+    private async Task<IQueryable<Property>> BuildBrokerQueryAsync(
+        IQueryable<Property> query, Guid userId, CancellationToken ct)
+    {
+        // جلب معرّفات الوكلاء التابعين لهذا المكتب
+        var agentIds = await _context.Agents
+            .Where(a => a.BrokerId == userId)
+            .Select(a => a.Id)
+            .ToListAsync(ct);
+
+        var ownerIdStr = userId.ToString();
+
+        // المكتب يرى إعلاناته الخاصة + إعلانات وكلائه
+        return query.Where(p =>
+            p.OwnerId == ownerIdStr ||
+            (p.AgentId != null && agentIds.Contains(p.AgentId.Value)));
+    }
+
     private async Task EnsureCanManageCompanyAsync(
         Guid userId, string userRole, Guid companyId, CancellationToken ct)
     {
@@ -556,6 +578,22 @@ public class PropertyService : IPropertyService
                 "Agent {UserId} attempted unauthorized access to property {PropertyId}",
                 userId, property.Id);
             throw new BoiootException("هذا العقار غير مسند إليك", 403);
+        }
+
+        if (userRole == RoleNames.Broker)
+        {
+            // المكتب يمكنه إدارة إعلانات وكلائه
+            var agentIds = await _context.Agents
+                .Where(a => a.BrokerId == userId)
+                .Select(a => a.Id)
+                .ToListAsync(ct);
+
+            if (property.AgentId.HasValue && agentIds.Contains(property.AgentId.Value)) return;
+
+            _logger.LogWarning(
+                "Broker {UserId} attempted unauthorized access to property {PropertyId}",
+                userId, property.Id);
+            throw new BoiootException("هذا العقار غير مسند لأحد وكلائك", 403);
         }
 
         throw new BoiootException("غير مصرح لك بتنفيذ هذا الإجراء", 403);

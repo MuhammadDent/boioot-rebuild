@@ -1,5 +1,6 @@
 using Boioot.Application.Common.Services;
 using Boioot.Application.Features.Admin.Interfaces;
+using Boioot.Application.Features.AgentManagement.Interfaces;
 using Boioot.Application.Features.Auth.Interfaces;
 using Boioot.Application.Features.Projects.Interfaces;
 using Boioot.Application.Features.Properties.Interfaces;
@@ -10,6 +11,7 @@ using Boioot.Application.Features.Favorites.Interfaces;
 using Boioot.Application.Features.Requests.Interfaces;
 using Boioot.Infrastructure.Common;
 using Boioot.Infrastructure.Features.Admin;
+using Boioot.Infrastructure.Features.AgentManagement;
 using Boioot.Infrastructure.Features.Auth;
 using Boioot.Infrastructure.Features.Dashboard;
 using Boioot.Infrastructure.Features.Messaging;
@@ -45,6 +47,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFavoriteService, FavoriteService>();
         services.AddScoped<IBuyerRequestService, BuyerRequestService>();
         services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IAgentManagementService, AgentManagementService>();
         services.AddScoped<DataSeeder>();
 
         return services;

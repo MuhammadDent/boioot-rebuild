@@ -13,7 +13,7 @@ import { EyeIcon } from "@/components/ui/EyeIcon";
 import Spinner from "@/components/ui/Spinner";
 import type { E164Number } from "libphonenumber-js/core";
 
-type RoleValue = "User" | "Agent" | "CompanyOwner";
+type RoleValue = "User" | "Owner" | "Broker" | "CompanyOwner";
 
 interface RoleOption {
   value: RoleValue;
@@ -34,9 +34,9 @@ const ROLES: RoleOption[] = [
     ),
   },
   {
-    value: "Agent",
+    value: "Owner",
     label: "مالك عقار",
-    desc: "أريد عرض عقاري للبيع أو الإيجار",
+    desc: "أريد عرض عقاري للبيع أو الإيجار (حتى إعلانين/شهر)",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -45,9 +45,9 @@ const ROLES: RoleOption[] = [
     ),
   },
   {
-    value: "Agent",
-    label: "وسيط عقاري",
-    desc: "أعمل وسيطاً بين البائعين والمشترين",
+    value: "Broker",
+    label: "مكتب عقاري",
+    desc: "أدير مكتباً عقارياً وأريد إنشاء فريق وكلاء",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -59,8 +59,8 @@ const ROLES: RoleOption[] = [
   },
   {
     value: "CompanyOwner",
-    label: "شركة عقارية",
-    desc: "أمثّل شركة أو مكتب عقاري",
+    label: "شركة تطوير",
+    desc: "أمثّل شركة تطوير عقاري ومشاريع سكنية",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />

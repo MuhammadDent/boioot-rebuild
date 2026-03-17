@@ -2,15 +2,19 @@ export const ADMIN_PAGE_SIZE = 20;
 
 export const ROLE_LABELS: Record<string, string> = {
   Admin:        "مدير النظام",
-  CompanyOwner: "مالك شركة",
-  Agent:        "وسيط",
+  CompanyOwner: "شركة تطوير",
+  Broker:       "مكتب عقاري",
+  Agent:        "وكيل عقاري",
+  Owner:        "مالك عقار",
   User:         "مستخدم",
 };
 
 export const ROLE_BADGE: Record<string, string> = {
   Admin:        "badge badge-red",
   CompanyOwner: "badge badge-blue",
+  Broker:       "badge badge-violet",
   Agent:        "badge badge-yellow",
+  Owner:        "badge badge-green",
   User:         "badge badge-gray",
 };
 
