@@ -643,12 +643,82 @@
   border-color: var(--color-primary);
 }
 
-/* ─────────────── Filter Bar ─────────────── */
-/*
- * Used by the public properties listing page.
- * Added to the shared stylesheet because there is no per-page CSS file
- * and these classes may be reused by the projects listing page.
- */
+/* ─────────────── Properties Layout (sidebar + content) ─────────────── */
+.properties-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+/* Main content area (cards) — takes remaining space */
+.properties-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─────────────── Filter Sidebar ─────────────── */
+.filter-sidebar {
+  width: 230px;
+  flex-shrink: 0;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  position: sticky;
+  top: 100px;
+}
+.filter-sidebar__title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid var(--color-primary);
+  margin-bottom: 0.1rem;
+}
+.filter-sidebar .form-group {
+  margin: 0;
+}
+.filter-sidebar .form-label {
+  font-size: 0.78rem;
+  margin-bottom: 0.3rem;
+}
+.filter-sidebar .form-input {
+  font-size: 0.85rem;
+  padding: 0.45rem 0.6rem;
+}
+.filter-sidebar__price {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+.filter-sidebar__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.filter-sidebar__actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ─── Mobile: stack vertically, filter on top ─── */
+@media (max-width: 768px) {
+  .properties-layout {
+    flex-direction: column;
+  }
+  .filter-sidebar {
+    width: 100%;
+    position: static;
+  }
+  .filter-sidebar__price { grid-template-columns: 1fr 1fr; }
+}
+
+/* ─────────────── Filter Bar (legacy horizontal) ─────────────── */
 .filter-bar {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);

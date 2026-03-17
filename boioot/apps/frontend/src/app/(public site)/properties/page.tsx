@@ -161,35 +161,28 @@ function PropertiesContent() {
           )}
         </div>
 
-        {/* Filter Bar */}
-        <form className="filter-bar" onSubmit={handleApply}>
-          <div className="filter-bar__grid">
+        {/* ── Two-column layout: filter sidebar (right) + content (left) ── */}
+        <div className="properties-layout">
+
+          {/* Filter Sidebar — first in DOM = RIGHT side in RTL */}
+          <form className="filter-sidebar" onSubmit={handleApply}>
+            <p className="filter-sidebar__title">فلتر بحث</p>
 
             {/* City */}
-            <div className="form-group" style={{ margin: 0 }}>
+            <div className="form-group">
               <label className="form-label" htmlFor="f-city">المدينة</label>
-              <select
-                id="f-city"
-                className="form-input"
-                value={form.city}
-                onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
-              >
+              <select id="f-city" className="form-input" value={form.city}
+                onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}>
                 <option value="">الكل</option>
-                {SYRIAN_CITIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+                {SYRIAN_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
 
             {/* Property Type */}
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="f-type">نوع العقار</label>
-              <select
-                id="f-type"
-                className="form-input"
-                value={form.type}
-                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
-              >
+            <div className="form-group">
+              <label className="form-label" htmlFor="f-type">قسم العقار</label>
+              <select id="f-type" className="form-input" value={form.type}
+                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
                 <option value="">الكل</option>
                 {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
@@ -198,14 +191,10 @@ function PropertiesContent() {
             </div>
 
             {/* Listing Type */}
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="f-listing">للبيع / للإيجار</label>
-              <select
-                id="f-listing"
-                className="form-input"
-                value={form.listingType}
-                onChange={(e) => setForm((p) => ({ ...p, listingType: e.target.value }))}
-              >
+            <div className="form-group">
+              <label className="form-label" htmlFor="f-listing">نوع الإدراج</label>
+              <select id="f-listing" className="form-input" value={form.listingType}
+                onChange={(e) => setForm((p) => ({ ...p, listingType: e.target.value }))}>
                 <option value="">الكل</option>
                 {Object.entries(LISTING_TYPE_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
@@ -214,111 +203,86 @@ function PropertiesContent() {
             </div>
 
             {/* Price Range */}
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">نطاق السعر (ل.س)</label>
-              <div className="filter-bar__price">
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="من"
-                  min={0}
+            <div className="form-group">
+              <label className="form-label">نطاق السعر</label>
+              <div className="filter-sidebar__price">
+                <input type="number" className="form-input" placeholder="من" min={0}
                   value={form.minPrice}
-                  onChange={(e) => setForm((p) => ({ ...p, minPrice: e.target.value }))}
-                />
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="إلى"
-                  min={0}
+                  onChange={(e) => setForm((p) => ({ ...p, minPrice: e.target.value }))} />
+                <input type="number" className="form-input" placeholder="إلى" min={0}
                   value={form.maxPrice}
-                  onChange={(e) => setForm((p) => ({ ...p, maxPrice: e.target.value }))}
-                />
+                  onChange={(e) => setForm((p) => ({ ...p, maxPrice: e.target.value }))} />
               </div>
+              {filterError && (
+                <p style={{ color: "var(--color-error, #c0392b)", fontSize: "0.78rem", margin: "0.3rem 0 0" }}>
+                  {filterError}
+                </p>
+              )}
             </div>
 
-          </div>
-
-          {/* Price range validation error */}
-          {filterError && (
-            <p style={{ color: "var(--color-error, #c0392b)", fontSize: "0.85rem", margin: 0 }}>
-              {filterError}
-            </p>
-          )}
-
-          <div className="filter-bar__actions">
-            {hasActiveFilters && (
-              <button type="button" className="btn btn-ghost btn-sm" onClick={handleClear}>
-                مسح الفلاتر
-              </button>
-            )}
-            <button type="submit" className="btn btn-primary btn-sm">
-              تطبيق
-            </button>
-          </div>
-        </form>
-
-        {/* Loading */}
-        {loading && <Spinner />}
-
-        {/* Error */}
-        {!loading && error && (
-          <div className="error-banner">{error}</div>
-        )}
-
-        {/* Empty state */}
-        {!loading && !error && properties.length === 0 && (
-          <div className="empty-state">
-            <div className="empty-state__icon">🏘️</div>
-            <h2 className="empty-state__title">
-              {hasActiveFilters ? "لا توجد نتائج مطابقة" : "لا توجد عقارات متاحة"}
-            </h2>
-            <p className="empty-state__desc">
-              {hasActiveFilters
-                ? "جرّب تغيير معايير البحث أو مسح الفلاتر."
-                : "لم يتم إضافة أي عقارات حتى الآن."}
-            </p>
-            {hasActiveFilters && (
-              <button
-                className="btn btn-outline"
-                style={{ marginTop: "1rem" }}
-                onClick={handleClear}
-              >
-                مسح الفلاتر
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Results grid */}
-        {!loading && !error && properties.length > 0 && (
-          <>
-            <div className="grid-cards">
-              {properties.map((p) => (
-                <PropertyCard key={p.id} property={p} />
-              ))}
+            {/* Actions */}
+            <div className="filter-sidebar__actions">
+              <button type="submit" className="btn btn-primary btn-sm">تطبيق الفلتر</button>
+              {hasActiveFilters && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={handleClear}>
+                  مسح الفلاتر
+                </button>
+              )}
             </div>
+          </form>
 
-            {(hasPrev || hasNext) && (
-              <div className="pagination">
-                <button
-                  className="btn btn-outline btn-sm"
-                  disabled={!hasPrev}
-                  onClick={() => goToPage(pageParam - 1)}
-                >
-                  ← السابق
-                </button>
-                <span className="pagination__info">صفحة {pageParam}</span>
-                <button
-                  className="btn btn-outline btn-sm"
-                  disabled={!hasNext}
-                  onClick={() => goToPage(pageParam + 1)}
-                >
-                  التالي →
-                </button>
+          {/* Content — second in DOM = LEFT side in RTL */}
+          <div className="properties-content">
+
+            {/* Loading */}
+            {loading && <Spinner />}
+
+            {/* Error */}
+            {!loading && error && <div className="error-banner">{error}</div>}
+
+            {/* Empty state */}
+            {!loading && !error && properties.length === 0 && (
+              <div className="empty-state">
+                <div className="empty-state__icon">🏘️</div>
+                <h2 className="empty-state__title">
+                  {hasActiveFilters ? "لا توجد نتائج مطابقة" : "لا توجد عقارات متاحة"}
+                </h2>
+                <p className="empty-state__desc">
+                  {hasActiveFilters
+                    ? "جرّب تغيير معايير البحث أو مسح الفلاتر."
+                    : "لم يتم إضافة أي عقارات حتى الآن."}
+                </p>
+                {hasActiveFilters && (
+                  <button className="btn btn-outline" style={{ marginTop: "1rem" }} onClick={handleClear}>
+                    مسح الفلاتر
+                  </button>
+                )}
               </div>
             )}
-          </>
-        )}
+
+            {/* Results grid */}
+            {!loading && !error && properties.length > 0 && (
+              <>
+                <div className="grid-cards">
+                  {properties.map((p) => (
+                    <PropertyCard key={p.id} property={p} />
+                  ))}
+                </div>
+
+                {(hasPrev || hasNext) && (
+                  <div className="pagination">
+                    <button className="btn btn-outline btn-sm" disabled={!hasPrev}
+                      onClick={() => goToPage(pageParam - 1)}>← السابق</button>
+                    <span className="pagination__info">صفحة {pageParam}</span>
+                    <button className="btn btn-outline btn-sm" disabled={!hasNext}
+                      onClick={() => goToPage(pageParam + 1)}>التالي →</button>
+                  </div>
+                )}
+              </>
+            )}
+
+          </div>
+        </div>
 
       </div>
     </div>
