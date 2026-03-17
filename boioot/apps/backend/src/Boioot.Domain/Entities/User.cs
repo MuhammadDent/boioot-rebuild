@@ -15,8 +15,6 @@ public class User : BaseEntity, ISoftDeletable
     public bool IsDeleted { get; set; } = false;
     public string? ProfileImageUrl { get; set; }
 
-    public Guid? AccountId { get; set; }
-
     public Agent? Agent { get; set; }
     public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<AccountUser> AccountUsers { get; set; } = [];

@@ -26,5 +26,7 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
         builder.HasIndex(s => s.AccountId);
         builder.HasIndex(s => s.Status);
         builder.HasIndex(s => s.EndDate);
+
+        builder.HasQueryFilter(s => !s.Account.OwnerUser.IsDeleted);
     }
 }

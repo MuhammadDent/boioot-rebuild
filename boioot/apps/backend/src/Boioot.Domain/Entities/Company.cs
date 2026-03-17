@@ -14,8 +14,6 @@ public class Company : BaseEntity, ISoftDeletable
     public bool IsVerified { get; set; } = false;
     public bool IsDeleted { get; set; } = false;
 
-    public Guid? AccountId { get; set; }
-
     public ICollection<Agent> Agents { get; set; } = [];
     public ICollection<Property> Properties { get; set; } = [];
     public ICollection<Project> Projects { get; set; } = [];

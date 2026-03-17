@@ -25,5 +25,8 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
 
         builder.HasIndex(a => a.OwnerUserId).IsUnique();
         builder.HasIndex(a => a.AccountType);
+
+        // Mirror User's soft-delete filter to avoid EF warning EF1002 / EF-10622
+        builder.HasQueryFilter(a => !a.OwnerUser.IsDeleted);
     }
 }

@@ -21,5 +21,7 @@ public class AccountUserConfiguration : IEntityTypeConfiguration<AccountUser>
             .WithMany(u => u.AccountUsers)
             .HasForeignKey(au => au.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(au => !au.Account.OwnerUser.IsDeleted);
     }
 }

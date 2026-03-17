@@ -160,21 +160,23 @@ using (var scope = app.Services.CreateScope())
 
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Messages ADD COLUMN AttachmentData TEXT"); }
         catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Messages ADD COLUMN AttachmentName TEXT"); }
+        catch { /* column already exists */ }
 
-        // ── Phase A: Subscription architecture ──────────────────────────────
+        // ── Phase A: Subscription architecture (tables + unique index + seed) ─
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS Plans (
-                Id          TEXT NOT NULL PRIMARY KEY,
-                Name        TEXT NOT NULL,
+                Id            TEXT NOT NULL PRIMARY KEY,
+                Name          TEXT NOT NULL,
                 ListingLimit  INTEGER NOT NULL DEFAULT 2,
                 ProjectLimit  INTEGER NOT NULL DEFAULT 0,
                 AgentLimit    INTEGER NOT NULL DEFAULT 0,
                 FeaturedSlots INTEGER NOT NULL DEFAULT 0,
                 PriceMonthly  REAL NOT NULL DEFAULT 0,
                 PriceYearly   REAL NOT NULL DEFAULT 0,
-                IsActive    INTEGER NOT NULL DEFAULT 1,
-                CreatedAt   TEXT NOT NULL,
-                UpdatedAt   TEXT NOT NULL
+                IsActive      INTEGER NOT NULL DEFAULT 1,
+                CreatedAt     TEXT NOT NULL,
+                UpdatedAt     TEXT NOT NULL
             )");
 
         await db.Database.ExecuteSqlRawAsync(@"
@@ -188,6 +190,10 @@ using (var scope = app.Services.CreateScope())
                 CreatedAt     TEXT NOT NULL,
                 UpdatedAt     TEXT NOT NULL
             )");
+
+        // Enforce 1-account-per-user at DB level (EF config alone is not enough for SQLite)
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_accounts_owneruserid ON Accounts(OwnerUserId)");
 
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS AccountUsers (
@@ -211,23 +217,16 @@ using (var scope = app.Services.CreateScope())
                 UpdatedAt   TEXT NOT NULL
             )");
 
-        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users     ADD COLUMN AccountId TEXT"); }
-        catch { /* column already exists */ }
-        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN AccountId TEXT"); }
-        catch { /* column already exists */ }
-
-        // ── Seed default Plans ───────────────────────────────────────────────
+        // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");
         await db.Database.ExecuteSqlRawAsync(@"
             INSERT OR IGNORE INTO Plans (Id, Name, ListingLimit, ProjectLimit, AgentLimit, FeaturedSlots, PriceMonthly, PriceYearly, IsActive, CreatedAt, UpdatedAt)
             VALUES
-              ('00000001-0000-0000-0000-000000000000', 'Free',       2,  0,  0, 0,    0,    0,    1, {0}, {0}),
-              ('00000002-0000-0000-0000-000000000000', 'Silver',     5,  0,  3, 1, 1500, 1200, 1, {0}, {0}),
-              ('00000003-0000-0000-0000-000000000000', 'Gold',      20,  2, 10, 5, 3500, 2800, 1, {0}, {0}),
+              ('00000001-0000-0000-0000-000000000000', 'Free',       2,  0,  0,  0,    0,    0, 1, {0}, {0}),
+              ('00000002-0000-0000-0000-000000000000', 'Silver',     5,  0,  3,  1, 1500, 1200, 1, {0}, {0}),
+              ('00000003-0000-0000-0000-000000000000', 'Gold',      20,  2, 10,  5, 3500, 2800, 1, {0}, {0}),
               ('00000004-0000-0000-0000-000000000000', 'Platinum',  -1, -1, -1, 20, 7000, 5600, 1, {0}, {0})",
             nowPlan);
-        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Messages ADD COLUMN AttachmentName TEXT"); }
-        catch { /* column already exists */ }
 
         // Seed the personal listings sentinel company (fixed GUID)
         var personalCompanyId = "00000000-0000-0000-0000-000000000001";
