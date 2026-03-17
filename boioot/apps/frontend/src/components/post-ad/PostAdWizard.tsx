@@ -4,6 +4,7 @@ import { useState, useRef, type ChangeEvent } from "react";
 import { apiConfig } from "@/lib/api-config";
 import { tokenStorage } from "@/lib/token";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
+import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { FEATURES_LIST } from "@/features/properties/constants";
 import type { ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
 
@@ -59,6 +60,8 @@ interface WizardData {
   city: string;
   neighborhood: string;
   address: string;
+  latitude: number | null;
+  longitude: number | null;
   // Step 5
   features: string[];
   // Step 6
@@ -89,6 +92,8 @@ const EMPTY: WizardData = {
   city: "",
   neighborhood: "",
   address: "",
+  latitude: null,
+  longitude: null,
   features: [],
   images: [],
   videoUrl: "",
@@ -604,6 +609,15 @@ export default function PostAdWizard({
                 placeholder="مثال: شارع الثورة، بناء رقم 5" />
             </Field>
           </Row>
+
+          <LocationPicker
+            lat={data.latitude}
+            lng={data.longitude}
+            onChange={(newLat, newLng) => {
+              setData(prev => ({ ...prev, latitude: newLat, longitude: newLng }));
+            }}
+            disabled={disabled}
+          />
         </div>
       )}
 

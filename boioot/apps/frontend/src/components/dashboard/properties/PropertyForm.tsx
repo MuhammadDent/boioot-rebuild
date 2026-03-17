@@ -14,6 +14,7 @@ import {
   PROPERTY_STATUS_LABELS,
 } from "@/features/properties/constants";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
+import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { api } from "@/lib/api";
 
 // ─── Image utility ────────────────────────────────────────────────────────────
@@ -181,6 +182,10 @@ export default function PropertyForm({
   const [errors, setErrors] = useState<FormErrors>({});
   const [listingTypes, setListingTypes] = useState<ListingTypeConfig[]>([]);
 
+  // Location coordinates state
+  const [lat, setLat] = useState<number | null>(initialData?.latitude ?? null);
+  const [lng, setLng] = useState<number | null>(initialData?.longitude ?? null);
+
   // Media state
   const [images, setImages] = useState<string[]>(
     initialData?.images?.slice().sort((a, b) => (a.isPrimary ? -1 : b.isPrimary ? 1 : a.order - b.order)).map(img => img.imageUrl) ?? []
@@ -286,6 +291,8 @@ export default function PropertyForm({
       neighborhood: fields.neighborhood.trim() || undefined,
       address: fields.address.trim() || undefined,
       city: fields.city,
+      latitude:  lat  ?? undefined,
+      longitude: lng  ?? undefined,
     };
 
     if (mode === "create") {
@@ -548,6 +555,13 @@ export default function PropertyForm({
           />
           {errors.address && <p className="form-error">{errors.address}</p>}
         </div>
+
+        <LocationPicker
+          lat={lat}
+          lng={lng}
+          onChange={(newLat, newLng) => { setLat(newLat); setLng(newLng); }}
+          disabled={disabled}
+        />
       </Section>
 
       {/* ── Section: rooms (optional) ── */}

@@ -56,7 +56,8 @@ export default function PostAdPage() {
     price: string; currency: "SYP" | "USD"; paymentType: "OneTime" | "Installments";
     installmentsCount: string; hasCommission: boolean; commissionType: "Percentage" | "Fixed";
     commissionValue: string; province: string; city: string; neighborhood: string;
-    address: string; features: string[]; images: string[]; videoUrl: string;
+    address: string; latitude: number | null; longitude: number | null;
+    features: string[]; images: string[]; videoUrl: string;
   }) {
     setIsSubmitting(true);
     setServerError("");
@@ -86,6 +87,8 @@ export default function PostAdPage() {
         city:             wizardData.city,
         neighborhood:     wizardData.neighborhood || undefined,
         address:          wizardData.address      || undefined,
+        latitude:         wizardData.latitude     ?? undefined,
+        longitude:        wizardData.longitude    ?? undefined,
         features:         wizardData.features.length > 0 ? wizardData.features : undefined,
         images:           wizardData.images.length > 0 ? wizardData.images : undefined,
         videoUrl:         wizardData.videoUrl.trim() || undefined,
