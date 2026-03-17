@@ -26,7 +26,8 @@ public class LimitDefinitionConfiguration : IEntityTypeConfiguration<LimitDefini
 
         builder.Property(l => l.ValueType)
             .IsRequired()
-            .HasMaxLength(50);
+            .HasMaxLength(50)
+            .HasDefaultValue("integer");
 
         builder.Property(l => l.AppliesToScope)
             .HasMaxLength(100);
