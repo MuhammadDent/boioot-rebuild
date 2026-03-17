@@ -217,6 +217,49 @@ using (var scope = app.Services.CreateScope())
                 UpdatedAt   TEXT NOT NULL
             )");
 
+        // ── Plan column additions (new limits + features) ────────────────────
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN ImageLimitPerListing INTEGER NOT NULL DEFAULT 5"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN VideoAllowed INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN AnalyticsAccess INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN Features TEXT"); }
+        catch { /* column already exists */ }
+
+        // Update seeded plans with full limits and feature lists
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE Plans SET
+                ImageLimitPerListing = 5,
+                VideoAllowed         = 0,
+                AnalyticsAccess      = 0,
+                Features             = '[""2 إعلانات شهرياً"",""5 صور لكل إعلان"",""بحث وتصفح عادي""]'
+            WHERE Id = '00000001-0000-0000-0000-000000000000'");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE Plans SET
+                ImageLimitPerListing = 10,
+                VideoAllowed         = 0,
+                AnalyticsAccess      = 0,
+                Features             = '[""5 إعلانات شهرياً"",""10 صور لكل إعلان"",""3 وكلاء"",""إعلان مميز واحد"",""دعم فني""]'
+            WHERE Id = '00000002-0000-0000-0000-000000000000'");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE Plans SET
+                ImageLimitPerListing = 20,
+                VideoAllowed         = 1,
+                AnalyticsAccess      = 1,
+                Features             = '[""20 إعلاناً شهرياً"",""20 صورة لكل إعلان"",""رفع فيديو"",""10 وكلاء"",""5 إعلانات مميزة"",""لوحة إحصائيات"",""2 مشروع""]'
+            WHERE Id = '00000003-0000-0000-0000-000000000000'");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE Plans SET
+                ImageLimitPerListing = -1,
+                VideoAllowed         = 1,
+                AnalyticsAccess      = 1,
+                Features             = '[""إعلانات غير محدودة"",""صور غير محدودة"",""رفع فيديو"",""وكلاء غير محدودون"",""إعلانات مميزة 20"",""لوحة إحصائيات متقدمة"",""مشاريع غير محدودة"",""دعم أولوية""]'
+            WHERE Id = '00000004-0000-0000-0000-000000000000'");
+
         // Property.AccountId — future ownership source (replaces CompanyId in Phase C)
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN AccountId TEXT"); }
         catch { /* column already exists */ }
