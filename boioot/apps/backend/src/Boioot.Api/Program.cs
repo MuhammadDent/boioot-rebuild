@@ -160,6 +160,72 @@ using (var scope = app.Services.CreateScope())
 
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Messages ADD COLUMN AttachmentData TEXT"); }
         catch { /* column already exists */ }
+
+        // ── Phase A: Subscription architecture ──────────────────────────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS Plans (
+                Id          TEXT NOT NULL PRIMARY KEY,
+                Name        TEXT NOT NULL,
+                ListingLimit  INTEGER NOT NULL DEFAULT 2,
+                ProjectLimit  INTEGER NOT NULL DEFAULT 0,
+                AgentLimit    INTEGER NOT NULL DEFAULT 0,
+                FeaturedSlots INTEGER NOT NULL DEFAULT 0,
+                PriceMonthly  REAL NOT NULL DEFAULT 0,
+                PriceYearly   REAL NOT NULL DEFAULT 0,
+                IsActive    INTEGER NOT NULL DEFAULT 1,
+                CreatedAt   TEXT NOT NULL,
+                UpdatedAt   TEXT NOT NULL
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS Accounts (
+                Id            TEXT NOT NULL PRIMARY KEY,
+                Name          TEXT NOT NULL,
+                AccountType   TEXT NOT NULL DEFAULT 'Individual',
+                OwnerUserId   TEXT NOT NULL REFERENCES Users(Id),
+                PlanId        TEXT REFERENCES Plans(Id),
+                IsActive      INTEGER NOT NULL DEFAULT 1,
+                CreatedAt     TEXT NOT NULL,
+                UpdatedAt     TEXT NOT NULL
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS AccountUsers (
+                AccountId TEXT NOT NULL REFERENCES Accounts(Id) ON DELETE CASCADE,
+                UserId    TEXT NOT NULL REFERENCES Users(Id) ON DELETE CASCADE,
+                Role      TEXT NOT NULL DEFAULT 'Member',
+                JoinedAt  TEXT NOT NULL,
+                PRIMARY KEY (AccountId, UserId)
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS Subscriptions (
+                Id          TEXT NOT NULL PRIMARY KEY,
+                AccountId   TEXT NOT NULL REFERENCES Accounts(Id) ON DELETE CASCADE,
+                PlanId      TEXT NOT NULL REFERENCES Plans(Id),
+                Status      TEXT NOT NULL DEFAULT 'Trial',
+                StartDate   TEXT NOT NULL,
+                EndDate     TEXT,
+                PaymentRef  TEXT,
+                CreatedAt   TEXT NOT NULL,
+                UpdatedAt   TEXT NOT NULL
+            )");
+
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users     ADD COLUMN AccountId TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN AccountId TEXT"); }
+        catch { /* column already exists */ }
+
+        // ── Seed default Plans ───────────────────────────────────────────────
+        var nowPlan = DateTime.UtcNow.ToString("O");
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO Plans (Id, Name, ListingLimit, ProjectLimit, AgentLimit, FeaturedSlots, PriceMonthly, PriceYearly, IsActive, CreatedAt, UpdatedAt)
+            VALUES
+              ('00000001-0000-0000-0000-000000000000', 'Free',       2,  0,  0, 0,    0,    0,    1, {0}, {0}),
+              ('00000002-0000-0000-0000-000000000000', 'Silver',     5,  0,  3, 1, 1500, 1200, 1, {0}, {0}),
+              ('00000003-0000-0000-0000-000000000000', 'Gold',      20,  2, 10, 5, 3500, 2800, 1, {0}, {0}),
+              ('00000004-0000-0000-0000-000000000000', 'Platinum',  -1, -1, -1, 20, 7000, 5600, 1, {0}, {0})",
+            nowPlan);
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Messages ADD COLUMN AttachmentName TEXT"); }
         catch { /* column already exists */ }
 

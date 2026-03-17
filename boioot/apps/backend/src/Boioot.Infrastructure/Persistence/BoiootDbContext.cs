@@ -27,6 +27,11 @@ public class BoiootDbContext : DbContext
     public DbSet<LocationCity> LocationCities => Set<LocationCity>();
     public DbSet<LocationNeighborhood> LocationNeighborhoods => Set<LocationNeighborhood>();
 
+    public DbSet<Plan> Plans => Set<Plan>();
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<AccountUser> AccountUsers => Set<AccountUser>();
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BoiootDbContext).Assembly);

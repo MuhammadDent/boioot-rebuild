@@ -85,6 +85,9 @@ boioot/
 - ✅ **Phase 8**: AgentManagement API — POST /api/agents، GET /api/agents/my-agents، PATCH toggle-active
 - ✅ **Phase 8**: Agents.BrokerId — عمود جديد يربط الوكيل بالمكتب (أو CompanyId بالشركة)
 - ✅ **Phase 8**: صفحة /dashboard/agents — إدارة الوكلاء للمكتب والشركة
+- ✅ **Phase 9 (A)**: هيكل الاشتراكات — Plans, Accounts, AccountUsers, Subscriptions (جداول جديدة)
+- ✅ **Phase 9 (A)**: AccountId? أُضيف لـ Users و Companies (أعمدة nullable)
+- ✅ **Phase 9 (A)**: 4 خطط مبدئية مُبذورة: Free(2), Silver(5), Gold(20), Platinum(∞)
 
 ---
 
