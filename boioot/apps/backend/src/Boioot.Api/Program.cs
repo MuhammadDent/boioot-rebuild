@@ -311,6 +311,26 @@ using (var scope = app.Services.CreateScope())
         await db.Database.ExecuteSqlRawAsync(
             "CREATE INDEX IF NOT EXISTS ix_featuredefinitions_group ON FeatureDefinitions(FeatureGroup)");
 
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS LimitDefinitions (
+                Id              TEXT NOT NULL PRIMARY KEY,
+                Key             TEXT NOT NULL,
+                Name            TEXT NOT NULL,
+                Description     TEXT,
+                Unit            TEXT,
+                ValueType       TEXT NOT NULL DEFAULT 'integer',
+                AppliesToScope  TEXT,
+                IsActive        INTEGER NOT NULL DEFAULT 1,
+                CreatedAt       TEXT NOT NULL,
+                UpdatedAt       TEXT NOT NULL
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_limitdefinitions_key ON LimitDefinitions(Key)");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_limitdefinitions_scope ON LimitDefinitions(AppliesToScope)");
+
         // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");
         await db.Database.ExecuteSqlRawAsync(@"
