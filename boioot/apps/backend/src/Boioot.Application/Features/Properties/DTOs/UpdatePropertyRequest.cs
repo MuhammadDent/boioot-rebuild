@@ -58,4 +58,8 @@ public class UpdatePropertyRequest
     public double? Longitude { get; set; }
 
     public Guid? AgentId { get; set; }
+
+    public List<string>? Images { get; set; }
+
+    public string? VideoUrl { get; set; }
 }

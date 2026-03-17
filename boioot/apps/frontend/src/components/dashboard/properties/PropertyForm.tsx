@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from "react";
+import { apiConfig } from "@/lib/api-config";
+import { tokenStorage } from "@/lib/token";
 import type {
   PropertyResponse,
   CreatePropertyRequest,
@@ -13,6 +15,29 @@ import {
 } from "@/features/properties/constants";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import { api } from "@/lib/api";
+
+// ─── Image utility ────────────────────────────────────────────────────────────
+
+async function resizeImage(file: File, maxPx = 1200): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = reject;
+      img.src = e.target!.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -156,6 +181,18 @@ export default function PropertyForm({
   const [errors, setErrors] = useState<FormErrors>({});
   const [listingTypes, setListingTypes] = useState<ListingTypeConfig[]>([]);
 
+  // Media state
+  const [images, setImages] = useState<string[]>(
+    initialData?.images?.slice().sort((a, b) => (a.isPrimary ? -1 : b.isPrimary ? 1 : a.order - b.order)).map(img => img.imageUrl) ?? []
+  );
+  const [videoUrl, setVideoUrl] = useState<string>(initialData?.videoUrl ?? "");
+  const [imageLoading, setImageLoading] = useState(false);
+  const [videoMode, setVideoMode] = useState<"url" | "file">("url");
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoFileRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     api
       .get<ListingTypeConfig[]>("/listing-types")
@@ -176,6 +213,57 @@ export default function PropertyForm({
     setFields((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   }
+
+  async function handleImageFiles(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const remaining = 10 - images.length;
+    if (remaining <= 0) return;
+    const toProcess = files.slice(0, remaining);
+    setImageLoading(true);
+    try {
+      const b64s = await Promise.all(toProcess.map((f) => resizeImage(f)));
+      setImages((prev) => [...prev, ...b64s]);
+    } finally {
+      setImageLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function removeImage(idx: number) {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function handleVideoFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) { setVideoError("حجم الفيديو يتجاوز 50MB"); return; }
+    setVideoError(null);
+    setVideoLoading(true);
+    try {
+      const token = tokenStorage.getToken();
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${apiConfig.baseUrl}/upload/video`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token ?? ""}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setVideoError((body as { error?: string }).error ?? "فشل رفع الفيديو");
+        return;
+      }
+      const { url } = await res.json() as { url: string };
+      setVideoUrl(url);
+    } catch { setVideoError("حدث خطأ أثناء رفع الفيديو"); }
+    finally {
+      setVideoLoading(false);
+      if (videoFileRef.current) videoFileRef.current.value = "";
+    }
+  }
+
+  function removeVideo() { setVideoUrl(""); setVideoError(null); if (videoFileRef.current) videoFileRef.current.value = ""; }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -205,9 +293,16 @@ export default function PropertyForm({
       await onSubmit({
         ...base,
         companyId: cid || undefined,
+        images: images.length > 0 ? images : undefined,
+        videoUrl: videoUrl.trim() || undefined,
       } as CreatePropertyRequest);
     } else {
-      await onSubmit({ ...base, status: fields.status } as UpdatePropertyRequest);
+      await onSubmit({
+        ...base,
+        status: fields.status,
+        images,
+        videoUrl: videoUrl.trim() || "",
+      } as UpdatePropertyRequest);
     }
   }
 
@@ -546,6 +641,134 @@ export default function PropertyForm({
           </div>
         </Section>
       )}
+
+      {/* ── Section: Images & Video ── */}
+      <Section label="الصور والفيديو (اختياري)">
+        {/* Images */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+            <label className="form-label" style={{ margin: 0 }}>
+              صور العقار <span style={{ color: "#94a3b8", fontWeight: 400 }}>(حتى 10 صور)</span>
+            </label>
+            <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{images.length} / 10</span>
+          </div>
+
+          {images.length < 10 && (
+            <label style={{
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              border: "2px dashed #d1d5db", borderRadius: 10, padding: "1.25rem",
+              cursor: disabled || imageLoading ? "default" : "pointer",
+              background: "#f9fafb", color: "#6b7280", gap: "0.35rem", marginBottom: "0.75rem",
+            }}>
+              <span style={{ fontSize: "1.5rem" }}>{imageLoading ? "⏳" : "📷"}</span>
+              <span style={{ fontWeight: 600, fontSize: "0.88rem" }}>{imageLoading ? "جاري المعالجة..." : "اضغط لإضافة صور"}</span>
+              <span style={{ fontSize: "0.75rem" }}>JPG، PNG — حتى 5MB لكل صورة</span>
+              <input ref={fileInputRef} type="file" accept="image/*" multiple hidden
+                disabled={disabled || imageLoading} onChange={handleImageFiles} />
+            </label>
+          )}
+
+          {images.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
+              {images.map((src, idx) => (
+                <div key={idx} style={{ position: "relative", borderRadius: 8, overflow: "hidden", aspectRatio: "4/3" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`صورة ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  {idx === 0 && (
+                    <span style={{
+                      position: "absolute", top: 3, right: 3,
+                      background: "#16a34a", color: "#fff",
+                      fontSize: "0.6rem", fontWeight: 700, padding: "2px 5px", borderRadius: 99,
+                    }}>رئيسية</span>
+                  )}
+                  <button type="button" onClick={() => removeImage(idx)}
+                    style={{
+                      position: "absolute", top: 3, left: 3,
+                      background: "rgba(0,0,0,0.55)", color: "#fff",
+                      border: "none", borderRadius: "50%", width: 22, height: 22,
+                      cursor: "pointer", fontSize: "0.7rem",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {images.length > 0 && (
+            <p style={{ fontSize: "0.75rem", color: "#64748b", margin: "0.35rem 0 0" }}>
+              الصورة الأولى ستكون الصورة الرئيسية للإعلان
+            </p>
+          )}
+        </div>
+
+        {/* Video */}
+        <div>
+          <label className="form-label" style={{ display: "block", marginBottom: "0.5rem" }}>
+            فيديو العقار <span style={{ color: "#94a3b8", fontWeight: 400 }}>(اختياري)</span>
+          </label>
+
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
+            {(["url", "file"] as const).map((m) => (
+              <button key={m} type="button"
+                onClick={() => { setVideoMode(m); removeVideo(); }}
+                style={{
+                  padding: "0.35rem 0.8rem", borderRadius: 7, fontSize: "0.82rem", fontWeight: 600,
+                  border: `1.5px solid ${videoMode === m ? "#16a34a" : "#e2e8f0"}`,
+                  background: videoMode === m ? "#f0fdf4" : "#f8fafc",
+                  color: videoMode === m ? "#16a34a" : "#64748b",
+                  cursor: "pointer",
+                }}>
+                {m === "url" ? "🔗 إدخال رابط" : "📁 رفع من الجهاز"}
+              </button>
+            ))}
+          </div>
+
+          {videoMode === "url" ? (
+            <>
+              <input className="form-input" type="url" dir="ltr" disabled={disabled}
+                value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://youtube.com/... أو رابط مباشر للفيديو" />
+              {videoUrl && (
+                <button type="button" onClick={removeVideo}
+                  style={{ marginTop: "0.4rem", fontSize: "0.8rem", color: "#dc2626", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                  ✕ حذف الرابط
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              {videoUrl && videoUrl.includes("/videos/") ? (
+                <div style={{ position: "relative" }}>
+                  <video src={videoUrl} controls
+                    style={{ width: "100%", borderRadius: 8, maxHeight: 200, background: "#000" }} />
+                  <button type="button" onClick={removeVideo}
+                    style={{
+                      position: "absolute", top: 6, left: 6,
+                      background: "rgba(0,0,0,0.6)", color: "#fff",
+                      border: "none", borderRadius: "50%", width: 26, height: 26,
+                      cursor: "pointer", fontSize: "0.75rem",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>✕</button>
+                </div>
+              ) : (
+                <label style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  border: "2px dashed #d1d5db", borderRadius: 10, padding: "1.25rem",
+                  cursor: disabled || videoLoading ? "default" : "pointer",
+                  background: "#f9fafb", color: "#6b7280", gap: "0.35rem",
+                }}>
+                  <span style={{ fontSize: "1.5rem" }}>{videoLoading ? "⏳" : "🎬"}</span>
+                  <span style={{ fontWeight: 600, fontSize: "0.88rem" }}>{videoLoading ? "جاري الرفع..." : "اضغط لاختيار فيديو"}</span>
+                  <span style={{ fontSize: "0.75rem" }}>MP4، WebM، MOV — حتى 50MB</span>
+                  <input ref={videoFileRef} type="file"
+                    accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo"
+                    hidden disabled={disabled || videoLoading} onChange={handleVideoFile} />
+                </label>
+              )}
+              {videoError && <p style={{ fontSize: "0.78rem", color: "#dc2626", margin: "0.3rem 0 0" }}>{videoError}</p>}
+            </>
+          )}
+        </div>
+      </Section>
 
       {/* ── Submit ── */}
       <button

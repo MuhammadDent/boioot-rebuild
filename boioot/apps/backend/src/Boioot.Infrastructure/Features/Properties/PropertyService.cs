@@ -182,6 +182,7 @@ public class PropertyService : IPropertyService
         Guid userId, string userRole, Guid propertyId, UpdatePropertyRequest request, CancellationToken ct = default)
     {
         var property = await _context.Properties
+            .Include(p => p.Images)
             .FirstOrDefaultAsync(p => p.Id == propertyId, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
 
@@ -213,6 +214,30 @@ public class PropertyService : IPropertyService
         property.Latitude = request.Latitude;
         property.Longitude = request.Longitude;
         property.AgentId = request.AgentId;
+
+        // Update VideoUrl if provided (null = unchanged, empty string = clear)
+        if (request.VideoUrl is not null)
+            property.VideoUrl = string.IsNullOrWhiteSpace(request.VideoUrl) ? null : request.VideoUrl.Trim();
+
+        // Replace images if a new list was supplied
+        if (request.Images is not null)
+        {
+            _context.Set<PropertyImage>().RemoveRange(property.Images);
+            var now = DateTime.UtcNow;
+            for (int i = 0; i < request.Images.Count; i++)
+            {
+                _context.Set<PropertyImage>().Add(new PropertyImage
+                {
+                    Id        = Guid.NewGuid(),
+                    PropertyId = property.Id,
+                    ImageUrl   = request.Images[i],
+                    IsPrimary  = i == 0,
+                    Order      = i,
+                    CreatedAt  = now,
+                    UpdatedAt  = now,
+                });
+            }
+        }
 
         await _context.SaveChangesAsync(ct);
 

@@ -263,6 +263,8 @@ export interface UpdatePropertyRequest {
   latitude?: number;
   longitude?: number;
   agentId?: string;
+  images?: string[];
+  videoUrl?: string;
 }
 
 export interface SubmitRequestPayload {
