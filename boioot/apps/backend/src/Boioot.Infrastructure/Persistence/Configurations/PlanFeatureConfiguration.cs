@@ -12,7 +12,7 @@ public class PlanFeatureConfiguration : IEntityTypeConfiguration<PlanFeature>
 
         builder.HasOne(pf => pf.Plan)
             .WithMany(p => p.PlanFeatures)
-            .HasForeignKey(pf => pf.PlanId)
+            .HasForeignKey(pf => pf.SubscriptionPlanId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(pf => pf.FeatureDefinition)
@@ -20,9 +20,9 @@ public class PlanFeatureConfiguration : IEntityTypeConfiguration<PlanFeature>
             .HasForeignKey(pf => pf.FeatureDefinitionId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Composite unique index — also covers leading-column queries on PlanId alone
-        builder.HasIndex(pf => new { pf.PlanId, pf.FeatureDefinitionId }).IsUnique();
-        // Only FeatureDefinitionId needs its own index (for reverse lookups: "which plans have feature X")
+        // Composite unique index — also covers leading-column queries on SubscriptionPlanId alone
+        builder.HasIndex(pf => new { pf.SubscriptionPlanId, pf.FeatureDefinitionId }).IsUnique();
+        // Separate index for reverse lookups: "which plans have feature X"
         builder.HasIndex(pf => pf.FeatureDefinitionId);
     }
 }

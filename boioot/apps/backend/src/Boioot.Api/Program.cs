@@ -334,18 +334,23 @@ using (var scope = app.Services.CreateScope())
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS PlanFeatures (
                 Id                  TEXT NOT NULL PRIMARY KEY,
-                PlanId              TEXT NOT NULL REFERENCES Plans(Id) ON DELETE CASCADE,
+                SubscriptionPlanId  TEXT NOT NULL REFERENCES Plans(Id) ON DELETE CASCADE,
                 FeatureDefinitionId TEXT NOT NULL REFERENCES FeatureDefinitions(Id) ON DELETE RESTRICT,
                 IsEnabled           INTEGER NOT NULL DEFAULT 1,
                 CreatedAt           TEXT NOT NULL,
                 UpdatedAt           TEXT NOT NULL
             )");
 
-        await db.Database.ExecuteSqlRawAsync(
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_planfeatures_plan_feature ON PlanFeatures(PlanId, FeatureDefinitionId)");
+        // Rename PlanId → SubscriptionPlanId if the table was created with the old column name
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE PlanFeatures RENAME COLUMN PlanId TO SubscriptionPlanId"); }
+        catch { /* column already renamed or did not exist */ }
+
+        // Drop old indexes that referenced PlanId, then recreate with correct name
+        await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS ix_planfeatures_plan_feature");
+        await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS ix_planfeatures_planid");
 
         await db.Database.ExecuteSqlRawAsync(
-            "CREATE INDEX IF NOT EXISTS ix_planfeatures_planid ON PlanFeatures(PlanId)");
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_planfeatures_plan_feature ON PlanFeatures(SubscriptionPlanId, FeatureDefinitionId)");
 
         await db.Database.ExecuteSqlRawAsync(
             "CREATE INDEX IF NOT EXISTS ix_planfeatures_featureid ON PlanFeatures(FeatureDefinitionId)");

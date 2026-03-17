@@ -6,7 +6,7 @@ namespace Boioot.Domain.Entities;
 /// </summary>
 public class PlanFeature : BaseEntity
 {
-    public Guid PlanId { get; set; }
+    public Guid SubscriptionPlanId { get; set; }
     public Guid FeatureDefinitionId { get; set; }
 
     /// <summary>Set to false to disable a feature without removing the row.</summary>
