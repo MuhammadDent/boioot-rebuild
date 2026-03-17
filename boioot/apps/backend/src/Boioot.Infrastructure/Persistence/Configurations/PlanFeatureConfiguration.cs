@@ -20,9 +20,11 @@ public class PlanFeatureConfiguration : IEntityTypeConfiguration<PlanFeature>
             .HasForeignKey(pf => pf.FeatureDefinitionId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Composite unique index — also covers leading-column queries on SubscriptionPlanId alone
+        // Composite unique index — enforces one row per (plan, feature)
         builder.HasIndex(pf => new { pf.SubscriptionPlanId, pf.FeatureDefinitionId }).IsUnique();
-        // Separate index for reverse lookups: "which plans have feature X"
+        // Most common query: "get all features for this plan"
+        builder.HasIndex(pf => pf.SubscriptionPlanId);
+        // Reverse lookup: "which plans have feature X"
         builder.HasIndex(pf => pf.FeatureDefinitionId);
     }
 }

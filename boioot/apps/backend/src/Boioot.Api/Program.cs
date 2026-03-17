@@ -353,6 +353,9 @@ using (var scope = app.Services.CreateScope())
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_planfeatures_plan_feature ON PlanFeatures(SubscriptionPlanId, FeatureDefinitionId)");
 
         await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_planfeatures_subscriptionplanid ON PlanFeatures(SubscriptionPlanId)");
+
+        await db.Database.ExecuteSqlRawAsync(
             "CREATE INDEX IF NOT EXISTS ix_planfeatures_featureid ON PlanFeatures(FeatureDefinitionId)");
 
         // Seed default Plans (ListingLimit: -1 = unlimited)
