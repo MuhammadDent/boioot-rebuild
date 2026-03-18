@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
         source: "/videos/:path*",
         destination: `${process.env.BACKEND_URL ?? "http://localhost:5233"}/videos/:path*`,
       },
+      {
+        source: "/uploads/:path*",
+        destination: `${process.env.BACKEND_URL ?? "http://localhost:5233"}/uploads/:path*`,
+      },
     ];
   },
 };
