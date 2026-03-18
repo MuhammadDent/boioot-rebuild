@@ -75,8 +75,9 @@ export default function PricingPage() {
   const [currentSub,    setCurrentSub]    = useState<CurrentSubscriptionResponse | null>(null);
 
   // Upgrade-intent modal state
-  const [intent,        setIntent]        = useState<UpgradeIntentResponse | null>(null);
-  const [intentLoading, setIntentLoading] = useState(false);
+  const [intent,          setIntent]          = useState<UpgradeIntentResponse | null>(null);
+  const [modalPricingId,  setModalPricingId]  = useState<string>("");
+  const [intentLoading,   setIntentLoading]   = useState(false);
 
   // ── Fetch public plans ──────────────────────────────────────────────────────
 
@@ -104,6 +105,7 @@ export default function PricingPage() {
     setIntentLoading(true);
     try {
       const result = await subscriptionApi.getUpgradeIntent(pricingId);
+      setModalPricingId(pricingId);
       setIntent(result);
     } catch {
       // Silently ignore; the button just resets
@@ -237,7 +239,8 @@ export default function PricingPage() {
       {intent && (
         <UpgradeModal
           intent={intent}
-          onClose={() => setIntent(null)}
+          pricingId={modalPricingId}
+          onClose={() => { setIntent(null); setModalPricingId(""); }}
         />
       )}
     </main>

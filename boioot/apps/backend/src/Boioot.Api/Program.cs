@@ -429,6 +429,36 @@ using (var scope = app.Services.CreateScope())
         await db.Database.ExecuteSqlRawAsync(
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_planpricing_plan_cycle ON PlanPricings(PlanId, BillingCycle, CurrencyCode)");
 
+        // ── Billing tables ────────────────────────────────────────────────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS Invoices (
+                Id            TEXT NOT NULL PRIMARY KEY,
+                UserId        TEXT NOT NULL,
+                PlanPricingId TEXT NOT NULL,
+                Amount        REAL NOT NULL DEFAULT 0,
+                Currency      TEXT NOT NULL DEFAULT 'SYP',
+                Status        INTEGER NOT NULL DEFAULT 0,
+                ProviderName  TEXT NOT NULL DEFAULT 'internal',
+                ExternalRef   TEXT,
+                AdminNote     TEXT,
+                CreatedAt     TEXT NOT NULL,
+                UpdatedAt     TEXT NOT NULL
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_invoices_userid ON Invoices(UserId)");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS PaymentProofs (
+                Id        TEXT NOT NULL PRIMARY KEY,
+                InvoiceId TEXT NOT NULL UNIQUE,
+                ImageUrl  TEXT NOT NULL DEFAULT '',
+                Notes     TEXT,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                FOREIGN KEY (InvoiceId) REFERENCES Invoices(Id)
+            )");
+
         // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");
         await db.Database.ExecuteSqlRawAsync(@"

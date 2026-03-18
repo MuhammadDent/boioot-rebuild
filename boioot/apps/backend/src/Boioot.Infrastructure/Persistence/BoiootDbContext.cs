@@ -37,6 +37,9 @@ public class BoiootDbContext : DbContext
     public DbSet<PlanLimit> PlanLimits => Set<PlanLimit>();
     public DbSet<PlanPricing> PlanPricings => Set<PlanPricing>();
 
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<PaymentProof> PaymentProofs => Set<PaymentProof>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BoiootDbContext).Assembly);

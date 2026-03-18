@@ -96,6 +96,21 @@ boioot/
 - ✅ **Phase 9 (C)**: POST /api/dashboard/subscription/upgrade-intent — تقييم نية الترقية/التخفيض (بدون دفع)
 - ✅ **Phase 9 (C)**: UpgradeModal — نافذة تأكيد الترقية مع "الدفع قريباً 🔒"
 - ✅ **Phase 9 (C)**: PricingCard — أزرار ذكية: الباقة الحالية / ترقية ↑ / تخفيض ↓ / تغيير دورة الفوترة
+- ✅ **Phase 9 (D)**: InvoiceStatus enum — Pending, Paid, Failed, Cancelled
+- ✅ **Phase 9 (D)**: Invoice entity — UserId, PlanPricingId, Amount, Currency, Status, ProviderName, ExternalRef
+- ✅ **Phase 9 (D)**: PaymentProof entity — InvoiceId (1:1), ImageUrl, Notes
+- ✅ **Phase 9 (D)**: IBillingProvider interface — ProviderName, CreatePaymentAsync, ConfirmPaymentAsync, RejectPaymentAsync (Stripe-ready design)
+- ✅ **Phase 9 (D)**: IBillingService interface — CreateCheckoutAsync, GetUserInvoicesAsync, SubmitPaymentProofAsync, GetAdminInvoicesAsync, AdminConfirmPaymentAsync, AdminRejectPaymentAsync
+- ✅ **Phase 9 (D)**: InternalBillingProvider — بنك تحويل يدوي، بدون API خارجي
+- ✅ **Phase 9 (D)**: BillingService — ينسق بين المزود + تخزين الفاتورة + تفعيل الاشتراك عند التأكيد
+- ✅ **Phase 9 (D)**: POST /api/dashboard/billing/checkout — يُنشئ فاتورة معلقة ويعيد تفاصيلها
+- ✅ **Phase 9 (D)**: GET /api/dashboard/billing/invoices — فواتير المستخدم
+- ✅ **Phase 9 (D)**: POST /api/dashboard/billing/invoices/{id}/proof — رفع إيصال الدفع
+- ✅ **Phase 9 (D)**: GET /api/admin/billing/invoices?status= — قائمة الفواتير للأدمن
+- ✅ **Phase 9 (D)**: POST /api/admin/billing/invoices/{id}/confirm — تأكيد الدفع + تفعيل الاشتراك تلقائياً
+- ✅ **Phase 9 (D)**: POST /api/admin/billing/invoices/{id}/reject — رفض الدفع
+- ✅ **Phase 9 (D)**: UpgradeModal — يستدعي /checkout عند التأكيد ويعرض تفاصيل الفاتورة وتعليمات التحويل البنكي
+- ✅ **Phase 9 (D)**: features/billing/types.ts + api.ts — أنواع وطرق API للفواتير في الواجهة الأمامية
 
 ---
 

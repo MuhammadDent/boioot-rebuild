@@ -11,10 +11,12 @@ using Boioot.Application.Features.Favorites.Interfaces;
 using Boioot.Application.Features.Requests.Interfaces;
 using Boioot.Application.Features.Plans.Interfaces;
 using Boioot.Application.Features.Pricing.Interfaces;
+using Boioot.Application.Features.Billing.Interfaces;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Infrastructure.Common;
 using Boioot.Infrastructure.Features.Plans;
 using Boioot.Infrastructure.Features.Pricing;
+using Boioot.Infrastructure.Features.Billing;
 using Boioot.Infrastructure.Features.Subscriptions;
 using Boioot.Infrastructure.Features.Admin;
 using Boioot.Infrastructure.Features.AgentManagement;
@@ -60,6 +62,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPublicPricingService, PublicPricingService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();
+        services.AddScoped<IBillingProvider, InternalBillingProvider>();
+        services.AddScoped<IBillingService, BillingService>();
         services.AddScoped<DataSeeder>();
 
         return services;
