@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Billing.DTOs;
 using Boioot.Application.Features.Billing.Interfaces;
@@ -18,6 +19,13 @@ public sealed class BillingService : IBillingService
     private readonly BoiootDbContext  _db;
     private readonly IBillingProvider _provider;
     private readonly IAccountResolver _accountResolver;
+
+    // ── Rate-limit store ───────────────────────────────────────────────────────
+    // Tracks the timestamps of recent checkout attempts per user.
+    // ConcurrentDictionary + Queue<DateTime> keeps this thread-safe with no DB overhead.
+    private static readonly ConcurrentDictionary<Guid, Queue<DateTime>> _invoiceTimestamps = new();
+    private const int    RateLimitMaxRequests = 3;
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(10);
 
     public BillingService(
         BoiootDbContext  db,
@@ -42,6 +50,8 @@ public sealed class BillingService : IBillingService
 
         if (pricing.Plan.Id == new Guid("00000001-0000-0000-0000-000000000000"))
             throw new BoiootException("الباقة المجانية لا تتطلب دفعاً", 400);
+
+        EnforceRateLimit(userId);
 
         if (await HasPendingInvoiceAsync(userId, ct))
             throw new BoiootException(
@@ -246,6 +256,31 @@ public sealed class BillingService : IBillingService
             .FirstAsync(i => i.Id == invoiceId, ct);
 
         return ToResponse(invoice);
+    }
+
+    /// <summary>
+    /// Enforces per-user rate limiting: max 3 invoice creation attempts within 10 minutes.
+    /// Records the current attempt timestamp on success; throws 429 when the limit is exceeded.
+    /// </summary>
+    private static void EnforceRateLimit(Guid userId)
+    {
+        var now = DateTime.UtcNow;
+        var cutoff = now - RateLimitWindow;
+
+        var timestamps = _invoiceTimestamps.GetOrAdd(userId, _ => new Queue<DateTime>());
+
+        lock (timestamps)
+        {
+            // Evict attempts older than the window
+            while (timestamps.Count > 0 && timestamps.Peek() < cutoff)
+                timestamps.Dequeue();
+
+            if (timestamps.Count >= RateLimitMaxRequests)
+                throw new BoiootException(
+                    "Too many requests. Please wait before trying again.", 429);
+
+            timestamps.Enqueue(now);
+        }
     }
 
     /// <summary>
