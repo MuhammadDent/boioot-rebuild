@@ -54,4 +54,7 @@ public class Plan : BaseEntity
     public ICollection<Subscription> Subscriptions { get; set; } = [];
     public ICollection<PlanFeature> PlanFeatures { get; set; } = [];
     public ICollection<PlanLimit> PlanLimits { get; set; } = [];
+
+    /// <summary>Normalized pricing entries (monthly, yearly, etc.).</summary>
+    public ICollection<PlanPricing> PlanPricings { get; set; } = [];
 }

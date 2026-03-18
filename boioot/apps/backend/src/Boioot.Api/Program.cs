@@ -387,6 +387,29 @@ using (var scope = app.Services.CreateScope())
         await db.Database.ExecuteSqlRawAsync(
             "CREATE INDEX IF NOT EXISTS ix_planlimits_limitdefinitionid ON PlanLimits(LimitDefinitionId)");
 
+        // ── PlanPricing: normalized per-plan pricing (monthly/yearly) ──────────
+        // Fully isolated from PlanLimits, PlanFeatures, and enforcement logic.
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS PlanPricings (
+                Id               TEXT NOT NULL PRIMARY KEY,
+                PlanId           TEXT NOT NULL REFERENCES Plans(Id) ON DELETE CASCADE,
+                BillingCycle     TEXT NOT NULL,
+                PriceAmount      REAL NOT NULL DEFAULT 0,
+                CurrencyCode     TEXT NOT NULL DEFAULT 'SYP',
+                IsActive         INTEGER NOT NULL DEFAULT 1,
+                IsPublic         INTEGER NOT NULL DEFAULT 1,
+                ExternalProvider TEXT,
+                ExternalPriceId  TEXT,
+                CreatedAt        TEXT NOT NULL,
+                UpdatedAt        TEXT NOT NULL
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_planpricing_planid ON PlanPricings(PlanId)");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_planpricing_plan_cycle ON PlanPricings(PlanId, BillingCycle, CurrencyCode)");
+
         // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");
         await db.Database.ExecuteSqlRawAsync(@"
@@ -483,6 +506,37 @@ using (var scope = app.Services.CreateScope())
               ('c100000d-0000-0000-0000-000000000000', '00000009-0000-0000-0000-000000000000', 'add00001-0000-0000-0000-000000000000',  -1, {0}, {0}),
               ('c100000e-0000-0000-0000-000000000000', '00000009-0000-0000-0000-000000000000', 'add00002-0000-0000-0000-000000000000',  -1, {0}, {0}),
               ('c100000f-0000-0000-0000-000000000000', '00000009-0000-0000-0000-000000000000', 'add00003-0000-0000-0000-000000000000',  -1, {0}, {0})",
+            nowPlan);
+
+        // ── PlanPricing seed data ──────────────────────────────────────────────
+        // Cleanup: remove any rows with non-hex GUID prefix 'pp' inserted by an
+        // earlier schema version. Safe to run multiple times — no-op if already clean.
+        await db.Database.ExecuteSqlRawAsync("DELETE FROM PlanPricings WHERE Id LIKE 'pp%'");
+
+        // IDs: ef000001-ef000011 (fixed, valid hex, fully idempotent via INSERT OR IGNORE).
+        // BillingCycle: 'Monthly' or 'Yearly'. Yearly = total annual price.
+        // Free plan has only Monthly at 0 SYP (shows on public pricing page).
+        // Plans 00000005-00000009 yearly prices match the existing Plans.PriceYearly seed.
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO PlanPricings (Id, PlanId, BillingCycle, PriceAmount, CurrencyCode, IsActive, IsPublic, ExternalProvider, ExternalPriceId, CreatedAt, UpdatedAt)
+            VALUES
+              ('ef000001-0000-0000-0000-000000000000', '00000001-0000-0000-0000-000000000000', 'Monthly',    0, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000002-0000-0000-0000-000000000000', '00000002-0000-0000-0000-000000000000', 'Monthly', 1500, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000003-0000-0000-0000-000000000000', '00000002-0000-0000-0000-000000000000', 'Yearly', 15000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000004-0000-0000-0000-000000000000', '00000003-0000-0000-0000-000000000000', 'Monthly', 3500, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000005-0000-0000-0000-000000000000', '00000003-0000-0000-0000-000000000000', 'Yearly', 35000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000006-0000-0000-0000-000000000000', '00000004-0000-0000-0000-000000000000', 'Monthly', 7000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000007-0000-0000-0000-000000000000', '00000004-0000-0000-0000-000000000000', 'Yearly', 70000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000008-0000-0000-0000-000000000000', '00000005-0000-0000-0000-000000000000', 'Monthly',  1000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000009-0000-0000-0000-000000000000', '00000005-0000-0000-0000-000000000000', 'Yearly',   9000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef00000a-0000-0000-0000-000000000000', '00000006-0000-0000-0000-000000000000', 'Monthly',  2500, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef00000b-0000-0000-0000-000000000000', '00000006-0000-0000-0000-000000000000', 'Yearly',  22000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef00000c-0000-0000-0000-000000000000', '00000007-0000-0000-0000-000000000000', 'Monthly',  5000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef00000d-0000-0000-0000-000000000000', '00000007-0000-0000-0000-000000000000', 'Yearly',  44000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef00000e-0000-0000-0000-000000000000', '00000008-0000-0000-0000-000000000000', 'Monthly', 10000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef00000f-0000-0000-0000-000000000000', '00000008-0000-0000-0000-000000000000', 'Yearly',  88000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000010-0000-0000-0000-000000000000', '00000009-0000-0000-0000-000000000000', 'Monthly', 20000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000011-0000-0000-0000-000000000000', '00000009-0000-0000-0000-000000000000', 'Yearly', 176000, 'SYP', 1, 1, NULL, NULL, {0}, {0})",
             nowPlan);
 
         // Seed the personal listings sentinel company (fixed GUID)
