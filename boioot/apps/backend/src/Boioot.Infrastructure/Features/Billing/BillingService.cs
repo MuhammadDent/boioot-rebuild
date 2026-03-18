@@ -43,14 +43,9 @@ public sealed class BillingService : IBillingService
         if (pricing.Plan.Id == new Guid("00000001-0000-0000-0000-000000000000"))
             throw new BoiootException("الباقة المجانية لا تتطلب دفعاً", 400);
 
-        var existingPending = await _db.Invoices
-            .AnyAsync(i =>
-                i.UserId        == userId       &&
-                i.PlanPricingId == request.PricingId &&
-                i.Status        == InvoiceStatus.Pending, ct);
-
-        if (existingPending)
-            throw new BoiootException("لديك فاتورة معلقة لهذه الباقة بالفعل", 409);
+        if (await HasPendingInvoiceAsync(userId, ct))
+            throw new BoiootException(
+                "لديك فاتورة معلقة بالفعل. يرجى إتمام الدفع أو إلغاؤها قبل إنشاء فاتورة جديدة.", 409);
 
         var result = await _provider.CreatePaymentAsync(
             new BillingPaymentRequest(
@@ -236,6 +231,14 @@ public sealed class BillingService : IBillingService
 
         return ToResponse(invoice);
     }
+
+    /// <summary>
+    /// Returns true if the user has any invoice currently in Pending status.
+    /// Used to prevent duplicate pending invoices across all billing flows.
+    /// </summary>
+    private Task<bool> HasPendingInvoiceAsync(Guid userId, CancellationToken ct) =>
+        _db.Invoices.AnyAsync(
+            i => i.UserId == userId && i.Status == InvoiceStatus.Pending, ct);
 
     private static InvoiceResponse ToResponse(Invoice i) => new()
     {
