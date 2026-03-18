@@ -31,6 +31,7 @@ public class ProjectsController : BaseController
 
     [Authorize(Policy = "AdminOrCompanyOwner")]
     [HttpPost]
+    [RequestSizeLimit(104_857_600)]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequest request, CancellationToken ct)
     {
         var result = await _projectService.CreateAsync(GetUserId(), GetUserRole(), request, ct);
@@ -39,6 +40,7 @@ public class ProjectsController : BaseController
 
     [Authorize(Policy = "AdminOrCompanyOwner")]
     [HttpPut("{id:guid}")]
+    [RequestSizeLimit(104_857_600)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequest request, CancellationToken ct)
     {
         var result = await _projectService.UpdateAsync(GetUserId(), GetUserRole(), id, request, ct);

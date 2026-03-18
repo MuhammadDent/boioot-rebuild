@@ -31,6 +31,7 @@ public class PropertiesController : BaseController
 
     [Authorize(Policy = "AdminOrCompanyOwner")]
     [HttpPost]
+    [RequestSizeLimit(104_857_600)]
     public async Task<IActionResult> Create([FromBody] CreatePropertyRequest request, CancellationToken ct)
     {
         var result = await _propertyService.CreateAsync(GetUserId(), GetUserRole(), request, ct);
@@ -39,6 +40,7 @@ public class PropertiesController : BaseController
 
     [Authorize(Policy = "AdminOrCompanyOwnerOrAgent")]
     [HttpPut("{id:guid}")]
+    [RequestSizeLimit(104_857_600)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePropertyRequest request, CancellationToken ct)
     {
         var result = await _propertyService.UpdateAsync(GetUserId(), GetUserRole(), id, request, ct);
@@ -57,6 +59,7 @@ public class PropertiesController : BaseController
 
     [Authorize]
     [HttpPost("post")]
+    [RequestSizeLimit(104_857_600)]
     public async Task<IActionResult> PostUserListing(
         [FromBody] CreatePropertyRequest request, CancellationToken ct)
     {
