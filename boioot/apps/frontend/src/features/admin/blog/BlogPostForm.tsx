@@ -5,6 +5,7 @@ import { blogAdminApi } from "@/features/admin/blog-api";
 import { BlogStatusBadge } from "./BlogStatusBadge";
 import { RichTextEditor } from "./RichTextEditor";
 import { normalizeError } from "@/lib/api";
+import { tokenStorage } from "@/lib/token";
 import type { BlogPostDetailResponse, BlogCategoryResponse } from "@/types";
 
 // ── Shared input styles ────────────────────────────────────────────────────────
@@ -50,10 +51,11 @@ function CoverImageField({ url, onUrlChange, alt, onAltChange, disabled }: Cover
     try {
       const form = new FormData();
       form.append("file", file);
+      const token = tokenStorage.getToken();
       const res = await fetch("/api/upload/image", {
         method: "POST",
         body: form,
-        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string };

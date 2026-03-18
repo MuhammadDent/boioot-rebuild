@@ -6,16 +6,18 @@ import Image from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect, useRef, useCallback, useState } from "react";
+import { tokenStorage } from "@/lib/token";
 
 // ── Upload helper ─────────────────────────────────────────────────────────────
 
 async function uploadImage(file: File): Promise<string> {
   const form = new FormData();
   form.append("file", file);
+  const token = tokenStorage.getToken();
   const res = await fetch("/api/upload/image", {
     method: "POST",
     body: form,
-    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
