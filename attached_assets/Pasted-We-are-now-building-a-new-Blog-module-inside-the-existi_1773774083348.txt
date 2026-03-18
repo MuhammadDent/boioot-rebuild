@@ -1,0 +1,146 @@
+We are now building a new Blog module inside the existing Boioot SaaS platform.
+
+Current architecture context:
+- Backend: .NET
+- Frontend: Next.js
+- Public site + user dashboard + admin panel are all inside the same Next.js application
+- Subscription system is already implemented
+- Admin plan management is already implemented
+- Internal billing + Stripe hybrid billing is already implemented
+- We are NOT building frontend in this phase
+- We are ONLY building the backend foundation for Blog module
+
+Your task in this phase:
+Build Blog backend foundation only:
+1) domain models
+2) database schema
+3) admin APIs
+4) public read APIs
+5) publish/archive workflow
+6) validation, filtering, pagination
+Without building any frontend.
+
+Important architectural rules:
+- The Blog module must be implemented as a clean internal module inside the existing backend architecture
+- Do NOT create a separate app or separate service
+- Reuse existing project conventions for auth, admin authorization, API response patterns, pagination, timestamps, soft delete, and auditing where applicable
+- Do NOT break existing billing/subscription/admin systems
+- Keep the implementation extensible for future phases
+
+Phase 1 scope:
+
+Entities:
+1. BlogPost
+2. BlogCategory
+3. BlogPostCategory (many-to-many)
+
+BlogPost fields:
+- Id
+- Title (required)
+- Slug (required, unique)
+- Excerpt (nullable)
+- Content (long text, required for published posts)
+- CoverImageUrl (nullable)
+- Status (Draft, Published, Archived)
+- PublishedAt (nullable)
+- IsFeatured (bool)
+- SeoTitle (nullable)
+- SeoDescription (nullable)
+- ReadTimeMinutes (nullable or computed)
+- ViewCount (default 0)
+- CreatedAt
+- UpdatedAt
+- CreatedByUserId
+- UpdatedByUserId
+- PublishedByUserId (nullable)
+- Soft delete fields if the project already uses soft delete
+
+BlogCategory fields:
+- Id
+- Name (required)
+- Slug (required, unique)
+- Description (nullable)
+- IsActive
+- SortOrder
+- CreatedAt
+- UpdatedAt
+
+BlogPostCategory:
+- BlogPostId
+- BlogCategoryId
+
+Rules:
+- Slug must be unique
+- If slug is not provided, generate it from title
+- Normalize slug before saving
+- Do NOT auto-change slug after publishing when title changes
+- Only Published posts should appear in public APIs
+- A post cannot be published unless Title, Slug, and Content are valid
+- On first publish, set PublishedAt automatically if null
+- Archived posts should not appear in public APIs
+- Prefer soft delete over hard delete if project conventions support it
+- Prevent unsafe category deletion if category is linked to published posts
+
+Indexes:
+- Unique index on BlogPost.Slug
+- Index on BlogPost.Status
+- Index on BlogPost.PublishedAt
+- Index on BlogCategory.Slug
+- Composite primary key on BlogPostCategory
+
+Required admin APIs:
+- POST   /api/admin/blog/posts
+- PUT    /api/admin/blog/posts/{id}
+- GET    /api/admin/blog/posts/{id}
+- GET    /api/admin/blog/posts
+- POST   /api/admin/blog/posts/{id}/publish
+- POST   /api/admin/blog/posts/{id}/archive
+- POST   /api/admin/blog/posts/{id}/unpublish
+- DELETE /api/admin/blog/posts/{id}
+
+- POST   /api/admin/blog/categories
+- PUT    /api/admin/blog/categories/{id}
+- GET    /api/admin/blog/categories
+- GET    /api/admin/blog/categories/{id}
+- DELETE /api/admin/blog/categories/{id}
+
+Required public APIs:
+- GET /api/blog/posts
+- GET /api/blog/posts/{slug}
+- GET /api/blog/categories
+- GET /api/blog/categories/{slug}/posts
+
+Admin list endpoints must support:
+- pagination
+- search by title
+- filter by status
+- filter by category
+- sorting by created date or published date
+
+Public list endpoints must support:
+- pagination
+- category filter
+- featured filter
+- ordered by PublishedAt desc
+
+Implementation requirements:
+- Use DTOs, not direct entity exposure
+- Add validation for create/update/publish flows
+- Add proper authorization hooks using existing admin authorization style
+- Add clean EF Core configurations and migration
+- Follow existing folder structure and coding conventions
+- Keep code production-safe and extensible
+- Do not add frontend
+- Do not add comments, tags, reactions, advanced SEO, scheduled publishing, or editor UI in this phase
+
+Deliverables:
+1. New entities and enum
+2. EF Core configurations
+3. Migration
+4. DTOs
+5. Admin controllers/endpoints
+6. Public controllers/endpoints
+7. Validation
+8. Any needed service/helper for slug generation and publish workflow
+9. Short implementation summary of what was added
+10. Notes about anything assumed from the current architecture

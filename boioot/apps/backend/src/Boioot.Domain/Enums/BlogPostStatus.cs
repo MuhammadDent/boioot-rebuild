@@ -4,6 +4,5 @@ public enum BlogPostStatus
 {
     Draft,
     Published,
-    Scheduled,
     Archived
 }

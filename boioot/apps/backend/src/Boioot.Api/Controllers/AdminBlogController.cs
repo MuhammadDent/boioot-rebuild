@@ -19,18 +19,39 @@ public class AdminBlogController : BaseController
 
     // ── Posts ─────────────────────────────────────────────────────────────────
 
-    /// <summary>GET /api/admin/blog/posts — list all posts (filter: status, categoryId)</summary>
+    /// <summary>
+    /// GET /api/admin/blog/posts
+    /// Paginated list with optional search, status filter, category filter, sort.
+    /// sortBy: createdAt (default) | publishedAt
+    /// sortDir: desc (default) | asc
+    /// </summary>
     [HttpGet("posts")]
     public async Task<IActionResult> GetPosts(
-        [FromQuery] BlogPostStatus? status,
-        [FromQuery] Guid? categoryId,
-        CancellationToken ct)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] BlogPostStatus? status = null,
+        [FromQuery] Guid? categoryId = null,
+        [FromQuery] string sortBy = "createdAt",
+        [FromQuery] string sortDir = "desc",
+        CancellationToken ct = default)
     {
-        var result = await _blog.AdminGetPostsAsync(status, categoryId, ct);
+        var query = new AdminBlogPostQuery
+        {
+            Page       = page,
+            PageSize   = pageSize,
+            Search     = search,
+            Status     = status,
+            CategoryId = categoryId,
+            SortBy     = sortBy,
+            SortDir    = sortDir
+        };
+
+        var result = await _blog.AdminGetPostsAsync(query, ct);
         return Ok(result);
     }
 
-    /// <summary>GET /api/admin/blog/posts/{id} — single post with full content</summary>
+    /// <summary>GET /api/admin/blog/posts/{id}</summary>
     [HttpGet("posts/{id:guid}")]
     public async Task<IActionResult> GetPost(Guid id, CancellationToken ct)
     {
@@ -38,26 +59,25 @@ public class AdminBlogController : BaseController
         return Ok(result);
     }
 
-    /// <summary>POST /api/admin/blog/posts — create draft post</summary>
+    /// <summary>POST /api/admin/blog/posts — create draft</summary>
     [HttpPost("posts")]
     public async Task<IActionResult> CreatePost(
         [FromBody] CreateBlogPostRequest request, CancellationToken ct)
     {
-        var authorId = GetUserId();
-        var result = await _blog.AdminCreatePostAsync(authorId, request, ct);
+        var result = await _blog.AdminCreatePostAsync(GetUserId(), request, ct);
         return Created($"/api/admin/blog/posts/{result.Id}", result);
     }
 
-    /// <summary>PUT /api/admin/blog/posts/{id} — update post fields</summary>
+    /// <summary>PUT /api/admin/blog/posts/{id} — update; slug is locked once published</summary>
     [HttpPut("posts/{id:guid}")]
     public async Task<IActionResult> UpdatePost(
         Guid id, [FromBody] UpdateBlogPostRequest request, CancellationToken ct)
     {
-        var result = await _blog.AdminUpdatePostAsync(id, request, ct);
+        var result = await _blog.AdminUpdatePostAsync(id, GetUserId(), request, ct);
         return Ok(result);
     }
 
-    /// <summary>DELETE /api/admin/blog/posts/{id} — permanently delete post</summary>
+    /// <summary>DELETE /api/admin/blog/posts/{id} — soft delete</summary>
     [HttpDelete("posts/{id:guid}")]
     public async Task<IActionResult> DeletePost(Guid id, CancellationToken ct)
     {
@@ -65,15 +85,15 @@ public class AdminBlogController : BaseController
         return NoContent();
     }
 
-    /// <summary>POST /api/admin/blog/posts/{id}/publish — set status = Published</summary>
+    /// <summary>POST /api/admin/blog/posts/{id}/publish — validates Title+Slug+Content</summary>
     [HttpPost("posts/{id:guid}/publish")]
     public async Task<IActionResult> PublishPost(Guid id, CancellationToken ct)
     {
-        var result = await _blog.AdminPublishPostAsync(id, ct);
+        var result = await _blog.AdminPublishPostAsync(id, GetUserId(), ct);
         return Ok(result);
     }
 
-    /// <summary>POST /api/admin/blog/posts/{id}/unpublish — revert to Draft</summary>
+    /// <summary>POST /api/admin/blog/posts/{id}/unpublish — reverts to Draft</summary>
     [HttpPost("posts/{id:guid}/unpublish")]
     public async Task<IActionResult> UnpublishPost(Guid id, CancellationToken ct)
     {
@@ -81,7 +101,7 @@ public class AdminBlogController : BaseController
         return Ok(result);
     }
 
-    /// <summary>POST /api/admin/blog/posts/{id}/archive — set status = Archived</summary>
+    /// <summary>POST /api/admin/blog/posts/{id}/archive</summary>
     [HttpPost("posts/{id:guid}/archive")]
     public async Task<IActionResult> ArchivePost(Guid id, CancellationToken ct)
     {
@@ -91,7 +111,7 @@ public class AdminBlogController : BaseController
 
     // ── Categories ────────────────────────────────────────────────────────────
 
-    /// <summary>GET /api/admin/blog/categories — all categories with post counts</summary>
+    /// <summary>GET /api/admin/blog/categories — all categories with total post counts</summary>
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories(CancellationToken ct)
     {
@@ -107,7 +127,7 @@ public class AdminBlogController : BaseController
         return Ok(result);
     }
 
-    /// <summary>POST /api/admin/blog/categories — create category</summary>
+    /// <summary>POST /api/admin/blog/categories</summary>
     [HttpPost("categories")]
     public async Task<IActionResult> CreateCategory(
         [FromBody] CreateBlogCategoryRequest request, CancellationToken ct)
@@ -116,7 +136,7 @@ public class AdminBlogController : BaseController
         return Created($"/api/admin/blog/categories/{result.Id}", result);
     }
 
-    /// <summary>PUT /api/admin/blog/categories/{id} — update category</summary>
+    /// <summary>PUT /api/admin/blog/categories/{id}</summary>
     [HttpPut("categories/{id:guid}")]
     public async Task<IActionResult> UpdateCategory(
         Guid id, [FromBody] UpdateBlogCategoryRequest request, CancellationToken ct)
@@ -125,7 +145,7 @@ public class AdminBlogController : BaseController
         return Ok(result);
     }
 
-    /// <summary>DELETE /api/admin/blog/categories/{id} — delete (fails if posts exist)</summary>
+    /// <summary>DELETE /api/admin/blog/categories/{id} — blocked if published posts exist</summary>
     [HttpDelete("categories/{id:guid}")]
     public async Task<IActionResult> DeleteCategory(Guid id, CancellationToken ct)
     {

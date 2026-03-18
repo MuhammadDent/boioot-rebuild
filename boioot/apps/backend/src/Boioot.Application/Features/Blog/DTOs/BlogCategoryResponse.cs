@@ -7,7 +7,7 @@ public class BlogCategoryResponse
     public string Slug { get; set; } = string.Empty;
     public string? Description { get; set; }
     public bool IsActive { get; set; }
-    public int DisplayOrder { get; set; }
+    public int SortOrder { get; set; }
     public int PostCount { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

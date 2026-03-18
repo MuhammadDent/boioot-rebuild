@@ -17,17 +17,19 @@ public class PublicBlogController : BaseController
 
     /// <summary>
     /// GET /api/blog/posts
-    /// List published posts. Optional filters: categorySlug, search, page, pageSize.
+    /// Published posts, ordered by PublishedAt desc.
+    /// Filters: categorySlug, isFeatured.
+    /// Paginated: page, pageSize (max 50).
     /// </summary>
     [HttpGet("posts")]
     public async Task<IActionResult> GetPosts(
-        [FromQuery] string? categorySlug,
-        [FromQuery] string? search,
+        [FromQuery] string? categorySlug = null,
+        [FromQuery] bool? isFeatured = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
         CancellationToken ct = default)
     {
-        var result = await _blog.PublicGetPostsAsync(categorySlug, search, page, pageSize, ct);
+        var result = await _blog.PublicGetPostsAsync(categorySlug, isFeatured, page, pageSize, ct);
         return Ok(result);
     }
 
@@ -39,7 +41,7 @@ public class PublicBlogController : BaseController
         return Ok(result);
     }
 
-    /// <summary>GET /api/blog/categories — list active categories with published post counts</summary>
+    /// <summary>GET /api/blog/categories — active categories with published post counts</summary>
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories(CancellationToken ct)
     {
@@ -49,7 +51,7 @@ public class PublicBlogController : BaseController
 
     /// <summary>
     /// GET /api/blog/categories/{categorySlug}/posts
-    /// List published posts in a specific category, paginated.
+    /// Published posts in a specific active category, ordered by PublishedAt desc.
     /// </summary>
     [HttpGet("categories/{categorySlug}/posts")]
     public async Task<IActionResult> GetPostsByCategory(

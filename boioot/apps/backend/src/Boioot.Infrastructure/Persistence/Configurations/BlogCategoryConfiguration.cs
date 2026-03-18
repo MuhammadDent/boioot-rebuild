@@ -22,6 +22,6 @@ public class BlogCategoryConfiguration : IEntityTypeConfiguration<BlogCategory>
             .HasMaxLength(1000);
 
         builder.HasIndex(c => c.Slug).IsUnique();
-        builder.HasIndex(c => c.DisplayOrder);
+        builder.HasIndex(c => c.SortOrder);
     }
 }

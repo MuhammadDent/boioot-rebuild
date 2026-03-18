@@ -42,6 +42,7 @@ public class BoiootDbContext : DbContext
 
     public DbSet<BlogCategory> BlogCategories => Set<BlogCategory>();
     public DbSet<BlogPost> BlogPosts => Set<BlogPost>();
+    public DbSet<BlogPostCategory> BlogPostCategories => Set<BlogPostCategory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

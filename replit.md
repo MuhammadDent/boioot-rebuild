@@ -243,63 +243,53 @@ boioot/
 
 ## Blog Module — Backend Foundation (مكتمل)
 
-**الملفات المُضافة:**
+**Domain entities:**
+- `BlogPostStatus` enum: Draft | Published | Archived (no Scheduled)
+- `BlogCategory` — Id, Name, Slug (unique), Description, IsActive, SortOrder
+- `BlogPost` — Id, Title, Slug (unique, locked after publish), Excerpt, Content, CoverImageUrl, Status, PublishedAt, IsFeatured, SeoTitle, SeoDescription, ReadTimeMinutes, ViewCount, IsDeleted (soft-delete), CreatedByUserId, UpdatedByUserId, PublishedByUserId
+- `BlogPostCategory` — junction table (BlogPostId PK+FK, BlogCategoryId PK+FK)
 
-Domain:
-- `Boioot.Domain/Enums/BlogPostStatus.cs` — Draft | Published | Scheduled | Archived
-- `Boioot.Domain/Entities/BlogCategory.cs` — Id, Name, Slug, Description, IsActive, DisplayOrder
-- `Boioot.Domain/Entities/BlogPost.cs` — كامل الحقول (AuthorId→User, CategoryId→BlogCategory)
+**Key architectural rules applied:**
+- `BlogPost` implements `ISoftDeletable` — DELETE is soft (IsDeleted=true), admin uses `IgnoreQueryFilters()`
+- `BlogPostConfiguration` has `HasQueryFilter(p => !p.IsDeleted)` — exactly matching existing project pattern
+- Many-to-many categories (a post can belong to multiple categories)
+- Slug never auto-changes after publishing; slug change is blocked in UpdatePost when status=Published
+- Publish validates Title + Slug + Content are non-empty before setting status=Published
+- Category delete blocked if any published (non-deleted) posts belong to it
+- Admin list returns `PagedResult<T>` with search, status filter, categoryId filter, sortBy (createdAt|publishedAt), sortDir (asc|desc)
+- Public list returns `PagedResult<T>` filtered to Published only, supports categorySlug + isFeatured filters
 
-Application:
-- `Features/Blog/DTOs/BlogCategoryResponse.cs`
-- `Features/Blog/DTOs/BlogPostSummaryResponse.cs`
-- `Features/Blog/DTOs/BlogPostDetailResponse.cs`
-- `Features/Blog/DTOs/CreateBlogPostRequest.cs`
-- `Features/Blog/DTOs/UpdateBlogPostRequest.cs`
-- `Features/Blog/DTOs/CreateBlogCategoryRequest.cs`
-- `Features/Blog/DTOs/UpdateBlogCategoryRequest.cs`
-- `Features/Blog/Interfaces/IBlogService.cs`
-
-Infrastructure:
-- `Persistence/Configurations/BlogCategoryConfiguration.cs` — unique index on Slug
-- `Persistence/Configurations/BlogPostConfiguration.cs` — FK→User (Restrict), FK→BlogCategory (Restrict), unique index on Slug, enum stored as string
-- `Features/Blog/BlogService.cs` — تنفيذ كامل لـ IBlogService
-
-API Controllers:
-- `Controllers/AdminBlogController.cs` — [AdminOnly] — 11 endpoint
-- `Controllers/PublicBlogController.cs` — [AllowAnonymous] — 4 endpoints
-
-**الملفات المُعدَّلة:**
-- `BoiootDbContext.cs` — أُضيف DbSet<BlogCategory> + DbSet<BlogPost>
-- `ServiceCollectionExtensions.cs` — تسجيل IBlogService → BlogService
-- `Program.cs` — CREATE TABLE IF NOT EXISTS BlogCategories + BlogPosts + unique indexes
+**DTOs:**
+- `AdminBlogPostQuery` — pagination + filter params for admin list
+- `BlogCategoryResponse`, `BlogPostSummaryResponse`, `BlogPostDetailResponse`
+- `CreateBlogPostRequest`, `UpdateBlogPostRequest`, `CreateBlogCategoryRequest`, `UpdateBlogCategoryRequest`
 
 **Endpoints:**
 
-Admin (POST /api/admin/blog/…):
-| Method | Path | Description |
+Admin `/api/admin/blog/…` — `[AdminOnly]`:
+| Method | Path | Notes |
 |---|---|---|
-| GET | /api/admin/blog/posts | list all posts (filter: status?, categoryId?) |
-| GET | /api/admin/blog/posts/{id} | get post with full content |
-| POST | /api/admin/blog/posts | create draft |
-| PUT | /api/admin/blog/posts/{id} | update fields |
-| DELETE | /api/admin/blog/posts/{id} | delete permanently |
-| POST | /api/admin/blog/posts/{id}/publish | Draft/Scheduled → Published |
-| POST | /api/admin/blog/posts/{id}/unpublish | → Draft |
-| POST | /api/admin/blog/posts/{id}/archive | → Archived |
-| GET | /api/admin/blog/categories | all categories + post counts |
-| GET | /api/admin/blog/categories/{id} | single category |
-| POST | /api/admin/blog/categories | create |
-| PUT | /api/admin/blog/categories/{id} | update |
-| DELETE | /api/admin/blog/categories/{id} | delete (fails if posts exist) |
+| GET | /posts | page, pageSize, search, status, categoryId, sortBy, sortDir |
+| GET | /posts/{id} | includes full content + categories |
+| POST | /posts | creates Draft; authorId = caller |
+| PUT | /posts/{id} | slug locked when Published |
+| DELETE | /posts/{id} | soft delete |
+| POST | /posts/{id}/publish | validates Title+Slug+Content; sets PublishedAt once |
+| POST | /posts/{id}/unpublish | → Draft |
+| POST | /posts/{id}/archive | → Archived |
+| GET | /categories | total post counts (all statuses) |
+| GET | /categories/{id} | — |
+| POST | /categories | — |
+| PUT | /categories/{id} | — |
+| DELETE | /categories/{id} | blocked if published posts exist |
 
-Public (/api/blog/…):
-| Method | Path | Query Params |
+Public `/api/blog/…` — `[AllowAnonymous]`:
+| Method | Path | Notes |
 |---|---|---|
-| GET | /api/blog/posts | categorySlug?, search?, page, pageSize |
-| GET | /api/blog/posts/{slug} | — |
-| GET | /api/blog/categories | — |
-| GET | /api/blog/categories/{categorySlug}/posts | page, pageSize |
+| GET | /posts | categorySlug?, isFeatured?, page, pageSize |
+| GET | /posts/{slug} | Published only |
+| GET | /categories | active only + published post counts |
+| GET | /categories/{slug}/posts | Published only, paginated |
 
 **لم يُبنَ بعد (V2):** admin UI، صفحات blog العامة، تعليقات، وسوم، سجل تعديلات
 

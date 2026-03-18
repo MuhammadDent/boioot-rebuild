@@ -1,8 +1,9 @@
+using Boioot.Domain.Common;
 using Boioot.Domain.Enums;
 
 namespace Boioot.Domain.Entities;
 
-public class BlogPost : BaseEntity
+public class BlogPost : BaseEntity, ISoftDeletable
 {
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
@@ -10,14 +11,21 @@ public class BlogPost : BaseEntity
     public string Content { get; set; } = string.Empty;
     public string? CoverImageUrl { get; set; }
     public BlogPostStatus Status { get; set; } = BlogPostStatus.Draft;
-    public Guid AuthorId { get; set; }
-    public Guid CategoryId { get; set; }
     public DateTime? PublishedAt { get; set; }
-    public string? MetaTitle { get; set; }
-    public string? MetaDescription { get; set; }
-    public int ReadingTime { get; set; } = 0;
     public bool IsFeatured { get; set; } = false;
+    public string? SeoTitle { get; set; }
+    public string? SeoDescription { get; set; }
+    public int? ReadTimeMinutes { get; set; }
+    public int ViewCount { get; set; } = 0;
+    public bool IsDeleted { get; set; } = false;
 
-    public User Author { get; set; } = null!;
-    public BlogCategory Category { get; set; } = null!;
+    public Guid CreatedByUserId { get; set; }
+    public Guid? UpdatedByUserId { get; set; }
+    public Guid? PublishedByUserId { get; set; }
+
+    public User CreatedBy { get; set; } = null!;
+    public User? UpdatedBy { get; set; }
+    public User? PublishedBy { get; set; }
+
+    public ICollection<BlogPostCategory> BlogPostCategories { get; set; } = new List<BlogPostCategory>();
 }

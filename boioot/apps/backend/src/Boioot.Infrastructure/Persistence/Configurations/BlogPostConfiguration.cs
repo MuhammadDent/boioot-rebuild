@@ -31,27 +31,33 @@ public class BlogPostConfiguration : IEntityTypeConfiguration<BlogPost>
             .HasConversion<string>()
             .HasMaxLength(50);
 
-        builder.Property(p => p.MetaTitle)
+        builder.Property(p => p.SeoTitle)
             .HasMaxLength(500);
 
-        builder.Property(p => p.MetaDescription)
+        builder.Property(p => p.SeoDescription)
             .HasMaxLength(1000);
 
         builder.HasIndex(p => p.Slug).IsUnique();
         builder.HasIndex(p => p.Status);
-        builder.HasIndex(p => p.AuthorId);
-        builder.HasIndex(p => p.CategoryId);
         builder.HasIndex(p => p.PublishedAt);
         builder.HasIndex(p => p.IsFeatured);
+        builder.HasIndex(p => p.CreatedByUserId);
 
-        builder.HasOne(p => p.Author)
+        builder.HasOne(p => p.CreatedBy)
             .WithMany()
-            .HasForeignKey(p => p.AuthorId)
+            .HasForeignKey(p => p.CreatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(p => p.Category)
-            .WithMany(c => c.Posts)
-            .HasForeignKey(p => p.CategoryId)
+        builder.HasOne(p => p.UpdatedBy)
+            .WithMany()
+            .HasForeignKey(p => p.UpdatedByUserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(p => p.PublishedBy)
+            .WithMany()
+            .HasForeignKey(p => p.PublishedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasQueryFilter(p => !p.IsDeleted);
     }
 }
