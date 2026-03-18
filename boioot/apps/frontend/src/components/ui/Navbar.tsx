@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/daily-rentals", label: "الإيجار اليومي", exact: false, highlight: true },
   { href: "/projects",      label: "المشاريع",       exact: false },
   { href: "/requests",      label: "الطلبات",        exact: false },
+  { href: "/blog",          label: "المدونة",        exact: false },
 ];
 
 export default function Navbar() {
