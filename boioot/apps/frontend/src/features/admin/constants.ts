@@ -40,6 +40,22 @@ export const ADMIN_PROJECT_STATUS_BADGE: Record<string, string> = {
   Completed:         "badge badge-green",
 };
 
+// ── Blog ──────────────────────────────────────────────────────────────────────
+
+export const BLOG_STATUS_LABELS: Record<string, string> = {
+  Draft:     "مسودة",
+  Published: "منشور",
+  Archived:  "مؤرشف",
+};
+
+export const BLOG_STATUS_BADGE: Record<string, string> = {
+  Draft:     "badge badge-gray",
+  Published: "badge badge-green",
+  Archived:  "badge badge-yellow",
+};
+
+export const BLOG_POST_PAGE_SIZE = 20;
+
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
   Pending:  "معلقة",
   Paid:     "مدفوعة",

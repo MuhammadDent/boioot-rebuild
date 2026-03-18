@@ -458,6 +458,91 @@ export interface AdminPlanPricingEntry {
   updatedAt: string;
 }
 
+// ── Blog ─────────────────────────────────────────────────────────────────────
+
+export type BlogPostStatus = "Draft" | "Published" | "Archived";
+
+export interface BlogCategoryResponse {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  isActive: boolean;
+  sortOrder: number;
+  postCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlogPostSummaryResponse {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  coverImageUrl?: string;
+  status: BlogPostStatus;
+  isFeatured: boolean;
+  readTimeMinutes?: number;
+  viewCount: number;
+  publishedAt?: string;
+  createdByUserId: string;
+  createdByName: string;
+  categories: BlogCategoryResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlogPostDetailResponse extends BlogPostSummaryResponse {
+  content: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  updatedByUserId?: string;
+  publishedByUserId?: string;
+  isDeleted: boolean;
+}
+
+export interface CreateBlogPostRequest {
+  title: string;
+  slug?: string;
+  excerpt?: string;
+  content: string;
+  coverImageUrl?: string;
+  categoryIds: string[];
+  isFeatured: boolean;
+  seoTitle?: string;
+  seoDescription?: string;
+  readTimeMinutes?: number;
+}
+
+export interface UpdateBlogPostRequest {
+  title?: string;
+  slug?: string;
+  excerpt?: string;
+  content?: string;
+  coverImageUrl?: string;
+  categoryIds?: string[];
+  isFeatured?: boolean;
+  seoTitle?: string;
+  seoDescription?: string;
+  readTimeMinutes?: number;
+}
+
+export interface CreateBlogCategoryRequest {
+  name: string;
+  slug?: string;
+  description?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface UpdateBlogCategoryRequest {
+  name?: string;
+  slug?: string;
+  description?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
 // ── Billing ───────────────────────────────────────────────────────────────────
 
 export interface PaymentInstructionsDto {

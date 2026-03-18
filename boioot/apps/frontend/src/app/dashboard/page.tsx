@@ -521,6 +521,12 @@ export default function DashboardPage() {
               <NavCard href="/dashboard/admin/plans" label="خطط الاشتراك" description="إدارة الخطط والحدود والميزات ديناميكياً"
                 icon={<><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></>}
               />
+              <NavCard href="/dashboard/admin/blog" label="إدارة المدونة" description="إنشاء وتحرير ونشر مقالات المدونة"
+                icon={<><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></>}
+              />
+              <NavCard href="/dashboard/admin/blog/categories" label="تصنيفات المدونة" description="إنشاء وتعديل تصنيفات مقالات المدونة"
+                icon={<><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></>}
+              />
             </div>
           </div>
         )}
