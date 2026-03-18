@@ -65,6 +65,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPublicPricingService, PublicPricingService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();
+        services.AddScoped<IBlogSlugService, BlogSlugService>();
         services.AddScoped<IBlogService, BlogService>();
 
         // ── Billing providers ──────────────────────────────────────────────────

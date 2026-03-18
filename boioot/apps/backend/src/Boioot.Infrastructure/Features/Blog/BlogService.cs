@@ -1,7 +1,9 @@
 using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Blog.DTOs;
+using Boioot.Application.Features.Blog.DTOs.Public;
 using Boioot.Application.Features.Blog.Interfaces;
+using Boioot.Application.Features.Blog.Validation;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
@@ -13,23 +15,14 @@ namespace Boioot.Infrastructure.Features.Blog;
 public class BlogService : IBlogService
 {
     private readonly BoiootDbContext _db;
+    private readonly IBlogSlugService _slugService;
     private readonly ILogger<BlogService> _logger;
 
-    public BlogService(BoiootDbContext db, ILogger<BlogService> logger)
+    public BlogService(BoiootDbContext db, IBlogSlugService slugService, ILogger<BlogService> logger)
     {
-        _db = db;
-        _logger = logger;
-    }
-
-    // ── Slug helpers ──────────────────────────────────────────────────────────
-
-    private static string NormalizeSlug(string input)
-    {
-        var slug = input.ToLowerInvariant().Trim().Replace(" ", "-").Replace("_", "-");
-        var chars = slug.ToCharArray().Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray();
-        slug = new string(chars);
-        while (slug.Contains("--")) slug = slug.Replace("--", "-");
-        return slug.Trim('-');
+        _db          = db;
+        _slugService = slugService;
+        _logger      = logger;
     }
 
     // ── Map helpers ───────────────────────────────────────────────────────────
@@ -47,7 +40,13 @@ public class BlogService : IBlogService
         UpdatedAt   = c.UpdatedAt
     };
 
-    private static BlogPostSummaryResponse MapToSummary(BlogPost p) => new()
+    private static List<BlogCategoryResponse> MapCategories(BlogPost p) =>
+        p.BlogPostCategories
+            .Select(bpc => MapCategory(bpc.BlogCategory))
+            .ToList();
+
+    // Admin maps — include all fields
+    private static BlogPostSummaryResponse MapToAdminSummary(BlogPost p) => new()
     {
         Id              = p.Id,
         Title           = p.Title,
@@ -61,14 +60,53 @@ public class BlogService : IBlogService
         PublishedAt     = p.PublishedAt,
         CreatedByUserId = p.CreatedByUserId,
         CreatedByName   = p.CreatedBy?.FullName ?? string.Empty,
-        Categories      = p.BlogPostCategories
-            .Select(bpc => MapCategory(bpc.BlogCategory))
-            .ToList(),
+        Categories      = MapCategories(p),
         CreatedAt       = p.CreatedAt,
         UpdatedAt       = p.UpdatedAt
     };
 
-    private static BlogPostDetailResponse MapToDetail(BlogPost p) => new()
+    private static BlogPostDetailResponse MapToAdminDetail(BlogPost p) => new()
+    {
+        Id                = p.Id,
+        Title             = p.Title,
+        Slug              = p.Slug,
+        Excerpt           = p.Excerpt,
+        Content           = p.Content,
+        CoverImageUrl     = p.CoverImageUrl,
+        Status            = p.Status,
+        IsFeatured        = p.IsFeatured,
+        ReadTimeMinutes   = p.ReadTimeMinutes,
+        ViewCount         = p.ViewCount,
+        SeoTitle          = p.SeoTitle,
+        SeoDescription    = p.SeoDescription,
+        PublishedAt       = p.PublishedAt,
+        CreatedByUserId   = p.CreatedByUserId,
+        CreatedByName     = p.CreatedBy?.FullName ?? string.Empty,
+        UpdatedByUserId   = p.UpdatedByUserId,
+        PublishedByUserId = p.PublishedByUserId,
+        IsDeleted         = p.IsDeleted,
+        Categories        = MapCategories(p),
+        CreatedAt         = p.CreatedAt,
+        UpdatedAt         = p.UpdatedAt
+    };
+
+    // Public maps — no internal fields, no content in summary
+    private static PublicBlogPostSummary MapToPublicSummary(BlogPost p) => new()
+    {
+        Id              = p.Id,
+        Title           = p.Title,
+        Slug            = p.Slug,
+        Excerpt         = p.Excerpt,
+        CoverImageUrl   = p.CoverImageUrl,
+        IsFeatured      = p.IsFeatured,
+        ReadTimeMinutes = p.ReadTimeMinutes,
+        ViewCount       = p.ViewCount,
+        PublishedAt     = p.PublishedAt,
+        Categories      = MapCategories(p),
+        CreatedAt       = p.CreatedAt
+    };
+
+    private static PublicBlogPostDetail MapToPublicDetail(BlogPost p) => new()
     {
         Id              = p.Id,
         Title           = p.Title,
@@ -76,24 +114,17 @@ public class BlogService : IBlogService
         Excerpt         = p.Excerpt,
         Content         = p.Content,
         CoverImageUrl   = p.CoverImageUrl,
-        Status          = p.Status,
         IsFeatured      = p.IsFeatured,
         ReadTimeMinutes = p.ReadTimeMinutes,
         ViewCount       = p.ViewCount,
         SeoTitle        = p.SeoTitle,
         SeoDescription  = p.SeoDescription,
         PublishedAt     = p.PublishedAt,
-        CreatedByUserId = p.CreatedByUserId,
-        CreatedByName   = p.CreatedBy?.FullName ?? string.Empty,
-        UpdatedByUserId = p.UpdatedByUserId,
-        PublishedByUserId = p.PublishedByUserId,
-        IsDeleted       = p.IsDeleted,
-        Categories      = p.BlogPostCategories
-            .Select(bpc => MapCategory(bpc.BlogCategory))
-            .ToList(),
-        CreatedAt       = p.CreatedAt,
-        UpdatedAt       = p.UpdatedAt
+        Categories      = MapCategories(p),
+        CreatedAt       = p.CreatedAt
     };
+
+    // ── Query helpers ─────────────────────────────────────────────────────────
 
     private IQueryable<BlogPost> PostsWithIncludes(bool ignoreFilters = false)
     {
@@ -107,37 +138,7 @@ public class BlogService : IBlogService
                 .ThenInclude(bpc => bpc.BlogCategory);
     }
 
-    // ── Publish validation ────────────────────────────────────────────────────
-
-    private static void ValidateForPublish(BlogPost post)
-    {
-        if (string.IsNullOrWhiteSpace(post.Title))
-            throw new BoiootException("لا يمكن نشر المقال: العنوان مطلوب", 422);
-        if (string.IsNullOrWhiteSpace(post.Slug))
-            throw new BoiootException("لا يمكن نشر المقال: الـ slug مطلوب", 422);
-        if (string.IsNullOrWhiteSpace(post.Content))
-            throw new BoiootException("لا يمكن نشر المقال: المحتوى مطلوب", 422);
-    }
-
-    // ── Slug uniqueness ───────────────────────────────────────────────────────
-
-    private async Task EnsurePostSlugUniqueAsync(string slug, Guid? excludeId, CancellationToken ct)
-    {
-        var q = _db.Set<BlogPost>().IgnoreQueryFilters().Where(p => p.Slug == slug);
-        if (excludeId.HasValue) q = q.Where(p => p.Id != excludeId.Value);
-        if (await q.AnyAsync(ct))
-            throw new BoiootException($"الـ slug '{slug}' مستخدم بالفعل", 409);
-    }
-
-    private async Task EnsureCategorySlugUniqueAsync(string slug, Guid? excludeId, CancellationToken ct)
-    {
-        var q = _db.Set<BlogCategory>().Where(c => c.Slug == slug);
-        if (excludeId.HasValue) q = q.Where(c => c.Id != excludeId.Value);
-        if (await q.AnyAsync(ct))
-            throw new BoiootException($"الـ slug '{slug}' مستخدم بالفعل", 409);
-    }
-
-    // ── Sync categories on a post ─────────────────────────────────────────────
+    // ── Category sync ─────────────────────────────────────────────────────────
 
     private async Task SyncCategoriesAsync(BlogPost post, List<Guid> categoryIds, CancellationToken ct)
     {
@@ -150,22 +151,21 @@ public class BlogService : IBlogService
 
             var invalid = categoryIds.Except(validIds).ToList();
             if (invalid.Count > 0)
-                throw new BoiootException($"تصنيف غير موجود: {string.Join(", ", invalid)}", 404);
+                throw new BoiootException(
+                    $"تصنيف غير موجود: {string.Join(", ", invalid)}", 404);
         }
 
-        // Remove existing links
         var existing = await _db.Set<BlogPostCategory>()
             .Where(bpc => bpc.BlogPostId == post.Id)
             .ToListAsync(ct);
         _db.Set<BlogPostCategory>().RemoveRange(existing);
 
-        // Add new links
         foreach (var catId in categoryIds.Distinct())
         {
             _db.Set<BlogPostCategory>().Add(new BlogPostCategory
             {
-                BlogPostId      = post.Id,
-                BlogCategoryId  = catId
+                BlogPostId     = post.Id,
+                BlogCategoryId = catId
             });
         }
     }
@@ -182,22 +182,18 @@ public class BlogService : IBlogService
 
         var q = PostsWithIncludes(ignoreFilters: true).AsNoTracking();
 
-        // Search
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var term = query.Search.Trim().ToLower();
             q = q.Where(p => p.Title.ToLower().Contains(term));
         }
 
-        // Filter by status
         if (query.Status.HasValue)
             q = q.Where(p => p.Status == query.Status.Value);
 
-        // Filter by category
         if (query.CategoryId.HasValue)
             q = q.Where(p => p.BlogPostCategories.Any(bpc => bpc.BlogCategoryId == query.CategoryId.Value));
 
-        // Sort
         q = (query.SortBy.ToLower(), query.SortDir.ToLower()) switch
         {
             ("publishedat", "asc")  => q.OrderBy(p => p.PublishedAt),
@@ -207,14 +203,13 @@ public class BlogService : IBlogService
         };
 
         var total = await q.CountAsync(ct);
-
         var items = await q
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToListAsync(ct);
 
         return new PagedResult<BlogPostSummaryResponse>(
-            items.Select(MapToSummary).ToList(),
+            items.Select(MapToAdminSummary).ToList(),
             query.Page, query.PageSize, total);
     }
 
@@ -224,26 +219,17 @@ public class BlogService : IBlogService
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new BoiootException("المقال غير موجود", 404);
 
-        return MapToDetail(post);
+        return MapToAdminDetail(post);
     }
 
     public async Task<BlogPostDetailResponse> AdminCreatePostAsync(
         Guid createdByUserId, CreateBlogPostRequest request, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Title))
-            throw new BoiootException("عنوان المقال مطلوب", 400);
+        BlogPostValidation.EnsureCreateValid(request);
 
-        if (string.IsNullOrWhiteSpace(request.Content))
-            throw new BoiootException("محتوى المقال مطلوب", 400);
-
-        var slug = string.IsNullOrWhiteSpace(request.Slug)
-            ? NormalizeSlug(request.Title)
-            : NormalizeSlug(request.Slug);
-
-        if (string.IsNullOrEmpty(slug))
-            throw new BoiootException("تعذّر إنشاء slug من العنوان المُدخَل", 400);
-
-        await EnsurePostSlugUniqueAsync(slug, null, ct);
+        var slug = await _slugService.UniquePostSlugAsync(
+            string.IsNullOrWhiteSpace(request.Slug) ? request.Title : request.Slug,
+            excludeId: null, ct);
 
         var post = new BlogPost
         {
@@ -273,28 +259,31 @@ public class BlogService : IBlogService
     public async Task<BlogPostDetailResponse> AdminUpdatePostAsync(
         Guid id, Guid updatedByUserId, UpdateBlogPostRequest request, CancellationToken ct = default)
     {
+        BlogPostValidation.EnsureUpdateValid(request);
+
         var post = await _db.Set<BlogPost>()
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new BoiootException("المقال غير موجود", 404);
 
-        if (request.Title != null) post.Title = request.Title.Trim();
+        if (request.Title != null)
+            post.Title = request.Title.Trim();
 
-        // Slug: only change if explicitly provided AND post is not published
-        if (request.Slug != null && post.Status != BlogPostStatus.Published)
+        // Slug is locked once published — only update it for Draft/Archived posts
+        if (request.Slug != null)
         {
-            var newSlug = NormalizeSlug(request.Slug);
-            if (string.IsNullOrEmpty(newSlug))
-                throw new BoiootException("الـ slug المُدخَل غير صالح", 400);
-            await EnsurePostSlugUniqueAsync(newSlug, id, ct);
+            if (post.Status == BlogPostStatus.Published)
+                throw new BoiootException("لا يمكن تغيير الـ slug بعد نشر المقال", 409);
+
+            var newSlug = await _slugService.UniquePostSlugAsync(request.Slug, excludeId: id, ct);
             post.Slug = newSlug;
         }
 
-        if (request.Excerpt    != null) post.Excerpt       = request.Excerpt.Trim();
-        if (request.Content    != null) post.Content       = request.Content.Trim();
-        if (request.CoverImageUrl != null) post.CoverImageUrl = request.CoverImageUrl.Trim();
-        if (request.IsFeatured != null) post.IsFeatured    = request.IsFeatured.Value;
-        if (request.SeoTitle   != null) post.SeoTitle      = request.SeoTitle.Trim();
+        if (request.Excerpt        != null) post.Excerpt       = request.Excerpt.Trim();
+        if (request.Content        != null) post.Content       = request.Content.Trim();
+        if (request.CoverImageUrl  != null) post.CoverImageUrl = request.CoverImageUrl.Trim();
+        if (request.IsFeatured     != null) post.IsFeatured    = request.IsFeatured.Value;
+        if (request.SeoTitle       != null) post.SeoTitle      = request.SeoTitle.Trim();
         if (request.SeoDescription != null) post.SeoDescription = request.SeoDescription.Trim();
         if (request.ReadTimeMinutes != null) post.ReadTimeMinutes = request.ReadTimeMinutes;
 
@@ -329,13 +318,11 @@ public class BlogService : IBlogService
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new BoiootException("المقال غير موجود", 404);
 
-        if (post.Status == BlogPostStatus.Published)
-            throw new BoiootException("المقال منشور بالفعل", 409);
-
-        ValidateForPublish(post);
+        // Runs all publish-readiness checks (including archived check)
+        BlogPostValidation.EnsurePublishReady(post);
 
         post.Status            = BlogPostStatus.Published;
-        post.PublishedAt     ??= DateTime.UtcNow;
+        post.PublishedAt     ??= DateTime.UtcNow;   // Set only on first publish
         post.PublishedByUserId = publishedByUserId;
 
         await _db.SaveChangesAsync(ct);
@@ -378,7 +365,7 @@ public class BlogService : IBlogService
 
     public async Task<List<BlogCategoryResponse>> AdminGetCategoriesAsync(CancellationToken ct = default)
     {
-        var categories = await _db.Set<BlogCategory>()
+        var cats = await _db.Set<BlogCategory>()
             .OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
             .ToListAsync(ct);
 
@@ -390,20 +377,20 @@ public class BlogService : IBlogService
 
         var countMap = counts.ToDictionary(x => x.Id, x => x.Count);
 
-        return categories.Select(c => MapCategory(c, countMap.GetValueOrDefault(c.Id, 0))).ToList();
+        return cats.Select(c => MapCategory(c, countMap.GetValueOrDefault(c.Id, 0))).ToList();
     }
 
     public async Task<BlogCategoryResponse> AdminGetCategoryByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var c = await _db.Set<BlogCategory>()
-            .FirstOrDefaultAsync(x => x.Id == id, ct)
+        var cat = await _db.Set<BlogCategory>()
+            .FirstOrDefaultAsync(c => c.Id == id, ct)
             ?? throw new BoiootException("التصنيف غير موجود", 404);
 
         var count = await _db.Set<BlogPostCategory>()
             .IgnoreQueryFilters()
             .CountAsync(bpc => bpc.BlogCategoryId == id, ct);
 
-        return MapCategory(c, count);
+        return MapCategory(cat, count);
     }
 
     public async Task<BlogCategoryResponse> AdminCreateCategoryAsync(
@@ -412,14 +399,9 @@ public class BlogService : IBlogService
         if (string.IsNullOrWhiteSpace(request.Name))
             throw new BoiootException("اسم التصنيف مطلوب", 400);
 
-        var slug = string.IsNullOrWhiteSpace(request.Slug)
-            ? NormalizeSlug(request.Name)
-            : NormalizeSlug(request.Slug);
-
-        if (string.IsNullOrEmpty(slug))
-            throw new BoiootException("تعذّر إنشاء slug من الاسم المُدخَل", 400);
-
-        await EnsureCategorySlugUniqueAsync(slug, null, ct);
+        var slug = await _slugService.UniqueCategorySlugAsync(
+            string.IsNullOrWhiteSpace(request.Slug) ? request.Name : request.Slug,
+            excludeId: null, ct);
 
         var cat = new BlogCategory
         {
@@ -443,14 +425,16 @@ public class BlogService : IBlogService
             .FirstOrDefaultAsync(c => c.Id == id, ct)
             ?? throw new BoiootException("التصنيف غير موجود", 404);
 
-        if (request.Name != null) cat.Name = request.Name.Trim();
+        if (request.Name != null)
+        {
+            if (string.IsNullOrWhiteSpace(request.Name))
+                throw new BoiootException("اسم التصنيف لا يمكن أن يكون فارغاً", 400);
+            cat.Name = request.Name.Trim();
+        }
 
         if (request.Slug != null)
         {
-            var newSlug = NormalizeSlug(request.Slug);
-            if (string.IsNullOrEmpty(newSlug))
-                throw new BoiootException("الـ slug المُدخَل غير صالح", 400);
-            await EnsureCategorySlugUniqueAsync(newSlug, id, ct);
+            var newSlug = await _slugService.UniqueCategorySlugAsync(request.Slug, excludeId: id, ct);
             cat.Slug = newSlug;
         }
 
@@ -473,14 +457,14 @@ public class BlogService : IBlogService
             .FirstOrDefaultAsync(c => c.Id == id, ct)
             ?? throw new BoiootException("التصنيف غير موجود", 404);
 
-        // Block deletion if any PUBLISHED post belongs to this category
         var hasPublishedPosts = await _db.Set<BlogPostCategory>()
             .AnyAsync(bpc =>
                 bpc.BlogCategoryId == id &&
                 bpc.BlogPost.Status == BlogPostStatus.Published, ct);
 
         if (hasPublishedPosts)
-            throw new BoiootException("لا يمكن حذف التصنيف لأنه مرتبط بمقالات منشورة. قم بأرشفة المقالات أولاً", 409);
+            throw new BoiootException(
+                "لا يمكن حذف التصنيف لأنه مرتبط بمقالات منشورة. قم بأرشفة المقالات أولاً", 409);
 
         _db.Set<BlogCategory>().Remove(cat);
         await _db.SaveChangesAsync(ct);
@@ -492,12 +476,13 @@ public class BlogService : IBlogService
     // Public: Posts
     // ═════════════════════════════════════════════════════════════════════════
 
-    public async Task<PagedResult<BlogPostSummaryResponse>> PublicGetPostsAsync(
+    public async Task<PagedResult<PublicBlogPostSummary>> PublicGetPostsAsync(
         string? categorySlug, bool? isFeatured, int page, int pageSize, CancellationToken ct = default)
     {
         page     = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 50);
 
+        // Query filter (HasQueryFilter) already excludes IsDeleted=true
         var q = PostsWithIncludes()
             .AsNoTracking()
             .Where(p => p.Status == BlogPostStatus.Published);
@@ -509,24 +494,24 @@ public class BlogService : IBlogService
             q = q.Where(p => p.IsFeatured == isFeatured.Value);
 
         var total = await q.CountAsync(ct);
-
         var items = await q
             .OrderByDescending(p => p.PublishedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
 
-        return new PagedResult<BlogPostSummaryResponse>(
-            items.Select(MapToSummary).ToList(), page, pageSize, total);
+        return new PagedResult<PublicBlogPostSummary>(
+            items.Select(MapToPublicSummary).ToList(), page, pageSize, total);
     }
 
-    public async Task<BlogPostDetailResponse> PublicGetPostBySlugAsync(string slug, CancellationToken ct = default)
+    public async Task<PublicBlogPostDetail> PublicGetPostBySlugAsync(string slug, CancellationToken ct = default)
     {
+        // Query filter excludes IsDeleted=true automatically
         var post = await PostsWithIncludes()
             .FirstOrDefaultAsync(p => p.Slug == slug && p.Status == BlogPostStatus.Published, ct)
             ?? throw new BoiootException("المقال غير موجود", 404);
 
-        return MapToDetail(post);
+        return MapToPublicDetail(post);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -551,7 +536,7 @@ public class BlogService : IBlogService
         return cats.Select(c => MapCategory(c, countMap.GetValueOrDefault(c.Id, 0))).ToList();
     }
 
-    public async Task<PagedResult<BlogPostSummaryResponse>> PublicGetPostsByCategorySlugAsync(
+    public async Task<PagedResult<PublicBlogPostSummary>> PublicGetPostsByCategorySlugAsync(
         string categorySlug, int page, int pageSize, CancellationToken ct = default)
     {
         page     = Math.Max(1, page);
@@ -567,14 +552,13 @@ public class BlogService : IBlogService
                         p.BlogPostCategories.Any(bpc => bpc.BlogCategoryId == cat.Id));
 
         var total = await q.CountAsync(ct);
-
         var items = await q
             .OrderByDescending(p => p.PublishedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
 
-        return new PagedResult<BlogPostSummaryResponse>(
-            items.Select(MapToSummary).ToList(), page, pageSize, total);
+        return new PagedResult<PublicBlogPostSummary>(
+            items.Select(MapToPublicSummary).ToList(), page, pageSize, total);
     }
 }

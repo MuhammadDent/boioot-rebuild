@@ -72,6 +72,13 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("CanListProperty", policy =>
         policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Broker, RoleNames.Agent, RoleNames.Owner, RoleNames.User));
+
+    // ── Blog permissions (all Admin-only in V1; extensible for future roles) ──
+    options.AddPolicy(BlogPermissions.CreatePost,       p => p.RequireRole(RoleNames.Admin));
+    options.AddPolicy(BlogPermissions.EditPost,         p => p.RequireRole(RoleNames.Admin));
+    options.AddPolicy(BlogPermissions.PublishPost,      p => p.RequireRole(RoleNames.Admin));
+    options.AddPolicy(BlogPermissions.DeletePost,       p => p.RequireRole(RoleNames.Admin));
+    options.AddPolicy(BlogPermissions.ManageCategories, p => p.RequireRole(RoleNames.Admin));
 });
 
 var app = builder.Build();

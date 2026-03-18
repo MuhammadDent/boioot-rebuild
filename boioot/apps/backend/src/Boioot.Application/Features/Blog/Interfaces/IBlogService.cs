@@ -1,5 +1,6 @@
 using Boioot.Application.Common.Models;
 using Boioot.Application.Features.Blog.DTOs;
+using Boioot.Application.Features.Blog.DTOs.Public;
 
 namespace Boioot.Application.Features.Blog.Interfaces;
 
@@ -22,11 +23,11 @@ public interface IBlogService
     Task<BlogCategoryResponse> AdminUpdateCategoryAsync(Guid id, UpdateBlogCategoryRequest request, CancellationToken ct = default);
     Task AdminDeleteCategoryAsync(Guid id, CancellationToken ct = default);
 
-    // ── Public: Posts ─────────────────────────────────────────────────────────
-    Task<PagedResult<BlogPostSummaryResponse>> PublicGetPostsAsync(string? categorySlug, bool? isFeatured, int page, int pageSize, CancellationToken ct = default);
-    Task<BlogPostDetailResponse> PublicGetPostBySlugAsync(string slug, CancellationToken ct = default);
+    // ── Public: Posts (separate DTOs — no internal fields, no content in list) ─
+    Task<PagedResult<PublicBlogPostSummary>> PublicGetPostsAsync(string? categorySlug, bool? isFeatured, int page, int pageSize, CancellationToken ct = default);
+    Task<PublicBlogPostDetail> PublicGetPostBySlugAsync(string slug, CancellationToken ct = default);
 
     // ── Public: Categories ────────────────────────────────────────────────────
     Task<List<BlogCategoryResponse>> PublicGetCategoriesAsync(CancellationToken ct = default);
-    Task<PagedResult<BlogPostSummaryResponse>> PublicGetPostsByCategorySlugAsync(string categorySlug, int page, int pageSize, CancellationToken ct = default);
+    Task<PagedResult<PublicBlogPostSummary>> PublicGetPostsByCategorySlugAsync(string categorySlug, int page, int pageSize, CancellationToken ct = default);
 }
