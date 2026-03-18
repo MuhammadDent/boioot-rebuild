@@ -34,10 +34,12 @@ const cardStyle: React.CSSProperties = {
 interface CoverImageFieldProps {
   url: string;
   onUrlChange: (url: string) => void;
+  alt: string;
+  onAltChange: (alt: string) => void;
   disabled?: boolean;
 }
 
-function CoverImageField({ url, onUrlChange, disabled }: CoverImageFieldProps) {
+function CoverImageField({ url, onUrlChange, alt, onAltChange, disabled }: CoverImageFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -48,7 +50,11 @@ function CoverImageField({ url, onUrlChange, disabled }: CoverImageFieldProps) {
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch("/api/upload/image", { method: "POST", body: form });
+      const res = await fetch("/api/upload/image", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string };
         throw new Error(err.error ?? "فشل رفع الصورة");
@@ -168,6 +174,22 @@ function CoverImageField({ url, onUrlChange, disabled }: CoverImageFieldProps) {
         dir="ltr"
       />
 
+      {/* Alt text */}
+      <div style={{ marginTop: "0.5rem" }}>
+        <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          <span>النص البديل للغلاف (Alt Text)</span>
+          <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--color-text-secondary)" }}>— للـ SEO</span>
+        </label>
+        <input
+          type="text"
+          value={alt}
+          onChange={e => onAltChange(e.target.value)}
+          style={inputStyle}
+          placeholder="مثال: صورة غلاف مقال عن العقارات في دمشق"
+          disabled={disabled || uploading}
+        />
+      </div>
+
       {uploadError && (
         <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "var(--color-error)" }}>
           {uploadError}
@@ -204,6 +226,7 @@ export function BlogPostForm({
   const [excerpt,        setExcerpt]        = useState(initialData?.excerpt        ?? "");
   const [content,        setContent]        = useState(initialData?.content        ?? "");
   const [coverImageUrl,  setCoverImageUrl]  = useState(initialData?.coverImageUrl  ?? "");
+  const [coverImageAlt,  setCoverImageAlt]  = useState(initialData?.coverImageAlt  ?? "");
   const [isFeatured,     setIsFeatured]     = useState(initialData?.isFeatured     ?? false);
   const [seoTitle,       setSeoTitle]       = useState(initialData?.seoTitle       ?? "");
   const [seoDescription, setSeoDescription] = useState(initialData?.seoDescription ?? "");
@@ -231,6 +254,7 @@ export function BlogPostForm({
       excerpt:         excerpt.trim() || undefined,
       content:         content,
       coverImageUrl:   coverImageUrl.trim() || undefined,
+      coverImageAlt:   coverImageAlt.trim() || undefined,
       categoryIds:     selectedCatIds,
       isFeatured,
       seoTitle:        seoTitle.trim() || undefined,
@@ -524,6 +548,8 @@ export function BlogPostForm({
             <CoverImageField
               url={coverImageUrl}
               onUrlChange={setCoverImageUrl}
+              alt={coverImageAlt}
+              onAltChange={setCoverImageAlt}
               disabled={busy}
             />
           </div>

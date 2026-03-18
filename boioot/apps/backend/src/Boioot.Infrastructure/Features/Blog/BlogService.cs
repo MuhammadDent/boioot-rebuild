@@ -53,6 +53,7 @@ public class BlogService : IBlogService
         Slug            = p.Slug,
         Excerpt         = p.Excerpt,
         CoverImageUrl   = p.CoverImageUrl,
+        CoverImageAlt   = p.CoverImageAlt,
         Status          = p.Status,
         IsFeatured      = p.IsFeatured,
         ReadTimeMinutes = p.ReadTimeMinutes,
@@ -73,6 +74,7 @@ public class BlogService : IBlogService
         Excerpt           = p.Excerpt,
         Content           = p.Content,
         CoverImageUrl     = p.CoverImageUrl,
+        CoverImageAlt     = p.CoverImageAlt,
         Status            = p.Status,
         IsFeatured        = p.IsFeatured,
         ReadTimeMinutes   = p.ReadTimeMinutes,
@@ -98,6 +100,7 @@ public class BlogService : IBlogService
         Slug            = p.Slug,
         Excerpt         = p.Excerpt,
         CoverImageUrl   = p.CoverImageUrl,
+        CoverImageAlt   = p.CoverImageAlt,
         IsFeatured      = p.IsFeatured,
         ReadTimeMinutes = p.ReadTimeMinutes,
         ViewCount       = p.ViewCount,
@@ -114,6 +117,7 @@ public class BlogService : IBlogService
         Excerpt         = p.Excerpt,
         Content         = p.Content,
         CoverImageUrl   = p.CoverImageUrl,
+        CoverImageAlt   = p.CoverImageAlt,
         IsFeatured      = p.IsFeatured,
         ReadTimeMinutes = p.ReadTimeMinutes,
         ViewCount       = p.ViewCount,
@@ -238,6 +242,7 @@ public class BlogService : IBlogService
             Excerpt         = request.Excerpt?.Trim(),
             Content         = request.Content.Trim(),
             CoverImageUrl   = request.CoverImageUrl?.Trim(),
+            CoverImageAlt   = request.CoverImageAlt?.Trim(),
             Status          = BlogPostStatus.Draft,
             IsFeatured      = request.IsFeatured,
             SeoTitle        = request.SeoTitle?.Trim(),
@@ -282,6 +287,7 @@ public class BlogService : IBlogService
         if (request.Excerpt        != null) post.Excerpt       = request.Excerpt.Trim();
         if (request.Content        != null) post.Content       = request.Content.Trim();
         if (request.CoverImageUrl  != null) post.CoverImageUrl = request.CoverImageUrl.Trim();
+        if (request.CoverImageAlt  != null) post.CoverImageAlt = request.CoverImageAlt.Trim();
         if (request.IsFeatured     != null) post.IsFeatured    = request.IsFeatured.Value;
         if (request.SeoTitle       != null) post.SeoTitle      = request.SeoTitle.Trim();
         if (request.SeoDescription != null) post.SeoDescription = request.SeoDescription.Trim();

@@ -13,6 +13,7 @@ public class PublicBlogPostSummary
     public string Slug { get; set; } = string.Empty;
     public string? Excerpt { get; set; }
     public string? CoverImageUrl { get; set; }
+    public string? CoverImageAlt { get; set; }
     public bool IsFeatured { get; set; }
     public int? ReadTimeMinutes { get; set; }
     public int ViewCount { get; set; }

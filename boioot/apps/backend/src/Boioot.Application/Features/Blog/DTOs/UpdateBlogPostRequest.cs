@@ -7,6 +7,7 @@ public class UpdateBlogPostRequest
     public string? Excerpt { get; set; }
     public string? Content { get; set; }
     public string? CoverImageUrl { get; set; }
+    public string? CoverImageAlt { get; set; }
     public bool? IsFeatured { get; set; }
     public string? SeoTitle { get; set; }
     public string? SeoDescription { get; set; }

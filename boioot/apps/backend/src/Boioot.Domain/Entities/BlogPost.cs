@@ -10,6 +10,7 @@ public class BlogPost : BaseEntity, ISoftDeletable
     public string? Excerpt { get; set; }
     public string Content { get; set; } = string.Empty;
     public string? CoverImageUrl { get; set; }
+    public string? CoverImageAlt { get; set; }
     public BlogPostStatus Status { get; set; } = BlogPostStatus.Draft;
     public DateTime? PublishedAt { get; set; }
     public bool IsFeatured { get; set; } = false;
