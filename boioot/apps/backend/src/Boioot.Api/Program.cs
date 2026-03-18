@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Billing.Settings;
 using Boioot.Domain.Constants;
 using Boioot.Infrastructure.Extensions;
 using Boioot.Infrastructure.Persistence;
@@ -21,6 +22,8 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddControllers()
     .AddJsonOptions(opt =>
         opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.Configure<BankInstructionsOptions>(
+    builder.Configuration.GetSection(BankInstructionsOptions.SectionName));
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddCors(options =>

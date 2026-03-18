@@ -24,7 +24,22 @@ public sealed class InvoiceResponse
     public Guid?     RejectedBy  { get; init; }
     public DateTime? RejectedAt  { get; init; }
 
+    /// <summary>
+    /// Bank transfer details the user needs to complete payment.
+    /// Populated for all internal (non-Stripe) invoices.
+    /// </summary>
+    public PaymentInstructionsDto? PaymentInstructions { get; init; }
+
     public PaymentProofResponse? Proof { get; init; }
+}
+
+/// <summary>Static bank details for completing the transfer.</summary>
+public sealed class PaymentInstructionsDto
+{
+    public string BankName      { get; init; } = string.Empty;
+    public string AccountName   { get; init; } = string.Empty;
+    public string AccountNumber { get; init; } = string.Empty;
+    public string Instructions  { get; init; } = string.Empty;
 }
 
 public sealed class PaymentProofResponse

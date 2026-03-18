@@ -2,11 +2,13 @@ using System.Collections.Concurrent;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Billing.DTOs;
 using Boioot.Application.Features.Billing.Interfaces;
+using Boioot.Application.Features.Billing.Settings;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Boioot.Infrastructure.Features.Billing;
 
@@ -16,10 +18,11 @@ namespace Boioot.Infrastructure.Features.Billing;
 /// </summary>
 public sealed class BillingService : IBillingService
 {
-    private readonly BoiootDbContext      _db;
-    private readonly IBillingProvider     _provider;
-    private readonly IAccountResolver     _accountResolver;
-    private readonly INotificationService _notifications;
+    private readonly BoiootDbContext        _db;
+    private readonly IBillingProvider       _provider;
+    private readonly IAccountResolver       _accountResolver;
+    private readonly INotificationService   _notifications;
+    private readonly BankInstructionsOptions _bankInstructions;
 
     // ── Rate-limit store ───────────────────────────────────────────────────────
     // Tracks the timestamps of recent checkout attempts per user.
@@ -29,15 +32,17 @@ public sealed class BillingService : IBillingService
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(10);
 
     public BillingService(
-        BoiootDbContext      db,
-        IBillingProvider     provider,
-        IAccountResolver     accountResolver,
-        INotificationService notifications)
+        BoiootDbContext                db,
+        IBillingProvider               provider,
+        IAccountResolver               accountResolver,
+        INotificationService           notifications,
+        IOptions<BankInstructionsOptions> bankInstructions)
     {
-        _db            = db;
-        _provider      = provider;
-        _accountResolver = accountResolver;
-        _notifications = notifications;
+        _db               = db;
+        _provider         = provider;
+        _accountResolver  = accountResolver;
+        _notifications    = notifications;
+        _bankInstructions = bankInstructions.Value;
     }
 
     // ── User-facing ───────────────────────────────────────────────────────────
@@ -309,7 +314,7 @@ public sealed class BillingService : IBillingService
             ct);
     }
 
-    private static InvoiceResponse ToResponse(Invoice i) => new()
+    private InvoiceResponse ToResponse(Invoice i) => new()
     {
         Id            = i.Id,
         UserId        = i.UserId,
@@ -331,6 +336,13 @@ public sealed class BillingService : IBillingService
         ApprovedAt    = i.ApprovedAt,
         RejectedBy    = i.RejectedBy,
         RejectedAt    = i.RejectedAt,
+        PaymentInstructions = i.ProviderName == "internal" ? new PaymentInstructionsDto
+        {
+            BankName      = _bankInstructions.BankName,
+            AccountName   = _bankInstructions.AccountName,
+            AccountNumber = _bankInstructions.AccountNumber,
+            Instructions  = _bankInstructions.Instructions,
+        } : null,
         Proof         = i.PaymentProof is null ? null : new PaymentProofResponse
         {
             Id        = i.PaymentProof.Id,
