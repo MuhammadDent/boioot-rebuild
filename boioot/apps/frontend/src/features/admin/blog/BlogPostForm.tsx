@@ -41,6 +41,7 @@ function CoverImageField({ url, onUrlChange, disabled }: CoverImageFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [dragging, setDragging] = useState(false);
 
   async function handleFile(file: File) {
     setUploading(true); setUploadError("");
@@ -61,51 +62,90 @@ function CoverImageField({ url, onUrlChange, disabled }: CoverImageFieldProps) {
     }
   }
 
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault(); setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) handleFile(file);
+  }
+
   return (
     <div>
-      <label style={labelStyle}>صورة الغلاف</label>
-
-      {/* Preview */}
-      {url && (
+      {/* Large drop zone */}
+      {url ? (
+        /* Preview */
         <div style={{ position: "relative", marginBottom: "0.75rem" }}>
           <img
             src={url}
             alt="غلاف المقال"
-            style={{ width: "100%", borderRadius: 8, maxHeight: 160, objectFit: "cover" }}
+            style={{ width: "100%", borderRadius: 10, maxHeight: 200, objectFit: "cover", display: "block" }}
             onError={e => (e.currentTarget.style.display = "none")}
           />
-          <button
-            type="button"
-            onClick={() => onUrlChange("")}
-            disabled={disabled}
-            style={{
-              position: "absolute", top: 6, left: 6,
-              background: "rgba(0,0,0,0.55)", color: "#fff",
-              border: "none", borderRadius: 6, padding: "0.2rem 0.5rem",
-              fontSize: "0.75rem", cursor: "pointer",
-            }}
-          >
-            ✕ إزالة
-          </button>
+          <div style={{ position: "absolute", top: 8, left: 8, display: "flex", gap: "0.4rem" }}>
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={disabled || uploading}
+              style={{
+                background: "rgba(0,0,0,0.6)", color: "#fff",
+                border: "none", borderRadius: 6, padding: "0.25rem 0.6rem",
+                fontSize: "0.75rem", cursor: "pointer",
+              }}
+            >
+              تغيير
+            </button>
+            <button
+              type="button"
+              onClick={() => onUrlChange("")}
+              disabled={disabled}
+              style={{
+                background: "rgba(0,0,0,0.6)", color: "#fff",
+                border: "none", borderRadius: 6, padding: "0.25rem 0.6rem",
+                fontSize: "0.75rem", cursor: "pointer",
+              }}
+            >
+              ✕ إزالة
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => !disabled && !uploading && inputRef.current?.click()}
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          style={{
+            width: "100%", minHeight: 160,
+            border: `2px dashed ${dragging ? "var(--color-primary)" : "var(--color-border, #d1d5db)"}`,
+            borderRadius: 10,
+            background: dragging ? "#f0fdf4" : "var(--color-bg-secondary, #f9fafb)",
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: "0.5rem",
+            cursor: disabled || uploading ? "default" : "pointer",
+            transition: "border-color 0.15s, background 0.15s",
+            marginBottom: "0.5rem",
+          }}
+        >
+          {uploading ? (
+            <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--color-text-secondary)" }}>⏳ جاري الرفع...</p>
+          ) : (
+            <>
+              {/* Image placeholder icon */}
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={dragging ? "var(--color-primary)" : "#9ca3af"} strokeWidth="1.2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21,15 16,10 5,21"/>
+              </svg>
+              <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: dragging ? "var(--color-primary)" : "var(--color-text-secondary)" }}>
+                انقر لرفع الصورة
+              </p>
+              <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                أو اسحب وأفلت الصورة هنا · JPG، PNG، WebP (حتى 10MB)
+              </p>
+            </>
+          )}
         </div>
       )}
 
-      {/* Upload from device */}
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={disabled || uploading}
-        style={{
-          width: "100%", padding: "0.6rem", borderRadius: 8,
-          border: "1.5px dashed var(--color-border, #e5e7eb)",
-          background: "var(--color-bg-secondary, #f9fafb)",
-          cursor: disabled || uploading ? "default" : "pointer",
-          fontSize: "0.85rem", color: "var(--color-text-secondary)",
-          marginBottom: "0.5rem",
-        }}
-      >
-        {uploading ? "⏳ جاري الرفع..." : "📁 رفع صورة من الجهاز"}
-      </button>
       <input
         ref={inputRef}
         type="file"
@@ -118,12 +158,12 @@ function CoverImageField({ url, onUrlChange, disabled }: CoverImageFieldProps) {
         }}
       />
 
-      {/* Manual URL fallback */}
+      {/* URL fallback */}
       <input
         value={url}
         onChange={e => onUrlChange(e.target.value)}
         style={{ ...inputStyle, fontSize: "0.82rem" }}
-        placeholder="أو أدخل رابط الصورة: https://..."
+        placeholder="أو أدخل رابط الصورة مباشرة: https://..."
         disabled={disabled || uploading}
         dir="ltr"
       />
