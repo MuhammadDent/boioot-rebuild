@@ -39,3 +39,19 @@ export const ADMIN_PROJECT_STATUS_BADGE: Record<string, string> = {
   UnderConstruction: "badge badge-blue",
   Completed:         "badge badge-green",
 };
+
+export const INVOICE_STATUS_LABELS: Record<string, string> = {
+  Pending:  "معلقة",
+  Paid:     "مدفوعة",
+  Failed:   "مرفوضة",
+  Expired:  "منتهية",
+  Cancelled:"ملغاة",
+};
+
+export const INVOICE_STATUS_BADGE: Record<string, string> = {
+  Pending:  "badge badge-yellow",
+  Paid:     "badge badge-green",
+  Failed:   "badge badge-red",
+  Expired:  "badge badge-gray",
+  Cancelled:"badge badge-gray",
+};

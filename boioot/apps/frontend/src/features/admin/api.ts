@@ -13,6 +13,7 @@ import type {
   AdminPlanDetail,
   PlanLimitItem,
   PlanFeatureItem,
+  AdminInvoiceResponse,
 } from "@/types";
 
 // ── Filter param types ─────────────────────────────────────────────────────────
@@ -239,5 +240,23 @@ export const adminApi = {
   /** PUT /api/admin/plans/{id}/features/{featureKey} */
   setPlanFeature(id: string, featureKey: string, isEnabled: boolean): Promise<PlanFeatureItem> {
     return api.put(`/admin/plans/${id}/features/${featureKey}`, { isEnabled });
+  },
+
+  // ── Billing ──────────────────────────────────────────────────────────────
+
+  /** GET /api/admin/billing/invoices?status=... */
+  getInvoices(status?: string): Promise<AdminInvoiceResponse[]> {
+    const qs = status ? `?status=${status}` : "";
+    return api.get(`/admin/billing/invoices${qs}`);
+  },
+
+  /** POST /api/admin/billing/invoices/{id}/confirm */
+  confirmInvoice(invoiceId: string, note?: string): Promise<AdminInvoiceResponse> {
+    return api.post(`/admin/billing/invoices/${invoiceId}/confirm`, { note: note || null });
+  },
+
+  /** POST /api/admin/billing/invoices/{id}/reject */
+  rejectInvoice(invoiceId: string, note?: string): Promise<AdminInvoiceResponse> {
+    return api.post(`/admin/billing/invoices/${invoiceId}/reject`, { note: note || null });
   },
 };

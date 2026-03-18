@@ -437,3 +437,44 @@ export interface AdminPlanDetail extends AdminPlanSummary {
   limits: PlanLimitItem[];
   features: PlanFeatureItem[];
 }
+
+// ── Billing ───────────────────────────────────────────────────────────────────
+
+export interface PaymentInstructionsDto {
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  instructions: string;
+}
+
+export interface PaymentProofDto {
+  id: string;
+  imageUrl: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface AdminInvoiceResponse {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  planPricingId: string;
+  planName: string;
+  billingCycle: string;
+  amount: number;
+  currency: string;
+  status: string;
+  providerName: string;
+  externalRef?: string;
+  adminNote?: string;
+  createdAt: string;
+  expiresAt?: string;
+  isExpired: boolean;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
+  paymentInstructions?: PaymentInstructionsDto;
+  proof?: PaymentProofDto;
+}
