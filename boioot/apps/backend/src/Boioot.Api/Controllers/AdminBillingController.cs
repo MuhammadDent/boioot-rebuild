@@ -13,11 +13,13 @@ namespace Boioot.Api.Controllers;
 [Route("api/admin/billing")]
 public class AdminBillingController : BaseController
 {
-    private readonly IBillingService _billing;
+    private readonly IBillingService      _billing;
+    private readonly INotificationService _notifications;
 
-    public AdminBillingController(IBillingService billing)
+    public AdminBillingController(IBillingService billing, INotificationService notifications)
     {
-        _billing = billing;
+        _billing       = billing;
+        _notifications = notifications;
     }
 
     /// <summary>
@@ -44,6 +46,7 @@ public class AdminBillingController : BaseController
         CancellationToken ct)
     {
         var invoice = await _billing.AdminConfirmPaymentAsync(invoiceId, request, GetUserId(), ct);
+        await _notifications.NotifyInvoiceApproved(invoice.UserId, invoice.Id, ct);
         return Ok(invoice);
     }
 
@@ -55,6 +58,7 @@ public class AdminBillingController : BaseController
         CancellationToken ct)
     {
         var invoice = await _billing.AdminRejectPaymentAsync(invoiceId, request, GetUserId(), ct);
+        await _notifications.NotifyInvoiceRejected(invoice.UserId, invoice.Id, ct);
         return Ok(invoice);
     }
 }

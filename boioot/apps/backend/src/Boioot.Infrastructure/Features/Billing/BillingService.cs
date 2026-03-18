@@ -16,9 +16,10 @@ namespace Boioot.Infrastructure.Features.Billing;
 /// </summary>
 public sealed class BillingService : IBillingService
 {
-    private readonly BoiootDbContext  _db;
-    private readonly IBillingProvider _provider;
-    private readonly IAccountResolver _accountResolver;
+    private readonly BoiootDbContext      _db;
+    private readonly IBillingProvider     _provider;
+    private readonly IAccountResolver     _accountResolver;
+    private readonly INotificationService _notifications;
 
     // ── Rate-limit store ───────────────────────────────────────────────────────
     // Tracks the timestamps of recent checkout attempts per user.
@@ -28,13 +29,15 @@ public sealed class BillingService : IBillingService
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(10);
 
     public BillingService(
-        BoiootDbContext  db,
-        IBillingProvider provider,
-        IAccountResolver accountResolver)
+        BoiootDbContext      db,
+        IBillingProvider     provider,
+        IAccountResolver     accountResolver,
+        INotificationService notifications)
     {
-        _db              = db;
-        _provider        = provider;
+        _db            = db;
+        _provider      = provider;
         _accountResolver = accountResolver;
+        _notifications = notifications;
     }
 
     // ── User-facing ───────────────────────────────────────────────────────────
@@ -67,6 +70,8 @@ public sealed class BillingService : IBillingService
                 BillingCycle:  pricing.BillingCycle,
                 ExpiresAt:     DateTime.UtcNow.AddHours(48)),
             ct);
+
+        await _notifications.NotifyInvoiceCreated(userId, result.InvoiceId, ct);
 
         return await LoadInvoiceResponseAsync(result.InvoiceId, ct);
     }

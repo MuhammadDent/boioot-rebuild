@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISubscriptionService, SubscriptionService>();
         services.AddScoped<IBillingProvider, InternalBillingProvider>();
         services.AddScoped<IBillingService, BillingService>();
+        services.AddScoped<INotificationService, LoggingNotificationService>();
         services.AddScoped<DataSeeder>();
 
         return services;
