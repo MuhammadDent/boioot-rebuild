@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { blogAdminApi } from "@/features/admin/blog-api";
 import { BlogStatusBadge } from "./BlogStatusBadge";
 import { RichTextEditor } from "./RichTextEditor";
@@ -199,6 +199,95 @@ function CoverImageField({ url, onUrlChange, alt, onAltChange, disabled }: Cover
   );
 }
 
+// ── Tags Input ────────────────────────────────────────────────────────────────
+
+interface TagsInputProps {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  disabled?: boolean;
+}
+
+function TagsInput({ tags, onChange, disabled }: TagsInputProps) {
+  const [input, setInput] = useState("");
+
+  const addTag = useCallback((raw: string) => {
+    const tag = raw.trim().replace(/^#/, "");
+    if (!tag || tags.includes(tag) || tags.length >= 20) return;
+    onChange([...tags, tag]);
+    setInput("");
+  }, [tags, onChange]);
+
+  const removeTag = useCallback((t: string) => {
+    onChange(tags.filter(x => x !== t));
+  }, [tags, onChange]);
+
+  useEffect(() => {
+    if (input.endsWith(",")) {
+      const raw = input.slice(0, -1);
+      if (raw.trim()) addTag(raw);
+      else setInput("");
+    }
+  }, [input, addTag]);
+
+  return (
+    <div>
+      <label style={labelStyle}>
+        الهاشتاغات
+        <span style={{ fontSize: "0.75rem", fontWeight: 400, color: "var(--color-text-secondary)", marginRight: "0.4rem" }}>
+          (اضغط Enter أو فاصلة للإضافة)
+        </span>
+      </label>
+
+      {/* Chips */}
+      {tags.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.5rem" }}>
+          {tags.map(t => (
+            <span key={t} style={{
+              display: "inline-flex", alignItems: "center", gap: "0.3rem",
+              background: "var(--color-primary-light, #e8f5e9)",
+              color: "var(--color-primary)",
+              borderRadius: 20, padding: "0.22rem 0.7rem",
+              fontSize: "0.82rem", fontWeight: 600,
+            }}>
+              #{t}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => removeTag(t)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "inherit", padding: 0, lineHeight: 1,
+                    fontSize: "0.9rem", opacity: 0.7,
+                  }}
+                  title={`إزالة #${t}`}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <input
+        type="text"
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === "Enter") { e.preventDefault(); addTag(input); }
+          if (e.key === "Backspace" && !input && tags.length > 0) {
+            removeTag(tags[tags.length - 1]);
+          }
+        }}
+        placeholder={tags.length === 0 ? "مثال: عقارات، دمشق، شقق" : "أضف هاشتاغ..."}
+        disabled={disabled}
+        style={{ ...inputStyle, fontSize: "0.88rem" }}
+        dir="rtl"
+      />
+    </div>
+  );
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface BlogPostFormProps {
@@ -227,6 +316,7 @@ export function BlogPostForm({
   const [content,        setContent]        = useState(initialData?.content        ?? "");
   const [coverImageUrl,  setCoverImageUrl]  = useState(initialData?.coverImageUrl  ?? "");
   const [coverImageAlt,  setCoverImageAlt]  = useState(initialData?.coverImageAlt  ?? "");
+  const [tags,           setTags]           = useState<string[]>(initialData?.tags ?? []);
   const [isFeatured,     setIsFeatured]     = useState(initialData?.isFeatured     ?? false);
   const [seoTitle,       setSeoTitle]       = useState(initialData?.seoTitle       ?? "");
   const [seoDescription, setSeoDescription] = useState(initialData?.seoDescription ?? "");
@@ -255,6 +345,7 @@ export function BlogPostForm({
       content:         content,
       coverImageUrl:   coverImageUrl.trim() || undefined,
       coverImageAlt:   coverImageAlt.trim() || undefined,
+      tags:            tags.length > 0 ? tags : undefined,
       categoryIds:     selectedCatIds,
       isFeatured,
       seoTitle:        seoTitle.trim() || undefined,
@@ -310,6 +401,32 @@ export function BlogPostForm({
       const published = await blogAdminApi.publishPost(updated.id);
       applyResult(published);
       setSuccess("تم نشر المقال بنجاح ✓");
+    } catch (e) {
+      setError(normalizeError(e));
+    } finally {
+      setActioning(null);
+    }
+  }
+
+  async function handleSaveAndPublish() {
+    setActioning("publish"); setError(""); setSuccess("");
+    try {
+      let post: BlogPostDetailResponse;
+      if (isEdit && postId) {
+        post = await blogAdminApi.updatePost(postId, buildPayload());
+      } else {
+        post = await blogAdminApi.createPost({
+          ...buildPayload(),
+          title: title.trim(),
+          content,
+          categoryIds: selectedCatIds,
+          isFeatured,
+        });
+      }
+      const published = await blogAdminApi.publishPost(post.id);
+      applyResult(published);
+      setSuccess("تم نشر المقال بنجاح ✓");
+      onSaved(published);
     } catch (e) {
       setError(normalizeError(e));
     } finally {
@@ -458,14 +575,24 @@ export function BlogPostForm({
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {/* Primary save action */}
               <button type="submit" className="btn btn-primary" disabled={busy} style={{ width: "100%" }}>
-                {saving ? "جاري الحفظ..." : isEdit ? "حفظ التغييرات" : "حفظ المسودة"}
+                {saving ? "جاري الحفظ..." : isEdit ? "حفظ التغييرات" : "حفظ مسودة"}
               </button>
-              {currentStatus === "Draft" && isEdit && (
-                <button type="button" className="btn btn-primary" onClick={handlePublish} disabled={busy} style={{ width: "100%", background: "#2e7d32", borderColor: "#2e7d32" }}>
-                  {actioning === "publish" ? "جاري النشر..." : "نشر المقال"}
+
+              {/* Publish — show for new posts AND draft edits */}
+              {currentStatus !== "Published" && currentStatus !== "Archived" && (
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleSaveAndPublish}
+                  disabled={busy}
+                  style={{ width: "100%", background: "#2e7d32", borderColor: "#2e7d32", color: "#fff", fontWeight: 600 }}
+                >
+                  {actioning === "publish" ? "جاري النشر..." : "نشر المقال ▶"}
                 </button>
               )}
+
               {currentStatus === "Published" && (
                 <button type="button" className="btn" onClick={handleUnpublish} disabled={busy} style={{ width: "100%" }}>
                   {actioning === "unpublish" ? "جاري الإرجاع..." : "إلغاء النشر (→ مسودة)"}
@@ -515,6 +642,11 @@ export function BlogPostForm({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Tags */}
+          <div style={cardStyle}>
+            <TagsInput tags={tags} onChange={setTags} disabled={busy} />
           </div>
 
           {/* Cover Image + Settings */}

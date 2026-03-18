@@ -469,6 +469,7 @@ export interface PublicBlogPostSummary {
   excerpt?: string;
   coverImageUrl?: string;
   coverImageAlt?: string;
+  tags: string[];
   isFeatured: boolean;
   readTimeMinutes?: number;
   viewCount: number;
@@ -485,6 +486,7 @@ export interface PublicBlogPostDetail {
   content: string;
   coverImageUrl?: string;
   coverImageAlt?: string;
+  tags: string[];
   isFeatured: boolean;
   readTimeMinutes?: number;
   viewCount: number;
@@ -523,6 +525,7 @@ export interface BlogPostSummaryResponse {
   excerpt?: string;
   coverImageUrl?: string;
   coverImageAlt?: string;
+  tags: string[];
   status: BlogPostStatus;
   isFeatured: boolean;
   readTimeMinutes?: number;
@@ -551,6 +554,7 @@ export interface CreateBlogPostRequest {
   content: string;
   coverImageUrl?: string;
   coverImageAlt?: string;
+  tags?: string[];
   categoryIds: string[];
   isFeatured: boolean;
   seoTitle?: string;
@@ -565,6 +569,7 @@ export interface UpdateBlogPostRequest {
   content?: string;
   coverImageUrl?: string;
   coverImageAlt?: string;
+  tags?: string[];
   categoryIds?: string[];
   isFeatured?: boolean;
   seoTitle?: string;

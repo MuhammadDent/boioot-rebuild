@@ -182,6 +182,8 @@ using (var scope = app.Services.CreateScope())
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN CoverImageAlt TEXT"); }
         catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN Tags TEXT"); }
+        catch { /* column already exists */ }
 
         // ── Phase A: Subscription architecture (tables + unique index + seed) ─
         await db.Database.ExecuteSqlRawAsync(@"
@@ -891,6 +893,7 @@ using (var scope = app.Services.CreateScope())
                 Content           TEXT NOT NULL DEFAULT '',
                 CoverImageUrl     TEXT,
                 CoverImageAlt     TEXT,
+                Tags              TEXT,
                 Status            TEXT NOT NULL DEFAULT 'Draft',
                 PublishedAt       TEXT,
                 IsFeatured        INTEGER NOT NULL DEFAULT 0,

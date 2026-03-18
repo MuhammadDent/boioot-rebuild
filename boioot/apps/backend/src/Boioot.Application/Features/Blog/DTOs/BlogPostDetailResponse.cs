@@ -11,6 +11,7 @@ public class BlogPostDetailResponse
     public string Content { get; set; } = string.Empty;
     public string? CoverImageUrl { get; set; }
     public string? CoverImageAlt { get; set; }
+    public List<string> Tags { get; set; } = new();
     public BlogPostStatus Status { get; set; }
     public bool IsFeatured { get; set; }
     public int? ReadTimeMinutes { get; set; }

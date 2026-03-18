@@ -10,6 +10,7 @@ public class BlogPostSummaryResponse
     public string? Excerpt { get; set; }
     public string? CoverImageUrl { get; set; }
     public string? CoverImageAlt { get; set; }
+    public List<string> Tags { get; set; } = new();
     public BlogPostStatus Status { get; set; }
     public bool IsFeatured { get; set; }
     public int? ReadTimeMinutes { get; set; }

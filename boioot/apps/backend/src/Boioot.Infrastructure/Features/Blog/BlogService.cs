@@ -45,6 +45,18 @@ public class BlogService : IBlogService
             .Select(bpc => MapCategory(bpc.BlogCategory))
             .ToList();
 
+    private static List<string> ParseTags(string? raw) =>
+        string.IsNullOrWhiteSpace(raw)
+            ? new List<string>()
+            : raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+    private static string? SerializeTags(IEnumerable<string>? tags)
+    {
+        if (tags == null) return null;
+        var joined = string.Join(",", tags.Select(t => t.Trim()).Where(t => t.Length > 0));
+        return joined.Length == 0 ? null : joined;
+    }
+
     // Admin maps — include all fields
     private static BlogPostSummaryResponse MapToAdminSummary(BlogPost p) => new()
     {
@@ -54,6 +66,7 @@ public class BlogService : IBlogService
         Excerpt         = p.Excerpt,
         CoverImageUrl   = p.CoverImageUrl,
         CoverImageAlt   = p.CoverImageAlt,
+        Tags            = ParseTags(p.Tags),
         Status          = p.Status,
         IsFeatured      = p.IsFeatured,
         ReadTimeMinutes = p.ReadTimeMinutes,
@@ -75,6 +88,7 @@ public class BlogService : IBlogService
         Content           = p.Content,
         CoverImageUrl     = p.CoverImageUrl,
         CoverImageAlt     = p.CoverImageAlt,
+        Tags              = ParseTags(p.Tags),
         Status            = p.Status,
         IsFeatured        = p.IsFeatured,
         ReadTimeMinutes   = p.ReadTimeMinutes,
@@ -101,6 +115,7 @@ public class BlogService : IBlogService
         Excerpt         = p.Excerpt,
         CoverImageUrl   = p.CoverImageUrl,
         CoverImageAlt   = p.CoverImageAlt,
+        Tags            = ParseTags(p.Tags),
         IsFeatured      = p.IsFeatured,
         ReadTimeMinutes = p.ReadTimeMinutes,
         ViewCount       = p.ViewCount,
@@ -118,6 +133,7 @@ public class BlogService : IBlogService
         Content         = p.Content,
         CoverImageUrl   = p.CoverImageUrl,
         CoverImageAlt   = p.CoverImageAlt,
+        Tags            = ParseTags(p.Tags),
         IsFeatured      = p.IsFeatured,
         ReadTimeMinutes = p.ReadTimeMinutes,
         ViewCount       = p.ViewCount,
@@ -243,6 +259,7 @@ public class BlogService : IBlogService
             Content         = request.Content.Trim(),
             CoverImageUrl   = request.CoverImageUrl?.Trim(),
             CoverImageAlt   = request.CoverImageAlt?.Trim(),
+            Tags            = SerializeTags(request.Tags),
             Status          = BlogPostStatus.Draft,
             IsFeatured      = request.IsFeatured,
             SeoTitle        = request.SeoTitle?.Trim(),
@@ -288,6 +305,7 @@ public class BlogService : IBlogService
         if (request.Content        != null) post.Content       = request.Content.Trim();
         if (request.CoverImageUrl  != null) post.CoverImageUrl = request.CoverImageUrl.Trim();
         if (request.CoverImageAlt  != null) post.CoverImageAlt = request.CoverImageAlt.Trim();
+        if (request.Tags           != null) post.Tags          = SerializeTags(request.Tags);
         if (request.IsFeatured     != null) post.IsFeatured    = request.IsFeatured.Value;
         if (request.SeoTitle       != null) post.SeoTitle      = request.SeoTitle.Trim();
         if (request.SeoDescription != null) post.SeoDescription = request.SeoDescription.Trim();
