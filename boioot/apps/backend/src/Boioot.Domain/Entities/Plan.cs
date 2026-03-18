@@ -50,6 +50,14 @@ public class Plan : BaseEntity
 
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// Ordinal rank used for upgrade/downgrade comparison.
+    /// Higher = more advanced plan. 0 = Free.
+    /// Individual plans: 0-3.  Professional plans: 10-14.
+    /// Plans with different rank groups cannot be compared for upgrade intent.
+    /// </summary>
+    public int Rank { get; set; } = 0;
+
     public ICollection<Account> Accounts { get; set; } = [];
     public ICollection<Subscription> Subscriptions { get; set; } = [];
     public ICollection<PlanFeature> PlanFeatures { get; set; } = [];

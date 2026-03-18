@@ -88,6 +88,14 @@ boioot/
 - ✅ **Phase 9 (A)**: هيكل الاشتراكات — Plans, Accounts, AccountUsers, Subscriptions (جداول جديدة)
 - ✅ **Phase 9 (A)**: AccountId? أُضيف لـ Users و Companies (أعمدة nullable)
 - ✅ **Phase 9 (A)**: 4 خطط مبدئية مُبذورة: Free(2), Silver(5), Gold(20), Platinum(∞)
+- ✅ **Phase 9 (B)**: PlanPricings — جدول التسعير المنفصل (Monthly/Yearly) + 9 باقات كاملة محبوسة (ef000001-ef000011)
+- ✅ **Phase 9 (B)**: صفحة التسعير العامة `/pricing` — BillingToggle، بطاقات الباقات بقسمين (أفراد + محترفين)
+- ✅ **Phase 9 (C)**: Plan.Rank — ترتيب ترقي الباقات (أفراد 0-3، محترفون 10-14)
+- ✅ **Phase 9 (C)**: Subscription.PricingId — يربط الاشتراك بصف التسعير المختار
+- ✅ **Phase 9 (C)**: GET /api/dashboard/subscription/current — حالة الاشتراك الحالي (أو Free افتراضياً)
+- ✅ **Phase 9 (C)**: POST /api/dashboard/subscription/upgrade-intent — تقييم نية الترقية/التخفيض (بدون دفع)
+- ✅ **Phase 9 (C)**: UpgradeModal — نافذة تأكيد الترقية مع "الدفع قريباً 🔒"
+- ✅ **Phase 9 (C)**: PricingCard — أزرار ذكية: الباقة الحالية / ترقية ↑ / تخفيض ↓ / تغيير دورة الفوترة
 
 ---
 

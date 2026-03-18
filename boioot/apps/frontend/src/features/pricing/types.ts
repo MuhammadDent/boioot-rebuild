@@ -1,6 +1,7 @@
 export interface PublicPricingEntry {
+  pricingId:    string;
   billingCycle: "Monthly" | "Yearly";
-  priceAmount: number;
+  priceAmount:  number;
   currencyCode: string;
 }
 
@@ -19,11 +20,12 @@ export interface PublicFeatureItem {
 }
 
 export interface PublicPricingItem {
-  planId: string;
-  planName: string;
-  description: string | null;
+  planId:               string;
+  planName:             string;
+  description:          string | null;
   applicableAccountType: string | null;
-  pricing: PublicPricingEntry[];
-  limits: PublicLimitItem[];
-  features: PublicFeatureItem[];
+  rank:                 number;
+  pricing:              PublicPricingEntry[];
+  limits:               PublicLimitItem[];
+  features:             PublicFeatureItem[];
 }

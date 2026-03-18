@@ -39,9 +39,10 @@ public class PublicPricingService : IPublicPricingService
             PlanName:             p.Name,
             Description:          p.Description,
             ApplicableAccountType: p.ApplicableAccountType?.ToString(),
+            Rank:                 p.Rank,
             Pricing: p.PlanPricings
                 .OrderBy(pp => pp.BillingCycle)
-                .Select(pp => new PublicPricingEntry(pp.BillingCycle, pp.PriceAmount, pp.CurrencyCode))
+                .Select(pp => new PublicPricingEntry(pp.Id, pp.BillingCycle, pp.PriceAmount, pp.CurrencyCode))
                 .ToList(),
             Limits: p.PlanLimits
                 .Where(pl => pl.LimitDefinition.IsActive)

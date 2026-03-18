@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminPlanPricingService, AdminPlanPricingService>();
         services.AddScoped<IPublicPricingService, PublicPricingService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
+        services.AddScoped<ISubscriptionService, SubscriptionService>();
         services.AddScoped<DataSeeder>();
 
         return services;

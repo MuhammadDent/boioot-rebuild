@@ -1,40 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { PublicPricingItem } from "@/features/pricing/types";
+import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
+import type { UpgradeIntentResponse } from "@/features/subscription/types";
 import { pricingApi } from "@/features/pricing/api";
+import { subscriptionApi } from "@/features/subscription/api";
+import { normalizeError } from "@/lib/api";
 import BillingToggle, { type BillingCycle } from "@/components/pricing/BillingToggle";
 import PricingCard from "@/components/pricing/PricingCard";
+import UpgradeModal from "@/components/pricing/UpgradeModal";
 import Spinner from "@/components/ui/Spinner";
 
-// ─── Plan grouping ────────────────────────────────────────────────────────────
+// ── Plan grouping ─────────────────────────────────────────────────────────────
 
-const INDIVIDUAL_PLANS  = ["Free", "Silver", "Gold", "Platinum"];
+const INDIVIDUAL_PLANS   = ["Free", "Silver", "Gold", "Platinum"];
 const PROFESSIONAL_PLANS = ["OwnerPro", "AgentPro", "AgentPremium", "OfficeStarter", "BusinessGrowth"];
 
 function filterGroup(plans: PublicPricingItem[], names: string[]) {
   return plans.filter((p) => names.includes(p.planName));
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
+// ── Section label ─────────────────────────────────────────────────────────────
 
 function SectionLabel({ label }: { label: string }) {
   return (
-    <div style={{
-      display:        "flex",
-      alignItems:     "center",
-      gap:            "0.75rem",
-      marginBottom:   "1.5rem",
-    }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
       <div style={{ flex: 1, height: 1, background: "var(--color-border)" }} />
-      <span style={{
-        fontSize:    "0.82rem",
-        fontWeight:  700,
-        color:       "var(--color-text-muted)",
-        letterSpacing: "0.07em",
-        textTransform: "uppercase",
-        whiteSpace:  "nowrap",
-      }}>
+      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--color-text-muted)", letterSpacing: "0.07em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
         {label}
       </span>
       <div style={{ flex: 1, height: 1, background: "var(--color-border)" }} />
@@ -42,37 +35,84 @@ function SectionLabel({ label }: { label: string }) {
   );
 }
 
-// ─── Plan grid ────────────────────────────────────────────────────────────────
+// ── Plans grid ────────────────────────────────────────────────────────────────
 
-function PlansGrid({ plans, cycle }: { plans: PublicPricingItem[]; cycle: BillingCycle }) {
+interface GridProps {
+  plans:               PublicPricingItem[];
+  cycle:               BillingCycle;
+  currentSubscription: CurrentSubscriptionResponse | null;
+  onUpgradeIntent:     (pricingId: string, planName: string) => void;
+  isLoadingIntent:     boolean;
+}
+
+function PlansGrid({ plans, cycle, currentSubscription, onUpgradeIntent, isLoadingIntent }: GridProps) {
   if (!plans.length) return null;
   return (
-    <div style={{
-      display:             "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))",
-      gap:                 "1.5rem",
-    }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: "1.5rem" }}>
       {plans.map((plan) => (
-        <PricingCard key={plan.planId} plan={plan} cycle={cycle} />
+        <PricingCard
+          key={plan.planId}
+          plan={plan}
+          cycle={cycle}
+          currentSubscription={currentSubscription}
+          onUpgradeIntent={onUpgradeIntent}
+          isLoadingIntent={isLoadingIntent}
+        />
       ))}
     </div>
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
-  const [plans,   setPlans]   = useState<PublicPricingItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState("");
-  const [cycle,   setCycle]   = useState<BillingCycle>("Monthly");
+  const [plans,         setPlans]         = useState<PublicPricingItem[]>([]);
+  const [plansLoading,  setPlansLoading]  = useState(true);
+  const [plansError,    setPlansError]    = useState("");
+  const [cycle,         setCycle]         = useState<BillingCycle>("Monthly");
+
+  // Current subscription (null = unauthenticated or no account)
+  const [currentSub,    setCurrentSub]    = useState<CurrentSubscriptionResponse | null>(null);
+
+  // Upgrade-intent modal state
+  const [intent,        setIntent]        = useState<UpgradeIntentResponse | null>(null);
+  const [intentLoading, setIntentLoading] = useState(false);
+
+  // ── Fetch public plans ──────────────────────────────────────────────────────
 
   useEffect(() => {
     pricingApi.getPublicPricing()
       .then(setPlans)
-      .catch((e) => setError(e instanceof Error ? e.message : "حدث خطأ"))
-      .finally(() => setLoading(false));
+      .catch((e) => setPlansError(normalizeError(e)))
+      .finally(() => setPlansLoading(false));
   }, []);
+
+  // ── Fetch current subscription (best-effort — silently ignore 401) ──────────
+
+  useEffect(() => {
+    subscriptionApi.getCurrent()
+      .then(setCurrentSub)
+      .catch(() => {
+        // 401 = not logged in, 204 = no account → both map to null
+        setCurrentSub(null);
+      });
+  }, []);
+
+  // ── Handle upgrade-intent click ─────────────────────────────────────────────
+
+  const handleUpgradeIntent = useCallback(async (pricingId: string) => {
+    setIntentLoading(true);
+    try {
+      const result = await subscriptionApi.getUpgradeIntent(pricingId);
+      setIntent(result);
+    } catch {
+      // Silently ignore; the button just resets
+    } finally {
+      setIntentLoading(false);
+    }
+  }, []);
+
+  // ── Derived ─────────────────────────────────────────────────────────────────
 
   const individualPlans   = filterGroup(plans, INDIVIDUAL_PLANS);
   const professionalPlans = filterGroup(plans, PROFESSIONAL_PLANS);
@@ -80,7 +120,6 @@ export default function PricingPage() {
     (p) => !INDIVIDUAL_PLANS.includes(p.planName) && !PROFESSIONAL_PLANS.includes(p.planName)
   );
 
-  // Compute average yearly saving for BillingToggle label
   const avgSaving = plans.length
     ? Math.round(
         plans
@@ -92,47 +131,53 @@ export default function PricingPage() {
           })
           .filter(Boolean)
           .reduce((a, b) => a + b, 0) /
-          plans.filter((p) => {
+          (plans.filter((p) => {
             const m = p.pricing.find((x) => x.billingCycle === "Monthly");
             return m && m.priceAmount > 0;
-          }).length || 1
+          }).length || 1)
       )
     : 17;
+
+  const gridProps: Omit<GridProps, "plans"> = {
+    cycle,
+    currentSubscription: currentSub,
+    onUpgradeIntent:     handleUpgradeIntent,
+    isLoadingIntent:     intentLoading,
+  };
 
   return (
     <main style={{ background: "var(--color-background)", minHeight: "100vh" }}>
 
       {/* ── Hero ── */}
       <section style={{
-        background:     "linear-gradient(160deg, var(--color-primary-dark) 0%, var(--color-primary) 100%)",
-        color:          "#fff",
-        textAlign:      "center",
-        padding:        "4rem 1.5rem 5rem",
+        background:  "linear-gradient(160deg, var(--color-primary-dark) 0%, var(--color-primary) 100%)",
+        color:       "#fff",
+        textAlign:   "center",
+        padding:     "4rem 1.5rem 5rem",
       }}>
-        <h1 style={{
-          fontSize:   "clamp(1.8rem, 4vw, 2.8rem)",
-          fontWeight: 900,
-          margin:     "0 0 0.75rem",
-          letterSpacing: "-0.01em",
-        }}>
+        <h1 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 900, margin: "0 0 0.75rem", letterSpacing: "-0.01em" }}>
           اختر الباقة المناسبة لك
         </h1>
-        <p style={{
-          fontSize:   "1.05rem",
-          opacity:    0.88,
-          maxWidth:   "520px",
-          margin:     "0 auto 2rem",
-          lineHeight: 1.6,
-        }}>
+        <p style={{ fontSize: "1.05rem", opacity: 0.88, maxWidth: "520px", margin: "0 auto 2rem", lineHeight: 1.6 }}>
           باقات مرنة تناسب أصحاب العقارات والوكلاء والشركات — وفّر أكثر مع الاشتراك السنوي
         </p>
 
+        {/* Logged-in plan indicator */}
+        {currentSub && (
+          <p style={{
+            fontSize:   "0.88rem",
+            opacity:    0.9,
+            marginBottom: "1rem",
+            marginTop:  "-0.5rem",
+          }}>
+            باقتك الحالية: <strong>{currentSub.planName}</strong>
+            {" — "}
+            {currentSub.billingCycle === "Yearly" ? "سنوي" : "شهري"}
+          </p>
+        )}
+
         {/* BillingToggle */}
-        <div style={{
-          display:        "flex",
-          justifyContent: "center",
-          filter:         "drop-shadow(0 2px 8px rgba(0,0,0,0.15))",
-        }}>
+        <div style={{ display: "flex", justifyContent: "center", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.15))" }}>
           <div style={{ background: "#fff", borderRadius: "999px", padding: "0.2rem" }}>
             <BillingToggle cycle={cycle} onChange={setCycle} yearlySavingPct={avgSaving} />
           </div>
@@ -140,77 +185,60 @@ export default function PricingPage() {
       </section>
 
       {/* ── Plans ── */}
-      <section style={{
-        maxWidth: "var(--max-width)",
-        margin:   "0 auto",
-        padding:  "2.5rem 1.5rem 4rem",
-      }}>
+      <section style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "2.5rem 1.5rem 4rem" }}>
 
-        {loading && <Spinner />}
+        {plansLoading && <Spinner />}
 
-        {error && (
-          <div style={{
-            textAlign:  "center",
-            padding:    "3rem",
-            color:      "var(--color-error)",
-            fontWeight: 600,
-          }}>
-            {error}
+        {plansError && (
+          <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-error)", fontWeight: 600 }}>
+            {plansError}
           </div>
         )}
 
-        {!loading && !error && (
+        {!plansLoading && !plansError && (
           <div style={{ display: "flex", flexDirection: "column", gap: "3rem" }}>
 
-            {/* Individual plans */}
             {individualPlans.length > 0 && (
               <div>
                 <SectionLabel label="باقات الأفراد" />
-                <PlansGrid plans={individualPlans} cycle={cycle} />
+                <PlansGrid plans={individualPlans} {...gridProps} />
               </div>
             )}
 
-            {/* Professional plans */}
             {professionalPlans.length > 0 && (
               <div>
                 <SectionLabel label="باقات المحترفين والشركات" />
-                <PlansGrid plans={professionalPlans} cycle={cycle} />
+                <PlansGrid plans={professionalPlans} {...gridProps} />
               </div>
             )}
 
-            {/* Any other plans */}
             {otherPlans.length > 0 && (
               <div>
                 <SectionLabel label="باقات أخرى" />
-                <PlansGrid plans={otherPlans} cycle={cycle} />
+                <PlansGrid plans={otherPlans} {...gridProps} />
               </div>
             )}
           </div>
         )}
       </section>
 
-      {/* ── FAQ strip ── */}
-      {!loading && !error && (
-        <section style={{
-          background:  "var(--color-surface)",
-          borderTop:   "1px solid var(--color-border)",
-          padding:     "2.5rem 1.5rem",
-          textAlign:   "center",
-        }}>
-          <p style={{
-            fontSize: "0.9rem",
-            color:    "var(--color-text-secondary)",
-            maxWidth: "600px",
-            margin:   "0 auto",
-            lineHeight: 1.7,
-          }}>
+      {/* ── Footer strip ── */}
+      {!plansLoading && !plansError && (
+        <section style={{ background: "var(--color-surface)", borderTop: "1px solid var(--color-border)", padding: "2.5rem 1.5rem", textAlign: "center" }}>
+          <p style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", maxWidth: "600px", margin: "0 auto", lineHeight: 1.7 }}>
             جميع الباقات تشمل حماية البيانات وإمكانية الإلغاء في أي وقت.
-            للأسئلة والاستفسارات تواصل معنا عبر صفحة{" "}
-            <a href="/requests" style={{ color: "var(--color-primary)", fontWeight: 600 }}>
-              الطلبات
-            </a>.
+            للاستفسارات تواصل معنا عبر صفحة{" "}
+            <a href="/requests" style={{ color: "var(--color-primary)", fontWeight: 600 }}>الطلبات</a>.
           </p>
         </section>
+      )}
+
+      {/* ── Upgrade-intent modal ── */}
+      {intent && (
+        <UpgradeModal
+          intent={intent}
+          onClose={() => setIntent(null)}
+        />
       )}
     </main>
   );

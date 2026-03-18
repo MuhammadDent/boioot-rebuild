@@ -16,6 +16,12 @@ public class Subscription : BaseEntity
 
     public string? PaymentRef { get; set; }
 
+    /// <summary>
+    /// The specific PlanPricing row the user subscribed to (captures billing cycle + amount).
+    /// Nullable for legacy rows created before this column existed.
+    /// </summary>
+    public Guid? PricingId { get; set; }
+
     /// <summary>Explicit active flag. Set to false when cancelling/expiring without changing Status.</summary>
     public bool IsActive { get; set; } = true;
 
