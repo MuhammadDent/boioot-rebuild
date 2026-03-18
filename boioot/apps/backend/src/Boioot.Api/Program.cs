@@ -853,6 +853,43 @@ using (var scope = app.Services.CreateScope())
                 FOREIGN KEY (UserId) REFERENCES Users(Id)
             )");
 
+        // ── Blog module ────────────────────────────────────────────────────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS BlogCategories (
+                Id           TEXT NOT NULL PRIMARY KEY,
+                Name         TEXT NOT NULL,
+                Slug         TEXT NOT NULL,
+                Description  TEXT,
+                IsActive     INTEGER NOT NULL DEFAULT 1,
+                DisplayOrder INTEGER NOT NULL DEFAULT 0,
+                CreatedAt    TEXT NOT NULL,
+                UpdatedAt    TEXT NOT NULL
+            )");
+        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_BlogCategories_Slug ON BlogCategories(Slug)"); }
+        catch { /* already exists */ }
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS BlogPosts (
+                Id              TEXT NOT NULL PRIMARY KEY,
+                Title           TEXT NOT NULL,
+                Slug            TEXT NOT NULL,
+                Excerpt         TEXT,
+                Content         TEXT NOT NULL,
+                CoverImageUrl   TEXT,
+                Status          TEXT NOT NULL DEFAULT 'Draft',
+                AuthorId        TEXT NOT NULL REFERENCES Users(Id),
+                CategoryId      TEXT NOT NULL REFERENCES BlogCategories(Id),
+                PublishedAt     TEXT,
+                MetaTitle       TEXT,
+                MetaDescription TEXT,
+                ReadingTime     INTEGER NOT NULL DEFAULT 0,
+                IsFeatured      INTEGER NOT NULL DEFAULT 0,
+                CreatedAt       TEXT NOT NULL,
+                UpdatedAt       TEXT NOT NULL
+            )");
+        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_BlogPosts_Slug ON BlogPosts(Slug)"); }
+        catch { /* already exists */ }
+
         await seeder.SeedAsync();
     }
     catch (Exception ex)

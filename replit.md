@@ -241,6 +241,68 @@ boioot/
 - خطأ → `normalizeError()` يُعرض فوق النموذج
 - الـ endpoint: `POST /api/requests` عام (لا يتطلب تسجيل دخول)
 
+## Blog Module — Backend Foundation (مكتمل)
+
+**الملفات المُضافة:**
+
+Domain:
+- `Boioot.Domain/Enums/BlogPostStatus.cs` — Draft | Published | Scheduled | Archived
+- `Boioot.Domain/Entities/BlogCategory.cs` — Id, Name, Slug, Description, IsActive, DisplayOrder
+- `Boioot.Domain/Entities/BlogPost.cs` — كامل الحقول (AuthorId→User, CategoryId→BlogCategory)
+
+Application:
+- `Features/Blog/DTOs/BlogCategoryResponse.cs`
+- `Features/Blog/DTOs/BlogPostSummaryResponse.cs`
+- `Features/Blog/DTOs/BlogPostDetailResponse.cs`
+- `Features/Blog/DTOs/CreateBlogPostRequest.cs`
+- `Features/Blog/DTOs/UpdateBlogPostRequest.cs`
+- `Features/Blog/DTOs/CreateBlogCategoryRequest.cs`
+- `Features/Blog/DTOs/UpdateBlogCategoryRequest.cs`
+- `Features/Blog/Interfaces/IBlogService.cs`
+
+Infrastructure:
+- `Persistence/Configurations/BlogCategoryConfiguration.cs` — unique index on Slug
+- `Persistence/Configurations/BlogPostConfiguration.cs` — FK→User (Restrict), FK→BlogCategory (Restrict), unique index on Slug, enum stored as string
+- `Features/Blog/BlogService.cs` — تنفيذ كامل لـ IBlogService
+
+API Controllers:
+- `Controllers/AdminBlogController.cs` — [AdminOnly] — 11 endpoint
+- `Controllers/PublicBlogController.cs` — [AllowAnonymous] — 4 endpoints
+
+**الملفات المُعدَّلة:**
+- `BoiootDbContext.cs` — أُضيف DbSet<BlogCategory> + DbSet<BlogPost>
+- `ServiceCollectionExtensions.cs` — تسجيل IBlogService → BlogService
+- `Program.cs` — CREATE TABLE IF NOT EXISTS BlogCategories + BlogPosts + unique indexes
+
+**Endpoints:**
+
+Admin (POST /api/admin/blog/…):
+| Method | Path | Description |
+|---|---|---|
+| GET | /api/admin/blog/posts | list all posts (filter: status?, categoryId?) |
+| GET | /api/admin/blog/posts/{id} | get post with full content |
+| POST | /api/admin/blog/posts | create draft |
+| PUT | /api/admin/blog/posts/{id} | update fields |
+| DELETE | /api/admin/blog/posts/{id} | delete permanently |
+| POST | /api/admin/blog/posts/{id}/publish | Draft/Scheduled → Published |
+| POST | /api/admin/blog/posts/{id}/unpublish | → Draft |
+| POST | /api/admin/blog/posts/{id}/archive | → Archived |
+| GET | /api/admin/blog/categories | all categories + post counts |
+| GET | /api/admin/blog/categories/{id} | single category |
+| POST | /api/admin/blog/categories | create |
+| PUT | /api/admin/blog/categories/{id} | update |
+| DELETE | /api/admin/blog/categories/{id} | delete (fails if posts exist) |
+
+Public (/api/blog/…):
+| Method | Path | Query Params |
+|---|---|---|
+| GET | /api/blog/posts | categorySlug?, search?, page, pageSize |
+| GET | /api/blog/posts/{slug} | — |
+| GET | /api/blog/categories | — |
+| GET | /api/blog/categories/{categorySlug}/posts | page, pageSize |
+
+**لم يُبنَ بعد (V2):** admin UI، صفحات blog العامة، تعليقات، وسوم، سجل تعديلات
+
 ## Stripe Billing Integration (مكتمل)
 
 **الملفات المُضافة (backend):**
