@@ -31,6 +31,12 @@ public class Invoice : BaseEntity
     /// <summary>Admin note when confirming or rejecting the payment.</summary>
     public string? AdminNote { get; set; }
 
+    /// <summary>
+    /// When this invoice can no longer be acted upon.
+    /// Null for invoices created before expiry was introduced (treated as non-expiring).
+    /// </summary>
+    public DateTime? ExpiresAt { get; set; }
+
     public User User { get; set; } = null!;
     public PlanPricing PlanPricing { get; set; } = null!;
     public PaymentProof? PaymentProof { get; set; }

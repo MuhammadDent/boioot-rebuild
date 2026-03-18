@@ -49,12 +49,13 @@ public sealed class BillingService : IBillingService
 
         var result = await _provider.CreatePaymentAsync(
             new BillingPaymentRequest(
-                UserId:       userId,
+                UserId:        userId,
                 PlanPricingId: request.PricingId,
-                Amount:       pricing.PriceAmount,
-                Currency:     pricing.CurrencyCode,
-                PlanName:     pricing.Plan.Name,
-                BillingCycle: pricing.BillingCycle),
+                Amount:        pricing.PriceAmount,
+                Currency:      pricing.CurrencyCode,
+                PlanName:      pricing.Plan.Name,
+                BillingCycle:  pricing.BillingCycle,
+                ExpiresAt:     DateTime.UtcNow.AddHours(48)),
             ct);
 
         return await LoadInvoiceResponseAsync(result.InvoiceId, ct);
@@ -87,6 +88,13 @@ public sealed class BillingService : IBillingService
 
         if (invoice.Status != InvoiceStatus.Pending)
             throw new BoiootException("لا يمكن إرفاق إيصال لفاتورة غير معلقة", 400);
+
+        if (IsExpired(invoice))
+        {
+            invoice.Status = InvoiceStatus.Expired;
+            await _db.SaveChangesAsync(ct);
+            throw new BoiootException("انتهت صلاحية الفاتورة ولا يمكن إرفاق إيصال لها", 410);
+        }
 
         if (invoice.PaymentProof is not null)
         {
@@ -137,15 +145,23 @@ public sealed class BillingService : IBillingService
     public async Task<InvoiceResponse> AdminConfirmPaymentAsync(
         Guid invoiceId, AdminReviewRequest request, CancellationToken ct = default)
     {
-        // 1. Mark invoice as Paid (no save yet)
-        await _provider.ConfirmPaymentAsync(invoiceId, request.Note, ct);
-
-        // 2. Load full invoice to activate subscription
+        // 1. Load invoice (tracked) to check expiry before any mutation
         var invoice = await _db.Invoices
             .Include(i => i.PlanPricing).ThenInclude(pp => pp.Plan)
             .Include(i => i.User)
             .Include(i => i.PaymentProof)
-            .FirstAsync(i => i.Id == invoiceId, ct);
+            .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+            ?? throw new BoiootException("الفاتورة غير موجودة", 404);
+
+        if (IsExpired(invoice))
+        {
+            invoice.Status = InvoiceStatus.Expired;
+            await _db.SaveChangesAsync(ct);
+            throw new BoiootException("انتهت صلاحية الفاتورة ولا يمكن تأكيدها", 410);
+        }
+
+        // 2. Mark invoice as Paid via provider (reuses the tracked entity — no extra DB query)
+        await _provider.ConfirmPaymentAsync(invoiceId, request.Note, ct);
 
         // 3. Resolve or create user account
         var accountId = await _accountResolver.ResolveAccountIdAsync(invoice.UserId, ct);
@@ -233,12 +249,25 @@ public sealed class BillingService : IBillingService
     }
 
     /// <summary>
-    /// Returns true if the user has any invoice currently in Pending status.
-    /// Used to prevent duplicate pending invoices across all billing flows.
+    /// Returns true if the invoice has passed its ExpiresAt time.
+    /// Invoices with no ExpiresAt set (created before this feature) are treated as non-expiring.
     /// </summary>
-    private Task<bool> HasPendingInvoiceAsync(Guid userId, CancellationToken ct) =>
-        _db.Invoices.AnyAsync(
-            i => i.UserId == userId && i.Status == InvoiceStatus.Pending, ct);
+    private static bool IsExpired(Invoice invoice) =>
+        invoice.ExpiresAt.HasValue && invoice.ExpiresAt.Value < DateTime.UtcNow;
+
+    /// <summary>
+    /// Returns true if the user has a non-expired Pending invoice.
+    /// Expired-but-still-Pending invoices (never accessed after expiry) do NOT block new creation.
+    /// </summary>
+    private Task<bool> HasPendingInvoiceAsync(Guid userId, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        return _db.Invoices.AnyAsync(
+            i => i.UserId == userId &&
+                 i.Status == InvoiceStatus.Pending &&
+                 (!i.ExpiresAt.HasValue || i.ExpiresAt.Value > now),
+            ct);
+    }
 
     private static InvoiceResponse ToResponse(Invoice i) => new()
     {
@@ -256,6 +285,8 @@ public sealed class BillingService : IBillingService
         ExternalRef   = i.ExternalRef,
         AdminNote     = i.AdminNote,
         CreatedAt     = i.CreatedAt,
+        ExpiresAt     = i.ExpiresAt,
+        IsExpired     = IsExpired(i),
         Proof         = i.PaymentProof is null ? null : new PaymentProofResponse
         {
             Id        = i.PaymentProof.Id,

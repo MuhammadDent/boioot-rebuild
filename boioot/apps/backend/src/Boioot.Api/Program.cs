@@ -459,6 +459,9 @@ using (var scope = app.Services.CreateScope())
                 FOREIGN KEY (InvoiceId) REFERENCES Invoices(Id)
             )");
 
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN ExpiresAt TEXT"); }
+        catch { /* column already exists */ }
+
         // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");
         await db.Database.ExecuteSqlRawAsync(@"

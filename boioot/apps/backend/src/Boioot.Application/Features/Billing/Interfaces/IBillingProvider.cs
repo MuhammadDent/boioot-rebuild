@@ -33,12 +33,13 @@ public interface IBillingProvider
 
 /// <summary>Input to IBillingProvider.CreatePaymentAsync.</summary>
 public sealed record BillingPaymentRequest(
-    Guid    UserId,
-    Guid    PlanPricingId,
-    decimal Amount,
-    string  Currency,
-    string  PlanName,
-    string  BillingCycle
+    Guid      UserId,
+    Guid      PlanPricingId,
+    decimal   Amount,
+    string    Currency,
+    string    PlanName,
+    string    BillingCycle,
+    DateTime  ExpiresAt
 );
 
 /// <summary>Output from IBillingProvider.CreatePaymentAsync.</summary>

@@ -36,6 +36,7 @@ public sealed class InternalBillingProvider : IBillingProvider
             Currency      = request.Currency,
             Status        = InvoiceStatus.Pending,
             ProviderName  = ProviderName,
+            ExpiresAt     = request.ExpiresAt,
         };
 
         _db.Invoices.Add(invoice);

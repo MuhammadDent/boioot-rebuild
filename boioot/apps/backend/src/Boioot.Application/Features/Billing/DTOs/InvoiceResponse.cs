@@ -15,7 +15,9 @@ public sealed class InvoiceResponse
     public string   ProviderName { get; init; } = "internal";
     public string?  ExternalRef  { get; init; }
     public string?  AdminNote    { get; init; }
-    public DateTime CreatedAt    { get; init; }
+    public DateTime  CreatedAt   { get; init; }
+    public DateTime? ExpiresAt   { get; init; }
+    public bool      IsExpired   { get; init; }
 
     public PaymentProofResponse? Proof { get; init; }
 }
