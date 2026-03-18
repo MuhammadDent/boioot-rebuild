@@ -39,7 +39,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd boioot/apps/frontend && npm run dev"
+args = "cd boioot/apps/frontend && PORT=3000 npm run dev"
 waitForPort = 3000
 
 [[workflows.workflow]]
