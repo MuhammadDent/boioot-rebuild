@@ -13,16 +13,24 @@ using Microsoft.Extensions.Options;
 namespace Boioot.Infrastructure.Features.Billing;
 
 /// <summary>
-/// Orchestrates billing: invoice creation, proof submission, admin confirmation,
-/// and subscription activation after payment is confirmed.
+/// Orchestrates billing: invoice creation (via the correct provider), proof submission,
+/// admin confirmation, Stripe webhook confirmation, and subscription activation.
+///
+/// Provider selection rules (CreateCheckoutAsync):
+///   InternalOnly → InternalBillingProvider
+///   StripeOnly   → StripeBillingProvider
+///   Hybrid       → request.Provider (default: "stripe")
+///
+/// Admin confirmation and rejection pick the provider by invoice.ProviderName,
+/// so internal and Stripe invoices each go through the right code path.
 /// </summary>
 public sealed class BillingService : IBillingService
 {
-    private readonly BoiootDbContext        _db;
-    private readonly IBillingProvider       _provider;
-    private readonly IAccountResolver       _accountResolver;
-    private readonly INotificationService   _notifications;
-    private readonly BankInstructionsOptions _bankInstructions;
+    private readonly BoiootDbContext            _db;
+    private readonly IEnumerable<IBillingProvider> _providers;
+    private readonly IAccountResolver           _accountResolver;
+    private readonly INotificationService       _notifications;
+    private readonly BankInstructionsOptions    _bankInstructions;
 
     // ── Rate-limit store ───────────────────────────────────────────────────────
     // Tracks the timestamps of recent checkout attempts per user.
@@ -32,14 +40,14 @@ public sealed class BillingService : IBillingService
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(10);
 
     public BillingService(
-        BoiootDbContext                db,
-        IBillingProvider               provider,
-        IAccountResolver               accountResolver,
-        INotificationService           notifications,
+        BoiootDbContext                   db,
+        IEnumerable<IBillingProvider>     providers,
+        IAccountResolver                  accountResolver,
+        INotificationService              notifications,
         IOptions<BankInstructionsOptions> bankInstructions)
     {
         _db               = db;
-        _provider         = provider;
+        _providers        = providers;
         _accountResolver  = accountResolver;
         _notifications    = notifications;
         _bankInstructions = bankInstructions.Value;
@@ -65,7 +73,21 @@ public sealed class BillingService : IBillingService
             throw new BoiootException(
                 "لديك فاتورة معلقة بالفعل. يرجى إتمام الدفع أو إلغاؤها قبل إنشاء فاتورة جديدة.", 409);
 
-        var result = await _provider.CreatePaymentAsync(
+        // ── Provider selection ─────────────────────────────────────────────────
+        var billingMode      = pricing.Plan.BillingMode ?? "InternalOnly";
+        var requestedProvider = (request.Provider ?? string.Empty).Trim().ToLowerInvariant();
+
+        var provider = billingMode switch
+        {
+            "InternalOnly" => PickProvider("internal"),
+            "StripeOnly"   => PickProvider("stripe"),
+            "Hybrid"       => requestedProvider == "internal"
+                                  ? PickProvider("internal")
+                                  : PickProvider("stripe"),
+            _              => PickProvider("internal"),
+        };
+
+        var result = await provider.CreatePaymentAsync(
             new BillingPaymentRequest(
                 UserId:        userId,
                 PlanPricingId: request.PricingId,
@@ -180,8 +202,9 @@ public sealed class BillingService : IBillingService
             throw new BoiootException("انتهت صلاحية الفاتورة ولا يمكن تأكيدها", 410);
         }
 
-        // 2. Mark invoice as Paid via provider (reuses the tracked entity — no extra DB query)
-        await _provider.ConfirmPaymentAsync(invoiceId, request.Note, adminId, ct);
+        // 2. Mark invoice as Paid via the correct provider (internal or stripe)
+        var provider = PickProvider(invoice.ProviderName ?? "internal");
+        await provider.ConfirmPaymentAsync(invoiceId, request.Note, adminId, ct);
 
         // 3. Resolve or create user account
         var accountId = await _accountResolver.ResolveAccountIdAsync(invoice.UserId, ct);
@@ -190,7 +213,7 @@ public sealed class BillingService : IBillingService
         {
             var account = new Account
             {
-                CreatedByUserId   = invoice.UserId,
+                CreatedByUserId    = invoice.UserId,
                 PrimaryAdminUserId = invoice.UserId,
             };
             _db.Accounts.Add(account);
@@ -248,9 +271,43 @@ public sealed class BillingService : IBillingService
     public async Task<InvoiceResponse> AdminRejectPaymentAsync(
         Guid invoiceId, AdminReviewRequest request, Guid adminId, CancellationToken ct = default)
     {
-        await _provider.RejectPaymentAsync(invoiceId, request.Note, adminId, ct);
+        var invoice = await _db.Invoices
+            .AsNoTracking()
+            .Include(i => i.PlanPricing).ThenInclude(pp => pp.Plan)
+            .Include(i => i.User)
+            .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+            ?? throw new BoiootException("الفاتورة غير موجودة", 404);
+
+        var provider = PickProvider(invoice.ProviderName ?? "internal");
+        await provider.RejectPaymentAsync(invoiceId, request.Note, adminId, ct);
 
         return await LoadInvoiceResponseAsync(invoiceId, ct);
+    }
+
+    // ── Stripe webhook confirmation ────────────────────────────────────────────
+
+    /// <summary>
+    /// Idempotent webhook handler: finds invoice by Stripe session ID,
+    /// then runs the full confirmation flow (mark Paid + activate subscription).
+    /// Uses Guid.Empty as adminId to represent automated Stripe confirmation.
+    /// </summary>
+    public async Task StripeWebhookConfirmAsync(string stripeSessionId, CancellationToken ct = default)
+    {
+        var invoice = await _db.Invoices
+            .FirstOrDefaultAsync(
+                i => i.ExternalRef == stripeSessionId && i.ProviderName == "stripe", ct);
+
+        if (invoice is null)
+            return; // session ID not in our system — ignore
+
+        if (invoice.Status != InvoiceStatus.Pending)
+            return; // already processed — idempotent
+
+        await AdminConfirmPaymentAsync(
+            invoice.Id,
+            new AdminReviewRequest { Note = "تأكيد تلقائي عبر Stripe webhook" },
+            Guid.Empty,
+            ct);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -269,12 +326,25 @@ public sealed class BillingService : IBillingService
     }
 
     /// <summary>
+    /// Resolves a billing provider by its machine-readable name.
+    /// Falls back gracefully: if the requested provider is not registered,
+    /// throws a 500 so the root cause is visible in logs.
+    /// </summary>
+    private IBillingProvider PickProvider(string name)
+    {
+        var normalised = name.Trim().ToLowerInvariant();
+        return _providers.FirstOrDefault(p => p.ProviderName == normalised)
+            ?? throw new BoiootException(
+                $"مزود الدفع '{name}' غير مسجل في النظام.", 500);
+    }
+
+    /// <summary>
     /// Enforces per-user rate limiting: max 3 invoice creation attempts within 10 minutes.
     /// Records the current attempt timestamp on success; throws 429 when the limit is exceeded.
     /// </summary>
     private static void EnforceRateLimit(Guid userId)
     {
-        var now = DateTime.UtcNow;
+        var now    = DateTime.UtcNow;
         var cutoff = now - RateLimitWindow;
 
         var timestamps = _invoiceTimestamps.GetOrAdd(userId, _ => new Queue<DateTime>());
@@ -328,6 +398,7 @@ public sealed class BillingService : IBillingService
         Status        = i.Status.ToString(),
         ProviderName  = i.ProviderName,
         ExternalRef   = i.ExternalRef,
+        SessionUrl    = i.StripeSessionUrl,
         AdminNote     = i.AdminNote,
         CreatedAt     = i.CreatedAt,
         ExpiresAt     = i.ExpiresAt,

@@ -241,6 +241,56 @@ boioot/
 - خطأ → `normalizeError()` يُعرض فوق النموذج
 - الـ endpoint: `POST /api/requests` عام (لا يتطلب تسجيل دخول)
 
+## Stripe Billing Integration (مكتمل)
+
+**الملفات المُضافة (backend):**
+- `Boioot.Application/Features/Billing/Settings/StripeOptions.cs` — إعدادات Stripe (SecretKey, WebhookSecret, SuccessUrl, CancelUrl)
+- `Boioot.Infrastructure/Features/Billing/StripeBillingProvider.cs` — منفذ IBillingProvider لـ Stripe (ينشئ Checkout Session + يحفظ Invoice)
+- `Boioot.Api/Controllers/StripeWebhookController.cs` — POST /api/webhooks/stripe (يتحقق من التوقيع، يعالج checkout.session.completed)
+
+**الملفات المُعدَّلة (backend):**
+- `IBillingService.cs` — أُضيف `StripeWebhookConfirmAsync(sessionId)` — idempotent
+- `BillingService.cs` — تحول من `IBillingProvider` الواحد إلى `IEnumerable<IBillingProvider>` + `PickProvider(name)` + منطق اختيار Provider حسب BillingMode
+- `ServiceCollectionExtensions.cs` — تسجيل StripeBillingProvider كـ IBillingProvider إضافي (كلا المزوّدَين يعملان معاً)
+- `CheckoutRequest.cs` — أُضيف `Provider?` (اختياري: "stripe" أو "internal")
+- `InvoiceResponse.cs` — أُضيف `SessionUrl?` (URL الـ Stripe Checkout لإعادة توجيه المستخدم)
+- `Invoice.cs` (entity) — أُضيف `StripeSessionUrl` (مخزَّن في DB للرجوع إليه)
+- `Program.cs` — ربط StripeOptions + ALTER TABLE Invoices ADD COLUMN StripeSessionUrl
+- `appsettings.json` — أُضيف قسم "Stripe" (فارغ افتراضياً، يُملأ عبر Secrets)
+
+**منطق اختيار المزود:**
+| BillingMode | النتيجة |
+|---|---|
+| InternalOnly | دائماً InternalBillingProvider (تحويل بنكي) |
+| StripeOnly | دائماً StripeBillingProvider |
+| Hybrid | حسب request.Provider (الافتراضي: stripe) |
+
+**تدفق Stripe:**
+1. POST /api/dashboard/billing/checkout `{"pricingId":"...","provider":"stripe"}`
+2. StripeBillingProvider ينشئ Checkout Session على Stripe API → يحفظ Invoice (StripeSessionUrl, ExternalRef=sessionId)
+3. InvoiceResponse يحمل `sessionUrl` — الـ frontend يعيد توجيه المستخدم إليه
+4. المستخدم يكمل الدفع على Stripe
+5. Stripe يُرسل webhook → POST /api/webhooks/stripe
+6. StripeWebhookController يتحقق من التوقيع → `StripeWebhookConfirmAsync(sessionId)`
+7. BillingService يجد الـ Invoice بـ ExternalRef → AdminConfirmPaymentAsync (adminId=Guid.Empty) → الاشتراك يُفعَّل
+
+**الضوامن:**
+- InternalBillingProvider لم يُعدَّل أبداً — المسار القديم يعمل بدون تغيير
+- StripeWebhookConfirmAsync idempotent — الـ webhook يمكن إعادة إرساله بأمان
+- إذا لم يُضبط WebhookSecret: الـ endpoint يقبل ويُحذِّر في اللوج (لا يرفض)
+- إذا لم يُضبط SecretKey: CreatePaymentAsync يُعيد 503 "استخدم التحويل البنكي"
+
+**الإعدادات المطلوبة لتفعيل Stripe:**
+```json
+// appsettings.json أو Environment Variables
+"Stripe": {
+  "SecretKey": "sk_live_...",
+  "WebhookSecret": "whsec_...",
+  "SuccessUrl": "https://your-domain.com/dashboard/billing?status=success&provider=stripe",
+  "CancelUrl": "https://your-domain.com/pricing?status=cancelled"
+}
+```
+
 ## Admin Panel Module (مكتمل)
 **الملفات المُضافة:**
 - `features/admin/constants.ts` — ADMIN_PAGE_SIZE(20), ROLE_LABELS/BADGE, PROPERTY_STATUS_BADGE, ADMIN_PROJECT_STATUS_BADGE

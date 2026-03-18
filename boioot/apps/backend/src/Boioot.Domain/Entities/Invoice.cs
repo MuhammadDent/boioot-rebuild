@@ -25,8 +25,14 @@ public class Invoice : BaseEntity
     /// <summary>Billing provider that issued this invoice: "internal", "stripe", etc.</summary>
     public string ProviderName { get; set; } = "internal";
 
-    /// <summary>Optional external reference from the payment provider (e.g., Stripe PaymentIntent ID).</summary>
+    /// <summary>Optional external reference from the payment provider (e.g., Stripe Checkout Session ID).</summary>
     public string? ExternalRef { get; set; }
+
+    /// <summary>
+    /// Stripe hosted checkout URL. Populated only for Stripe-provider invoices.
+    /// Stored so users can resume checkout if they navigate away.
+    /// </summary>
+    public string? StripeSessionUrl { get; set; }
 
     /// <summary>Admin note when confirming or rejecting the payment.</summary>
     public string? AdminNote { get; set; }

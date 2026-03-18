@@ -24,6 +24,8 @@ builder.Services.AddControllers()
         opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.Configure<BankInstructionsOptions>(
     builder.Configuration.GetSection(BankInstructionsOptions.SectionName));
+builder.Services.Configure<StripeOptions>(
+    builder.Configuration.GetSection(StripeOptions.SectionName));
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddCors(options =>
@@ -495,6 +497,8 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN RejectedBy TEXT"); }
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN RejectedAt TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN StripeSessionUrl TEXT"); }
         catch { /* column already exists */ }
 
         // Seed default Plans (ListingLimit: -1 = unlimited)

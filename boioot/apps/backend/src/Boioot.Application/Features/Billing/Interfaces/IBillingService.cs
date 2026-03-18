@@ -54,4 +54,11 @@ public interface IBillingService
         AdminReviewRequest request,
         Guid adminId,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Called by the Stripe webhook controller when a checkout.session.completed event arrives.
+    /// Finds the invoice by the Stripe session ID, marks it Paid, and activates the subscription.
+    /// Idempotent: no-op if the invoice is already Paid or does not exist.
+    /// </summary>
+    Task StripeWebhookConfirmAsync(string stripeSessionId, CancellationToken ct = default);
 }

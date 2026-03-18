@@ -1,34 +1,34 @@
 using Boioot.Application.Common.Services;
+using Boioot.Application.Features.Billing.Interfaces;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Application.Features.Admin.Interfaces;
 using Boioot.Application.Features.AgentManagement.Interfaces;
 using Boioot.Application.Features.Auth.Interfaces;
-using Boioot.Application.Features.Projects.Interfaces;
-using Boioot.Application.Features.Properties.Interfaces;
-using Boioot.Application.Features.Dashboard.Interfaces;
-using Boioot.Application.Features.Messaging.Interfaces;
 using Boioot.Application.Features.BuyerRequests.Interfaces;
+using Boioot.Application.Features.Dashboard.Interfaces;
 using Boioot.Application.Features.Favorites.Interfaces;
-using Boioot.Application.Features.Requests.Interfaces;
+using Boioot.Application.Features.Messaging.Interfaces;
 using Boioot.Application.Features.Plans.Interfaces;
 using Boioot.Application.Features.Pricing.Interfaces;
-using Boioot.Application.Features.Billing.Interfaces;
+using Boioot.Application.Features.Projects.Interfaces;
+using Boioot.Application.Features.Properties.Interfaces;
+using Boioot.Application.Features.Requests.Interfaces;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Infrastructure.Common;
-using Boioot.Infrastructure.Features.Plans;
-using Boioot.Infrastructure.Features.Pricing;
-using Boioot.Infrastructure.Features.Billing;
-using Boioot.Infrastructure.Features.Subscriptions;
 using Boioot.Infrastructure.Features.Admin;
 using Boioot.Infrastructure.Features.AgentManagement;
 using Boioot.Infrastructure.Features.Auth;
+using Boioot.Infrastructure.Features.Billing;
+using Boioot.Infrastructure.Features.BuyerRequests;
 using Boioot.Infrastructure.Features.Dashboard;
+using Boioot.Infrastructure.Features.Favorites;
 using Boioot.Infrastructure.Features.Messaging;
+using Boioot.Infrastructure.Features.Plans;
+using Boioot.Infrastructure.Features.Pricing;
 using Boioot.Infrastructure.Features.Projects;
 using Boioot.Infrastructure.Features.Properties;
-using Boioot.Infrastructure.Features.BuyerRequests;
-using Boioot.Infrastructure.Features.Favorites;
 using Boioot.Infrastructure.Features.Requests;
+using Boioot.Infrastructure.Features.Subscriptions;
 using Boioot.Infrastructure.Persistence;
 using Boioot.Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
@@ -63,9 +63,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPublicPricingService, PublicPricingService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();
+
+        // ── Billing providers ──────────────────────────────────────────────────
+        // Both registered as IBillingProvider — BillingService injects IEnumerable<IBillingProvider>
+        // and selects the correct one based on the plan's BillingMode field.
         services.AddScoped<IBillingProvider, InternalBillingProvider>();
+        services.AddScoped<IBillingProvider, StripeBillingProvider>();
+
+        // ── Billing orchestrator & notifications ───────────────────────────────
         services.AddScoped<IBillingService, BillingService>();
         services.AddScoped<INotificationService, LoggingNotificationService>();
+
         services.AddScoped<DataSeeder>();
 
         return services;

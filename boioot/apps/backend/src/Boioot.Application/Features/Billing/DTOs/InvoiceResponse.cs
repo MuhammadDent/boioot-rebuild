@@ -14,6 +14,13 @@ public sealed class InvoiceResponse
     public string   Status       { get; init; } = "Pending";
     public string   ProviderName { get; init; } = "internal";
     public string?  ExternalRef  { get; init; }
+
+    /// <summary>
+    /// Stripe hosted checkout URL. Non-null only for Stripe invoices.
+    /// The frontend must redirect the user to this URL to complete payment.
+    /// </summary>
+    public string?  SessionUrl   { get; init; }
+
     public string?  AdminNote    { get; init; }
     public DateTime  CreatedAt   { get; init; }
     public DateTime? ExpiresAt   { get; init; }
