@@ -431,11 +431,31 @@ export interface AdminPlanSummary {
   basePriceYearly: number;
   applicableAccountType?: string;
   createdAt: string;
+  displayOrder: number;
+  isPublic: boolean;
+  isRecommended: boolean;
+  planCategory?: string;
+  billingMode: string;
+  rank: number;
 }
 
 export interface AdminPlanDetail extends AdminPlanSummary {
   limits: PlanLimitItem[];
   features: PlanFeatureItem[];
+}
+
+export interface AdminPlanPricingEntry {
+  id: string;
+  planId: string;
+  billingCycle: string;
+  priceAmount: number;
+  currencyCode: string;
+  isActive: boolean;
+  isPublic: boolean;
+  externalProvider?: string;
+  externalPriceId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Billing ───────────────────────────────────────────────────────────────────

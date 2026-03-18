@@ -11,6 +11,7 @@ import type {
   OwnershipTypeConfig,
   AdminPlanSummary,
   AdminPlanDetail,
+  AdminPlanPricingEntry,
   PlanLimitItem,
   PlanFeatureItem,
   AdminInvoiceResponse,
@@ -223,6 +224,11 @@ export const adminApi = {
     basePriceYearly: number;
     isActive: boolean;
     applicableAccountType?: string;
+    displayOrder: number;
+    isPublic: boolean;
+    isRecommended: boolean;
+    planCategory?: string;
+    billingMode: string;
   }): Promise<AdminPlanDetail> {
     return api.put(`/admin/plans/${id}`, payload);
   },
@@ -240,6 +246,44 @@ export const adminApi = {
   /** PUT /api/admin/plans/{id}/features/{featureKey} */
   setPlanFeature(id: string, featureKey: string, isEnabled: boolean): Promise<PlanFeatureItem> {
     return api.put(`/admin/plans/${id}/features/${featureKey}`, { isEnabled });
+  },
+
+  // ── Plan Pricing ──────────────────────────────────────────────────────────
+
+  /** GET /api/admin/plans/{planId}/pricing */
+  getPlanPricing(planId: string): Promise<AdminPlanPricingEntry[]> {
+    return api.get(`/admin/plans/${planId}/pricing`);
+  },
+
+  /** POST /api/admin/plans/{planId}/pricing */
+  createPlanPricing(planId: string, payload: {
+    billingCycle: string;
+    priceAmount: number;
+    currencyCode: string;
+    isActive: boolean;
+    isPublic: boolean;
+    externalProvider?: string;
+    externalPriceId?: string;
+  }): Promise<AdminPlanPricingEntry> {
+    return api.post(`/admin/plans/${planId}/pricing`, payload);
+  },
+
+  /** PUT /api/admin/plans/{planId}/pricing/{pricingId} */
+  updatePlanPricing(planId: string, pricingId: string, payload: {
+    billingCycle: string;
+    priceAmount: number;
+    currencyCode: string;
+    isActive: boolean;
+    isPublic: boolean;
+    externalProvider?: string;
+    externalPriceId?: string;
+  }): Promise<AdminPlanPricingEntry> {
+    return api.put(`/admin/plans/${planId}/pricing/${pricingId}`, payload);
+  },
+
+  /** DELETE /api/admin/plans/{planId}/pricing/{pricingId} */
+  deletePlanPricing(planId: string, pricingId: string): Promise<void> {
+    return api.delete(`/admin/plans/${planId}/pricing/${pricingId}`);
   },
 
   // ── Billing ──────────────────────────────────────────────────────────────

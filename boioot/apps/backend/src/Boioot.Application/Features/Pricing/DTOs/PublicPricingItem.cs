@@ -11,6 +11,12 @@ public record PublicPricingItem(
     string? ApplicableAccountType,
     /// <summary>Ordinal rank for upgrade/downgrade comparison (higher = more advanced).</summary>
     int Rank,
+    /// <summary>Sort order on the public pricing page. Lower = appears first.</summary>
+    int DisplayOrder,
+    /// <summary>When true, this plan is highlighted as recommended.</summary>
+    bool IsRecommended,
+    /// <summary>Groups plans on the pricing page: "Individual" | "Business" | null.</summary>
+    string? PlanCategory,
     List<PublicPricingEntry> Pricing,
     List<PublicLimitItem> Limits,
     List<PublicFeatureItem> Features

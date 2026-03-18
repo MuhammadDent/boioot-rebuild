@@ -10,4 +10,10 @@ public class PlanSummaryResponse
     public decimal BasePriceYearly   { get; set; }
     public string? ApplicableAccountType { get; set; }
     public DateTime CreatedAt        { get; set; }
+    public int     DisplayOrder      { get; set; }
+    public bool    IsPublic          { get; set; }
+    public bool    IsRecommended     { get; set; }
+    public string? PlanCategory      { get; set; }
+    public string  BillingMode       { get; set; } = "InternalOnly";
+    public int     Rank              { get; set; }
 }

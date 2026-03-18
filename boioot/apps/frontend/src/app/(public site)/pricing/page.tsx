@@ -12,13 +12,10 @@ import PricingCard from "@/components/pricing/PricingCard";
 import UpgradeModal from "@/components/pricing/UpgradeModal";
 import Spinner from "@/components/ui/Spinner";
 
-// ── Plan grouping ─────────────────────────────────────────────────────────────
+// ── Plan grouping (data-driven by planCategory field) ─────────────────────────
 
-const INDIVIDUAL_PLANS   = ["Free", "Silver", "Gold", "Platinum"];
-const PROFESSIONAL_PLANS = ["OwnerPro", "AgentPro", "AgentPremium", "OfficeStarter", "BusinessGrowth"];
-
-function filterGroup(plans: PublicPricingItem[], names: string[]) {
-  return plans.filter((p) => names.includes(p.planName));
+function filterByCategory(plans: PublicPricingItem[], category: string) {
+  return plans.filter((p) => p.planCategory === category);
 }
 
 // ── Section label ─────────────────────────────────────────────────────────────
@@ -115,11 +112,13 @@ export default function PricingPage() {
   }, []);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
+  // Plans are pre-sorted by DisplayOrder from the backend.
+  // Group by planCategory; plans with no category appear in "other".
 
-  const individualPlans   = filterGroup(plans, INDIVIDUAL_PLANS);
-  const professionalPlans = filterGroup(plans, PROFESSIONAL_PLANS);
+  const individualPlans   = filterByCategory(plans, "Individual");
+  const professionalPlans = filterByCategory(plans, "Business");
   const otherPlans        = plans.filter(
-    (p) => !INDIVIDUAL_PLANS.includes(p.planName) && !PROFESSIONAL_PLANS.includes(p.planName)
+    (p) => p.planCategory !== "Individual" && p.planCategory !== "Business"
   );
 
   const avgSaving = plans.length

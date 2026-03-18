@@ -123,6 +123,11 @@ public class AdminPlanService : IAdminPlanService
         plan.BasePriceYearly      = request.BasePriceYearly;
         plan.IsActive             = request.IsActive;
         plan.ApplicableAccountType = accountType;
+        plan.DisplayOrder         = request.DisplayOrder;
+        plan.IsPublic             = request.IsPublic;
+        plan.IsRecommended        = request.IsRecommended;
+        plan.PlanCategory         = request.PlanCategory?.Trim();
+        plan.BillingMode          = request.BillingMode;
 
         await _db.SaveChangesAsync(ct);
 
@@ -250,7 +255,13 @@ public class AdminPlanService : IAdminPlanService
         BasePriceMonthly     = p.BasePriceMonthly,
         BasePriceYearly      = p.BasePriceYearly,
         ApplicableAccountType = p.ApplicableAccountType?.ToString(),
-        CreatedAt            = p.CreatedAt
+        CreatedAt            = p.CreatedAt,
+        DisplayOrder         = p.DisplayOrder,
+        IsPublic             = p.IsPublic,
+        IsRecommended        = p.IsRecommended,
+        PlanCategory         = p.PlanCategory,
+        BillingMode          = p.BillingMode,
+        Rank                 = p.Rank,
     };
 
     private static PlanDetailResponse MapToDetail(Plan p) => new()
@@ -263,6 +274,12 @@ public class AdminPlanService : IAdminPlanService
         BasePriceYearly      = p.BasePriceYearly,
         ApplicableAccountType = p.ApplicableAccountType?.ToString(),
         CreatedAt            = p.CreatedAt,
+        DisplayOrder         = p.DisplayOrder,
+        IsPublic             = p.IsPublic,
+        IsRecommended        = p.IsRecommended,
+        PlanCategory         = p.PlanCategory,
+        BillingMode          = p.BillingMode,
+        Rank                 = p.Rank,
         Limits = p.PlanLimits
             .OrderBy(pl => pl.LimitDefinition.Key)
             .Select(pl => new PlanLimitItem

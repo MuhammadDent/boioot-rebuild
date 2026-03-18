@@ -1,4 +1,4 @@
-import { POPULAR_PLAN_NAME, yearlySaving } from "@/features/pricing/labels";
+import { yearlySaving } from "@/features/pricing/labels";
 import type { PublicPricingItem } from "@/features/pricing/types";
 import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
 import type { BillingCycle } from "./BillingToggle";
@@ -74,7 +74,7 @@ export default function PricingCard({
   onUpgradeIntent,
   isLoadingIntent,
 }: PricingCardProps) {
-  const isPopular  = plan.planName === POPULAR_PLAN_NAME;
+  const isPopular  = plan.isRecommended;
   const { kind, pricingId } = resolveCta(plan, cycle, currentSubscription);
   const isCurrent  = kind === "current";
 

@@ -58,6 +58,23 @@ public class Plan : BaseEntity
     /// </summary>
     public int Rank { get; set; } = 0;
 
+    // ── Display & Visibility ──────────────────────────────────────────────────
+
+    /// <summary>Ordering index on the public pricing page. Lower = appears first.</summary>
+    public int DisplayOrder { get; set; } = 0;
+
+    /// <summary>When false, plan is hidden from the public pricing page.</summary>
+    public bool IsPublic { get; set; } = true;
+
+    /// <summary>When true, plan is highlighted as recommended on the pricing page.</summary>
+    public bool IsRecommended { get; set; } = false;
+
+    /// <summary>Used to group plans on the pricing page. E.g. "Individual" or "Business".</summary>
+    public string? PlanCategory { get; set; }
+
+    /// <summary>Controls which billing providers are offered for this plan. "InternalOnly" | "StripeOnly" | "Hybrid".</summary>
+    public string BillingMode { get; set; } = "InternalOnly";
+
     public ICollection<Account> Accounts { get; set; } = [];
     public ICollection<Subscription> Subscriptions { get; set; } = [];
     public ICollection<PlanFeature> PlanFeatures { get; set; } = [];

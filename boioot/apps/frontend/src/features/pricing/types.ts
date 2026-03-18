@@ -25,6 +25,9 @@ export interface PublicPricingItem {
   description:          string | null;
   applicableAccountType: string | null;
   rank:                 number;
+  displayOrder:         number;
+  isRecommended:        boolean;
+  planCategory:         string | null;
   pricing:              PublicPricingEntry[];
   limits:               PublicLimitItem[];
   features:             PublicFeatureItem[];

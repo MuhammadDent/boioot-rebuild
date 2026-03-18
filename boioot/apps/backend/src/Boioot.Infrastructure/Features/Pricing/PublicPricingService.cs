@@ -23,14 +23,15 @@ public class PublicPricingService : IPublicPricingService
     public async Task<List<PublicPricingItem>> GetPublicPricingAsync(CancellationToken ct = default)
     {
         var plans = await _db.Set<Plan>()
-            .Where(p => p.IsActive)
+            .Where(p => p.IsActive && p.IsPublic)
             .Include(p => p.PlanPricings.Where(pp => pp.IsActive && pp.IsPublic))
             .Include(p => p.PlanLimits)
                 .ThenInclude(pl => pl.LimitDefinition)
             .Include(p => p.PlanFeatures)
                 .ThenInclude(pf => pf.FeatureDefinition)
             .Where(p => p.PlanPricings.Any(pp => pp.IsActive && pp.IsPublic))
-            .OrderBy(p => p.CreatedAt)
+            .OrderBy(p => p.DisplayOrder)
+            .ThenBy(p => p.CreatedAt)
             .AsNoTracking()
             .ToListAsync(ct);
 
@@ -40,6 +41,9 @@ public class PublicPricingService : IPublicPricingService
             Description:          p.Description,
             ApplicableAccountType: p.ApplicableAccountType?.ToString(),
             Rank:                 p.Rank,
+            DisplayOrder:         p.DisplayOrder,
+            IsRecommended:        p.IsRecommended,
+            PlanCategory:         p.PlanCategory,
             Pricing: p.PlanPricings
                 .OrderBy(pp => pp.BillingCycle)
                 .Select(pp => new PublicPricingEntry(pp.Id, pp.BillingCycle, pp.PriceAmount, pp.CurrencyCode))

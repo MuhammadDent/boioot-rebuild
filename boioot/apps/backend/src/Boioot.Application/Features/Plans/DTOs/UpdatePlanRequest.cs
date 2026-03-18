@@ -19,4 +19,15 @@ public class UpdatePlanRequest
     public bool    IsActive             { get; set; } = true;
 
     public string? ApplicableAccountType { get; set; }
+
+    public int     DisplayOrder         { get; set; } = 0;
+
+    public bool    IsPublic             { get; set; } = true;
+
+    public bool    IsRecommended        { get; set; } = false;
+
+    public string? PlanCategory         { get; set; }
+
+    /// <summary>"InternalOnly" | "StripeOnly" | "Hybrid"</summary>
+    public string  BillingMode          { get; set; } = "InternalOnly";
 }

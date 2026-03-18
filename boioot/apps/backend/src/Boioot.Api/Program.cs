@@ -261,6 +261,16 @@ using (var scope = app.Services.CreateScope())
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN Rank INTEGER NOT NULL DEFAULT 0"); }
         catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN DisplayOrder INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN IsPublic INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN IsRecommended INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN PlanCategory TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN BillingMode TEXT NOT NULL DEFAULT 'InternalOnly'"); }
+        catch { /* column already exists */ }
 
         // ── Subscriptions column additions ────────────────────────────────────
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Subscriptions ADD COLUMN PricingId TEXT"); }
@@ -319,6 +329,20 @@ using (var scope = app.Services.CreateScope())
             UPDATE Plans SET Rank = 12 WHERE Id = '00000007-0000-0000-0000-000000000000';
             UPDATE Plans SET Rank = 13 WHERE Id = '00000008-0000-0000-0000-000000000000';
             UPDATE Plans SET Rank = 14 WHERE Id = '00000009-0000-0000-0000-000000000000'");
+
+        // ── Seed Plan.DisplayOrder + PlanCategory (idempotent) ────────────────
+        // Individual plans (01–04): order 1–4, category Individual
+        // Professional plans (05–09): order 10–14, category Business
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE Plans SET DisplayOrder = 1,  PlanCategory = 'Individual' WHERE Id = '00000001-0000-0000-0000-000000000000';
+            UPDATE Plans SET DisplayOrder = 2,  PlanCategory = 'Individual' WHERE Id = '00000002-0000-0000-0000-000000000000';
+            UPDATE Plans SET DisplayOrder = 3,  PlanCategory = 'Individual' WHERE Id = '00000003-0000-0000-0000-000000000000';
+            UPDATE Plans SET DisplayOrder = 4,  PlanCategory = 'Individual' WHERE Id = '00000004-0000-0000-0000-000000000000';
+            UPDATE Plans SET DisplayOrder = 10, PlanCategory = 'Business'   WHERE Id = '00000005-0000-0000-0000-000000000000';
+            UPDATE Plans SET DisplayOrder = 11, PlanCategory = 'Business'   WHERE Id = '00000006-0000-0000-0000-000000000000';
+            UPDATE Plans SET DisplayOrder = 12, PlanCategory = 'Business'   WHERE Id = '00000007-0000-0000-0000-000000000000';
+            UPDATE Plans SET DisplayOrder = 13, PlanCategory = 'Business'   WHERE Id = '00000008-0000-0000-0000-000000000000';
+            UPDATE Plans SET DisplayOrder = 14, PlanCategory = 'Business'   WHERE Id = '00000009-0000-0000-0000-000000000000'");
 
         // Property.AccountId — future ownership source (replaces CompanyId in Phase C)
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN AccountId TEXT"); }
