@@ -461,6 +461,14 @@ using (var scope = app.Services.CreateScope())
 
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN ExpiresAt TEXT"); }
         catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN ApprovedBy TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN ApprovedAt TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN RejectedBy TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN RejectedAt TEXT"); }
+        catch { /* column already exists */ }
 
         // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");

@@ -19,6 +19,11 @@ public sealed class InvoiceResponse
     public DateTime? ExpiresAt   { get; init; }
     public bool      IsExpired   { get; init; }
 
+    public Guid?     ApprovedBy  { get; init; }
+    public DateTime? ApprovedAt  { get; init; }
+    public Guid?     RejectedBy  { get; init; }
+    public DateTime? RejectedAt  { get; init; }
+
     public PaymentProofResponse? Proof { get; init; }
 }
 

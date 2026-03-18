@@ -45,11 +45,13 @@ public interface IBillingService
     Task<InvoiceResponse> AdminConfirmPaymentAsync(
         Guid invoiceId,
         AdminReviewRequest request,
+        Guid adminId,
         CancellationToken ct = default);
 
     /// <summary>Rejects payment: sets Invoice.Status = Failed.</summary>
     Task<InvoiceResponse> AdminRejectPaymentAsync(
         Guid invoiceId,
         AdminReviewRequest request,
+        Guid adminId,
         CancellationToken ct = default);
 }

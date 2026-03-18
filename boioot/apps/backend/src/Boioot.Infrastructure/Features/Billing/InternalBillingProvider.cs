@@ -50,7 +50,7 @@ public sealed class InternalBillingProvider : IBillingProvider
     /// the caller (BillingService) saves after activating the subscription.
     /// </summary>
     public async Task ConfirmPaymentAsync(
-        Guid invoiceId, string? adminNote, CancellationToken ct = default)
+        Guid invoiceId, string? adminNote, Guid adminId, CancellationToken ct = default)
     {
         var invoice = await _db.Invoices.FindAsync([invoiceId], ct)
             ?? throw new BoiootException("الفاتورة غير موجودة", 404);
@@ -58,13 +58,15 @@ public sealed class InternalBillingProvider : IBillingProvider
         if (invoice.Status != InvoiceStatus.Pending)
             throw new BoiootException("يمكن تأكيد الفواتير المعلقة فقط", 400);
 
-        invoice.Status    = InvoiceStatus.Paid;
-        invoice.AdminNote = adminNote;
+        invoice.Status     = InvoiceStatus.Paid;
+        invoice.AdminNote  = adminNote;
+        invoice.ApprovedBy = adminId;
+        invoice.ApprovedAt = DateTime.UtcNow;
     }
 
     /// <summary>Sets Invoice.Status = Failed and saves immediately.</summary>
     public async Task RejectPaymentAsync(
-        Guid invoiceId, string? adminNote, CancellationToken ct = default)
+        Guid invoiceId, string? adminNote, Guid adminId, CancellationToken ct = default)
     {
         var invoice = await _db.Invoices.FindAsync([invoiceId], ct)
             ?? throw new BoiootException("الفاتورة غير موجودة", 404);
@@ -72,8 +74,10 @@ public sealed class InternalBillingProvider : IBillingProvider
         if (invoice.Status != InvoiceStatus.Pending)
             throw new BoiootException("يمكن رفض الفواتير المعلقة فقط", 400);
 
-        invoice.Status    = InvoiceStatus.Failed;
-        invoice.AdminNote = adminNote;
+        invoice.Status     = InvoiceStatus.Failed;
+        invoice.AdminNote  = adminNote;
+        invoice.RejectedBy = adminId;
+        invoice.RejectedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
     }

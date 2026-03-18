@@ -37,6 +37,18 @@ public class Invoice : BaseEntity
     /// </summary>
     public DateTime? ExpiresAt { get; set; }
 
+    /// <summary>Admin who confirmed the payment (audit trail).</summary>
+    public Guid? ApprovedBy { get; set; }
+
+    /// <summary>When the payment was confirmed by an admin.</summary>
+    public DateTime? ApprovedAt { get; set; }
+
+    /// <summary>Admin who rejected the payment (audit trail).</summary>
+    public Guid? RejectedBy { get; set; }
+
+    /// <summary>When the payment was rejected by an admin.</summary>
+    public DateTime? RejectedAt { get; set; }
+
     public User User { get; set; } = null!;
     public PlanPricing PlanPricing { get; set; } = null!;
     public PaymentProof? PaymentProof { get; set; }

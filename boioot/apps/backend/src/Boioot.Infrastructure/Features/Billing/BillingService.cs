@@ -153,7 +153,7 @@ public sealed class BillingService : IBillingService
     }
 
     public async Task<InvoiceResponse> AdminConfirmPaymentAsync(
-        Guid invoiceId, AdminReviewRequest request, CancellationToken ct = default)
+        Guid invoiceId, AdminReviewRequest request, Guid adminId, CancellationToken ct = default)
     {
         // 1. Load invoice (tracked) to check expiry before any mutation
         var invoice = await _db.Invoices
@@ -171,7 +171,7 @@ public sealed class BillingService : IBillingService
         }
 
         // 2. Mark invoice as Paid via provider (reuses the tracked entity — no extra DB query)
-        await _provider.ConfirmPaymentAsync(invoiceId, request.Note, ct);
+        await _provider.ConfirmPaymentAsync(invoiceId, request.Note, adminId, ct);
 
         // 3. Resolve or create user account
         var accountId = await _accountResolver.ResolveAccountIdAsync(invoice.UserId, ct);
@@ -236,9 +236,9 @@ public sealed class BillingService : IBillingService
     }
 
     public async Task<InvoiceResponse> AdminRejectPaymentAsync(
-        Guid invoiceId, AdminReviewRequest request, CancellationToken ct = default)
+        Guid invoiceId, AdminReviewRequest request, Guid adminId, CancellationToken ct = default)
     {
-        await _provider.RejectPaymentAsync(invoiceId, request.Note, ct);
+        await _provider.RejectPaymentAsync(invoiceId, request.Note, adminId, ct);
 
         return await LoadInvoiceResponseAsync(invoiceId, ct);
     }
@@ -322,6 +322,10 @@ public sealed class BillingService : IBillingService
         CreatedAt     = i.CreatedAt,
         ExpiresAt     = i.ExpiresAt,
         IsExpired     = IsExpired(i),
+        ApprovedBy    = i.ApprovedBy,
+        ApprovedAt    = i.ApprovedAt,
+        RejectedBy    = i.RejectedBy,
+        RejectedAt    = i.RejectedAt,
         Proof         = i.PaymentProof is null ? null : new PaymentProofResponse
         {
             Id        = i.PaymentProof.Id,

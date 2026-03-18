@@ -23,12 +23,12 @@ public interface IBillingProvider
     /// For internal: called by admin action.
     /// For Stripe: called after webhook verification.
     /// </summary>
-    Task ConfirmPaymentAsync(Guid invoiceId, string? adminNote, CancellationToken ct = default);
+    Task ConfirmPaymentAsync(Guid invoiceId, string? adminNote, Guid adminId, CancellationToken ct = default);
 
     /// <summary>
     /// Marks the payment as failed/rejected.
     /// </summary>
-    Task RejectPaymentAsync(Guid invoiceId, string? adminNote, CancellationToken ct = default);
+    Task RejectPaymentAsync(Guid invoiceId, string? adminNote, Guid adminId, CancellationToken ct = default);
 }
 
 /// <summary>Input to IBillingProvider.CreatePaymentAsync.</summary>

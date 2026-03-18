@@ -43,7 +43,7 @@ public class AdminBillingController : BaseController
         [FromBody] AdminReviewRequest request,
         CancellationToken ct)
     {
-        var invoice = await _billing.AdminConfirmPaymentAsync(invoiceId, request, ct);
+        var invoice = await _billing.AdminConfirmPaymentAsync(invoiceId, request, GetUserId(), ct);
         return Ok(invoice);
     }
 
@@ -54,7 +54,7 @@ public class AdminBillingController : BaseController
         [FromBody] AdminReviewRequest request,
         CancellationToken ct)
     {
-        var invoice = await _billing.AdminRejectPaymentAsync(invoiceId, request, ct);
+        var invoice = await _billing.AdminRejectPaymentAsync(invoiceId, request, GetUserId(), ct);
         return Ok(invoice);
     }
 }
