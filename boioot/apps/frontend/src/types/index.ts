@@ -460,6 +460,46 @@ export interface AdminPlanPricingEntry {
 
 // ── Blog ─────────────────────────────────────────────────────────────────────
 
+// ── Public Blog DTOs (from /api/blog/*) ───────────────────────────────────────
+
+export interface PublicBlogPostSummary {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  coverImageUrl?: string;
+  isFeatured: boolean;
+  readTimeMinutes?: number;
+  viewCount: number;
+  publishedAt?: string;
+  categories: PublicBlogCategory[];
+  createdAt: string;
+}
+
+export interface PublicBlogPostDetail {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  content: string;
+  coverImageUrl?: string;
+  isFeatured: boolean;
+  readTimeMinutes?: number;
+  viewCount: number;
+  seoTitle?: string;
+  seoDescription?: string;
+  publishedAt?: string;
+  categories: PublicBlogCategory[];
+  createdAt: string;
+}
+
+export interface PublicBlogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  postCount: number;
+}
+
 export type BlogPostStatus = "Draft" | "Published" | "Archived";
 
 export interface BlogCategoryResponse {
