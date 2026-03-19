@@ -1,0 +1,230 @@
+We are now starting the RBAC Admin Panel implementation for Boioot.
+
+IMPORTANT:
+Do NOT build randomly.
+Do NOT jump between files without structure.
+We will build this as a clean production-grade admin feature.
+
+==================================================
+GOAL
+==================================================
+
+Build a professional RBAC Admin Management UI for the Boioot admin panel.
+
+This UI must allow administrators to:
+
+1) View all roles
+2) View all permissions
+3) View role → permissions mapping
+4) Assign/remove permissions from roles
+5) View users assigned to roles
+6) Assign/change user roles
+7) Keep the UI clean, institutional, and scalable
+
+==================================================
+CURRENT BACKEND STATUS
+==================================================
+
+Already completed:
+
+- RBAC tables exist
+- Roles table exists
+- Permissions table exists
+- RolePermissions exists
+- UserRoles exists
+- APIs for role permission mapping are working
+- Dynamic RBAC data is seeded
+- Admin role has full DB permissions
+- CompanyOwner has DB permissions
+- JWT permission system exists
+- Frontend already uses permission-based checks in many places
+
+So now this task is FRONTEND + ADMIN UX focused.
+
+==================================================
+BUILD TARGET
+==================================================
+
+Create a new admin area for RBAC inside:
+
+/dashboard/admin/roles
+/dashboard/admin/roles/[roleId]
+/dashboard/admin/users  (extend existing if already exists)
+
+==================================================
+PHASE 1 — UI STRUCTURE
+==================================================
+
+Build the following pages/components:
+
+1) Roles List Page
+Route:
+- /dashboard/admin/roles
+
+Show:
+- role name
+- role type/category (Staff / Platform)
+- permissions count
+- users count (if available)
+- action button: Manage Permissions
+- action button: View Details
+
+2) Role Details / Permission Matrix Page
+Route:
+- /dashboard/admin/roles/[roleId]
+
+Show:
+- role basic info
+- list/grid of all permissions grouped by module
+
+Permission groups example:
+- users.*
+- staff.*
+- roles.*
+- properties.*
+- projects.*
+- agents.*
+- requests.*
+- companies.*
+- blog.*
+- seo.*
+- marketing.*
+- settings.*
+- billing.*
+- dashboard.*
+
+Each permission row must have:
+- permission key
+- description (human readable)
+- assigned/unassigned toggle checkbox
+
+Add:
+- Save Changes button
+- Reset button
+- loading state
+- success/error toast
+
+3) User Role Assignment Section
+In admin users page or a dedicated modal:
+- show current role of each user
+- allow changing role
+- allow assigning role to a user
+- show role badge clearly
+
+==================================================
+PHASE 2 — UI/UX REQUIREMENTS
+==================================================
+
+The design must be:
+
+- professional
+- enterprise-like
+- clean
+- RTL-friendly for Arabic
+- mobile-friendly
+- desktop optimized
+
+Use:
+- cards
+- grouped sections
+- role badges
+- search/filter
+- sticky action bar if useful
+
+Avoid:
+- raw ugly tables everywhere
+- clutter
+- developer-looking placeholder UI
+- ungrouped permissions dump
+
+==================================================
+PHASE 3 — PERMISSION PRESENTATION
+==================================================
+
+Convert permission keys into readable labels.
+
+Examples:
+- users.view => View Users
+- users.edit => Edit Users
+- properties.create => Create Property
+- blog.seo.manage => Manage Blog SEO
+
+Also provide Arabic-friendly display labels if possible.
+
+==================================================
+PHASE 4 — DATA INTEGRATION
+==================================================
+
+Use the existing backend APIs.
+
+Need to connect UI to:
+- get all roles
+- get all permissions
+- get permissions for one role
+- assign/remove permissions for one role
+- get user roles
+- update user role
+
+If some read endpoints are missing, do NOT invent fake logic.
+Instead:
+- detect exactly what endpoint is missing
+- list it clearly
+- implement only the minimal missing endpoint if necessary
+
+==================================================
+PHASE 5 — SAFETY RULES
+==================================================
+
+- Do NOT break existing dashboard/admin pages
+- Do NOT remove existing authorization logic
+- Do NOT change JWT structure
+- Do NOT refactor unrelated modules
+- Do NOT touch public site
+- Do NOT touch billing logic
+- Do NOT touch listing pages unless required for role assignment display
+
+==================================================
+PHASE 6 — FILES TO CREATE
+==================================================
+
+Expected frontend structure should include something like:
+
+src/app/dashboard/admin/roles/page.tsx
+src/app/dashboard/admin/roles/[roleId]/page.tsx
+src/components/admin/rbac/RolesTable.tsx
+src/components/admin/rbac/PermissionMatrix.tsx
+src/components/admin/rbac/RoleBadge.tsx
+src/components/admin/rbac/UserRoleEditor.tsx
+src/lib/rbac-ui.ts
+
+You may adapt names slightly if project conventions require it.
+
+==================================================
+PHASE 7 — DELIVERABLE FORMAT
+==================================================
+
+After implementation, provide a report with:
+
+A) files created/updated
+B) routes added
+C) APIs used
+D) missing APIs added (if any)
+E) screenshots/description of final UI
+F) confirmation that existing admin access still works
+
+==================================================
+IMPORTANT IMPLEMENTATION NOTE
+==================================================
+
+Before writing code:
+1. inspect current admin dashboard structure
+2. inspect existing users page
+3. inspect existing API client pattern
+4. reuse current design system/components if available
+
+Do not start coding blindly.
+
+Now begin with:
+- audit current admin structure
+- create the clean UI plan
+- then implement phase 1

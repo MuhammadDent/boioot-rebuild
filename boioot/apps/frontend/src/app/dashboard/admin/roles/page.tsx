@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { normalizeError } from "@/lib/api";
 import {
@@ -11,6 +12,23 @@ import {
   type RbacPermission,
 } from "@/features/admin/rbac/api";
 import type { AdminUserResponse } from "@/types";
+
+// ── Role category helpers ────────────────────────────────────────────────────
+
+const STAFF_ROLES = new Set([
+  "AdminManager", "CustomerSupport", "TechnicalSupport",
+  "ContentEditor", "SeoSpecialist", "MarketingStaff",
+]);
+const PLATFORM_ROLES = new Set([
+  "CompanyOwner", "Broker", "Agent", "Owner", "User",
+]);
+
+function getRoleCategory(name: string): { label: string; color: string; bg: string } {
+  if (name === "Admin") return { label: "مدير النظام", color: "#9333ea", bg: "#f5f3ff" };
+  if (STAFF_ROLES.has(name))    return { label: "موظف", color: "#0369a1", bg: "#e0f2fe" };
+  if (PLATFORM_ROLES.has(name)) return { label: "منصة", color: "#0f766e", bg: "#ccfbf1" };
+  return { label: "مخصص", color: "#6b7280", bg: "#f3f4f6" };
+}
 
 // ── Shared styles ──────────────────────────────────────────────────────────────
 
@@ -210,8 +228,20 @@ function RolesTab({ toast }: { toast: (m: string, t?: "ok" | "err") => void }) {
                         </button>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                         <span style={{ fontWeight: 600, color: "#1e293b" }}>{role.name}</span>
+                        {(() => {
+                          const cat = getRoleCategory(role.name);
+                          return (
+                            <span style={{
+                              fontSize: "0.65rem", fontWeight: 700,
+                              color: cat.color, backgroundColor: cat.bg,
+                              padding: "0.1rem 0.45rem", borderRadius: 20,
+                            }}>
+                              {cat.label}
+                            </span>
+                          );
+                        })()}
                         {role.isSystem && (
                           <span style={{
                             fontSize: "0.65rem", fontWeight: 700, color: "#6366f1",
@@ -251,7 +281,22 @@ function RolesTab({ toast }: { toast: (m: string, t?: "ok" | "err") => void }) {
                   </td>
                   <td style={{ padding: "0.65rem 1rem", textAlign: "center" }}>
                     {editId !== role.id && (
-                      <div style={{ display: "flex", gap: "0.4rem", justifyContent: "center" }}>
+                      <div style={{ display: "flex", gap: "0.4rem", justifyContent: "center", flexWrap: "wrap" }}>
+                        <Link
+                          href={`/dashboard/admin/roles/${role.id}`}
+                          style={{
+                            ...btn("#16a34a", "#f0fdf4", "#bbf7d0"),
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.3rem",
+                          }}
+                        >
+                          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                          </svg>
+                          إدارة الصلاحيات
+                        </Link>
                         {!role.isSystem && (
                           <>
                             <button

@@ -16,6 +16,7 @@ import {
 } from "@/features/admin/constants";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
+import { rbacApi, type RbacRole } from "@/features/admin/rbac/api";
 import type { AdminUserResponse } from "@/types";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ export default function AdminUsersPage() {
   const { user, isLoading } = useProtectedRoute({ requiredPermission: "users.view" });
 
   const [users, setUsers]           = useState<AdminUserResponse[]>([]);
+  const [roles, setRoles]           = useState<RbacRole[]>([]);
   const [page, setPage]             = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -32,6 +34,7 @@ export default function AdminUsersPage() {
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError]     = useState("");
+  const [roleNotice, setRoleNotice]       = useState("");
 
   // Pending filter values (UI state — not yet applied)
   const [pendingRole, setPendingRole]         = useState("");
@@ -57,7 +60,10 @@ export default function AdminUsersPage() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && user) load(1, {});
+    if (!isLoading && user) {
+      load(1, {});
+      rbacApi.getRoles().then(setRoles).catch(() => {});
+    }
   }, [isLoading, user, load]);
 
   if (isLoading || !user) return null;
@@ -86,6 +92,21 @@ export default function AdminUsersPage() {
     try {
       const updated = await adminApi.updateUserStatus(targetId, !currentIsActive);
       setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+    } catch (e) {
+      setActionError(normalizeError(e));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRoleChange(userId: string, roleId: string, roleName: string) {
+    setActionLoading(userId);
+    setActionError("");
+    try {
+      await rbacApi.assignUserRole(userId, roleId);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: roleName } : u));
+      setRoleNotice(`تم تغيير الدور إلى "${ROLE_LABELS[roleName] ?? roleName}"`);
+      setTimeout(() => setRoleNotice(""), 3000);
     } catch (e) {
       setActionError(normalizeError(e));
     } finally {
@@ -158,6 +179,22 @@ export default function AdminUsersPage() {
         {/* ── Action error ── */}
         <InlineBanner message={actionError} />
 
+        {/* ── Role change notice ── */}
+        {roleNotice && (
+          <div style={{
+            marginBottom: "0.75rem",
+            padding: "0.65rem 1rem",
+            backgroundColor: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: 8,
+            fontSize: "0.83rem",
+            color: "#15803d",
+            fontWeight: 600,
+          }}>
+            ✓ {roleNotice}
+          </div>
+        )}
+
         {/* ── Fetch error ── */}
         <InlineBanner message={fetchError} />
 
@@ -181,8 +218,10 @@ export default function AdminUsersPage() {
                 key={u.id}
                 userData={u}
                 isSelf={u.id === user.id}
+                roles={roles}
                 actionLoading={actionLoading}
                 onToggle={handleToggleStatus}
+                onRoleChange={handleRoleChange}
               />
             ))}
           </div>
@@ -207,15 +246,30 @@ export default function AdminUsersPage() {
 function UserRow({
   userData: u,
   isSelf,
+  roles,
   actionLoading,
   onToggle,
+  onRoleChange,
 }: {
   userData: AdminUserResponse;
   isSelf: boolean;
+  roles: RbacRole[];
   actionLoading: string | null;
   onToggle: (id: string, current: boolean) => void;
+  onRoleChange: (userId: string, roleId: string, roleName: string) => void;
 }) {
+  const [showRoleEdit, setShowRoleEdit] = useState(false);
+  const [selectedRoleId, setSelectedRoleId] = useState("");
   const isThisLoading = actionLoading === u.id;
+
+  function handleRoleSubmit() {
+    if (!selectedRoleId) return;
+    const role = roles.find(r => r.id === selectedRoleId);
+    if (!role) return;
+    onRoleChange(u.id, selectedRoleId, role.name);
+    setShowRoleEdit(false);
+    setSelectedRoleId("");
+  }
 
   return (
     <div className="form-card" style={{ padding: "1rem 1.25rem" }}>
@@ -260,25 +314,96 @@ function UserRow({
               year: "numeric", month: "numeric", day: "numeric",
             })}
           </p>
+
+          {/* ── Inline role editor ── */}
+          {showRoleEdit && (
+            <div style={{
+              marginTop: "0.75rem",
+              padding: "0.75rem",
+              backgroundColor: "#f8fafc",
+              border: "1px solid #e8ecf0",
+              borderRadius: 8,
+              display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap",
+            }}>
+              <select
+                style={{
+                  padding: "0.4rem 0.65rem",
+                  fontSize: "0.82rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  fontFamily: "inherit",
+                  direction: "rtl",
+                  cursor: "pointer",
+                  flex: 1,
+                  minWidth: 180,
+                }}
+                value={selectedRoleId}
+                onChange={e => setSelectedRoleId(e.target.value)}
+                disabled={isThisLoading}
+              >
+                <option value="">— اختر الدور الجديد —</option>
+                {roles.map(r => (
+                  <option key={r.id} value={r.id}>
+                    {ROLE_LABELS[r.name] ?? r.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="btn btn-primary"
+                style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem" }}
+                onClick={handleRoleSubmit}
+                disabled={!selectedRoleId || isThisLoading}
+              >
+                {isThisLoading ? "..." : "تأكيد"}
+              </button>
+              <button
+                className="btn"
+                style={{ padding: "0.4rem 0.75rem", fontSize: "0.82rem" }}
+                onClick={() => { setShowRoleEdit(false); setSelectedRoleId(""); }}
+                disabled={isThisLoading}
+              >
+                إلغاء
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* ── Action ── */}
-        <button
-          className={u.isActive ? "btn" : "btn btn-primary"}
-          style={{
-            padding: "0.4rem 1rem", flexShrink: 0, fontSize: "0.85rem",
-            ...(!u.isActive ? {} : {
-              border: "1.5px solid var(--color-error)",
-              backgroundColor: "transparent",
-              color: "var(--color-error)",
-            }),
-          }}
-          disabled={isThisLoading || !!actionLoading || isSelf}
-          onClick={() => onToggle(u.id, u.isActive)}
-          title={isSelf ? "لا يمكنك تعطيل حسابك الخاص" : undefined}
-        >
-          {isThisLoading ? "..." : u.isActive ? "تعطيل" : "تفعيل"}
-        </button>
+        {/* ── Actions ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", flexShrink: 0 }}>
+          {/* Role change button */}
+          {!isSelf && roles.length > 0 && (
+            <button
+              className="btn"
+              style={{
+                padding: "0.4rem 1rem", fontSize: "0.82rem",
+                backgroundColor: showRoleEdit ? "#eef2ff" : undefined,
+                color: showRoleEdit ? "#4f46e5" : undefined,
+                borderColor: showRoleEdit ? "#c7d2fe" : undefined,
+              }}
+              disabled={isThisLoading}
+              onClick={() => { setShowRoleEdit(v => !v); setSelectedRoleId(""); }}
+            >
+              تغيير الدور
+            </button>
+          )}
+          {/* Status toggle button */}
+          <button
+            className={u.isActive ? "btn" : "btn btn-primary"}
+            style={{
+              padding: "0.4rem 1rem", fontSize: "0.85rem",
+              ...(!u.isActive ? {} : {
+                border: "1.5px solid var(--color-error)",
+                backgroundColor: "transparent",
+                color: "var(--color-error)",
+              }),
+            }}
+            disabled={isThisLoading || !!actionLoading || isSelf}
+            onClick={() => onToggle(u.id, u.isActive)}
+            title={isSelf ? "لا يمكنك تعطيل حسابك الخاص" : undefined}
+          >
+            {isThisLoading ? "..." : u.isActive ? "تعطيل" : "تفعيل"}
+          </button>
+        </div>
 
       </div>
     </div>
