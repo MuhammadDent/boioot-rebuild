@@ -237,13 +237,21 @@ public class BlogService : IBlogService
 
     private async Task<BlogSeoSettings> GetOrCreateSettingsAsync(CancellationToken ct = default)
     {
-        var s = await _db.Set<BlogSeoSettings>().FindAsync(new object[] { SeoSettingsId }, ct);
-        if (s != null) return s;
+        try
+        {
+            var s = await _db.Set<BlogSeoSettings>().FindAsync(new object[] { SeoSettingsId }, ct);
+            if (s != null) return s;
 
-        s = new BlogSeoSettings { Id = SeoSettingsId };
-        _db.Set<BlogSeoSettings>().Add(s);
-        await _db.SaveChangesAsync(ct);
-        return s;
+            s = new BlogSeoSettings { Id = SeoSettingsId };
+            _db.Set<BlogSeoSettings>().Add(s);
+            await _db.SaveChangesAsync(ct);
+            return s;
+        }
+        catch
+        {
+            // BlogSeoSettings table may not exist yet on this environment — return safe defaults
+            return new BlogSeoSettings { Id = SeoSettingsId };
+        }
     }
 
     // ── Category sync ─────────────────────────────────────────────────────────

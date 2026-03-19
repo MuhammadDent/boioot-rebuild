@@ -186,33 +186,44 @@ using (var scope = app.Services.CreateScope())
         catch { /* column already exists */ }
 
         // ── Blog SEO modes ────────────────────────────────────────────────────
-        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SeoTitleMode TEXT NOT NULL DEFAULT 'Auto'"); }
-        catch { /* column already exists */ }
-        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SeoDescriptionMode TEXT NOT NULL DEFAULT 'Auto'"); }
-        catch { /* column already exists */ }
-        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SlugMode TEXT NOT NULL DEFAULT 'Auto'"); }
-        catch { /* column already exists */ }
+        // Diagnostic: log actual DB path and column existence
+        logger.LogInformation("DB connection string: {conn}", db.Database.GetConnectionString());
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SeoTitleMode TEXT NOT NULL DEFAULT 'Auto'"); logger.LogInformation("MIGRATED: Added SeoTitleMode"); }
+        catch (Exception ex) { logger.LogWarning("SeoTitleMode: {msg}", ex.Message); }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SeoDescriptionMode TEXT NOT NULL DEFAULT 'Auto'"); logger.LogInformation("MIGRATED: Added SeoDescriptionMode"); }
+        catch (Exception ex) { logger.LogWarning("SeoDescriptionMode: {msg}", ex.Message); }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SlugMode TEXT NOT NULL DEFAULT 'Auto'"); logger.LogInformation("MIGRATED: Added SlugMode"); }
+        catch (Exception ex) { logger.LogWarning("SlugMode: {msg}", ex.Message); }
 
         // ── Blog SEO Settings singleton table ─────────────────────────────────
-        // Note: {{...}} escapes the curly braces so EF Core doesn't treat them as format params
-        await db.Database.ExecuteSqlRawAsync(@"
-            CREATE TABLE IF NOT EXISTS BlogSeoSettings (
-                Id                               TEXT NOT NULL PRIMARY KEY,
-                SiteName                         TEXT NOT NULL DEFAULT 'بيوت',
-                DefaultPostSeoTitleTemplate      TEXT NOT NULL DEFAULT '{{PostTitle}} | {{SiteName}}',
-                DefaultPostSeoDescriptionTemplate TEXT NOT NULL DEFAULT '{{Excerpt}}',
-                DefaultBlogListSeoTitle          TEXT NOT NULL DEFAULT 'المدونة | بيوت',
-                DefaultBlogListSeoDescription    TEXT NOT NULL DEFAULT 'تصفح أحدث المقالات العقارية من بيوت سوريا'
-            )");
+        // Note: {{...}} double-brace escapes prevent EF Core's format-string parser from
+        //       treating {PostTitle} etc. as positional parameters.
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS BlogSeoSettings (
+                    Id                               TEXT NOT NULL PRIMARY KEY,
+                    SiteName                         TEXT NOT NULL DEFAULT 'بيوت',
+                    DefaultPostSeoTitleTemplate      TEXT NOT NULL DEFAULT '{{PostTitle}} | {{SiteName}}',
+                    DefaultPostSeoDescriptionTemplate TEXT NOT NULL DEFAULT '{{Excerpt}}',
+                    DefaultBlogListSeoTitle          TEXT NOT NULL DEFAULT 'المدونة | بيوت',
+                    DefaultBlogListSeoDescription    TEXT NOT NULL DEFAULT 'تصفح أحدث المقالات العقارية من بيوت سوريا'
+                )");
+        }
+        catch { /* table already exists — safe to ignore */ }
 
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogSeoSettings ADD COLUMN DefaultBlogListSeoTitle TEXT NOT NULL DEFAULT 'المدونة | بيوت'"); }
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogSeoSettings ADD COLUMN DefaultBlogListSeoDescription TEXT NOT NULL DEFAULT 'تصفح أحدث المقالات العقارية من بيوت سوريا'"); }
         catch { /* column already exists */ }
 
-        // Seed singleton row if missing ({{...}} → {PostTitle} etc. after EF Core format processing)
-        var seoSettingsExists = await db.Database.ExecuteSqlRawAsync(
-            "INSERT OR IGNORE INTO BlogSeoSettings (Id, SiteName, DefaultPostSeoTitleTemplate, DefaultPostSeoDescriptionTemplate, DefaultBlogListSeoTitle, DefaultBlogListSeoDescription) VALUES ('00000000-0000-0000-0000-000000000001', 'بيوت', '{{PostTitle}} | {{SiteName}}', '{{Excerpt}}', 'المدونة | بيوت', 'تصفح أحدث المقالات العقارية من بيوت سوريا')");
+        // Seed singleton row if missing — {{...}} resolves to {PostTitle} etc. after EF Core processes
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "INSERT OR IGNORE INTO BlogSeoSettings (Id, SiteName, DefaultPostSeoTitleTemplate, DefaultPostSeoDescriptionTemplate, DefaultBlogListSeoTitle, DefaultBlogListSeoDescription) VALUES ('00000000-0000-0000-0000-000000000001', 'بيوت', '{{PostTitle}} | {{SiteName}}', '{{Excerpt}}', 'المدونة | بيوت', 'تصفح أحدث المقالات العقارية من بيوت سوريا')");
+        }
+        catch { /* row already exists or BlogSeoSettings missing — GetOrCreateSettingsAsync handles at runtime */ }
 
 
         // ── Phase A: Subscription architecture (tables + unique index + seed) ─
@@ -541,6 +552,31 @@ using (var scope = app.Services.CreateScope())
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN StripeSessionUrl TEXT"); }
         catch { /* column already exists */ }
+
+        // ── Force WAL checkpoint so ALL connections see schema changes ──────────
+        // After ALTER TABLE, WAL frames must be merged into the main DB file so that
+        // connection-pool connections (opened before migrations ran) see new columns.
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(FULL)");
+            logger.LogInformation("WAL checkpoint completed — schema changes are visible to all connections");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("WAL checkpoint failed (non-fatal): {msg}", ex.Message);
+        }
+
+        // Clear the ADO.NET connection pool so all future EF Core connections are fresh
+        // and read the updated schema from the main DB file.
+        try
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            logger.LogInformation("SQLite connection pool cleared — all future connections will use updated schema");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("ClearAllPools failed (non-fatal): {msg}", ex.Message);
+        }
 
         // Seed default Plans (ListingLimit: -1 = unlimited)
         var nowPlan = DateTime.UtcNow.ToString("O");
@@ -929,6 +965,9 @@ using (var scope = app.Services.CreateScope())
                 IsFeatured        INTEGER NOT NULL DEFAULT 0,
                 SeoTitle          TEXT,
                 SeoDescription    TEXT,
+                SeoTitleMode      TEXT NOT NULL DEFAULT 'Auto',
+                SeoDescriptionMode TEXT NOT NULL DEFAULT 'Auto',
+                SlugMode          TEXT NOT NULL DEFAULT 'Auto',
                 ReadTimeMinutes   INTEGER,
                 ViewCount         INTEGER NOT NULL DEFAULT 0,
                 IsDeleted         INTEGER NOT NULL DEFAULT 0,
