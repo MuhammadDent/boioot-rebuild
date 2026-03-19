@@ -1,0 +1,89 @@
+We still have a hydration mismatch. Do not guess. Diagnose it systematically and fix the exact source.
+
+Current status:
+- SEO preview was changed
+- Date formatting was partially addressed
+- But hydration error still exists in the dashboard/admin page
+
+Your task now is to isolate the real cause and fix it with a clean, deterministic approach.
+
+================================
+STEP 1: ISOLATE THE SOURCE
+================================
+
+Temporarily disable the SEO Preview component entirely from the admin page.
+
+- Remove/comment out the SeoPreview render from the page/form
+- Keep the rest of the page unchanged
+
+Then verify:
+- If hydration error disappears → the issue is inside SeoPreview or its child components
+- If hydration error remains → the issue is elsewhere in the admin page
+
+Report clearly which case is true.
+
+================================
+STEP 2: IF THE ISSUE IS INSIDE SEO PREVIEW
+================================
+
+Check all of the following and fix them properly:
+
+1. Ensure SeoPreview is imported ONLY with:
+   dynamic(() => import('./SeoPreview'), { ssr: false })
+
+2. Ensure SeoPreview has:
+   - default export
+   - "use client"
+
+3. Ensure no child inside SeoPreview uses:
+   - new Date() during render
+   - Date.now()
+   - Math.random()
+   - toLocaleDateString() during initial render
+   - browser-only values during render unless inside useEffect
+
+4. If published date must be shown:
+   - either render a stable raw string from props
+   - or render it only after mount using useEffect/state
+   - do not let server and client format it differently
+
+5. Check for invalid HTML nesting inside preview
+
+================================
+STEP 3: IF THE ISSUE IS OUTSIDE SEO PREVIEW
+================================
+
+Then inspect the admin page and surrounding layout for:
+
+- use of Date.now / new Date / Math.random in render
+- locale-based formatting
+- browser extension affected markup is NOT a valid explanation unless proven
+- invalid HTML nesting
+- conditional rendering that differs between server and client
+- any component that branches on typeof window during render
+
+================================
+STEP 4: MAKE RENDER DETERMINISTIC
+================================
+
+Any value rendered on first paint must be deterministic and identical between server and client.
+
+Use these rules:
+- No locale-formatted date on initial render
+- No random values
+- No unstable IDs
+- No browser-only state in SSR render
+
+================================
+STEP 5: DELIVERABLE
+================================
+
+Provide:
+1. What component was the real cause
+2. Exact code-level fix
+3. Why mismatch happened
+4. Confirmation that console hydration error is fully gone
+
+Important:
+Do not patch with suppressHydrationWarning unless there is an unavoidable tiny text difference.
+Prefer real architectural fixes.
