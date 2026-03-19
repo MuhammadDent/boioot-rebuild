@@ -1,0 +1,75 @@
+The listings were previously visible on the homepage and had already been published, but now the homepage shows 0 listings.
+
+This is a regression diagnosis task.
+Do NOT change UI first.
+Do NOT guess.
+Trace the exact cause.
+
+We need to determine why listings that were previously visible are no longer visible now.
+
+Check all of the following carefully:
+
+1) CURRENT DATABASE FILE
+- Print the exact SQLite database file path currently used by the running app
+- Confirm whether this is the same DB file as before or a newly created/reset one
+
+2) LISTING COUNT IN CURRENT DB
+Query the database and report:
+- total number of listings/properties/ads records
+- how many are published
+- how many are active
+- how many are approved
+- how many are soft-deleted
+- how many belong to each company/user/tenant if applicable
+
+3) SHOW THE PREVIOUSLY CREATED LISTINGS
+List the records that correspond to the 3 previously added ads, including:
+- id
+- title
+- created date
+- published flag/status
+- active flag/status
+- approval status
+- deleted flag
+- company/tenant/user ownership
+- city / district / category / purpose
+- whether they have image/media references
+
+If they no longer exist, say that explicitly.
+
+4) TRACE THE PUBLIC HOMEPAGE QUERY
+Find the exact backend query/API used by the homepage listings feed and show:
+- all WHERE conditions
+- all filters applied by default
+- whether tenant/company scoping exists
+- whether it requires:
+  - published
+  - approved
+  - active
+  - non-deleted
+  - image exists
+  - price exists
+  - category/purpose match
+  - city/district match
+
+5) COMPARE ONE MISSING LISTING AGAINST THE QUERY
+Take one listing that used to appear and explain exactly why it is excluded now.
+Identify the exact condition that filters it out.
+
+6) CHECK WHETHER RECENT RBAC / STARTUP / SEEDING CHANGES ALTERED THE DB OR DATA
+Review:
+- Program.cs DB initialization
+- seeding logic
+- startup/restart behavior
+- SQLite file path or environment changes
+
+7) DO NOT APPLY A FIX YET
+First, only diagnose and report the real root cause.
+
+OUTPUT:
+A) Current DB file path
+B) Total listing count in current DB
+C) The 3 historical listings and their current state (or confirmation they no longer exist)
+D) Exact homepage query conditions
+E) Exact root cause of why they disappeared
+F) Recommended minimal fix
