@@ -84,6 +84,27 @@ export const api = {
   delete<T>(path: string): Promise<T> {
     return request<T>(path, { method: "DELETE" });
   },
+
+  postForm<T>(path: string, form: FormData): Promise<T> {
+    const token = tokenStorage.getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return fetch(`${apiConfig.baseUrl}${path}`, {
+      method: "POST",
+      headers,
+      body: form,
+    }).then(async res => {
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        const message = payload?.error ?? payload?.message ?? "حدث خطأ أثناء رفع الملف";
+        throw new ApiError(message, res.status, payload);
+      }
+      return res.json() as Promise<T>;
+    }).catch(err => {
+      if (err instanceof ApiError) throw err;
+      throw new NetworkError();
+    });
+  },
 };
 
 // ─── Error normalizer ─────────────────────────────────────────────────────────

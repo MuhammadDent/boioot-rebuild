@@ -42,6 +42,18 @@ public interface IAdminService
     Task<AdminUserResponse> UpdateUserRoleAsync(
         Guid adminUserId, Guid targetUserId, UserRole newRole, CancellationToken ct = default);
 
+    Task<AdminUserResponse> UpdateUserProfileImageAsync(
+        Guid userId, string profileImageUrl, CancellationToken ct = default);
+
+    Task<PagedResult<AdminBrokerResponse>> GetAdminBrokersAsync(
+        int page, int pageSize, bool? isActive, CancellationToken ct = default);
+
+    Task<AdminBrokerResponse> CreateAdminBrokerAsync(
+        CreateAdminBrokerRequest request, CancellationToken ct = default);
+
+    Task<AdminBrokerResponse> UpdateAdminBrokerAsync(
+        Guid userId, UpdateAdminBrokerRequest request, CancellationToken ct = default);
+
     Task<AdminCompanyResponse> CreateCompanyAsync(
         CreateAdminCompanyRequest request, CancellationToken ct = default);
 

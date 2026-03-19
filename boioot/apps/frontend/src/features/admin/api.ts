@@ -3,6 +3,7 @@ import type {
   PagedResult,
   AdminUserResponse,
   AdminAgentResponse,
+  AdminBrokerResponse,
   AdminCompanyResponse,
   PropertyResponse,
   ProjectResponse,
@@ -182,6 +183,51 @@ export const adminApi = {
     companyId?: string;
   }): Promise<AdminAgentResponse> {
     return api.put(`/admin/agents/${userId}`, payload);
+  },
+
+  // ── Admin Brokers ───────────────────────────────────────────────────────────
+
+  /** GET /api/admin/brokers */
+  getAdminBrokers(
+    page: number,
+    pageSize: number,
+    params: { isActive?: boolean } = {},
+  ): Promise<PagedResult<AdminBrokerResponse>> {
+    const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (params.isActive !== undefined) qs.set("isActive", String(params.isActive));
+    return api.get(`/admin/brokers?${qs}`);
+  },
+
+  /** POST /api/admin/brokers */
+  createAdminBroker(payload: {
+    fullName: string;
+    email: string;
+    password: string;
+    phone?: string;
+    profileImageUrl?: string;
+  }): Promise<AdminBrokerResponse> {
+    return api.post("/admin/brokers", payload);
+  },
+
+  /** PUT /api/admin/brokers/{userId} */
+  updateAdminBroker(userId: string, payload: {
+    fullName: string;
+    phone?: string;
+    profileImageUrl?: string;
+  }): Promise<AdminBrokerResponse> {
+    return api.put(`/admin/brokers/${userId}`, payload);
+  },
+
+  /** PATCH /api/admin/users/{userId}/profile-image */
+  updateUserProfileImage(userId: string, profileImageUrl: string): Promise<AdminUserResponse> {
+    return api.patch(`/admin/users/${userId}/profile-image`, { profileImageUrl });
+  },
+
+  /** POST /api/upload/image — returns { url: string } */
+  uploadImage(file: File): Promise<{ url: string }> {
+    const form = new FormData();
+    form.append("file", file);
+    return api.postForm("/upload/image", form);
   },
 
   /** POST /api/admin/companies */

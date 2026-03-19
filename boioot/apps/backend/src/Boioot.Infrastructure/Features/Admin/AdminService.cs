@@ -266,6 +266,211 @@ public class AdminService : IAdminService
         };
     }
 
+    public async Task<AdminUserResponse> UpdateUserProfileImageAsync(
+        Guid userId, string profileImageUrl, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new BoiootException("المستخدم غير موجود", 404);
+
+        user.ProfileImageUrl = profileImageUrl.Trim();
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(ct);
+
+        return new AdminUserResponse
+        {
+            Id        = user.Id,
+            FullName  = user.FullName,
+            Email     = user.Email,
+            Phone     = user.Phone,
+            Role      = user.Role.ToString(),
+            IsActive  = user.IsActive,
+            IsDeleted = user.IsDeleted,
+            CreatedAt = user.CreatedAt,
+            UpdatedAt = user.UpdatedAt,
+        };
+    }
+
+    public async Task<PagedResult<AdminBrokerResponse>> GetAdminBrokersAsync(
+        int page, int pageSize, bool? isActive, CancellationToken ct = default)
+    {
+        page     = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var query = _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.Role == UserRole.Broker)
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (isActive.HasValue)
+            query = query.Where(u => u.IsActive == isActive.Value);
+
+        var total = await query.CountAsync(ct);
+
+        var brokers = await query
+            .OrderByDescending(u => u.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var brokerIds = brokers.Select(b => b.Id).ToList();
+
+        var agentCounts = await _context.Set<Agent>()
+            .IgnoreQueryFilters()
+            .Where(a => a.BrokerId.HasValue && brokerIds.Contains(a.BrokerId.Value))
+            .GroupBy(a => a.BrokerId!.Value)
+            .Select(g => new { BrokerId = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var agentIds = await _context.Set<Agent>()
+            .IgnoreQueryFilters()
+            .Where(a => a.BrokerId.HasValue && brokerIds.Contains(a.BrokerId.Value))
+            .Select(a => a.UserId)
+            .ToListAsync(ct);
+
+        var propertyCounts = await _context.Properties
+            .IgnoreQueryFilters()
+            .Where(p => p.AgentId.HasValue && agentIds.Contains(p.AgentId.Value))
+            .GroupBy(p => p.AgentId!.Value)
+            .Select(g => new { AgentId = g.Key, Total = g.Count(), Deals = g.Count(p => p.Status == PropertyStatus.Sold || p.Status == PropertyStatus.Rented) })
+            .ToListAsync(ct);
+
+        var agentBrokerMap = await _context.Set<Agent>()
+            .IgnoreQueryFilters()
+            .Where(a => a.BrokerId.HasValue && brokerIds.Contains(a.BrokerId.Value))
+            .Select(a => new { a.UserId, BrokerId = a.BrokerId!.Value })
+            .ToListAsync(ct);
+
+        var ratings = await _context.Set<Review>()
+            .Where(r => r.TargetType == ReviewTargetType.Agent && agentIds.Contains(r.TargetId))
+            .GroupBy(r => r.TargetId)
+            .Select(g => new { UserId = g.Key, Avg = g.Average(r => (double)r.Rating), Count = g.Count() })
+            .ToListAsync(ct);
+
+        var items = brokers.Select(b =>
+        {
+            var myAgentIds = agentBrokerMap.Where(m => m.BrokerId == b.Id).Select(m => m.UserId).ToList();
+            var totalProps  = propertyCounts.Where(p => myAgentIds.Contains(p.AgentId)).Sum(p => p.Total);
+            var totalDeals  = propertyCounts.Where(p => myAgentIds.Contains(p.AgentId)).Sum(p => p.Deals);
+            var myRatings   = ratings.Where(r => myAgentIds.Contains(r.UserId)).ToList();
+            var avgRating   = myRatings.Count > 0 ? myRatings.Average(r => r.Avg) : (double?)null;
+            var reviewCount = myRatings.Sum(r => r.Count);
+
+            return new AdminBrokerResponse
+            {
+                Id              = b.Id,
+                UserCode        = b.UserCode,
+                FullName        = b.FullName,
+                Email           = b.Email,
+                Phone           = b.Phone,
+                ProfileImageUrl = b.ProfileImageUrl,
+                AgentCount      = agentCounts.FirstOrDefault(a => a.BrokerId == b.Id)?.Count ?? 0,
+                PropertyCount   = totalProps,
+                DealsCount      = totalDeals,
+                AverageRating   = avgRating,
+                ReviewCount     = reviewCount,
+                IsActive        = b.IsActive,
+                IsDeleted       = b.IsDeleted,
+                CreatedAt       = b.CreatedAt,
+                UpdatedAt       = b.UpdatedAt,
+            };
+        }).ToList();
+
+        return new PagedResult<AdminBrokerResponse>(items, page, pageSize, total);
+    }
+
+    public async Task<AdminBrokerResponse> CreateAdminBrokerAsync(
+        CreateAdminBrokerRequest request, CancellationToken ct = default)
+    {
+        var emailLower = request.Email.Trim().ToLowerInvariant();
+
+        if (await _context.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == emailLower, ct))
+            throw new BoiootException("البريد الإلكتروني مستخدم بالفعل", 409);
+
+        var count = await _context.Users
+            .IgnoreQueryFilters()
+            .CountAsync(u => u.Role == UserRole.Broker, ct) + 1;
+
+        var user = new User
+        {
+            UserCode        = $"BRK-{count:D4}",
+            FullName        = request.FullName.Trim(),
+            Email           = emailLower,
+            Phone           = request.Phone?.Trim(),
+            PasswordHash    = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role            = UserRole.Broker,
+            ProfileImageUrl = request.ProfileImageUrl?.Trim(),
+            IsActive        = true,
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Admin created broker: {BrokerId}", user.Id);
+
+        return new AdminBrokerResponse
+        {
+            Id              = user.Id,
+            UserCode        = user.UserCode,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            ProfileImageUrl = user.ProfileImageUrl,
+            AgentCount      = 0,
+            PropertyCount   = 0,
+            DealsCount      = 0,
+            IsActive        = user.IsActive,
+            IsDeleted       = user.IsDeleted,
+            CreatedAt       = user.CreatedAt,
+            UpdatedAt       = user.UpdatedAt,
+        };
+    }
+
+    public async Task<AdminBrokerResponse> UpdateAdminBrokerAsync(
+        Guid userId, UpdateAdminBrokerRequest request, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId && u.Role == UserRole.Broker, ct)
+            ?? throw new BoiootException("الوسيط غير موجود", 404);
+
+        user.FullName        = request.FullName.Trim();
+        user.Phone           = request.Phone?.Trim();
+        user.ProfileImageUrl = request.ProfileImageUrl?.Trim() ?? user.ProfileImageUrl;
+        user.UpdatedAt       = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Admin updated broker: {BrokerId}", userId);
+
+        var agentIds = await _context.Set<Agent>()
+            .IgnoreQueryFilters()
+            .Where(a => a.BrokerId == userId)
+            .Select(a => a.UserId)
+            .ToListAsync(ct);
+
+        return new AdminBrokerResponse
+        {
+            Id              = user.Id,
+            UserCode        = user.UserCode,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            ProfileImageUrl = user.ProfileImageUrl,
+            AgentCount      = agentIds.Count,
+            PropertyCount   = await _context.Properties.IgnoreQueryFilters()
+                .CountAsync(p => p.AgentId.HasValue && agentIds.Contains(p.AgentId.Value), ct),
+            DealsCount      = await _context.Properties.IgnoreQueryFilters()
+                .CountAsync(p => p.AgentId.HasValue && agentIds.Contains(p.AgentId.Value) && (p.Status == PropertyStatus.Sold || p.Status == PropertyStatus.Rented), ct),
+            IsActive        = user.IsActive,
+            IsDeleted       = user.IsDeleted,
+            CreatedAt       = user.CreatedAt,
+            UpdatedAt       = user.UpdatedAt,
+        };
+    }
+
     public async Task<PagedResult<AdminCompanyResponse>> GetCompaniesAsync(
         int page, int pageSize, string? city, bool? isVerified, CancellationToken ct = default)
     {

@@ -108,6 +108,52 @@ public class AdminController : BaseController
         return Ok(result);
     }
 
+    // ── Brokers (Admin) ───────────────────────────────────────────────────────
+
+    [HttpGet("brokers")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetAdminBrokers(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] bool? isActive = null,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetAdminBrokersAsync(page, pageSize, isActive, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("brokers")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> CreateAdminBroker(
+        [FromBody] CreateAdminBrokerRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateAdminBrokerAsync(request, ct);
+        return Created($"api/admin/brokers/{result.Id}", result);
+    }
+
+    [HttpPut("brokers/{userId:guid}")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateAdminBroker(
+        Guid userId,
+        [FromBody] UpdateAdminBrokerRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateAdminBrokerAsync(userId, request, ct);
+        return Ok(result);
+    }
+
+    [HttpPatch("users/{userId:guid}/profile-image")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateUserProfileImage(
+        Guid userId,
+        [FromBody] UpdateUserProfileImageRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateUserProfileImageAsync(userId, request.ProfileImageUrl, ct);
+        return Ok(result);
+    }
+
     // ── Companies ─────────────────────────────────────────────────────────────
 
     [HttpPost("companies")]

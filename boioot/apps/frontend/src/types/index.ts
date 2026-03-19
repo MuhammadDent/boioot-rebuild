@@ -372,6 +372,24 @@ export interface AdminUserResponse {
   updatedAt: string;
 }
 
+export interface AdminBrokerResponse {
+  id: string;
+  userCode: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  profileImageUrl?: string;
+  agentCount: number;
+  propertyCount: number;
+  dealsCount: number;
+  averageRating?: number;
+  reviewCount: number;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AdminAgentResponse {
   id: string;
   userCode: string;
