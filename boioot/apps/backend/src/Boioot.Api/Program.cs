@@ -125,6 +125,35 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 
+// ── Schema compatibility check (SEPARATE scope so connection is closed before delete) ─
+// The file descriptor must be closed before we delete the DB file; otherwise the new
+// EnsureCreatedAsync will reuse the stale fd and write into the deleted (invisible) file.
+var dbPath = "/home/runner/workspace/boioot/apps/backend/boioot.db";
+{
+    var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    bool schemaOk = false;
+    using (var checkScope = app.Services.CreateScope())
+    {
+        var checkDb = checkScope.ServiceProvider.GetRequiredService<BoiootDbContext>();
+        try
+        {
+            await checkDb.Database.ExecuteSqlRawAsync("SELECT OgDescription FROM BlogPosts LIMIT 0");
+            schemaOk = true;
+            startupLogger.LogInformation("Schema check: OgDescription VERIFIED — schema is current");
+        }
+        catch { /* column or table missing — reset needed */ }
+    } // checkScope disposed → SQLite connection properly closed
+
+    if (!schemaOk)
+    {
+        startupLogger.LogWarning("Schema check: OgDescription missing — resetting DB");
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        foreach (var f in new[] { dbPath, dbPath + "-wal", dbPath + "-shm" })
+            if (File.Exists(f)) { File.Delete(f); startupLogger.LogInformation("Deleted stale DB: {f}", f); }
+        startupLogger.LogInformation("SCHEMA RESET complete — new scope will create fresh DB");
+    }
+}
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BoiootDbContext>();
@@ -642,27 +671,29 @@ using (var scope = app.Services.CreateScope())
         }
 
         // Seed default Plans (ListingLimit: -1 = unlimited)
+        // ALL NOT NULL columns must be specified — INSERT OR IGNORE silently drops rows with missing NOT NULL values.
+        // Column names: PriceMonthly/PriceYearly match HasColumnName() in PlanConfiguration.
         var nowPlan = DateTime.UtcNow.ToString("O");
         await db.Database.ExecuteSqlRawAsync(@"
-            INSERT OR IGNORE INTO Plans (Id, Name, ListingLimit, ProjectLimit, AgentLimit, FeaturedSlots, PriceMonthly, PriceYearly, IsActive, CreatedAt, UpdatedAt)
+            INSERT OR IGNORE INTO Plans (Id, Name, ListingLimit, ProjectLimit, AgentLimit, FeaturedSlots, PriceMonthly, PriceYearly, IsActive, BillingMode, Rank, DisplayOrder, IsPublic, IsRecommended, CreatedAt, UpdatedAt)
             VALUES
-              ('00000001-0000-0000-0000-000000000000', 'Free',       2,  0,  0,  0,    0,    0, 1, {0}, {0}),
-              ('00000002-0000-0000-0000-000000000000', 'Silver',     5,  0,  3,  1, 1500, 1200, 1, {0}, {0}),
-              ('00000003-0000-0000-0000-000000000000', 'Gold',      20,  2, 10,  5, 3500, 2800, 1, {0}, {0}),
-              ('00000004-0000-0000-0000-000000000000', 'Platinum',  -1, -1, -1, 20, 7000, 5600, 1, {0}, {0})",
+              ('00000001-0000-0000-0000-000000000000', 'Free',       2,  0,  0,  0,    0,    0, 1, 'InternalOnly', 0, 0, 1, 0, {0}, {0}),
+              ('00000002-0000-0000-0000-000000000000', 'Silver',     5,  0,  3,  1, 1500, 1200, 1, 'InternalOnly', 1, 1, 1, 0, {0}, {0}),
+              ('00000003-0000-0000-0000-000000000000', 'Gold',      20,  2, 10,  5, 3500, 2800, 1, 'InternalOnly', 2, 2, 1, 0, {0}, {0}),
+              ('00000004-0000-0000-0000-000000000000', 'Platinum',  -1, -1, -1, 20, 7000, 5600, 1, 'InternalOnly', 3, 3, 1, 0, {0}, {0})",
             nowPlan);
 
         // ── Subscription catalog seed ──────────────────────────────────────────
         // All GUIDs are fixed so seeds are fully idempotent (INSERT OR IGNORE).
         // Plans 00000005-00000009 are the new normalized subscription plans.
         await db.Database.ExecuteSqlRawAsync(@"
-            INSERT OR IGNORE INTO Plans (Id, Name, ListingLimit, ProjectLimit, AgentLimit, FeaturedSlots, PriceMonthly, PriceYearly, IsActive, CreatedAt, UpdatedAt)
+            INSERT OR IGNORE INTO Plans (Id, Name, ListingLimit, ProjectLimit, AgentLimit, FeaturedSlots, PriceMonthly, PriceYearly, IsActive, BillingMode, Rank, DisplayOrder, IsPublic, IsRecommended, CreatedAt, UpdatedAt)
             VALUES
-              ('00000005-0000-0000-0000-000000000000', 'OwnerPro',       5,   0,   0,  0,  1000,  9000, 1, {0}, {0}),
-              ('00000006-0000-0000-0000-000000000000', 'AgentPro',      20,   0,   3,  2,  2500, 22000, 1, {0}, {0}),
-              ('00000007-0000-0000-0000-000000000000', 'AgentPremium',  50,   5,  10,  5,  5000, 44000, 1, {0}, {0}),
-              ('00000008-0000-0000-0000-000000000000', 'OfficeStarter', 100,  10,  20, 10, 10000, 88000, 1, {0}, {0}),
-              ('00000009-0000-0000-0000-000000000000', 'BusinessGrowth', -1,  -1,  -1, 20, 20000,176000, 1, {0}, {0})",
+              ('00000005-0000-0000-0000-000000000000', 'OwnerPro',        5,   0,   0,  0,  1000,  9000, 1, 'InternalOnly', 10, 0, 1, 0, {0}, {0}),
+              ('00000006-0000-0000-0000-000000000000', 'AgentPro',       20,   0,   3,  2,  2500, 22000, 1, 'InternalOnly', 11, 1, 1, 0, {0}, {0}),
+              ('00000007-0000-0000-0000-000000000000', 'AgentPremium',   50,   5,  10,  5,  5000, 44000, 1, 'InternalOnly', 12, 2, 1, 0, {0}, {0}),
+              ('00000008-0000-0000-0000-000000000000', 'OfficeStarter', 100,  10,  20, 10, 10000, 88000, 1, 'InternalOnly', 13, 3, 1, 0, {0}, {0}),
+              ('00000009-0000-0000-0000-000000000000', 'BusinessGrowth',  -1,  -1,  -1, 20, 20000,176000, 1, 'InternalOnly', 14, 4, 1, 0, {0}, {0})",
             nowPlan);
 
         // FeatureDefinitions — stable keys, never rename after creation
@@ -1030,7 +1061,10 @@ using (var scope = app.Services.CreateScope())
                 SeoDescription    TEXT,
                 SeoTitleMode      TEXT NOT NULL DEFAULT 'Auto',
                 SeoDescriptionMode TEXT NOT NULL DEFAULT 'Auto',
+                SeoMode           TEXT NOT NULL DEFAULT 'Auto',
                 SlugMode          TEXT NOT NULL DEFAULT 'Auto',
+                OgTitle           TEXT,
+                OgDescription     TEXT,
                 ReadTimeMinutes   INTEGER,
                 ViewCount         INTEGER NOT NULL DEFAULT 0,
                 IsDeleted         INTEGER NOT NULL DEFAULT 0,
@@ -1055,6 +1089,38 @@ using (var scope = app.Services.CreateScope())
             )");
 
         await seeder.SeedAsync();
+
+        // DIAGNOSTIC: verify OgDescription via raw ADO.NET (bypasses EF Core)
+        try
+        {
+            using var rawConn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=/home/runner/workspace/boioot/apps/backend/boioot.db;Pooling=False");
+            await rawConn.OpenAsync();
+
+            // Check PRAGMA table_info
+            using var pragma = rawConn.CreateCommand();
+            pragma.CommandText = "PRAGMA table_info(BlogPosts)";
+            var cols = new System.Text.StringBuilder();
+            using (var r = await pragma.ExecuteReaderAsync())
+                while (await r.ReadAsync()) cols.Append(r.GetString(1) + ",");
+            logger.LogInformation("DIAG PRAGMA columns: {cols}", cols.ToString());
+
+            // Direct SELECT
+            using var selectCmd = rawConn.CreateCommand();
+            selectCmd.CommandText = "SELECT OgDescription FROM BlogPosts LIMIT 0";
+            try
+            {
+                await selectCmd.ExecuteNonQueryAsync();
+                logger.LogInformation("DIAG RAW SELECT OgDescription: SUCCESS");
+            }
+            catch (Exception ex2)
+            {
+                logger.LogError("DIAG RAW SELECT OgDescription: FAILED — {msg}", ex2.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("DIAG raw connection failed: {msg}", ex.Message);
+        }
     }
     catch (Exception ex)
     {
