@@ -45,10 +45,13 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isAdminRoute = pathname.startsWith("/dashboard/admin");
+
   return (
     <>
       <Navbar />
-      <DashboardSecNav />
+      {!isAdminRoute && <DashboardSecNav />}
       {children}
     </>
   );

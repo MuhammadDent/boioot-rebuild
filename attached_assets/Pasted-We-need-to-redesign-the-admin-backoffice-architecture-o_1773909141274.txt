@@ -1,0 +1,196 @@
+We need to redesign the admin/backoffice architecture of Boioot in a professional, enterprise-style way.
+
+This is not only a dashboard redesign task.
+It must include STAFF MANAGEMENT, ROLES, and PERMISSIONS architecture.
+
+==================================================
+PHASE 1: BACKOFFICE STAFF / ROLES / PERMISSIONS FOUNDATION
+==================================================
+
+Context:
+Boioot is not managed by one admin only.
+The platform will have internal staff members such as:
+
+- Super Admin
+- Operations/Admin Manager
+- Customer Support staff
+- Technical Support staff
+- Blog/Content Editor
+- SEO Specialist
+- Marketing staff
+
+We need the backoffice to support this structure properly.
+
+==================================================
+GOAL
+==================================================
+
+Design and implement the first foundation of an internal staff management system and role-based admin architecture.
+
+This phase should prepare the system for a professional multi-staff operational workflow.
+
+==================================================
+1) DISTINGUISH BETWEEN PLATFORM USERS AND INTERNAL STAFF
+==================================================
+
+Important:
+Do NOT treat all people in the system as the same.
+
+We need a clear distinction between:
+- Platform Users (customers, offices, developers, etc.)
+- Internal Staff (employees managing Boioot)
+
+Implement architecture accordingly.
+
+==================================================
+2) ROLE-BASED ACCESS CONTROL FOUNDATION
+==================================================
+
+Create a clean RBAC foundation for internal staff.
+
+Roles should include at least:
+- SuperAdmin
+- AdminManager
+- CustomerSupport
+- TechnicalSupport
+- ContentEditor
+- SeoSpecialist
+- MarketingStaff
+
+Permissions should be granular and extensible, for example:
+- users.view
+- users.edit
+- users.disable
+- staff.view
+- staff.create
+- staff.edit
+- staff.disable
+- roles.view
+- roles.manage
+- properties.view
+- properties.edit
+- projects.view
+- requests.view
+- requests.assign
+- blog.view
+- blog.create
+- blog.edit
+- blog.publish
+- blog.seo.manage
+- marketing.view
+- seo.settings.manage
+- settings.manage
+
+Do not hardcode everything only by role name.
+Use permissions architecture that can scale.
+
+==================================================
+3) ADMIN SIDEBAR / NAVIGATION SHOULD BE ROLE-AWARE
+==================================================
+
+Redesign the admin/backoffice navigation so it feels like a real internal management system.
+
+Requirements:
+- Use a proper admin sidebar layout
+- Group modules clearly
+- Sidebar items should be shown based on permissions
+- Do not show irrelevant modules to staff who cannot access them
+
+Suggested groups:
+- Overview
+- Staff & Roles
+- Users
+- Companies
+- Properties
+- Projects
+- Requests
+- Blog & SEO
+- Marketing
+- System Settings
+- Audit Logs
+
+==================================================
+4) DASHBOARD HOME SHOULD REFLECT THE STAFF ROLE
+==================================================
+
+The dashboard home page should not be the same for everyone.
+
+Examples:
+- Customer Support should see requests, pending items, user issues
+- Content/SEO staff should see blog/SEO related widgets
+- Super Admin should see system-wide KPIs and alerts
+- Marketing staff should see campaign-related shortcuts if available
+
+At this phase, prepare the architecture for role-aware dashboard widgets,
+even if initial widgets are basic.
+
+==================================================
+5) STAFF MANAGEMENT MODULE
+==================================================
+
+Add a dedicated internal staff management section.
+
+It should support:
+- Staff list
+- Staff profile/basic info
+- Staff role assignment
+- Staff status (active / inactive)
+- Search and filters
+
+Do not mix this page with normal platform users.
+
+==================================================
+6) ROLE MANAGEMENT MODULE
+==================================================
+
+Add a role management page/section.
+
+It should support:
+- List of roles
+- Permissions assigned to each role
+- Clean permissions matrix or grouped permissions UI
+- Ability to prepare future custom roles
+
+Even if full CRUD is not completed in this phase, structure it properly.
+
+==================================================
+7) UX / DESIGN REQUIREMENTS
+==================================================
+
+Make the admin/backoffice look and feel like a professional SaaS internal operations panel.
+
+Requirements:
+- Sidebar-based admin layout
+- Clear hierarchy
+- Modern cards/tables
+- Search / filters where appropriate
+- RTL support
+- Clean spacing
+- Practical, not decorative
+
+==================================================
+8) SAFETY / ARCHITECTURE REQUIREMENTS
+==================================================
+
+- Keep clean separation between public app and admin/backoffice
+- Do not break existing modules
+- Build extensibly
+- Prefer permission-driven architecture over hardcoded UI checks
+- Make this maintainable for future growth
+
+==================================================
+9) DELIVERABLES
+==================================================
+
+Deliver in this phase:
+1. Updated admin/backoffice layout direction
+2. Role-aware sidebar/navigation
+3. Internal staff management foundation
+4. Roles/permissions foundation
+5. Initial dashboard home structure prepared for role-aware widgets
+6. Summary of architecture decisions
+7. Summary of files changed
+
+Important:
+This must feel like a real operational backoffice for a growing company, not a simple admin page.
+Prioritize enterprise structure, clarity, and scalability.
