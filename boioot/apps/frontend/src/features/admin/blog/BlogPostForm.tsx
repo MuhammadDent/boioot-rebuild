@@ -317,6 +317,64 @@ interface BlogPostFormProps {
   onDeleted?: () => void;
 }
 
+// ── SEO character-counter helpers ─────────────────────────────────────────────
+
+interface SeoStatus { color: string; hint: string; pct: number; }
+
+function getSeoTitleStatus(len: number): SeoStatus {
+  if (len === 0)    return { color: "#9ca3af", hint: "أدخل العنوان",    pct: 0 };
+  if (len < 40)     return { color: "#ef4444", hint: "قصير جداً",       pct: (len / 40) * 45 };
+  if (len < 50)     return { color: "#f59e0b", hint: "قصير نسبياً",     pct: 45 + ((len - 40) / 10) * 20 };
+  if (len <= 60)    return { color: "#22c55e", hint: "مثالي ✓",          pct: 65 + ((len - 50) / 10) * 25 };
+  if (len <= 70)    return { color: "#f59e0b", hint: "طويل نسبياً",     pct: 90 + ((len - 60) / 10) * 7 };
+  return             { color: "#ef4444", hint: "طويل جداً — اختصره",   pct: 100 };
+}
+
+function getSeoDescStatus(len: number): SeoStatus {
+  if (len === 0)    return { color: "#9ca3af", hint: "أدخل الوصف",      pct: 0 };
+  if (len < 120)    return { color: "#ef4444", hint: "قصير جداً",       pct: (len / 120) * 45 };
+  if (len < 140)    return { color: "#f59e0b", hint: "قصير نسبياً",     pct: 45 + ((len - 120) / 20) * 20 };
+  if (len <= 160)   return { color: "#22c55e", hint: "مثالي ✓",          pct: 65 + ((len - 140) / 20) * 25 };
+  if (len <= 180)   return { color: "#f59e0b", hint: "طويل نسبياً",     pct: 90 + ((len - 160) / 20) * 7 };
+  return             { color: "#ef4444", hint: "طويل جداً — اختصره",   pct: 100 };
+}
+
+function SeoCounter({
+  len, max, status,
+}: { len: number; max: number; status: SeoStatus }) {
+  return (
+    <div style={{ marginTop: "0.3rem" }}>
+      <div style={{
+        height: 3, background: "#e5e7eb", borderRadius: 99,
+        overflow: "hidden", marginBottom: "0.22rem",
+      }}>
+        <div style={{
+          height: "100%",
+          width: `${Math.min(status.pct, 100)}%`,
+          background: status.color,
+          borderRadius: 99,
+          transition: "width 0.25s ease, background-color 0.25s ease",
+        }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{
+          fontSize: "0.71rem", color: status.color, fontWeight: 500,
+          transition: "color 0.25s ease",
+        }}>
+          {status.hint}
+        </span>
+        <span style={{
+          fontSize: "0.71rem", color: status.color, fontWeight: 600,
+          transition: "color 0.25s ease", fontVariantNumeric: "tabular-nums",
+          letterSpacing: "0.01em",
+        }}>
+          {len} / {max}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function BlogPostForm({
@@ -862,6 +920,7 @@ export function BlogPostForm({
             {seoMode === "Custom" && (
               <div style={{ marginBottom: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {/* Meta Title */}
+                {(() => { const s = getSeoTitleStatus(seoTitle.length); return (
                 <div>
                   <label style={labelStyle}>
                     عنوان Meta
@@ -870,16 +929,16 @@ export function BlogPostForm({
                   <input
                     value={seoTitle}
                     onChange={e => setSeoTitle(e.target.value)}
-                    style={{ ...inputStyle, borderColor: seoTitle.length > 60 ? "var(--color-error)" : undefined }}
+                    style={{ ...inputStyle, borderColor: seoTitle.length > 0 ? s.color : undefined, transition: "border-color 0.25s ease" }}
                     placeholder={`مثال: ${title || "عنوان المقال"} | ${siteName}`}
                     disabled={busy}
                   />
-                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: seoTitle.length > 60 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
-                    {seoTitle.length} / 60 حرف {seoTitle.length > 60 ? "⚠ طويل جداً" : ""}
-                  </p>
+                  <SeoCounter len={seoTitle.length} max={60} status={s} />
                 </div>
+                ); })()}
 
                 {/* Meta Description */}
+                {(() => { const s = getSeoDescStatus(seoDescription.length); return (
                 <div>
                   <label style={labelStyle}>
                     وصف Meta
@@ -888,16 +947,16 @@ export function BlogPostForm({
                   <textarea
                     value={seoDescription}
                     onChange={e => setSeoDescription(e.target.value)}
-                    style={{ ...inputStyle, minHeight: 65, resize: "vertical", borderColor: seoDescription.length > 160 ? "var(--color-error)" : undefined }}
+                    style={{ ...inputStyle, minHeight: 65, resize: "vertical", borderColor: seoDescription.length > 0 ? s.color : undefined, transition: "border-color 0.25s ease" }}
                     placeholder={excerpt || "وصف مختصر يظهر في نتائج البحث..."}
                     disabled={busy}
                   />
-                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: seoDescription.length > 160 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
-                    {seoDescription.length} / 160 حرف {seoDescription.length > 160 ? "⚠ طويل جداً" : ""}
-                  </p>
+                  <SeoCounter len={seoDescription.length} max={160} status={s} />
                 </div>
+                ); })()}
 
                 {/* OG Title */}
+                {(() => { const s = getSeoTitleStatus(ogTitle.length); return (
                 <div>
                   <label style={labelStyle}>
                     عنوان OG
@@ -906,16 +965,16 @@ export function BlogPostForm({
                   <input
                     value={ogTitle}
                     onChange={e => setOgTitle(e.target.value)}
-                    style={{ ...inputStyle, borderColor: ogTitle.length > 60 ? "var(--color-error)" : undefined }}
-                    placeholder={`سيُستخدم عنوان Meta كقيمة افتراضية`}
+                    style={{ ...inputStyle, borderColor: ogTitle.length > 0 ? s.color : undefined, transition: "border-color 0.25s ease" }}
+                    placeholder="سيُستخدم عنوان Meta كقيمة افتراضية"
                     disabled={busy}
                   />
-                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: ogTitle.length > 60 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
-                    {ogTitle.length} / 60 حرف {ogTitle.length > 60 ? "⚠ طويل جداً" : ""}
-                  </p>
+                  <SeoCounter len={ogTitle.length} max={60} status={s} />
                 </div>
+                ); })()}
 
                 {/* OG Description */}
+                {(() => { const s = getSeoDescStatus(ogDescription.length); return (
                 <div>
                   <label style={labelStyle}>
                     وصف OG
@@ -924,14 +983,13 @@ export function BlogPostForm({
                   <textarea
                     value={ogDescription}
                     onChange={e => setOgDescription(e.target.value)}
-                    style={{ ...inputStyle, minHeight: 65, resize: "vertical", borderColor: ogDescription.length > 200 ? "var(--color-error)" : undefined }}
+                    style={{ ...inputStyle, minHeight: 65, resize: "vertical", borderColor: ogDescription.length > 0 ? s.color : undefined, transition: "border-color 0.25s ease" }}
                     placeholder="سيُستخدم وصف Meta كقيمة افتراضية"
                     disabled={busy}
                   />
-                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: ogDescription.length > 200 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
-                    {ogDescription.length} / 200 حرف {ogDescription.length > 200 ? "⚠ طويل جداً" : ""}
-                  </p>
+                  <SeoCounter len={ogDescription.length} max={160} status={s} />
                 </div>
+                ); })()}
               </div>
             )}
 
