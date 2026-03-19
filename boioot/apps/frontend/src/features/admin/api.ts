@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import type {
   PagedResult,
   AdminUserResponse,
+  AdminAgentResponse,
   AdminCompanyResponse,
   PropertyResponse,
   ProjectResponse,
@@ -145,6 +146,42 @@ export const adminApi = {
   /** PATCH /api/admin/users/{userId}/role */
   updateUserRole(userId: string, role: string): Promise<AdminUserResponse> {
     return api.patch(`/admin/users/${userId}/role`, { role });
+  },
+
+  // ── Admin Agents ────────────────────────────────────────────────────────────
+
+  /** GET /api/admin/agents */
+  getAdminAgents(
+    page: number,
+    pageSize: number,
+    params: { companyId?: string; isActive?: boolean } = {},
+  ): Promise<PagedResult<AdminAgentResponse>> {
+    const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (params.companyId)            qs.set("companyId", params.companyId);
+    if (params.isActive !== undefined) qs.set("isActive", String(params.isActive));
+    return api.get(`/admin/agents?${qs}`);
+  },
+
+  /** POST /api/admin/agents */
+  createAdminAgent(payload: {
+    fullName: string;
+    email: string;
+    password: string;
+    phone?: string;
+    bio?: string;
+    companyId?: string;
+  }): Promise<AdminAgentResponse> {
+    return api.post("/admin/agents", payload);
+  },
+
+  /** PUT /api/admin/agents/{userId} */
+  updateAdminAgent(userId: string, payload: {
+    fullName: string;
+    phone?: string;
+    bio?: string;
+    companyId?: string;
+  }): Promise<AdminAgentResponse> {
+    return api.put(`/admin/agents/${userId}`, payload);
   },
 
   /** POST /api/admin/companies */

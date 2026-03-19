@@ -63,6 +63,209 @@ public class AdminService : IAdminService
         return new PagedResult<AdminUserResponse>(items, page, pageSize, total);
     }
 
+    public async Task<PagedResult<AdminAgentResponse>> GetAdminAgentsAsync(
+        int page, int pageSize, Guid? companyId, bool? isActive, CancellationToken ct = default)
+    {
+        page     = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 50);
+
+        var query = _context.Set<Agent>()
+            .IgnoreQueryFilters()
+            .Include(a => a.User)
+            .Include(a => a.Company)
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (companyId.HasValue)
+            query = query.Where(a => a.CompanyId == companyId.Value);
+
+        if (isActive.HasValue)
+            query = query.Where(a => a.User.IsActive == isActive.Value);
+
+        var total = await query.CountAsync(ct);
+
+        var agentList = await query
+            .OrderByDescending(a => a.User.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var userIds = agentList.Select(a => a.UserId).ToList();
+
+        var propertyCounts = await _context.Properties
+            .IgnoreQueryFilters()
+            .Where(p => p.AgentId.HasValue && userIds.Contains(p.AgentId.Value))
+            .GroupBy(p => p.AgentId!.Value)
+            .Select(g => new { AgentId = g.Key, Total = g.Count(), Deals = g.Count(p => p.Status == PropertyStatus.Sold || p.Status == PropertyStatus.Rented) })
+            .ToListAsync(ct);
+
+        var ratings = await _context.Set<Review>()
+            .Where(r => r.TargetType == ReviewTargetType.Agent && userIds.Contains(r.TargetId))
+            .GroupBy(r => r.TargetId)
+            .Select(g => new { UserId = g.Key, Avg = g.Average(r => (double)r.Rating), Count = g.Count() })
+            .ToListAsync(ct);
+
+        var items = agentList.Select(a =>
+        {
+            var pc = propertyCounts.FirstOrDefault(p => p.AgentId == a.UserId);
+            var rv = ratings.FirstOrDefault(r => r.UserId == a.UserId);
+            return new AdminAgentResponse
+            {
+                Id            = a.UserId,
+                UserCode      = a.User.UserCode,
+                FullName      = a.User.FullName,
+                Email         = a.User.Email,
+                Phone         = a.User.Phone,
+                Bio           = a.Bio,
+                ProfileImageUrl = a.User.ProfileImageUrl,
+                CompanyId     = a.CompanyId,
+                CompanyName   = a.Company?.Name,
+                BrokerId      = a.BrokerId,
+                PropertyCount = pc?.Total ?? 0,
+                DealsCount    = pc?.Deals ?? 0,
+                AverageRating = rv?.Avg,
+                ReviewCount   = rv?.Count ?? 0,
+                IsActive      = a.User.IsActive,
+                IsDeleted     = a.User.IsDeleted,
+                CreatedAt     = a.User.CreatedAt,
+                UpdatedAt     = a.User.UpdatedAt,
+            };
+        }).ToList();
+
+        return new PagedResult<AdminAgentResponse>(items, page, pageSize, total);
+    }
+
+    public async Task<AdminAgentResponse> CreateAdminAgentAsync(
+        CreateAdminAgentRequest request, CancellationToken ct = default)
+    {
+        var emailLower = request.Email.Trim().ToLowerInvariant();
+
+        if (await _context.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == emailLower, ct))
+            throw new BoiootException("البريد الإلكتروني مستخدم بالفعل", 409);
+
+        if (request.CompanyId.HasValue)
+        {
+            var companyExists = await _context.Companies
+                .IgnoreQueryFilters()
+                .AnyAsync(c => c.Id == request.CompanyId.Value, ct);
+            if (!companyExists)
+                throw new BoiootException("الشركة غير موجودة", 404);
+        }
+
+        var count = await _context.Users
+            .IgnoreQueryFilters()
+            .CountAsync(u => u.Role == UserRole.Agent, ct) + 1;
+
+        var user = new User
+        {
+            UserCode     = $"AGT-{count:D4}",
+            FullName     = request.FullName.Trim(),
+            Email        = emailLower,
+            Phone        = request.Phone?.Trim(),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role         = UserRole.Agent,
+            IsActive     = true,
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync(ct);
+
+        var agent = new Agent
+        {
+            UserId    = user.Id,
+            CompanyId = request.CompanyId,
+            Bio       = request.Bio?.Trim(),
+        };
+
+        _context.Set<Agent>().Add(agent);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Admin created agent: {AgentId}", user.Id);
+
+        string? companyName = null;
+        if (request.CompanyId.HasValue)
+        {
+            companyName = await _context.Companies
+                .IgnoreQueryFilters()
+                .Where(c => c.Id == request.CompanyId.Value)
+                .Select(c => c.Name)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        return new AdminAgentResponse
+        {
+            Id            = user.Id,
+            UserCode      = user.UserCode,
+            FullName      = user.FullName,
+            Email         = user.Email,
+            Phone         = user.Phone,
+            Bio           = agent.Bio,
+            CompanyId     = agent.CompanyId,
+            CompanyName   = companyName,
+            PropertyCount = 0,
+            DealsCount    = 0,
+            IsActive      = user.IsActive,
+            IsDeleted     = user.IsDeleted,
+            CreatedAt     = user.CreatedAt,
+            UpdatedAt     = user.UpdatedAt,
+        };
+    }
+
+    public async Task<AdminAgentResponse> UpdateAdminAgentAsync(
+        Guid userId, UpdateAdminAgentRequest request, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId && u.Role == UserRole.Agent, ct)
+            ?? throw new BoiootException("الوكيل غير موجود", 404);
+
+        var agent = await _context.Set<Agent>()
+            .Include(a => a.Company)
+            .FirstOrDefaultAsync(a => a.UserId == userId, ct)
+            ?? throw new BoiootException("سجل الوكيل غير موجود", 404);
+
+        if (request.CompanyId.HasValue && request.CompanyId != agent.CompanyId)
+        {
+            var companyExists = await _context.Companies
+                .IgnoreQueryFilters()
+                .AnyAsync(c => c.Id == request.CompanyId.Value, ct);
+            if (!companyExists)
+                throw new BoiootException("الشركة غير موجودة", 404);
+        }
+
+        user.FullName   = request.FullName.Trim();
+        user.Phone      = request.Phone?.Trim();
+        user.UpdatedAt  = DateTime.UtcNow;
+        agent.Bio       = request.Bio?.Trim();
+        agent.CompanyId = request.CompanyId;
+        agent.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Admin updated agent: {AgentId}", userId);
+
+        return new AdminAgentResponse
+        {
+            Id            = user.Id,
+            UserCode      = user.UserCode,
+            FullName      = user.FullName,
+            Email         = user.Email,
+            Phone         = user.Phone,
+            Bio           = agent.Bio,
+            ProfileImageUrl = user.ProfileImageUrl,
+            CompanyId     = agent.CompanyId,
+            CompanyName   = agent.Company?.Name,
+            PropertyCount = await _context.Properties.IgnoreQueryFilters()
+                .CountAsync(p => p.AgentId == userId, ct),
+            DealsCount    = await _context.Properties.IgnoreQueryFilters()
+                .CountAsync(p => p.AgentId == userId && (p.Status == PropertyStatus.Sold || p.Status == PropertyStatus.Rented), ct),
+            IsActive      = user.IsActive,
+            IsDeleted     = user.IsDeleted,
+            CreatedAt     = user.CreatedAt,
+            UpdatedAt     = user.UpdatedAt,
+        };
+    }
+
     public async Task<PagedResult<AdminCompanyResponse>> GetCompaniesAsync(
         int page, int pageSize, string? city, bool? isVerified, CancellationToken ct = default)
     {

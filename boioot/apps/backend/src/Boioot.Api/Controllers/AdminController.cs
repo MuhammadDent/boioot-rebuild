@@ -72,6 +72,42 @@ public class AdminController : BaseController
         return Ok(result);
     }
 
+    // ── Agents (Admin) ────────────────────────────────────────────────────────
+
+    [HttpGet("agents")]
+    [RequirePermission(Permissions.AgentsView)]
+    public async Task<IActionResult> GetAdminAgents(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] Guid? companyId = null,
+        [FromQuery] bool? isActive = null,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetAdminAgentsAsync(page, pageSize, companyId, isActive, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("agents")]
+    [RequirePermission(Permissions.AgentsManage)]
+    public async Task<IActionResult> CreateAdminAgent(
+        [FromBody] CreateAdminAgentRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateAdminAgentAsync(request, ct);
+        return Created($"api/admin/agents/{result.Id}", result);
+    }
+
+    [HttpPut("agents/{userId:guid}")]
+    [RequirePermission(Permissions.AgentsManage)]
+    public async Task<IActionResult> UpdateAdminAgent(
+        Guid userId,
+        [FromBody] UpdateAdminAgentRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateAdminAgentAsync(userId, request, ct);
+        return Ok(result);
+    }
+
     // ── Companies ─────────────────────────────────────────────────────────────
 
     [HttpPost("companies")]

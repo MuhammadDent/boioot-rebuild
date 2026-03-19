@@ -12,6 +12,15 @@ public interface IAdminService
     Task<PagedResult<AdminUserResponse>> GetUsersAsync(
         int page, int pageSize, UserRole? role, bool? isActive, CancellationToken ct = default);
 
+    Task<PagedResult<AdminAgentResponse>> GetAdminAgentsAsync(
+        int page, int pageSize, Guid? companyId, bool? isActive, CancellationToken ct = default);
+
+    Task<AdminAgentResponse> CreateAdminAgentAsync(
+        CreateAdminAgentRequest request, CancellationToken ct = default);
+
+    Task<AdminAgentResponse> UpdateAdminAgentAsync(
+        Guid userId, UpdateAdminAgentRequest request, CancellationToken ct = default);
+
     Task<PagedResult<AdminCompanyResponse>> GetCompaniesAsync(
         int page, int pageSize, string? city, bool? isVerified, CancellationToken ct = default);
 
