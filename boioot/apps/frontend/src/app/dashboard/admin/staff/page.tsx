@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { adminApi } from "@/features/admin/api";
 import { normalizeError } from "@/lib/api";
+import { rbacApi, type RbacRole } from "@/features/admin/rbac/api";
 import {
   STAFF_ROLES,
   STAFF_ROLE_LABELS,
@@ -66,19 +67,29 @@ export default function AdminStaffPage() {
   const { isLoading } = useProtectedRoute({ requiredPermission: "staff.view" });
 
   const [allUsers, setAllUsers]         = useState<AdminUserResponse[]>([]);
+  const [rbacRoles, setRbacRoles]       = useState<RbacRole[]>([]);
   const [fetching, setFetching]         = useState(true);
   const [fetchError, setFetchError]     = useState("");
   const [search, setSearch]             = useState("");
   const [filterRole, setFilterRole]     = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
 
+  // ── Create staff panel state ────────────────────────────────────────────────
+  const [showCreate, setShowCreate]         = useState(false);
+  const [createFullName, setCreateFullName] = useState("");
+  const [createEmail, setCreateEmail]       = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createPhone, setCreatePhone]       = useState("");
+  const [createRbacRoleId, setCreateRbacRoleId] = useState("");
+  const [createLoading, setCreateLoading]   = useState(false);
+  const [createError, setCreateError]       = useState("");
+  const [createNotice, setCreateNotice]     = useState("");
+
   const loadStaff = useCallback(async () => {
     setFetching(true);
     setFetchError("");
     try {
-      // Fetch all pages to get all staff (staff count is typically small)
       const result = await adminApi.getUsers(1, 200, {});
-      // Filter: show only users whose role is a StaffRole
       const staff = result.items.filter((u) => isStaffRole(u.role));
       setAllUsers(staff);
     } catch (err) {
@@ -89,8 +100,11 @@ export default function AdminStaffPage() {
   }, []);
 
   useEffect(() => {
-    loadStaff();
-  }, [loadStaff]);
+    if (!isLoading) {
+      loadStaff();
+      rbacApi.getRoles().then(setRbacRoles).catch(() => {});
+    }
+  }, [isLoading, loadStaff]);
 
   if (isLoading) return null;
 
@@ -102,41 +116,282 @@ export default function AdminStaffPage() {
       || u.email.toLowerCase().includes(q);
     const matchRole = !filterRole || u.role === filterRole;
     const matchStatus =
-      filterStatus === ""
-        ? true
-        : filterStatus === "active"
-        ? u.isActive
-        : !u.isActive;
+      filterStatus === "" ? true
+      : filterStatus === "active" ? u.isActive
+      : !u.isActive;
     return matchSearch && matchRole && matchStatus;
   });
+
+  function handleToggleCreate() {
+    setShowCreate(v => !v);
+    setCreateFullName("");
+    setCreateEmail("");
+    setCreatePassword("");
+    setCreatePhone("");
+    setCreateRbacRoleId("");
+    setCreateError("");
+  }
+
+  async function handleCreateStaff(e: React.FormEvent) {
+    e.preventDefault();
+    if (createLoading) return;
+    setCreateLoading(true);
+    setCreateError("");
+    try {
+      const created = await adminApi.createUser({
+        fullName: createFullName.trim(),
+        email: createEmail.trim(),
+        password: createPassword,
+        phone: createPhone.trim() || undefined,
+        role: "Admin",
+      });
+
+      if (createRbacRoleId) {
+        await rbacApi.assignUserRole(created.id.toString(), createRbacRoleId);
+        const rbacRole = rbacRoles.find(r => r.id === createRbacRoleId);
+        if (rbacRole) {
+          created.role = rbacRole.name;
+        }
+      }
+
+      setAllUsers(prev => [created, ...prev]);
+      setShowCreate(false);
+      setCreateFullName("");
+      setCreateEmail("");
+      setCreatePassword("");
+      setCreatePhone("");
+      setCreateRbacRoleId("");
+      setCreateNotice(`تم إنشاء الموظف "${created.fullName}" بنجاح`);
+      setTimeout(() => setCreateNotice(""), 5000);
+    } catch (e) {
+      setCreateError(normalizeError(e));
+    } finally {
+      setCreateLoading(false);
+    }
+  }
 
   return (
     <div style={{ padding: "1.75rem 1.5rem 3rem", direction: "rtl" }}>
 
       {/* Header */}
-      <div style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 700, color: "#1e293b" }}>
-          إدارة الفريق الداخلي
-        </h1>
-        <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b" }}>
-          موظفو النظام الداخليون المصنّفون بأدوار الإدارة — منفصلون عن مستخدمي المنصة
-        </p>
+      <div style={{ marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
+        <div>
+          <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 700, color: "#1e293b" }}>
+            إدارة الفريق الداخلي
+          </h1>
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b" }}>
+            موظفو النظام الداخليون المصنّفون بأدوار الإدارة — منفصلون عن مستخدمي المنصة
+          </p>
+        </div>
+
+        <button
+          onClick={handleToggleCreate}
+          style={{
+            padding: "0.6rem 1.25rem",
+            backgroundColor: showCreate ? "#1d4ed8" : "#2563eb",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontFamily: "inherit",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {showCreate ? "✕ إلغاء" : "+ إضافة موظف جديد"}
+        </button>
       </div>
 
-      {/* Info banner */}
-      <div style={{
-        backgroundColor: "#f0f9ff",
-        border: "1px solid #bae6fd",
-        borderRadius: 10,
-        padding: "0.75rem 1rem",
-        marginBottom: "1.25rem",
-        fontSize: "0.82rem",
-        color: "#0369a1",
-        lineHeight: 1.6,
-      }}>
-        <strong>ملاحظة:</strong> في هذه المرحلة، الفريق الداخلي هم المستخدمون ذوو أدوار الإدارة.
-        دعم تعيين الأدوار المتقدمة (AdminManager، ContentEditor...) سيُتاح في المرحلة القادمة.
-      </div>
+      {/* ── Create Staff Panel ─────────────────────────────────────────────────── */}
+      {showCreate && (
+        <div style={{
+          backgroundColor: "#fff",
+          border: "1px solid #e2e8f0",
+          borderRadius: 12,
+          padding: "1.5rem",
+          marginBottom: "1.5rem",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: "0 0 1.25rem", color: "#1e293b" }}>
+            إضافة موظف جديد للفريق الداخلي
+          </h2>
+
+          {/* Info note */}
+          <div style={{
+            backgroundColor: "#f0f9ff",
+            border: "1px solid #bae6fd",
+            borderRadius: 8,
+            padding: "0.65rem 1rem",
+            marginBottom: "1.25rem",
+            fontSize: "0.8rem",
+            color: "#0369a1",
+          }}>
+            سيُنشأ الموظف بدور <strong>Admin</strong> في النظام. الصلاحيات التفصيلية تُحدَّد من خلال "دور RBAC" أدناه.
+          </div>
+
+          {createError && (
+            <div style={{
+              backgroundColor: "#fef2f2", border: "1px solid #fecaca",
+              borderRadius: 8, padding: "0.65rem 1rem",
+              marginBottom: "1rem", fontSize: "0.83rem", color: "#b91c1c",
+            }}>
+              {createError}
+            </div>
+          )}
+
+          <form onSubmit={handleCreateStaff}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
+              gap: "1rem",
+              marginBottom: "1.25rem",
+            }}>
+              {/* Full Name */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  الاسم الكامل *
+                </label>
+                <input
+                  type="text"
+                  placeholder="مثال: سارة أحمد"
+                  value={createFullName}
+                  onChange={e => setCreateFullName(e.target.value)}
+                  required
+                  disabled={createLoading}
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Email */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  البريد الإلكتروني *
+                </label>
+                <input
+                  type="email"
+                  placeholder="staff@boioot.sy"
+                  value={createEmail}
+                  onChange={e => setCreateEmail(e.target.value)}
+                  required
+                  disabled={createLoading}
+                  style={{ ...inputStyle, direction: "ltr", textAlign: "right" }}
+                />
+              </div>
+
+              {/* Password */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  كلمة المرور *
+                </label>
+                <input
+                  type="password"
+                  placeholder="8 أحرف على الأقل"
+                  value={createPassword}
+                  onChange={e => setCreatePassword(e.target.value)}
+                  required
+                  minLength={8}
+                  disabled={createLoading}
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Phone */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  رقم الهاتف
+                </label>
+                <input
+                  type="tel"
+                  placeholder="+963..."
+                  value={createPhone}
+                  onChange={e => setCreatePhone(e.target.value)}
+                  disabled={createLoading}
+                  style={{ ...inputStyle, direction: "ltr", textAlign: "right" }}
+                />
+              </div>
+
+              {/* RBAC Role */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", gridColumn: "span 2" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  دور RBAC (الصلاحيات)
+                </label>
+                <select
+                  value={createRbacRoleId}
+                  onChange={e => setCreateRbacRoleId(e.target.value)}
+                  disabled={createLoading}
+                  style={inputStyle}
+                >
+                  <option value="">— بدون دور محدد (بدون صلاحيات) —</option>
+                  {rbacRoles.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+                {createRbacRoleId && (() => {
+                  const role = rbacRoles.find(r => r.id === createRbacRoleId);
+                  if (!role) return null;
+                  return (
+                    <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b" }}>
+                      {role.permissionCount} صلاحية مُخصَّصة لهذا الدور
+                    </p>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <button
+                type="submit"
+                disabled={createLoading}
+                style={{
+                  padding: "0.6rem 1.5rem",
+                  backgroundColor: createLoading ? "#93c5fd" : "#2563eb",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  fontFamily: "inherit",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  cursor: createLoading ? "not-allowed" : "pointer",
+                }}
+              >
+                {createLoading ? "جارٍ الإنشاء..." : "إنشاء الموظف"}
+              </button>
+              <button
+                type="button"
+                disabled={createLoading}
+                onClick={handleToggleCreate}
+                style={{
+                  padding: "0.6rem 1.25rem",
+                  backgroundColor: "transparent",
+                  color: "#64748b",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 8,
+                  fontFamily: "inherit",
+                  fontSize: "0.875rem",
+                  cursor: "pointer",
+                }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Success notice */}
+      {createNotice && (
+        <div style={{
+          backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0",
+          borderRadius: 8, padding: "0.65rem 1rem",
+          marginBottom: "1rem", fontSize: "0.83rem", color: "#15803d", fontWeight: 600,
+        }}>
+          ✓ {createNotice}
+        </div>
+      )}
 
       {/* Filters */}
       <div style={{
@@ -225,7 +480,7 @@ export default function AdminStaffPage() {
         ) : filtered.length === 0 ? (
           <div style={{ padding: "3rem", textAlign: "center", color: "#94a3b8", fontSize: "0.9rem" }}>
             {allUsers.length === 0
-              ? "لا يوجد أعضاء فريق داخلي حتى الآن — الحساب الحالي (Admin) هو الأول."
+              ? "لا يوجد أعضاء فريق داخلي حتى الآن."
               : "لا توجد نتائج مطابقة للبحث"}
           </div>
         ) : (
@@ -321,6 +576,18 @@ export default function AdminStaffPage() {
     </div>
   );
 }
+
+const inputStyle: React.CSSProperties = {
+  padding: "0.5rem 0.75rem",
+  borderRadius: 8,
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  fontFamily: "inherit",
+  backgroundColor: "#fff",
+  width: "100%",
+  boxSizing: "border-box",
+  outline: "none",
+};
 
 const thStyle: React.CSSProperties = {
   padding: "0.75rem 1rem",
