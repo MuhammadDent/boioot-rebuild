@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import type {
   PagedResult,
   AdminUserResponse,
+  AdminUserProfileResponse,
   AdminAgentResponse,
   AdminBrokerResponse,
   AdminCompanyResponse,
@@ -87,6 +88,10 @@ export const adminApi = {
 
   getAdminUser(userId: string): Promise<AdminUserResponse> {
     return api.get(`/admin/users/${userId}`);
+  },
+
+  getAdminUserProfile(userId: string): Promise<AdminUserProfileResponse> {
+    return api.get(`/admin/users/${userId}/profile`);
   },
 
   updateAdminUser(userId: string, data: { fullName?: string; phone?: string }): Promise<AdminUserResponse> {

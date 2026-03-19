@@ -14,6 +14,8 @@ public interface IAdminService
 
     Task<AdminUserResponse> GetAdminUserAsync(Guid userId, CancellationToken ct = default);
 
+    Task<AdminUserProfileResponse> GetAdminUserProfileAsync(Guid userId, CancellationToken ct = default);
+
     Task<AdminUserResponse> UpdateAdminUserAsync(Guid userId, UpdateAdminUserRequest request, CancellationToken ct = default);
 
     Task<PagedResult<AdminAgentResponse>> GetAdminAgentsAsync(

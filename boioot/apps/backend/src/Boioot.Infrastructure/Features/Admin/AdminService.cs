@@ -87,6 +87,100 @@ public class AdminService : IAdminService
         };
     }
 
+    public async Task<AdminUserProfileResponse> GetAdminUserProfileAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new KeyNotFoundException($"User {userId} not found");
+
+        var userIdStr = userId.ToString();
+
+        // ── Property count (owner or agent) ───────────────────────────────────
+        var propertyCount = await _context.Properties
+            .IgnoreQueryFilters()
+            .CountAsync(p => !p.IsDeleted &&
+                (p.OwnerId == userIdStr ||
+                 (p.AgentId.HasValue && p.AgentId.Value == userId)), ct);
+
+        // ── Request count ─────────────────────────────────────────────────────
+        var requestCount = await _context.Requests
+            .CountAsync(r => r.UserId == userId, ct);
+
+        // ── Most common city from properties ──────────────────────────────────
+        var topCity = await _context.Properties
+            .IgnoreQueryFilters()
+            .Where(p => !p.IsDeleted &&
+                (p.OwnerId == userIdStr ||
+                 (p.AgentId.HasValue && p.AgentId.Value == userId)) &&
+                p.City != null && p.City != "")
+            .GroupBy(p => p.City)
+            .Select(g => new { City = g.Key, Count = g.Count() })
+            .OrderByDescending(g => g.Count)
+            .FirstOrDefaultAsync(ct);
+
+        // ── Subscription via AccountUsers ─────────────────────────────────────
+        var accountIds = await _context.AccountUsers
+            .Where(au => au.UserId == userId && au.IsActive)
+            .Select(au => au.AccountId)
+            .ToListAsync(ct);
+
+        Subscription? activeSub = null;
+        Plan? plan = null;
+
+        if (accountIds.Count > 0)
+        {
+            activeSub = await _context.Subscriptions
+                .Include(s => s.Plan)
+                .Where(s => accountIds.Contains(s.AccountId) && s.IsActive &&
+                            (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial))
+                .OrderByDescending(s => s.StartDate)
+                .FirstOrDefaultAsync(ct);
+
+            plan = activeSub?.Plan;
+        }
+
+        // ── Count listings used within the account (for remaining calc) ────────
+        var usedListings = propertyCount;
+        if (accountIds.Count > 0)
+        {
+            usedListings = await _context.Properties
+                .IgnoreQueryFilters()
+                .CountAsync(p => !p.IsDeleted && p.AccountId.HasValue &&
+                                 accountIds.Contains(p.AccountId.Value), ct);
+        }
+
+        var planLimit   = plan?.ListingLimit ?? 0;
+        var remaining   = planLimit == -1 ? -1 : Math.Max(0, planLimit - usedListings);
+
+        return new AdminUserProfileResponse
+        {
+            Id              = user.Id,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            ProfileImageUrl = user.ProfileImageUrl,
+            Role            = user.Role.ToString(),
+            IsActive        = user.IsActive,
+            IsDeleted       = user.IsDeleted,
+            CreatedAt       = user.CreatedAt,
+            UpdatedAt       = user.UpdatedAt,
+
+            PropertyCount           = propertyCount,
+            RequestCount            = requestCount,
+            City                    = topCity?.City,
+
+            HasActiveSubscription   = activeSub != null,
+            PlanName                = plan?.Name,
+            PlanListingLimit        = planLimit,
+            UsedListings            = usedListings,
+            RemainingListings       = remaining,
+            SubscriptionStatus      = activeSub?.Status.ToString(),
+            SubscriptionEndDate     = activeSub?.EndDate,
+        };
+    }
+
     public async Task<AdminUserResponse> UpdateAdminUserAsync(Guid userId, UpdateAdminUserRequest request, CancellationToken ct = default)
     {
         var user = await _context.Users

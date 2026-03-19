@@ -373,6 +373,29 @@ export interface AdminUserResponse {
   updatedAt: string;
 }
 
+export interface AdminUserProfileResponse {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  profileImageUrl?: string;
+  role: string;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  propertyCount: number;
+  requestCount: number;
+  city?: string;
+  hasActiveSubscription: boolean;
+  planName?: string;
+  planListingLimit: number;
+  usedListings: number;
+  remainingListings: number;
+  subscriptionStatus?: string;
+  subscriptionEndDate?: string;
+}
+
 export interface AdminBrokerResponse {
   id: string;
   userCode: string;
