@@ -9,7 +9,7 @@ import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { adminApi } from "@/features/admin/api";
 import { ROLE_LABELS, ROLE_BADGE } from "@/features/admin/constants";
 import { normalizeError } from "@/lib/api";
-import type { AdminUserProfileResponse, AdminUserResponse } from "@/types";
+import type { AdminUserResponse, AdminUserProfileResponse } from "@/types";
 
 const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
   Active:    "نشطة",
@@ -23,7 +23,7 @@ export default function UserProfilePage() {
   const params = useParams();
   const userId = params.id as string;
 
-  const [profile, setProfile]   = useState<AdminUserProfileResponse | null>(null);
+  const [profile, setProfile]   = useState<AdminUserResponse | null>(null);
   const [fetching, setFetching] = useState(true);
   const [error, setError]       = useState("");
 
@@ -36,6 +36,14 @@ export default function UserProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  // ── Stats (separate fetch) ────────────────────────────────────────────────
+  const [stats, setStats]           = useState<AdminUserProfileResponse | null>(null);
+  const [statsFetching, setStatsFetching] = useState(true);
 
   useEffect(() => {
     if (!isLoading && user && userId) load();
@@ -43,14 +51,20 @@ export default function UserProfilePage() {
 
   async function load() {
     setFetching(true);
+    setStatsFetching(true);
     setError("");
     try {
-      const data = await adminApi.getAdminUserProfile(userId);
+      const [data, statsData] = await Promise.all([
+        adminApi.getAdminUser(userId),
+        adminApi.getAdminUserProfile(userId).catch(() => null),
+      ]);
       setProfile(data);
+      setStats(statsData);
     } catch (e) {
       setError(normalizeError(e));
     } finally {
       setFetching(false);
+      setStatsFetching(false);
     }
   }
 
@@ -60,8 +74,8 @@ export default function UserProfilePage() {
     setActionError("");
     try {
       const updated = await adminApi.updateUserStatus(profile.id, !profile.isActive);
-      setProfile(prev => prev ? { ...prev, isActive: updated.isActive } : prev);
-      setActionNotice(updated.isActive ? "تم تفعيل الحساب بنجاح" : "تم تعطيل الحساب بنجاح");
+      setProfile(updated);
+      setActionNotice(updated.isActive ? "تم تفعيل المستخدم بنجاح" : "تم تعطيل المستخدم بنجاح");
       setTimeout(() => setActionNotice(""), 3000);
     } catch (e) {
       setActionError(normalizeError(e));
@@ -77,8 +91,8 @@ export default function UserProfilePage() {
     setUploadError("");
     try {
       const { url } = await adminApi.uploadImage(file);
-      await adminApi.updateUserProfileImage(profile.id, url);
-      setProfile(prev => prev ? { ...prev, profileImageUrl: url } : prev);
+      const updated = await adminApi.updateUserProfileImage(profile.id, url);
+      setProfile(prev => prev ? { ...prev, profileImageUrl: updated.profileImageUrl } : prev);
     } catch (err) {
       setUploadError(normalizeError(err));
     } finally {
@@ -87,20 +101,21 @@ export default function UserProfilePage() {
     }
   }
 
-  function handleUpdated(updated: AdminUserResponse) {
-    setProfile(prev => prev
-      ? { ...prev, fullName: updated.fullName, phone: updated.phone }
-      : prev
-    );
-    setEditOpen(false);
+  function openEdit() {
+    if (!profile) return;
+    setEditName(profile.fullName);
+    setEditPhone(profile.phone ?? "");
+    setEditError("");
+    setEditOpen(true);
   }
 
   if (isLoading || !user) return null;
+
   const isSelf = profile?.id === user.id;
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto" }}>
 
         <DashboardBackLink href="/dashboard/admin/users" label="← قائمة المستخدمين" />
 
@@ -109,9 +124,10 @@ export default function UserProfilePage() {
 
         {!fetching && profile && (
           <>
-            {/* ─── Profile Header Card ──────────────────────────────── */}
+            {/* ── Profile card ── */}
             <div className="form-card" style={{ padding: "1.75rem", marginBottom: "1.25rem" }}>
 
+              {/* Header: avatar + name + badges */}
               <div style={{ display: "flex", gap: "1.25rem", alignItems: "flex-start", marginBottom: "1.5rem", flexWrap: "wrap" }}>
 
                 {/* Avatar with upload */}
@@ -124,7 +140,8 @@ export default function UserProfilePage() {
                   }}>
                     {profile.profileImageUrl
                       ? <img src={profile.profileImageUrl} alt={profile.fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : "👤"}
+                      : "👤"
+                    }
                   </div>
                   <button
                     title="تغيير الصورة الشخصية"
@@ -149,7 +166,7 @@ export default function UserProfilePage() {
                     {profile.fullName}
                     {isSelf && <span className="badge badge-gray" style={{ marginRight: "0.5rem", fontSize: "0.72rem" }}>أنت</span>}
                   </h1>
-                  <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.35rem" }}>
+                  <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
                     <span className={ROLE_BADGE[profile.role] ?? "badge badge-gray"}>
                       {ROLE_LABELS[profile.role] ?? profile.role}
                     </span>
@@ -158,27 +175,22 @@ export default function UserProfilePage() {
                     </span>
                     {profile.isDeleted && <span className="badge badge-red">محذوف</span>}
                   </div>
-                  {profile.city && (
-                    <p style={{ margin: 0, fontSize: "0.83rem", color: "var(--color-text-secondary)" }}>
-                      📍 {profile.city}
-                    </p>
-                  )}
                   {uploadError && (
-                    <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "var(--color-error, #dc2626)" }}>{uploadError}</p>
+                    <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--color-error, #dc2626)" }}>{uploadError}</p>
                   )}
                 </div>
               </div>
 
-              {/* Contact info */}
+              {/* Fields grid */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
-                gap: "0.85rem",
-                padding: "1rem 1.15rem",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: "1rem",
+                marginBottom: "1.5rem",
+                padding: "1.25rem",
                 background: "#f8fafc",
                 borderRadius: 10,
                 border: "1px solid var(--color-border)",
-                marginBottom: "1.25rem",
               }}>
                 <InfoField label="البريد الإلكتروني" value={profile.email} />
                 <InfoField label="الهاتف" value={profile.phone} />
@@ -200,9 +212,12 @@ export default function UserProfilePage() {
 
               {/* Actions */}
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-                <button className="btn btn-primary" style={{ padding: "0.5rem 1.25rem" }}
-                  onClick={() => setEditOpen(v => !v)}>
-                  {editOpen ? "✕ إلغاء التعديل" : "تعديل البيانات"}
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: "0.5rem 1.25rem" }}
+                  onClick={openEdit}
+                >
+                  تعديل البيانات
                 </button>
                 {!isSelf && (
                   <button
@@ -224,104 +239,116 @@ export default function UserProfilePage() {
               </div>
             </div>
 
-            {/* ─── Edit form ─────────────────────────────────────────── */}
+            {/* ── Edit form ── */}
             {editOpen && (
               <EditUserForm
                 profile={profile}
                 onCancel={() => setEditOpen(false)}
-                onSaved={handleUpdated}
+                onSaved={(updated) => {
+                  setProfile(updated);
+                  setEditOpen(false);
+                }}
               />
             )}
 
-            {/* ─── Stats Cards Row ───────────────────────────────────── */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: "0.85rem", marginBottom: "1.25rem" }}>
-              <StatCard icon="🏠" label="إجمالي الإعلانات" value={profile.propertyCount} color="#2563eb" />
-              <StatCard icon="📋" label="الطلبات المرفوعة" value={profile.requestCount} color="#7c3aed" />
-              {profile.city && (
-                <StatCard icon="📍" label="المدينة" value={profile.city} color="#059669" isText />
-              )}
-            </div>
-
-            {/* ─── Subscription Card ─────────────────────────────────── */}
-            <div className="form-card" style={{ padding: "1.5rem" }}>
-              <h2 style={{ margin: "0 0 1.1rem", fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
-                الباقة والاشتراك
-              </h2>
-
-              {profile.hasActiveSubscription ? (
-                <>
-                  <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-                    gap: "1rem",
-                    marginBottom: "1rem",
-                  }}>
-                    <InfoField label="الباقة المشترَك بها" value={profile.planName} />
-                    <InfoField
-                      label="حالة الاشتراك"
-                      value={SUBSCRIPTION_STATUS_LABELS[profile.subscriptionStatus ?? ""] ?? profile.subscriptionStatus}
-                    />
-                    {profile.subscriptionEndDate && (
-                      <InfoField
-                        label="تاريخ الانتهاء"
-                        value={new Date(profile.subscriptionEndDate).toLocaleDateString("ar-SY")}
-                      />
-                    )}
-                  </div>
-
-                  {/* Listing usage bar */}
-                  <div style={{
-                    padding: "1rem 1.15rem",
-                    background: "#f8fafc",
-                    borderRadius: 10,
-                    border: "1px solid var(--color-border)",
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                      <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-primary)" }}>
-                        استخدام الإعلانات
-                      </span>
-                      <span style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
-                        {profile.planListingLimit === -1
-                          ? `${profile.usedListings} / غير محدود`
-                          : `${profile.usedListings} / ${profile.planListingLimit}`}
-                      </span>
-                    </div>
-                    {profile.planListingLimit !== -1 && profile.planListingLimit > 0 && (
-                      <div style={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{
-                          height: "100%",
-                          width: `${Math.min(100, (profile.usedListings / profile.planListingLimit) * 100)}%`,
-                          background: profile.usedListings >= profile.planListingLimit
-                            ? "var(--color-error, #dc2626)"
-                            : "var(--color-primary)",
-                          borderRadius: 4,
-                          transition: "width 0.3s ease",
-                        }} />
-                      </div>
-                    )}
-                    <p style={{ margin: "0.5rem 0 0", fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>
-                      {profile.planListingLimit === -1
-                        ? "✓ إعلانات غير محدودة"
-                        : profile.remainingListings === 0
-                          ? "⚠️ استُنفدت جميع إعلانات الباقة"
-                          : `تبقّى ${profile.remainingListings} إعلان من الباقة`}
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <div style={{
-                  padding: "1.5rem",
-                  textAlign: "center",
-                  background: "#f8fafc",
-                  borderRadius: 10,
-                  border: "1px dashed var(--color-border)",
-                }}>
-                  <p style={{ margin: 0, color: "var(--color-text-secondary)", fontSize: "0.88rem" }}>
-                    لا يوجد اشتراك نشط لهذا المستخدم
-                  </p>
+            {/* ── Stats section (NEW) ── */}
+            {!statsFetching && stats && (
+              <>
+                {/* Activity stats cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "0.85rem", marginBottom: "1.25rem" }}>
+                  <StatCard icon="🏠" label="إجمالي الإعلانات" value={stats.propertyCount} color="#2563eb" />
+                  <StatCard icon="📋" label="الطلبات المرفوعة" value={stats.requestCount} color="#7c3aed" />
+                  {stats.city && (
+                    <StatCard icon="📍" label="المدينة" value={stats.city} color="#059669" isText />
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Subscription card */}
+                <div className="form-card" style={{ padding: "1.5rem" }}>
+                  <h2 style={{ margin: "0 0 1.1rem", fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
+                    الباقة والاشتراك
+                  </h2>
+
+                  {stats.hasActiveSubscription ? (
+                    <>
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                        gap: "1rem",
+                        marginBottom: "1rem",
+                        padding: "1rem 1.15rem",
+                        background: "#f8fafc",
+                        borderRadius: 10,
+                        border: "1px solid var(--color-border)",
+                      }}>
+                        <InfoField label="الباقة المشترَك بها" value={stats.planName} />
+                        <InfoField
+                          label="حالة الاشتراك"
+                          value={SUBSCRIPTION_STATUS_LABELS[stats.subscriptionStatus ?? ""] ?? stats.subscriptionStatus}
+                        />
+                        {stats.subscriptionEndDate && (
+                          <InfoField
+                            label="تاريخ الانتهاء"
+                            value={new Date(stats.subscriptionEndDate).toLocaleDateString("ar-SY")}
+                          />
+                        )}
+                      </div>
+
+                      {/* Listing usage bar */}
+                      <div style={{
+                        padding: "1rem 1.15rem",
+                        background: "#f8fafc",
+                        borderRadius: 10,
+                        border: "1px solid var(--color-border)",
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                          <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-primary)" }}>
+                            استخدام الإعلانات
+                          </span>
+                          <span style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
+                            {stats.planListingLimit === -1
+                              ? `${stats.usedListings} / غير محدود`
+                              : `${stats.usedListings} / ${stats.planListingLimit}`}
+                          </span>
+                        </div>
+                        {stats.planListingLimit !== -1 && stats.planListingLimit > 0 && (
+                          <div style={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden" }}>
+                            <div style={{
+                              height: "100%",
+                              width: `${Math.min(100, (stats.usedListings / stats.planListingLimit) * 100)}%`,
+                              background: stats.usedListings >= stats.planListingLimit
+                                ? "var(--color-error, #dc2626)"
+                                : "var(--color-primary)",
+                              borderRadius: 4,
+                              transition: "width 0.3s ease",
+                            }} />
+                          </div>
+                        )}
+                        <p style={{ margin: "0.5rem 0 0", fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>
+                          {stats.planListingLimit === -1
+                            ? "✓ إعلانات غير محدودة"
+                            : stats.remainingListings === 0
+                              ? "⚠️ استُنفدت جميع إعلانات الباقة"
+                              : `تبقّى ${stats.remainingListings} إعلان من الباقة`}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{
+                      padding: "1.5rem",
+                      textAlign: "center",
+                      background: "#f8fafc",
+                      borderRadius: 10,
+                      border: "1px dashed var(--color-border)",
+                    }}>
+                      <p style={{ margin: 0, color: "var(--color-text-secondary)", fontSize: "0.88rem" }}>
+                        لا يوجد اشتراك نشط لهذا المستخدم
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -353,7 +380,7 @@ function StatCard({
   );
 }
 
-// ─── Info Field ───────────────────────────────────────────────────────────────
+// ─── Info field ───────────────────────────────────────────────────────────────
 
 function InfoField({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
@@ -367,14 +394,14 @@ function InfoField({ label, value }: { label: string; value?: string }) {
   );
 }
 
-// ─── Edit Form ────────────────────────────────────────────────────────────────
+// ─── Edit form ────────────────────────────────────────────────────────────────
 
 function EditUserForm({
   profile,
   onCancel,
   onSaved,
 }: {
-  profile: AdminUserProfileResponse;
+  profile: AdminUserResponse;
   onCancel: () => void;
   onSaved: (updated: AdminUserResponse) => void;
 }) {
@@ -403,7 +430,7 @@ function EditUserForm({
 
   return (
     <div className="form-card" style={{ padding: "1.5rem", marginBottom: "1.25rem" }}>
-      <h2 style={{ margin: "0 0 1.1rem", fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
+      <h2 style={{ margin: "0 0 1.25rem", fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
         تعديل بيانات المستخدم
       </h2>
       {error && (
