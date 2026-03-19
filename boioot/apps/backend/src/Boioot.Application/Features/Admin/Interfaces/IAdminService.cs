@@ -48,6 +48,9 @@ public interface IAdminService
     Task<PagedResult<AdminBrokerResponse>> GetAdminBrokersAsync(
         int page, int pageSize, bool? isActive, CancellationToken ct = default);
 
+    Task<AdminBrokerResponse> GetAdminBrokerAsync(
+        Guid userId, CancellationToken ct = default);
+
     Task<AdminBrokerResponse> CreateAdminBrokerAsync(
         CreateAdminBrokerRequest request, CancellationToken ct = default);
 

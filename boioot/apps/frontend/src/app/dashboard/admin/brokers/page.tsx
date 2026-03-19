@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
@@ -15,6 +16,7 @@ import type { AdminBrokerResponse } from "@/types";
 
 export default function AdminBrokersPage() {
   const { user, isLoading } = useProtectedRoute({ requiredPermission: "users.view" });
+  const router = useRouter();
 
   const [brokers, setBrokers]       = useState<AdminBrokerResponse[]>([]);
   const [page, setPage]             = useState(1);
@@ -29,9 +31,8 @@ export default function AdminBrokersPage() {
   const [pendingIsActive, setPendingIsActive] = useState("");
   const appliedRef = useRef<{ isActive?: boolean }>({});
 
-  const [createOpen, setCreateOpen]   = useState(false);
-  const [viewBroker, setViewBroker]   = useState<AdminBrokerResponse | null>(null);
-  const [editBroker, setEditBroker]   = useState<AdminBrokerResponse | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editBroker, setEditBroker] = useState<AdminBrokerResponse | null>(null);
 
   const load = useCallback(async (
     p: number,
@@ -80,7 +81,6 @@ export default function AdminBrokersPage() {
     try {
       const updated = await adminApi.updateUserStatus(brokerId, !current);
       setBrokers(prev => prev.map(b => b.id === brokerId ? { ...b, isActive: updated.isActive } : b));
-      if (viewBroker?.id === brokerId) setViewBroker(v => v ? { ...v, isActive: updated.isActive } : v);
     } catch (e) {
       setActionError(normalizeError(e));
     } finally {
@@ -92,17 +92,12 @@ export default function AdminBrokersPage() {
     setBrokers(prev => [broker, ...prev]);
     setTotalCount(c => c + 1);
     setCreateOpen(false);
+    router.push(`/dashboard/admin/brokers/${broker.id}`);
   }
 
   function handleUpdated(broker: AdminBrokerResponse) {
     setBrokers(prev => prev.map(b => b.id === broker.id ? broker : b));
     setEditBroker(null);
-    if (viewBroker?.id === broker.id) setViewBroker(broker);
-  }
-
-  function handleImageUpdated(brokerId: string, url: string) {
-    setBrokers(prev => prev.map(b => b.id === brokerId ? { ...b, profileImageUrl: url } : b));
-    if (viewBroker?.id === brokerId) setViewBroker(v => v ? { ...v, profileImageUrl: url } : v);
   }
 
   return (
@@ -150,18 +145,6 @@ export default function AdminBrokersPage() {
           />
         )}
 
-        {/* ── Details panel ── */}
-        {viewBroker && (
-          <BrokerDetailsPanel
-            broker={viewBroker}
-            actionLoading={actionLoading}
-            onToggle={handleToggleStatus}
-            onEdit={() => { setEditBroker(viewBroker); setViewBroker(null); }}
-            onClose={() => setViewBroker(null)}
-            onImageUpdated={handleImageUpdated}
-          />
-        )}
-
         {/* ── Filters ── */}
         <div className="form-card" style={{
           marginBottom: "1.25rem",
@@ -203,10 +186,10 @@ export default function AdminBrokersPage() {
               <BrokerRow
                 key={b.id}
                 broker={b}
-                activeId={viewBroker?.id ?? editBroker?.id ?? null}
+                activeId={editBroker?.id ?? null}
                 actionLoading={actionLoading}
-                onView={() => { setViewBroker(b); setEditBroker(null); }}
-                onEdit={() => { setEditBroker(b); setViewBroker(null); }}
+                onView={() => router.push(`/dashboard/admin/brokers/${b.id}`)}
+                onEdit={() => { setEditBroker(b); }}
                 onToggle={handleToggleStatus}
               />
             ))}
@@ -251,7 +234,12 @@ function BrokerRow({
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
 
-        <div style={{ flex: 1, minWidth: 0, display: "flex", gap: "0.85rem", alignItems: "flex-start" }}>
+        <div
+          style={{ flex: 1, minWidth: 0, display: "flex", gap: "0.85rem", alignItems: "flex-start", cursor: "pointer" }}
+          onClick={onView}
+          role="button"
+          title={`عرض بروفايل ${b.fullName}`}
+        >
           {/* avatar */}
           <div style={{
             width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
@@ -267,7 +255,7 @@ function BrokerRow({
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem", flexWrap: "wrap" }}>
-              <span style={{ fontWeight: 700, fontSize: "1rem", color: "var(--color-text-primary)" }}>{b.fullName}</span>
+              <span style={{ fontWeight: 700, fontSize: "1rem", color: "var(--color-primary)", textDecoration: "underline", textDecorationStyle: "dotted" }}>{b.fullName}</span>
               <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{b.userCode}</span>
               <span className={b.isActive ? "badge badge-green" : "badge badge-red"}>
                 {b.isActive ? "نشط" : "غير نشط"}
@@ -304,138 +292,6 @@ function BrokerRow({
             {isLoading ? "..." : b.isActive ? "تعطيل" : "تفعيل"}
           </button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Broker Details Panel ─────────────────────────────────────────────────────
-
-function BrokerDetailsPanel({
-  broker: b,
-  actionLoading,
-  onToggle,
-  onEdit,
-  onClose,
-  onImageUpdated,
-}: {
-  broker: AdminBrokerResponse;
-  actionLoading: string | null;
-  onToggle: (id: string, current: boolean) => void;
-  onEdit: () => void;
-  onClose: () => void;
-  onImageUpdated: (id: string, url: string) => void;
-}) {
-  const isLoading     = actionLoading === b.id;
-  const [uploading, setUploading]   = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setUploadError("");
-    try {
-      const { url } = await adminApi.uploadImage(file);
-      await adminApi.updateUserProfileImage(b.id, url);
-      onImageUpdated(b.id, url);
-    } catch (err) {
-      setUploadError(normalizeError(err));
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
-  return (
-    <div className="form-card" style={{ marginBottom: "1.25rem", border: "2px solid var(--color-primary)", padding: "1.5rem" }}>
-
-      {/* header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
-        <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
-          {/* avatar with upload */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: "50%",
-              background: "var(--color-border)", overflow: "hidden",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "2rem",
-            }}>
-              {b.profileImageUrl
-                ? <img src={b.profileImageUrl} alt={b.fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : "👤"
-              }
-            </div>
-            <button
-              title="تغيير الصورة الشخصية"
-              disabled={uploading}
-              onClick={() => fileRef.current?.click()}
-              style={{
-                position: "absolute", bottom: -2, left: -2,
-                width: 24, height: 24, borderRadius: "50%",
-                background: "var(--color-primary)", border: "2px solid white",
-                color: "white", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "0.75rem", lineHeight: 1,
-              }}
-            >
-              {uploading ? "..." : "📷"}
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
-          </div>
-
-          <div>
-            <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
-              {b.fullName}
-            </h2>
-            <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.25rem", flexWrap: "wrap", alignItems: "center" }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{b.userCode}</span>
-              <span className={b.isActive ? "badge badge-green" : "badge badge-red"}>
-                {b.isActive ? "نشط" : "غير نشط"}
-              </span>
-              {b.isDeleted && <span className="badge badge-red">محذوف</span>}
-            </div>
-            {uploadError && (
-              <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "var(--color-error, #dc2626)" }}>{uploadError}</p>
-            )}
-          </div>
-        </div>
-
-        <button onClick={onClose}
-          style={{ background: "none", border: "none", fontSize: "1.3rem", cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1 }}>
-          ✕
-        </button>
-      </div>
-
-      {/* fields */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: "1rem", marginBottom: "1.25rem" }}>
-        <DetailField label="البريد الإلكتروني" value={b.email} />
-        <DetailField label="الهاتف" value={b.phone} />
-        <DetailField label="عدد الوكلاء التابعين" value={String(b.agentCount)} />
-        <DetailField label="إجمالي العقارات" value={String(b.propertyCount)} />
-        <DetailField label="الصفقات المنجزة" value={String(b.dealsCount)} />
-        {b.averageRating !== undefined && b.averageRating !== null && (
-          <DetailField label="متوسط التقييم" value={`${b.averageRating.toFixed(1)} / 5 (${b.reviewCount} تقييم)`} />
-        )}
-        <DetailField label="تاريخ الانضمام" value={new Date(b.createdAt).toLocaleDateString("ar-SY")} />
-      </div>
-
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-        <button className="btn btn-primary" style={{ padding: "0.45rem 1.1rem", fontSize: "0.88rem" }} onClick={onEdit}>
-          تعديل البيانات
-        </button>
-        <button
-          className={b.isActive ? "btn" : "btn btn-primary"}
-          style={{
-            padding: "0.45rem 1.1rem", fontSize: "0.88rem",
-            ...(!b.isActive ? {} : { border: "1.5px solid var(--color-border)", backgroundColor: "transparent", color: "var(--color-text-primary)" }),
-          }}
-          disabled={isLoading || !!actionLoading || b.isDeleted}
-          onClick={() => onToggle(b.id, b.isActive)}
-        >
-          {isLoading ? "..." : b.isActive ? "تعطيل الوسيط" : "تفعيل الوسيط"}
-        </button>
       </div>
     </div>
   );
@@ -554,16 +410,6 @@ function BrokerForm({
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function DetailField({ label, value }: { label: string; value?: string }) {
-  if (!value) return null;
-  return (
-    <div>
-      <p style={{ margin: "0 0 0.2rem", fontSize: "0.77rem", fontWeight: 600, color: "var(--color-text-secondary)", textTransform: "uppercase" }}>{label}</p>
-      <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--color-text-primary)" }}>{value}</p>
-    </div>
-  );
-}
 
 function FField({ label, children }: { label: string; children: React.ReactNode }) {
   return (

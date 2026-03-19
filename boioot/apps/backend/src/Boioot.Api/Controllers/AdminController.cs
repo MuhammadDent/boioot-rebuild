@@ -122,6 +122,16 @@ public class AdminController : BaseController
         return Ok(result);
     }
 
+    [HttpGet("brokers/{userId:guid}")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetAdminBroker(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetAdminBrokerAsync(userId, ct);
+        return Ok(result);
+    }
+
     [HttpPost("brokers")]
     [RequirePermission(Permissions.UsersEdit)]
     public async Task<IActionResult> CreateAdminBroker(

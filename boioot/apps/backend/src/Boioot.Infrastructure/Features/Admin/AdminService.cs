@@ -381,6 +381,58 @@ public class AdminService : IAdminService
         return new PagedResult<AdminBrokerResponse>(items, page, pageSize, total);
     }
 
+    public async Task<AdminBrokerResponse> GetAdminBrokerAsync(
+        Guid userId, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId && u.Role == UserRole.Broker, ct)
+            ?? throw new BoiootException("الوسيط غير موجود", 404);
+
+        var agentIds = await _context.Set<Agent>()
+            .IgnoreQueryFilters()
+            .Where(a => a.BrokerId == userId)
+            .Select(a => a.UserId)
+            .ToListAsync(ct);
+
+        var propStats = await _context.Properties
+            .IgnoreQueryFilters()
+            .Where(p => p.AgentId.HasValue && agentIds.Contains(p.AgentId.Value))
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total = g.Count(),
+                Deals = g.Count(p => p.Status == PropertyStatus.Sold || p.Status == PropertyStatus.Rented),
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var ratingStats = await _context.Set<Review>()
+            .Where(r => r.TargetType == ReviewTargetType.Agent && agentIds.Contains(r.TargetId))
+            .GroupBy(_ => 1)
+            .Select(g => new { Avg = g.Average(r => (double)r.Rating), Count = g.Count() })
+            .FirstOrDefaultAsync(ct);
+
+        return new AdminBrokerResponse
+        {
+            Id              = user.Id,
+            UserCode        = user.UserCode,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            ProfileImageUrl = user.ProfileImageUrl,
+            AgentCount      = agentIds.Count,
+            PropertyCount   = propStats?.Total    ?? 0,
+            DealsCount      = propStats?.Deals    ?? 0,
+            AverageRating   = ratingStats?.Avg,
+            ReviewCount     = ratingStats?.Count  ?? 0,
+            IsActive        = user.IsActive,
+            IsDeleted       = user.IsDeleted,
+            CreatedAt       = user.CreatedAt,
+            UpdatedAt       = user.UpdatedAt,
+        };
+    }
+
     public async Task<AdminBrokerResponse> CreateAdminBrokerAsync(
         CreateAdminBrokerRequest request, CancellationToken ct = default)
     {

@@ -187,6 +187,11 @@ export const adminApi = {
 
   // ── Admin Brokers ───────────────────────────────────────────────────────────
 
+  /** GET /api/admin/brokers/{userId} */
+  getAdminBroker(userId: string): Promise<AdminBrokerResponse> {
+    return api.get(`/admin/brokers/${userId}`);
+  },
+
   /** GET /api/admin/brokers */
   getAdminBrokers(
     page: number,
