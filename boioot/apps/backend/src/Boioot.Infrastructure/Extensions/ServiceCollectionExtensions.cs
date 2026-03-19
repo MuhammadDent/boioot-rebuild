@@ -19,6 +19,7 @@ using Boioot.Infrastructure.Common;
 using Boioot.Infrastructure.Features.Admin;
 using Boioot.Infrastructure.Features.AgentManagement;
 using Boioot.Infrastructure.Features.Auth;
+using Boioot.Infrastructure.Features.Rbac;
 using Boioot.Infrastructure.Features.Billing;
 using Boioot.Infrastructure.Features.Blog;
 using Boioot.Infrastructure.Features.BuyerRequests;
@@ -79,6 +80,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationService, LoggingNotificationService>();
 
         services.AddScoped<DataSeeder>();
+        services.AddScoped<RbacRepository>();
 
         return services;
     }

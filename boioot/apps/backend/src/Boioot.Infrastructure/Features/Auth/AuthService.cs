@@ -4,8 +4,10 @@ using System.Text;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Auth.DTOs;
 using Boioot.Application.Features.Auth.Interfaces;
+using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
+using Boioot.Infrastructure.Features.Rbac;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -19,15 +21,18 @@ public class AuthService : IAuthService
     private readonly BoiootDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthService> _logger;
+    private readonly RbacRepository _rbac;
 
     public AuthService(
         BoiootDbContext context,
         IConfiguration configuration,
-        ILogger<AuthService> logger)
+        ILogger<AuthService> logger,
+        RbacRepository rbac)
     {
         _context = context;
         _configuration = configuration;
         _logger = logger;
+        _rbac = rbac;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
@@ -63,7 +68,7 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("New user registered: {Email} | Role: {Role}", emailLower, user.Role);
 
-        return BuildAuthResponse(user);
+        return await BuildAuthResponseAsync(user, ct);
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
@@ -87,7 +92,7 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("User logged in: {Email} | Role: {Role}", emailLower, user.Role);
 
-        return BuildAuthResponse(user);
+        return await BuildAuthResponseAsync(user, ct);
     }
 
     public async Task<UserProfileResponse> GetProfileAsync(Guid userId, CancellationToken ct = default)
@@ -99,7 +104,8 @@ public class AuthService : IAuthService
         if (!user.IsActive)
             throw new BoiootException("الحساب غير مفعّل", 403);
 
-        return MapToProfileResponse(user);
+        var permissions = await ResolvePermissionsAsync(user, ct);
+        return MapToProfileResponse(user, permissions);
     }
 
     public async Task<UserProfileResponse> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default)
@@ -145,23 +151,90 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Profile updated for user: {UserId}", userId);
 
-        return MapToProfileResponse(user);
+        var permissions = await ResolvePermissionsAsync(user, ct);
+        return MapToProfileResponse(user, permissions);
     }
 
-    private AuthResponse BuildAuthResponse(User user)
+    // ── Permission resolution — Dual Mode (Phase 2) ───────────────────────────
+    //
+    // Pass 1: query the dynamic RBAC tables (UserRoles → RolePermissions → Permissions).
+    // Pass 2: if no DB permissions found, fall back to StaffRolePermissions (legacy).
+    //
+    // Temporarily logs both sets so we can compare them during the transition.
+
+    private async Task<IReadOnlyList<string>> ResolvePermissionsAsync(User user, CancellationToken ct)
+    {
+        var roleStr = user.Role.ToString();
+
+        // Pass 1 — DB-driven permissions
+        var dbPermissions = await _rbac.GetUserPermissionsAsync(user.Id, ct);
+
+        // Pass 2 — legacy static mapping (always computed for comparison logging)
+        var legacyPermissions = StaffRolePermissions.GetPermissions(roleStr);
+
+        // ── Comparison log (Phase 2 diagnostic) ──────────────────────────────
+        if (dbPermissions.Count == 0 && legacyPermissions.Count == 0)
+        {
+            _logger.LogDebug(
+                "[RBAC] {Email} ({Role}) — DB: none, Legacy: none → no permissions",
+                user.Email, roleStr);
+        }
+        else if (dbPermissions.Count == 0)
+        {
+            _logger.LogInformation(
+                "[RBAC] {Email} ({Role}) — DB: none (no UserRole rows) → FALLBACK to legacy ({LegacyCount} perms): [{Legacy}]",
+                user.Email, roleStr, legacyPermissions.Count,
+                string.Join(", ", legacyPermissions));
+        }
+        else
+        {
+            var onlyInDb     = dbPermissions.Except(legacyPermissions).ToList();
+            var onlyInLegacy = legacyPermissions.Except(dbPermissions).ToList();
+
+            if (onlyInDb.Count == 0 && onlyInLegacy.Count == 0)
+            {
+                _logger.LogInformation(
+                    "[RBAC] {Email} ({Role}) — DB ({DbCount}) == Legacy ({LegacyCount}) ✓ identical",
+                    user.Email, roleStr, dbPermissions.Count, legacyPermissions.Count);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "[RBAC] {Email} ({Role}) — DB vs Legacy DIFF: only-in-DB=[{OnlyDb}] only-in-Legacy=[{OnlyLegacy}]",
+                    user.Email, roleStr,
+                    string.Join(", ", onlyInDb),
+                    string.Join(", ", onlyInLegacy));
+            }
+
+            _logger.LogInformation(
+                "[RBAC] {Email} ({Role}) — using DB permissions ({Count}): [{Perms}]",
+                user.Email, roleStr, dbPermissions.Count,
+                string.Join(", ", dbPermissions));
+        }
+
+        // ── Resolution: DB first, legacy fallback ─────────────────────────────
+        return dbPermissions.Count > 0 ? dbPermissions : legacyPermissions;
+    }
+
+    // ── Auth response builder ──────────────────────────────────────────────────
+
+    private async Task<AuthResponse> BuildAuthResponseAsync(User user, CancellationToken ct)
     {
         var expiryMinutes = GetExpiryMinutes();
         var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+        var permissions = await ResolvePermissionsAsync(user, ct);
 
         return new AuthResponse
         {
-            Token = GenerateToken(user, expiresAt),
+            Token = GenerateToken(user, expiresAt, permissions),
             ExpiresAt = expiresAt,
-            User = MapToProfileResponse(user)
+            User = MapToProfileResponse(user, permissions)
         };
     }
 
-    private string GenerateToken(User user, DateTime expiresAt)
+    // ── JWT generation ─────────────────────────────────────────────────────────
+
+    private string GenerateToken(User user, DateTime expiresAt, IReadOnlyList<string> permissions)
     {
         var key = _configuration["Jwt:Key"]!;
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
@@ -169,7 +242,6 @@ public class AuthService : IAuthService
 
         var roleStr = user.Role.ToString();
 
-        // Base claims
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -179,10 +251,9 @@ public class AuthService : IAuthService
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        // Embed individual permission claims so the PermissionAuthorizationHandler
-        // can verify them without a DB lookup on every request.
-        // SuperAdmin (Admin) has all permissions — still embedded for frontend use.
-        foreach (var perm in Domain.Constants.StaffRolePermissions.GetPermissions(roleStr))
+        // Embed resolved permissions as individual claims.
+        // PermissionAuthorizationHandler reads these on every request — no DB hit per request.
+        foreach (var perm in permissions)
             claims.Add(new Claim("permission", perm));
 
         var token = new JwtSecurityToken(
@@ -194,6 +265,8 @@ public class AuthService : IAuthService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private async Task<string> GenerateUserCodeAsync(UserRole role, CancellationToken ct)
     {
@@ -229,20 +302,20 @@ public class AuthService : IAuthService
     private int GetExpiryMinutes() =>
         int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var mins) ? mins : 1440;
 
-    private static UserProfileResponse MapToProfileResponse(User user)
+    private static UserProfileResponse MapToProfileResponse(User user, IReadOnlyList<string> permissions)
     {
         var roleStr = user.Role.ToString();
         return new UserProfileResponse
         {
-            Id             = user.Id,
-            UserCode       = user.UserCode,
-            FullName       = user.FullName,
-            Email          = user.Email,
-            Phone          = user.Phone,
-            Role           = roleStr,
+            Id              = user.Id,
+            UserCode        = user.UserCode,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            Role            = roleStr,
             ProfileImageUrl = user.ProfileImageUrl,
-            CreatedAt      = user.CreatedAt,
-            Permissions    = Domain.Constants.StaffRolePermissions.GetPermissions(roleStr),
+            CreatedAt       = user.CreatedAt,
+            Permissions     = permissions,
         };
     }
 }

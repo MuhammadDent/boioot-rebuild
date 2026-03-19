@@ -1,0 +1,112 @@
+We are continuing Boioot Dynamic RBAC migration.
+
+This is PHASE 2 — Dual Mode Integration.
+
+==================================================
+GOAL
+==================================================
+
+Start using RBAC permissions from the database
+WITHOUT breaking the existing authorization system.
+
+We will run BOTH systems temporarily.
+
+==================================================
+CURRENT STATE
+==================================================
+
+- RBAC tables exist ✅
+- Seed data exists ✅
+- RbacRepository exists ✅
+- Current system still uses:
+  - StaffRolePermissions
+  - PLATFORM_ROLE_PERMISSIONS
+  - JWT permissions
+
+==================================================
+TASKS
+==================================================
+
+1) LOAD PERMISSIONS FROM DB IN BACKEND
+
+In AuthService (or equivalent):
+
+When user logs in:
+
+- fetch permissions using:
+  GetUserPermissionsAsync(userId)
+
+- store result in:
+  user.permissions (same shape as current system)
+
+==================================================
+
+2) ADD SAFE FALLBACK
+
+If DB permissions are empty:
+
+fallback to existing system:
+
+- StaffRolePermissions
+- PLATFORM_ROLE_PERMISSIONS
+
+Example:
+
+if (dbPermissions.Any())
+    return dbPermissions;
+else
+    return legacyPermissions;
+
+==================================================
+
+3) DO NOT BREAK JWT STRUCTURE
+
+Keep same format:
+
+permissions: string[]
+
+Frontend must NOT break.
+
+==================================================
+
+4) LOG DIFFERENCES (IMPORTANT)
+
+Temporarily log:
+
+- DB permissions
+- legacy permissions
+
+Compare them for same user
+
+==================================================
+
+5) DO NOT REMOVE OLD SYSTEM
+
+- keep StaffRolePermissions
+- keep PLATFORM_ROLE_PERMISSIONS
+
+We are only adding DB as source
+
+==================================================
+
+6) VERIFY
+
+Test:
+
+Admin:
+- has all permissions
+
+CompanyOwner:
+- matches expected permissions
+
+Broker:
+- limited permissions
+
+==================================================
+OUTPUT
+==================================================
+
+- updated AuthService
+- sample user permission output
+- confirmation fallback works
+- logs showing DB vs legacy comparison
