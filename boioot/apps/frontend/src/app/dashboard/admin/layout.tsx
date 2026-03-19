@@ -1,26 +1,34 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
-/**
- * Admin shell layout guard.
- *
- * Access condition: the authenticated user must have at least one admin
- * permission in their permissions[] (derived from backend JWT).
- * Platform users (User, Agent, CompanyOwner, etc.) receive an empty
- * permissions[] from the backend and are redirected to /dashboard.
- *
- * This is a permission-based gate, not a role-based one. Role is not
- * inspected here. Individual pages each enforce their own specific
- * required permission via useProtectedRoute({ requiredPermission }).
- */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const redirected = useRef(false);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
 
   useEffect(() => {
     if (isLoading || redirected.current) return;
@@ -31,9 +39,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    // Shell gate: Admin role always has access.
-    // For other roles, require at least one permission in their JWT.
-    // This prevents a stale/empty session from locking out Admin users.
     const isAdminRole = user.role === "Admin";
     const hasAnyAdminPermission = (user.permissions?.length ?? 0) > 0;
     if (!isAdminRole && !hasAnyAdminPermission) {
@@ -45,22 +50,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (isLoading) return null;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "calc(100vh - 64px)",
-        backgroundColor: "#f8fafc",
-        alignItems: "stretch",
-      }}
-    >
-      <AdminSidebar />
-      <main
-        style={{
-          flex: 1,
-          minWidth: 0,
-          overflowX: "hidden",
-        }}
+    <div className="admin-layout">
+      {/* ── Hamburger button (mobile only, visible via CSS) ── */}
+      <button
+        className="admin-hamburger"
+        onClick={() => setSidebarOpen(true)}
+        aria-label="فتح القائمة"
       >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
+
+      {/* ── Overlay (mobile only) ── */}
+      <div
+        className={`admin-overlay${sidebarOpen ? " open" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* ── Sidebar ── */}
+      <AdminSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* ── Main content ── */}
+      <main style={{ flex: 1, minWidth: 0, overflowX: "hidden" }}>
         {children}
       </main>
     </div>

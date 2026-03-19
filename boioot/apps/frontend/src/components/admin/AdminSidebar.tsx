@@ -84,6 +84,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <Icon path={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>} />,
       },
       {
+        href: "/dashboard/admin/brokers",
+        label: "الوسطاء",
+        permission: "users.view",
+        icon: <Icon path={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>} />,
+      },
+      {
         href: "/dashboard/admin/companies",
         label: "الشركات",
         permission: "companies.view",
@@ -188,7 +194,12 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 // ── Sidebar ────────────────────────────────────────────────────────────────────
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { user, hasPermission } = useAuth();
 
@@ -204,25 +215,31 @@ export default function AdminSidebar() {
 
   return (
     <aside
+      className={`admin-sidebar${isOpen ? " open" : ""}`}
       style={{
-        width: 232,
-        flexShrink: 0,
         backgroundColor: "#111827",
-        minHeight: "calc(100vh - 64px)",
-        overflowY: "auto",
-        position: "sticky",
-        top: 64,
-        height: "calc(100vh - 64px)",
         display: "flex",
         flexDirection: "column",
         borderLeft: "1px solid rgba(255,255,255,0.07)",
       }}
     >
+      {/* Mobile: close button (shown via CSS on mobile only) */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          aria-label="إغلاق القائمة"
+          className="admin-sidebar-close"
+        >
+          ✕
+        </button>
+      )}
+
       {/* Brand header */}
       <div
         style={{
           padding: "1rem 1.1rem 0.8rem",
           borderBottom: "1px solid rgba(255,255,255,0.07)",
+          flexShrink: 0,
         }}
       >
         <div
@@ -254,7 +271,7 @@ export default function AdminSidebar() {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: "0.5rem 0 1rem" }}>
+      <nav style={{ flex: 1, padding: "0.5rem 0 1rem", overflowY: "auto" }}>
         {NAV_GROUPS.map((group) => {
           if (!can(group.permission)) return null;
 
@@ -284,6 +301,7 @@ export default function AdminSidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={onClose}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -330,10 +348,12 @@ export default function AdminSidebar() {
         style={{
           padding: "0.75rem 1.1rem",
           borderTop: "1px solid rgba(255,255,255,0.07)",
+          flexShrink: 0,
         }}
       >
         <Link
           href="/dashboard"
+          onClick={onClose}
           style={{
             display: "flex",
             alignItems: "center",
