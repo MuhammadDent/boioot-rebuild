@@ -22,17 +22,28 @@ public static class Permissions
     public const string RolesView   = "roles.view";
     public const string RolesManage = "roles.manage";
 
-    // ── Properties ───────────────────────────────────────────────────────────
+    // ── Dashboard ─────────────────────────────────────────────────────────────
+    public const string DashboardView = "dashboard.view";
+
+    // ── Properties ────────────────────────────────────────────────────────────
     public const string PropertiesView   = "properties.view";
+    public const string PropertiesCreate = "properties.create";
     public const string PropertiesEdit   = "properties.edit";
     public const string PropertiesDelete = "properties.delete";
 
     // ── Projects ──────────────────────────────────────────────────────────────
-    public const string ProjectsView = "projects.view";
-    public const string ProjectsEdit = "projects.edit";
+    public const string ProjectsView   = "projects.view";
+    public const string ProjectsCreate = "projects.create";
+    public const string ProjectsEdit   = "projects.edit";
+    public const string ProjectsDelete = "projects.delete";
+
+    // ── Agents ────────────────────────────────────────────────────────────────
+    public const string AgentsView   = "agents.view";
+    public const string AgentsManage = "agents.manage";
 
     // ── Requests ──────────────────────────────────────────────────────────────
     public const string RequestsView   = "requests.view";
+    public const string RequestsCreate = "requests.create";
     public const string RequestsAssign = "requests.assign";
     public const string RequestsEdit   = "requests.edit";
 
@@ -63,15 +74,17 @@ public static class Permissions
     public const string BillingView   = "billing.view";
     public const string BillingManage = "billing.manage";
 
-    /// <summary>All permissions — assigned to SuperAdmin.</summary>
+    /// <summary>All permissions — assigned to Admin.</summary>
     public static readonly IReadOnlyList<string> All = new[]
     {
+        DashboardView,
         UsersView, UsersEdit, UsersDisable,
         StaffView, StaffCreate, StaffEdit, StaffDisable,
         RolesView, RolesManage,
-        PropertiesView, PropertiesEdit, PropertiesDelete,
-        ProjectsView, ProjectsEdit,
-        RequestsView, RequestsAssign, RequestsEdit,
+        PropertiesView, PropertiesCreate, PropertiesEdit, PropertiesDelete,
+        ProjectsView, ProjectsCreate, ProjectsEdit, ProjectsDelete,
+        AgentsView, AgentsManage,
+        RequestsView, RequestsCreate, RequestsAssign, RequestsEdit,
         CompaniesView, CompaniesEdit,
         BlogView, BlogCreate, BlogEdit, BlogPublish, BlogDelete,
         BlogSeoManage, SeoSettingsManage,

@@ -184,7 +184,7 @@ public class DataSeeder
         {
             await _context.Database.ExecuteSqlRawAsync(
                 "INSERT OR IGNORE INTO Roles (Id, Name, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {2})",
-                Guid.NewGuid().ToString(), name, now);
+                Guid.NewGuid().ToString("D").ToUpperInvariant(), name, now);
         }
 
         // ── 2. Permissions ────────────────────────────────────────────────────
@@ -250,7 +250,7 @@ public class DataSeeder
         {
             await _context.Database.ExecuteSqlRawAsync(
                 "INSERT OR IGNORE INTO Permissions (Id, Key, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {2})",
-                Guid.NewGuid().ToString(), key, now);
+                Guid.NewGuid().ToString("D").ToUpperInvariant(), key, now);
         }
 
         // ── 3. Role → Permission mapping ──────────────────────────────────────

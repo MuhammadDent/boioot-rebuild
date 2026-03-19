@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Boioot.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+35e5d55ca4747a2eb221fb80d3dd0bb6a4127610")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+eb84a41ea02fe3d735c3346dee66073cee90b707")]
 [assembly: System.Reflection.AssemblyProductAttribute("Boioot.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Boioot.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
