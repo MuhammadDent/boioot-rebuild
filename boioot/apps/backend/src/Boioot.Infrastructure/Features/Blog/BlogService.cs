@@ -515,6 +515,8 @@ public class BlogService : IBlogService
         if (request.SiteName                          != null) s.SiteName                           = request.SiteName.Trim();
         if (request.DefaultPostSeoTitleTemplate       != null) s.DefaultPostSeoTitleTemplate        = request.DefaultPostSeoTitleTemplate.Trim();
         if (request.DefaultPostSeoDescriptionTemplate != null) s.DefaultPostSeoDescriptionTemplate  = request.DefaultPostSeoDescriptionTemplate.Trim();
+        if (request.DefaultOgTitleTemplate            != null) s.DefaultOgTitleTemplate             = request.DefaultOgTitleTemplate.Trim();
+        if (request.DefaultOgDescriptionTemplate      != null) s.DefaultOgDescriptionTemplate       = request.DefaultOgDescriptionTemplate.Trim();
         if (request.DefaultBlogListSeoTitle           != null) s.DefaultBlogListSeoTitle            = request.DefaultBlogListSeoTitle.Trim();
         if (request.DefaultBlogListSeoDescription     != null) s.DefaultBlogListSeoDescription      = request.DefaultBlogListSeoDescription.Trim();
 

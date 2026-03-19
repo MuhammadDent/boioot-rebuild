@@ -526,6 +526,8 @@ export interface UpdateBlogSeoSettingsRequest {
   siteName?: string;
   defaultPostSeoTitleTemplate?: string;
   defaultPostSeoDescriptionTemplate?: string;
+  defaultOgTitleTemplate?: string;
+  defaultOgDescriptionTemplate?: string;
   defaultBlogListSeoTitle?: string;
   defaultBlogListSeoDescription?: string;
 }
