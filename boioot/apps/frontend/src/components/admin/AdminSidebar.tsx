@@ -192,6 +192,15 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const { user, hasPermission } = useAuth();
 
+  // Admin role always sees all sidebar items regardless of cached permissions.
+  const isAdminRole = user?.role === "Admin";
+
+  function can(permission?: string): boolean {
+    if (!permission) return true;
+    if (isAdminRole) return true;
+    return hasPermission(permission);
+  }
+
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(href + "/");
@@ -251,12 +260,9 @@ export default function AdminSidebar() {
       {/* Nav */}
       <nav style={{ flex: 1, padding: "0.5rem 0 1rem" }}>
         {NAV_GROUPS.map((group) => {
-          const groupPermission = group.permission;
-          if (groupPermission && !hasPermission(groupPermission)) return null;
+          if (!can(group.permission)) return null;
 
-          const visibleItems = group.items.filter(
-            (item) => !item.permission || hasPermission(item.permission)
-          );
+          const visibleItems = group.items.filter((item) => can(item.permission));
           if (visibleItems.length === 0) return null;
 
           return (

@@ -489,8 +489,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Admin Section — visible to users who hold roles.manage (Admin only) ── */}
-        {hasPermission(user, "roles.manage") && (
+        {/* ── Admin Section — visible to Admin role or users with roles.manage ── */}
+        {(user.role === "Admin" || hasPermission(user, "roles.manage")) && (
           <div style={{ marginBottom: "1.25rem" }}>
             <SectionLabel>إدارة النظام</SectionLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
@@ -535,7 +535,7 @@ export default function DashboardPage() {
         )}
 
         {/* ── Management section (CompanyOwner / Broker / Agent) ─────────────── */}
-        {isManagementRole && !hasPermission(user, "roles.manage") && (
+        {isManagementRole && user.role !== "Admin" && !hasPermission(user, "roles.manage") && (
           <div style={{ marginBottom: "1.25rem" }}>
             <SectionLabel>إدارة الإعلانات</SectionLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>

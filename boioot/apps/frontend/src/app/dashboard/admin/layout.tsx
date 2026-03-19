@@ -31,10 +31,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    // Permission-based shell gate: any user with at least one admin permission
-    // is allowed into the admin shell. Platform users have permissions[] = [].
+    // Shell gate: Admin role always has access.
+    // For other roles, require at least one permission in their JWT.
+    // This prevents a stale/empty session from locking out Admin users.
+    const isAdminRole = user.role === "Admin";
     const hasAnyAdminPermission = (user.permissions?.length ?? 0) > 0;
-    if (!hasAnyAdminPermission) {
+    if (!isAdminRole && !hasAnyAdminPermission) {
       redirected.current = true;
       router.replace("/dashboard");
     }
