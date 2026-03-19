@@ -1,0 +1,125 @@
+We are now starting the next phase of the Blog module.
+
+This phase has TWO goals:
+
+1) Dynamic SEO Phase 2
+2) Blog engagement improvement with related article cards / read-more windows
+
+Do NOT break the current working blog pages.
+
+-----------------------------------
+PART 1 — Dynamic SEO Phase 2
+-----------------------------------
+
+We already added the base dynamic SEO support.
+Now improve it safely and completely.
+
+Requirements:
+
+1. Per-post SEO controls
+Support:
+- SeoTitleMode: Auto / Template / Custom
+- SeoDescriptionMode: Auto / Template / Custom
+- SlugMode: Auto / Custom
+
+2. Global blog SEO settings
+Support configurable defaults for:
+- DefaultPostSeoTitleTemplate
+- DefaultPostSeoDescriptionTemplate
+- DefaultBlogListSeoTitle
+- DefaultBlogListSeoDescription
+
+3. Supported variables
+Support these variables:
+- {PostTitle}
+- {Excerpt}
+- {PrimaryCategory}
+- {SiteName}
+- {PublishDate}
+- {Year}
+- {ReadTime}
+
+4. SEO preview
+In admin blog create/edit page:
+- Show live preview for:
+  - SEO title
+  - URL
+  - meta description
+- Keep preview stable and client-safe
+- If preview uses browser-only logic, isolate it in a client-only component
+
+5. Fallback safety
+- Existing posts must still work
+- If SEO mode fields are empty, fall back safely
+- Invalid or missing templates must not break rendering
+
+-----------------------------------
+PART 2 — Related Articles / Read More Cards
+-----------------------------------
+
+We want to increase time on site and encourage users to read more blog articles.
+
+Add a “related articles” / “read more” feature on the public blog.
+
+Requirements:
+
+1. Related articles section on blog detail page
+On the public blog post detail page, add a section such as:
+- "مقالات ذات صلة"
+or
+- "اقرأ أيضًا"
+
+This section should display 3 to 4 article cards.
+
+2. Each article card should include:
+- Cover image
+- Title
+- Short excerpt
+- Category badge or label
+- Publish date or read time
+- Link to article
+- The whole card should be clickable
+
+3. Selection logic for related articles
+Use this priority:
+- First: same category
+- Then: same tags if available
+- Then: latest published posts
+- Always exclude the current article
+
+4. API support
+Add a backend/public endpoint for related posts if needed, such as:
+- GET /api/blog/posts/{slug}/related
+
+Return lightweight summary DTOs only.
+
+5. Read more section styling
+Make it visually attractive and content-focused.
+Use responsive cards.
+Desktop:
+- 3 columns if space allows
+Mobile:
+- 1 column or 2 smaller stacked cards
+
+6. Optional sidebar enhancement
+If the blog detail layout supports it, add a sidebar or side rail for more articles.
+If not, place the section below the main article content.
+
+-----------------------------------
+GENERAL RULES
+-----------------------------------
+
+- Do NOT introduce hydration issues again
+- Rich editor / preview / browser-only pieces must remain client-safe
+- Do NOT break current admin blog editing
+- Do NOT break current public blog pages
+- Keep components reusable
+- Keep the design clean, modern, and content-oriented
+
+Deliverables:
+1. Dynamic SEO Phase 2 completed safely
+2. SEO preview in admin
+3. Related articles section in public blog detail page
+4. Any needed related-post API endpoint
+5. Short summary of what was added
+6. Notes about any assumptions made

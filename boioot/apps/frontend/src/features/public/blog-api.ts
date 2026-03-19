@@ -26,6 +26,10 @@ export const publicBlogApi = {
     return api.get(`/blog/posts/${slug}`);
   },
 
+  getRelatedPosts(slug: string, count = 4): Promise<PublicBlogPostSummary[]> {
+    return api.get(`/blog/posts/${slug}/related?count=${count}`);
+  },
+
   getCategories(): Promise<PublicBlogCategory[]> {
     return api.get("/blog/categories");
   },

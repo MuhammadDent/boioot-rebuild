@@ -720,4 +720,87 @@ public class BlogService : IBlogService
         return new PagedResult<PublicBlogPostSummary>(
             items.Select(MapToPublicSummary).ToList(), page, pageSize, total);
     }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Public: Related Posts
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public async Task<List<PublicBlogPostSummary>> PublicGetRelatedPostsAsync(
+        string slug, int count, CancellationToken ct = default)
+    {
+        count = Math.Clamp(count, 1, 10);
+
+        // Load the current post (lightweight — we only need id, categories, tags)
+        var current = await _db.Set<BlogPost>()
+            .AsNoTracking()
+            .Include(p => p.BlogPostCategories)
+            .FirstOrDefaultAsync(p => p.Slug == slug && p.Status == BlogPostStatus.Published, ct);
+
+        if (current is null)
+            return new List<PublicBlogPostSummary>();
+
+        var currentId      = current.Id;
+        var categoryIds    = current.BlogPostCategories.Select(bpc => bpc.BlogCategoryId).ToList();
+        var currentTags    = ParseTags(current.Tags);
+
+        var result = new List<PublicBlogPostSummary>();
+        var seenIds = new HashSet<Guid> { currentId };
+
+        // ── 1. Same category ─────────────────────────────────────────────────
+        if (categoryIds.Count > 0 && result.Count < count)
+        {
+            var needed = count - result.Count;
+            var byCategory = await PostsWithIncludes()
+                .AsNoTracking()
+                .Where(p => p.Status == BlogPostStatus.Published
+                         && p.Id != currentId
+                         && p.BlogPostCategories.Any(bpc => categoryIds.Contains(bpc.BlogCategoryId)))
+                .OrderByDescending(p => p.PublishedAt)
+                .Take(needed)
+                .ToListAsync(ct);
+
+            foreach (var p in byCategory)
+            {
+                if (seenIds.Add(p.Id))
+                    result.Add(MapToPublicSummary(p));
+            }
+        }
+
+        // ── 2. Same tags ─────────────────────────────────────────────────────
+        if (currentTags.Count > 0 && result.Count < count)
+        {
+            var needed = count - result.Count;
+            var allPublished = await PostsWithIncludes()
+                .AsNoTracking()
+                .Where(p => p.Status == BlogPostStatus.Published && !seenIds.Contains(p.Id))
+                .OrderByDescending(p => p.PublishedAt)
+                .Take(50) // load a pool then filter in memory
+                .ToListAsync(ct);
+
+            foreach (var p in allPublished)
+            {
+                if (result.Count >= count) break;
+                var tags = ParseTags(p.Tags);
+                if (tags.Any(t => currentTags.Contains(t)) && seenIds.Add(p.Id))
+                    result.Add(MapToPublicSummary(p));
+            }
+        }
+
+        // ── 3. Latest published ───────────────────────────────────────────────
+        if (result.Count < count)
+        {
+            var needed = count - result.Count;
+            var latest = await PostsWithIncludes()
+                .AsNoTracking()
+                .Where(p => p.Status == BlogPostStatus.Published && !seenIds.Contains(p.Id))
+                .OrderByDescending(p => p.PublishedAt)
+                .Take(needed)
+                .ToListAsync(ct);
+
+            foreach (var p in latest)
+                result.Add(MapToPublicSummary(p));
+        }
+
+        return result;
+    }
 }

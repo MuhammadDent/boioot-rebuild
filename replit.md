@@ -34,7 +34,11 @@ I prefer simple language. I want iterative development. Ask before making major 
     - **Requests/Leads Module:** Anonymous lead capture, dashboard management for requests with statuses (New, Contacted, Qualified, Closed).
     - **Role Management:** Support for various user roles with specific permissions, including Broker managing Agents.
     - **Subscription Module:** Management of plans, accounts, subscriptions, and invoices. Supports multiple billing providers.
-    - **Blog Module:** Full-stack blog system. Backend: `IBlogService`/`BlogService`, `IBlogSlugService`/`BlogSlugService` (auto-increment collision), `BlogPostValidation`, `BlogPermissions`, `AdminBlogController` with per-action auth, soft delete with query filter. Frontend admin: list page with search/filter/pagination, create page, edit page (two-column form with publish/unpublish/archive/delete workflow), categories management page, `BlogStatusBadge` component, `blogAdminApi` helper, and two NavCards on the dashboard.
+    - **Blog Module:** Full-stack blog system.
+      - Backend: `IBlogService`/`BlogService`, `IBlogSlugService`/`BlogSlugService` (auto-increment collision), `BlogPostValidation`, `BlogPermissions`, `AdminBlogController` with per-action auth, soft delete with query filter. Public endpoints: `GET /api/blog/posts` (list), `GET /api/blog/posts/{slug}` (detail), `GET /api/blog/posts/{slug}/related?count=4` (related articles: same category → same tags → latest published, deduped via HashSet).
+      - Frontend admin: list page with search/filter/pagination, create page, edit page (two-column form with publish/unpublish/archive/delete workflow), SEO tab (SeoTitleMode/SeoDescriptionMode/SlugMode: Auto/Template/Custom, live SERP preview with variable substitution), categories management page, `BlogStatusBadge`, `blogAdminApi`, dashboard NavCards.
+      - Frontend public: blog list page (`/blog`), blog detail page (`/blog/[slug]`) with HTML content via `dangerouslySetInnerHTML`, client-side SEO (`useEffect` → `document.title` + meta description), `RelatedCard` component, related articles section. `.blog-content` CSS in `globals.css` for headings, lists, blockquotes, code, tables, images, hr.
+      - Hydration fixes: `properties/[id]/page.tsx` uses `useState+useEffect` for `pageUrl`; `BlogPostForm.tsx` uses `dynamic(() => import("./RichTextEditor"), { ssr: false })`.
     - **Global Error Handling:** Consistent JSON responses for errors in Arabic.
 
 **Key Design Decisions:**

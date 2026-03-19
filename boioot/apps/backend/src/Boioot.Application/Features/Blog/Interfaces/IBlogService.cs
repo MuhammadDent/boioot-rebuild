@@ -31,6 +31,9 @@ public interface IBlogService
     Task<PagedResult<PublicBlogPostSummary>> PublicGetPostsAsync(string? categorySlug, bool? isFeatured, int page, int pageSize, CancellationToken ct = default);
     Task<PublicBlogPostDetail> PublicGetPostBySlugAsync(string slug, CancellationToken ct = default);
 
+    // ── Public: Related Posts ─────────────────────────────────────────────────
+    Task<List<PublicBlogPostSummary>> PublicGetRelatedPostsAsync(string slug, int count, CancellationToken ct = default);
+
     // ── Public: Categories ────────────────────────────────────────────────────
     Task<List<BlogCategoryResponse>> PublicGetCategoriesAsync(CancellationToken ct = default);
     Task<PagedResult<PublicBlogPostSummary>> PublicGetPostsByCategorySlugAsync(string categorySlug, int page, int pageSize, CancellationToken ct = default);

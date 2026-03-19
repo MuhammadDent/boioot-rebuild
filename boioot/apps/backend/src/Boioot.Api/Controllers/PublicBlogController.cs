@@ -50,6 +50,20 @@ public class PublicBlogController : BaseController
     }
 
     /// <summary>
+    /// GET /api/blog/posts/{slug}/related?count=4
+    /// Returns related published posts (same category → same tags → latest), excluding current.
+    /// </summary>
+    [HttpGet("posts/{slug}/related")]
+    public async Task<IActionResult> GetRelatedPosts(
+        string slug,
+        [FromQuery] int count = 4,
+        CancellationToken ct = default)
+    {
+        var result = await _blog.PublicGetRelatedPostsAsync(slug, count, ct);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// GET /api/blog/categories/{categorySlug}/posts
     /// Published posts in a specific active category, ordered by PublishedAt desc.
     /// </summary>
