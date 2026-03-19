@@ -12,7 +12,7 @@ import type { ListingTypeConfig } from "@/types";
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminListingTypesPage() {
-  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading: authLoading } = useProtectedRoute({ requiredPermission: "settings.manage" });
 
   const [items, setItems]         = useState<ListingTypeConfig[]>([]);
   const [fetching, setFetching]   = useState(true);

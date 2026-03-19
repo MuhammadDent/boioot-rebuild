@@ -10,7 +10,7 @@ import { normalizeError } from "@/lib/api";
 import type { BlogCategoryResponse, BlogPostDetailResponse } from "@/types";
 
 export default function AdminBlogNewPostPage() {
-  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading: authLoading } = useProtectedRoute({ requiredPermission: "blog.create" });
   const router = useRouter();
 
   const [categories, setCategories] = useState<BlogCategoryResponse[]>([]);

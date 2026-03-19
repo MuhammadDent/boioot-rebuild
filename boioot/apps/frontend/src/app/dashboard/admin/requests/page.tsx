@@ -22,7 +22,7 @@ import type { RequestResponse } from "@/types";
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminRequestsPage() {
-  const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "requests.view" });
 
   const [requests, setRequests]     = useState<RequestResponse[]>([]);
   const [page, setPage]             = useState(1);

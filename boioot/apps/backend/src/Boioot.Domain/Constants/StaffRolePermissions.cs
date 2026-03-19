@@ -22,7 +22,7 @@ public static class StaffRolePermissions
                 Permissions.RequestsView, Permissions.RequestsAssign, Permissions.RequestsEdit,
                 Permissions.CompaniesView, Permissions.CompaniesEdit,
                 Permissions.BlogView, Permissions.BlogCreate, Permissions.BlogEdit, Permissions.BlogPublish,
-                Permissions.BlogSeoManage,
+                Permissions.BlogSeoManage, Permissions.SeoSettingsManage,
                 Permissions.SettingsView, Permissions.SettingsManage,
                 Permissions.BillingView,
             },

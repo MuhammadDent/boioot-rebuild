@@ -21,7 +21,7 @@ import type { AdminUserResponse } from "@/types";
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminUsersPage() {
-  const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "users.view" });
 
   const [users, setUsers]           = useState<AdminUserResponse[]>([]);
   const [page, setPage]             = useState(1);

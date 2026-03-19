@@ -43,6 +43,7 @@ public class AdminBillingController : BaseController
     /// Automatically creates/updates the user's active subscription.
     /// </summary>
     [HttpPost("invoices/{invoiceId:guid}/confirm")]
+    [RequirePermission(Permissions.BillingManage)]
     public async Task<IActionResult> ConfirmPayment(
         Guid invoiceId,
         [FromBody] AdminReviewRequest request,
@@ -55,6 +56,7 @@ public class AdminBillingController : BaseController
 
     /// <summary>Rejects a pending invoice and marks it as Failed.</summary>
     [HttpPost("invoices/{invoiceId:guid}/reject")]
+    [RequirePermission(Permissions.BillingManage)]
     public async Task<IActionResult> RejectPayment(
         Guid invoiceId,
         [FromBody] AdminReviewRequest request,

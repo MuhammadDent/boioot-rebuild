@@ -18,7 +18,7 @@ import type { AdminCompanyResponse } from "@/types";
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminCompaniesPage() {
-  const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "companies.view" });
   const { cities } = useCities();
 
   const [companies, setCompanies]   = useState<AdminCompanyResponse[]>([]);

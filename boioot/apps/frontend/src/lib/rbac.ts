@@ -85,7 +85,7 @@ export const ROLE_PERMISSIONS: Record<StaffRole, Permission[]> = {
     "requests.view", "requests.assign", "requests.edit",
     "companies.view", "companies.edit",
     "blog.view", "blog.create", "blog.edit", "blog.publish",
-    "blog.seo.manage",
+    "blog.seo.manage", "seo.settings.manage",
     "settings.view", "settings.manage",
     "billing.view",
   ],

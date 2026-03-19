@@ -14,7 +14,7 @@ import {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AdminRolesPage() {
-  const { isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading } = useProtectedRoute({ requiredPermission: "roles.view" });
 
   if (isLoading) return null;
 

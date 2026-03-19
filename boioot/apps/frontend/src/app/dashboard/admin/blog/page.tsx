@@ -28,7 +28,7 @@ const tdStyle: React.CSSProperties = {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminBlogPage() {
-  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading: authLoading } = useProtectedRoute({ requiredPermission: "blog.view" });
 
   const [result,     setResult]     = useState<PagedResult<BlogPostSummaryResponse> | null>(null);
   const [categories, setCategories] = useState<BlogCategoryResponse[]>([]);

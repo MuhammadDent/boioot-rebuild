@@ -24,7 +24,7 @@ const PROJECT_STATUSES = ["Upcoming", "UnderConstruction", "Completed"] as const
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminProjectsPage() {
-  const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "projects.view" });
   const { cities } = useCities();
 
   const [projects, setProjects]     = useState<ProjectResponse[]>([]);

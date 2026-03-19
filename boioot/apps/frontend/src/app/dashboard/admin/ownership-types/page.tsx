@@ -10,7 +10,7 @@ import { normalizeError } from "@/lib/api";
 import type { OwnershipTypeConfig } from "@/types";
 
 export default function AdminOwnershipTypesPage() {
-  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading: authLoading } = useProtectedRoute({ requiredPermission: "settings.manage" });
 
   const [items, setItems]       = useState<OwnershipTypeConfig[]>([]);
   const [fetching, setFetching] = useState(true);

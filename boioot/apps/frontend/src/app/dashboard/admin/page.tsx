@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
-import { hasPermission, STAFF_ROLE_LABELS, type Permission } from "@/lib/rbac";
+import { STAFF_ROLE_LABELS, type Permission } from "@/lib/rbac";
 
 // ── Quick access cards config ─────────────────────────────────────────────────
 type QuickCard = {
@@ -119,8 +119,8 @@ const QUICK_CARDS: QuickCard[] = [
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AdminOverviewPage() {
-  const { isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
-  const { user } = useAuth();
+  const { isLoading } = useProtectedRoute();
+  const { user, hasPermission } = useAuth();
 
   if (isLoading || !user) return null;
 
@@ -131,7 +131,7 @@ export default function AdminOverviewPage() {
   const greeting = hour < 12 ? "صباح الخير" : hour < 18 ? "مساء الخير" : "مساء الخير";
 
   const visibleCards = QUICK_CARDS.filter(
-    (c) => !c.permission || hasPermission(role, c.permission)
+    (c) => !c.permission || hasPermission(c.permission)
   );
 
   return (

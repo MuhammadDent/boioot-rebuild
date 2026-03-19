@@ -10,7 +10,7 @@ import { normalizeError } from "@/lib/api";
 import type { PropertyTypeConfig } from "@/types";
 
 export default function AdminPropertyTypesPage() {
-  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading: authLoading } = useProtectedRoute({ requiredPermission: "settings.manage" });
 
   const [items, setItems]       = useState<PropertyTypeConfig[]>([]);
   const [fetching, setFetching] = useState(true);

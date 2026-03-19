@@ -528,7 +528,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function AdminPlansPage() {
-  const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "settings.manage" });
 
   const [plans, setPlans]         = useState<AdminPlanDetail[]>([]);
   const [fetching, setFetching]   = useState(true);

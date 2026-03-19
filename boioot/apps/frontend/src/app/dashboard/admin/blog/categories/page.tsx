@@ -125,7 +125,7 @@ function CategoryForm({ initial, onSaved, onCancel }: CategoryFormProps) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminBlogCategoriesPage() {
-  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading: authLoading } = useProtectedRoute({ requiredPermission: "blog.view" });
 
   const [categories, setCategories] = useState<BlogCategoryResponse[]>([]);
   const [loading,    setLoading]    = useState(true);

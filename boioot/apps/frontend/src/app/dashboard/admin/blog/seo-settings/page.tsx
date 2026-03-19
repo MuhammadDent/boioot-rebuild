@@ -180,7 +180,7 @@ function FieldSep() {
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function BlogSeoSettingsPage() {
-  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading: authLoading } = useProtectedRoute({ requiredPermission: "seo.settings.manage" });
 
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);

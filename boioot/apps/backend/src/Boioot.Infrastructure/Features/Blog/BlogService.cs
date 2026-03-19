@@ -80,7 +80,7 @@ public class BlogService : IBlogService
         var result = template
             .Replace("{PostTitle}",       post.Title)
             .Replace("{Excerpt}",         post.Excerpt ?? "")
-            .Replace("{PrimaryCategory}", primaryCategory)
+            .Replace("{Category}", primaryCategory)
             .Replace("{SiteName}",        settings.SiteName)
             .Replace("{PublishDate}",     publishDate)
             .Replace("{Year}",            DateTime.UtcNow.Year.ToString())

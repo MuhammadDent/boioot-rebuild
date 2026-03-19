@@ -17,7 +17,7 @@ interface Props {
 
 export default function AdminBlogEditPostPage({ params }: Props) {
   const { id } = use(params);
-  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading: authLoading } = useProtectedRoute({ requiredPermission: "blog.edit" });
   const router = useRouter();
 
   const [post,       setPost]       = useState<BlogPostDetailResponse | null>(null);

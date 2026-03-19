@@ -336,7 +336,7 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminBillingInvoicesPage() {
-  const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "billing.view" });
 
   const [invoices, setInvoices] = useState<AdminInvoiceResponse[]>([]);
   const [fetching, setFetching] = useState(true);

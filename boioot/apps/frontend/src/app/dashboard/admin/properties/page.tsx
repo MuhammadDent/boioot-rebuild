@@ -26,7 +26,7 @@ const PROPERTY_STATUSES = ["Available", "Inactive", "Sold", "Rented"] as const;
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminPropertiesPage() {
-  const { user, isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "properties.view" });
   const { cities } = useCities();
 
   const [properties, setProperties] = useState<PropertyResponse[]>([]);

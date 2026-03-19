@@ -63,7 +63,7 @@ function StatusBadge({ active }: { active: boolean }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AdminStaffPage() {
-  const { isLoading } = useProtectedRoute({ allowedRoles: ["Admin"] });
+  const { isLoading } = useProtectedRoute({ requiredPermission: "staff.view" });
 
   const [allUsers, setAllUsers]         = useState<AdminUserResponse[]>([]);
   const [fetching, setFetching]         = useState(true);
