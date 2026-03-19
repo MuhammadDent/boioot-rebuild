@@ -1,22 +1,22 @@
-import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface StatCardProps {
   title: string;
   value: number | string;
-  icon: LucideIcon;
+  icon: ReactNode;
   subtitle?: string;
   accent?: "green" | "blue" | "purple" | "orange" | "rose";
 }
 
 const accentMap = {
-  green:  { bg: "#f0fdf4", icon: "#16a34a", border: "#bbf7d0" },
-  blue:   { bg: "#eff6ff", icon: "#2563eb", border: "#bfdbfe" },
-  purple: { bg: "#faf5ff", icon: "#7c3aed", border: "#ddd6fe" },
-  orange: { bg: "#fff7ed", icon: "#ea580c", border: "#fed7aa" },
-  rose:   { bg: "#fff1f2", icon: "#e11d48", border: "#fecdd3" },
+  green:  { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+  blue:   { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
+  purple: { bg: "#faf5ff", color: "#7c3aed", border: "#ddd6fe" },
+  orange: { bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" },
+  rose:   { bg: "#fff1f2", color: "#e11d48", border: "#fecdd3" },
 };
 
-export default function StatCard({ title, value, icon: Icon, subtitle, accent = "green" }: StatCardProps) {
+export default function StatCard({ title, value, icon, subtitle, accent = "green" }: StatCardProps) {
   const colors = accentMap[accent];
 
   return (
@@ -36,12 +36,13 @@ export default function StatCard({ title, value, icon: Icon, subtitle, accent = 
         borderRadius: 10,
         backgroundColor: colors.bg,
         border: `1px solid ${colors.border}`,
+        color: colors.color,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
       }}>
-        <Icon size={20} color={colors.icon} strokeWidth={2} />
+        {icon}
       </div>
 
       <div>
