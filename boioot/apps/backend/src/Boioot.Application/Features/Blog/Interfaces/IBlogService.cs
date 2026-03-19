@@ -23,6 +23,10 @@ public interface IBlogService
     Task<BlogCategoryResponse> AdminUpdateCategoryAsync(Guid id, UpdateBlogCategoryRequest request, CancellationToken ct = default);
     Task AdminDeleteCategoryAsync(Guid id, CancellationToken ct = default);
 
+    // ── Admin: Blog SEO Settings ──────────────────────────────────────────────
+    Task<BlogSeoSettingsDto> GetBlogSeoSettingsAsync(CancellationToken ct = default);
+    Task<BlogSeoSettingsDto> UpdateBlogSeoSettingsAsync(UpdateBlogSeoSettingsRequest request, CancellationToken ct = default);
+
     // ── Public: Posts (separate DTOs — no internal fields, no content in list) ─
     Task<PagedResult<PublicBlogPostSummary>> PublicGetPostsAsync(string? categorySlug, bool? isFeatured, int page, int pageSize, CancellationToken ct = default);
     Task<PublicBlogPostDetail> PublicGetPostBySlugAsync(string slug, CancellationToken ct = default);

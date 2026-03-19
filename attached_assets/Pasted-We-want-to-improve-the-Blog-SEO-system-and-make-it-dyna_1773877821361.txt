@@ -1,0 +1,94 @@
+We want to improve the Blog SEO system and make it dynamic and customizable, similar in concept to template-based SEO systems like Salla.
+
+Important architectural goal:
+SEO should support both automatic generation and manual override.
+
+Do NOT break the current blog publishing workflow.
+
+Implement a Dynamic Blog SEO system with these rules:
+
+1) Per-post SEO modes
+
+For each blog post, support:
+
+- SeoTitleMode:
+  - Auto
+  - Template
+  - Custom
+
+- SeoDescriptionMode:
+  - Auto
+  - Template
+  - Custom
+
+- SlugMode:
+  - Auto
+  - Custom
+
+2) Global blog SEO templates
+
+Add blog SEO settings for default templates:
+
+- DefaultPostSeoTitleTemplate
+- DefaultPostSeoDescriptionTemplate
+
+These templates should be used when a post is in Template mode.
+
+3) Supported template variables
+
+Support these variables for blog posts:
+- {PostTitle}
+- {Excerpt}
+- {PrimaryCategory}
+- {SiteName}
+- {PublishDate}
+- {Year}
+- {ReadTime}
+
+4) Resolution logic
+
+SEO title:
+- Auto mode: generate from sensible default rule
+- Template mode: resolve using template variables
+- Custom mode: use manually entered SeoTitle
+
+SEO description:
+- Auto mode: generate from excerpt/content summary
+- Template mode: resolve using template variables
+- Custom mode: use manually entered SeoDescription
+
+Slug:
+- Auto mode: generate from title using existing slug service
+- Custom mode: use manually entered slug
+- After publish, slug should remain locked unless future redirect support is implemented
+
+5) Admin UI changes
+
+In the blog post create/edit page:
+- Add SEO mode selectors
+- Add template/custom fields as needed
+- Add live preview for:
+  - SEO title
+  - URL
+  - meta description
+
+Also add a blog SEO settings page or section for:
+- Default title template
+- Default description template
+- List of supported variables with examples
+
+6) Validation
+- Ensure template variables resolve safely
+- Ignore unsupported variables or show validation error
+- Do not allow invalid slug values
+
+7) Keep current compatibility
+- Existing posts should continue to work
+- If SEO mode fields are empty for older data, fall back safely to current behavior
+
+Deliverables:
+1. Backend support for dynamic SEO modes and template resolution
+2. Blog SEO settings storage
+3. Admin UI updates in post create/edit page
+4. SEO preview component
+5. Clear summary of how fallback behavior works

@@ -15,8 +15,19 @@ public class BlogPost : BaseEntity, ISoftDeletable
     public BlogPostStatus Status { get; set; } = BlogPostStatus.Draft;
     public DateTime? PublishedAt { get; set; }
     public bool IsFeatured { get; set; } = false;
+
+    // ── SEO raw/stored fields ─────────────────────────────────────────────────
     public string? SeoTitle { get; set; }
     public string? SeoDescription { get; set; }
+
+    // ── SEO modes ─────────────────────────────────────────────────────────────
+    // Values: "Auto" | "Template" | "Custom"
+    public string SeoTitleMode { get; set; } = "Auto";
+    public string SeoDescriptionMode { get; set; } = "Auto";
+
+    // Values: "Auto" | "Custom"
+    public string SlugMode { get; set; } = "Auto";
+
     public int? ReadTimeMinutes { get; set; }
     public int ViewCount { get; set; } = 0;
     public bool IsDeleted { get; set; } = false;

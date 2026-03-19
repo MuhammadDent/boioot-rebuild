@@ -505,6 +505,25 @@ export interface PublicBlogCategory {
 }
 
 export type BlogPostStatus = "Draft" | "Published" | "Archived";
+export type SeoTitleMode = "Auto" | "Template" | "Custom";
+export type SeoDescriptionMode = "Auto" | "Template" | "Custom";
+export type SlugMode = "Auto" | "Custom";
+
+export interface BlogSeoSettingsDto {
+  siteName: string;
+  defaultPostSeoTitleTemplate: string;
+  defaultPostSeoDescriptionTemplate: string;
+  defaultBlogListSeoTitle: string;
+  defaultBlogListSeoDescription: string;
+}
+
+export interface UpdateBlogSeoSettingsRequest {
+  siteName?: string;
+  defaultPostSeoTitleTemplate?: string;
+  defaultPostSeoDescriptionTemplate?: string;
+  defaultBlogListSeoTitle?: string;
+  defaultBlogListSeoDescription?: string;
+}
 
 export interface BlogCategoryResponse {
   id: string;
@@ -542,6 +561,11 @@ export interface BlogPostDetailResponse extends BlogPostSummaryResponse {
   content: string;
   seoTitle?: string;
   seoDescription?: string;
+  seoTitleMode: SeoTitleMode;
+  seoDescriptionMode: SeoDescriptionMode;
+  slugMode: SlugMode;
+  resolvedSeoTitle: string;
+  resolvedSeoDescription: string;
   updatedByUserId?: string;
   publishedByUserId?: string;
   isDeleted: boolean;
@@ -559,6 +583,9 @@ export interface CreateBlogPostRequest {
   isFeatured: boolean;
   seoTitle?: string;
   seoDescription?: string;
+  seoTitleMode?: SeoTitleMode;
+  seoDescriptionMode?: SeoDescriptionMode;
+  slugMode?: SlugMode;
   readTimeMinutes?: number;
 }
 
@@ -574,6 +601,9 @@ export interface UpdateBlogPostRequest {
   isFeatured?: boolean;
   seoTitle?: string;
   seoDescription?: string;
+  seoTitleMode?: SeoTitleMode;
+  seoDescriptionMode?: SeoDescriptionMode;
+  slugMode?: SlugMode;
   readTimeMinutes?: number;
 }
 

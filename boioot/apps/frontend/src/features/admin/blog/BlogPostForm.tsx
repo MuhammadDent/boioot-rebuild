@@ -6,7 +6,14 @@ import { BlogStatusBadge } from "./BlogStatusBadge";
 import { RichTextEditor } from "./RichTextEditor";
 import { normalizeError } from "@/lib/api";
 import { tokenStorage } from "@/lib/token";
-import type { BlogPostDetailResponse, BlogCategoryResponse } from "@/types";
+import type {
+  BlogPostDetailResponse,
+  BlogCategoryResponse,
+  BlogSeoSettingsDto,
+  SeoTitleMode,
+  SeoDescriptionMode,
+  SlugMode,
+} from "@/types";
 
 // ── Shared input styles ────────────────────────────────────────────────────────
 
@@ -329,6 +336,12 @@ export function BlogPostForm({
     initialData?.categories.map(c => c.id) ?? []
   );
 
+  const [seoTitleMode,       setSeoTitleMode]       = useState<SeoTitleMode>(initialData?.seoTitleMode ?? "Auto");
+  const [seoDescriptionMode, setSeoDescriptionMode] = useState<SeoDescriptionMode>(initialData?.seoDescriptionMode ?? "Auto");
+  const [slugMode,           setSlugMode]           = useState<SlugMode>(initialData?.slugMode ?? "Auto");
+
+  const [seoSettings,    setSeoSettings]    = useState<BlogSeoSettingsDto | null>(null);
+
   const [currentPost, setCurrentPost] = useState<BlogPostDetailResponse | null>(initialData ?? null);
   const currentStatus = currentPost?.status ?? "Draft";
 
@@ -341,24 +354,30 @@ export function BlogPostForm({
 
   function buildPayload() {
     return {
-      title:           title.trim(),
-      slug:            slug.trim() || undefined,
-      excerpt:         excerpt.trim() || undefined,
-      content:         content,
-      coverImageUrl:   coverImageUrl.trim() || undefined,
-      coverImageAlt:   coverImageAlt.trim() || undefined,
-      tags:            tags.length > 0 ? tags : undefined,
-      categoryIds:     selectedCatIds,
+      title:              title.trim(),
+      slug:               slug.trim() || undefined,
+      excerpt:            excerpt.trim() || undefined,
+      content:            content,
+      coverImageUrl:      coverImageUrl.trim() || undefined,
+      coverImageAlt:      coverImageAlt.trim() || undefined,
+      tags:               tags.length > 0 ? tags : undefined,
+      categoryIds:        selectedCatIds,
       isFeatured,
-      seoTitle:        seoTitle.trim() || undefined,
-      seoDescription:  seoDescription.trim() || undefined,
-      readTimeMinutes: readTimeMinutes ? parseInt(readTimeMinutes) : undefined,
+      seoTitle:           seoTitleMode === "Custom" ? (seoTitle.trim() || undefined) : undefined,
+      seoDescription:     seoDescriptionMode === "Custom" ? (seoDescription.trim() || undefined) : undefined,
+      seoTitleMode,
+      seoDescriptionMode,
+      slugMode,
+      readTimeMinutes:    readTimeMinutes ? parseInt(readTimeMinutes) : undefined,
     };
   }
 
   function applyResult(post: BlogPostDetailResponse) {
     setCurrentPost(post);
     setSlug(post.slug);
+    setSeoTitleMode(post.seoTitleMode ?? "Auto");
+    setSeoDescriptionMode(post.seoDescriptionMode ?? "Auto");
+    setSlugMode(post.slugMode ?? "Auto");
     onSaved(post);
   }
 
@@ -479,6 +498,48 @@ export function BlogPostForm({
   }
 
   const busy = saving || actioning !== null;
+
+  // ── Load SEO settings on mount ────────────────────────────────────────────
+  useEffect(() => {
+    blogAdminApi.getSeoSettings()
+      .then(setSeoSettings)
+      .catch(() => {});
+  }, []);
+
+  // ── Live SEO preview resolution (client-side mirror of server logic) ──────
+  const primaryCategory = (initialData?.categories ?? []).length > 0
+    ? (initialData?.categories[0].name ?? "")
+    : "";
+
+  function resolveTemplate(template: string): string {
+    if (!template) return "";
+    const year = new Date().getFullYear().toString();
+    const readTime = readTimeMinutes ? `${readTimeMinutes} دقائق` : "";
+    let result = template
+      .replace(/\{PostTitle\}/g,       title || "")
+      .replace(/\{Excerpt\}/g,         excerpt || "")
+      .replace(/\{PrimaryCategory\}/g, primaryCategory)
+      .replace(/\{SiteName\}/g,        seoSettings?.siteName ?? "بيوت")
+      .replace(/\{Year\}/g,            year)
+      .replace(/\{ReadTime\}/g,        readTime)
+      .replace(/\{PublishDate\}/g,     new Date().toISOString().slice(0, 10));
+    result = result.replace(/\{[^}]+\}/g, "").trim();
+    return result;
+  }
+
+  const previewSeoTitle = (() => {
+    if (seoTitleMode === "Custom") return seoTitle || `${title} | ${seoSettings?.siteName ?? "بيوت"}`;
+    if (seoTitleMode === "Template") return resolveTemplate(seoSettings?.defaultPostSeoTitleTemplate ?? "{PostTitle} | {SiteName}");
+    return `${title || "عنوان المقال"} | ${seoSettings?.siteName ?? "بيوت"}`;
+  })();
+
+  const previewSeoDescription = (() => {
+    if (seoDescriptionMode === "Custom") return seoDescription || excerpt || "";
+    if (seoDescriptionMode === "Template") return resolveTemplate(seoSettings?.defaultPostSeoDescriptionTemplate ?? "{Excerpt}");
+    return excerpt || "";
+  })();
+
+  const previewUrl = `/blog/${slug || "url-slug"}`;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -690,54 +751,147 @@ export function BlogPostForm({
 
           {/* SEO */}
           <div style={cardStyle}>
-            <p style={{ margin: "0 0 0.75rem", fontWeight: 700, fontSize: "0.92rem" }}>تحسين محركات البحث (SEO)</p>
-
-            <div style={{ marginBottom: "0.75rem" }}>
-              <label style={labelStyle}>
-                عنوان الصفحة (Page Title)
-              </label>
-              <input
-                value={seoTitle}
-                onChange={e => setSeoTitle(e.target.value)}
-                style={inputStyle}
-                placeholder={title || "اختياري — يُعرض في نتائج البحث"}
-                disabled={busy}
-              />
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.75rem", color: seoTitle.length > 60 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
-                {seoTitle.length} / 60 حرف
-              </p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: "0.92rem" }}>تحسين محركات البحث (SEO)</p>
+              <a href="/dashboard/admin/blog/seo-settings" target="_blank" style={{ fontSize: "0.75rem", color: "var(--color-primary)" }}>
+                إعدادات SEO ⚙
+              </a>
             </div>
 
-            <div style={{ marginBottom: "0.75rem" }}>
-              <label style={labelStyle}>رابط الصفحة (SEO URL)</label>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                <span style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
-                  /blog/
-                </span>
-                <input
-                  value={slug}
-                  onChange={e => setSlug(e.target.value)}
-                  style={{ ...inputStyle, fontFamily: "monospace", fontSize: "0.82rem" }}
-                  placeholder="url-slug"
-                  readOnly={isPublished}
-                  disabled={busy}
-                  dir="ltr"
-                />
+            {/* Slug / URL */}
+            <div style={{ marginBottom: "0.9rem" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.3rem" }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>رابط الصفحة (Slug)</label>
+                <div style={{ display: "flex", gap: "0.3rem" }}>
+                  {(["Auto", "Custom"] as const).map(m => (
+                    <button key={m} type="button"
+                      onClick={() => { setSlugMode(m); if (m === "Auto") setSlug(""); }}
+                      disabled={busy || (m === "Custom" && isPublished)}
+                      style={{
+                        fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: 4, cursor: "pointer", border: "1px solid",
+                        borderColor: slugMode === m ? "var(--color-primary)" : "var(--color-border, #e5e7eb)",
+                        background: slugMode === m ? "var(--color-primary)" : "transparent",
+                        color: slugMode === m ? "#fff" : "var(--color-text-secondary)",
+                        opacity: (m === "Custom" && isPublished) ? 0.5 : 1,
+                      }}>
+                      {m === "Auto" ? "تلقائي" : "مخصص"}
+                    </button>
+                  ))}
+                </div>
               </div>
+              {slugMode === "Custom" ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                  <span style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>/blog/</span>
+                  <input
+                    value={slug}
+                    onChange={e => setSlug(e.target.value)}
+                    style={{ ...inputStyle, fontFamily: "monospace", fontSize: "0.82rem" }}
+                    placeholder="url-slug"
+                    readOnly={isPublished}
+                    disabled={busy}
+                    dir="ltr"
+                  />
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)", fontFamily: "monospace", padding: "0.4rem 0.6rem", background: "var(--color-bg-muted, #f9fafb)", borderRadius: 6 }} dir="ltr">
+                  /blog/{slug || <em style={{ color: "#aaa" }}>يُولَّد من العنوان</em>}
+                </p>
+              )}
+              {isPublished && <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: "var(--color-warning, #b45309)" }}>الرابط مقفل بعد النشر</p>}
             </div>
 
-            <div>
-              <label style={labelStyle}>وصف الصفحة (Page Description)</label>
-              <textarea
-                value={seoDescription}
-                onChange={e => setSeoDescription(e.target.value)}
-                style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                placeholder={excerpt || "وصف مختصر لنتائج البحث (150–160 حرفاً مثالياً)"}
-                disabled={busy}
-              />
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.75rem", color: seoDescription.length > 160 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
-                {seoDescription.length} / 160 حرف
-              </p>
+            {/* SEO Title */}
+            <div style={{ marginBottom: "0.9rem" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.3rem" }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>عنوان SEO</label>
+                <div style={{ display: "flex", gap: "0.3rem" }}>
+                  {(["Auto", "Template", "Custom"] as const).map(m => (
+                    <button key={m} type="button" onClick={() => setSeoTitleMode(m)} disabled={busy}
+                      style={{
+                        fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: 4, cursor: "pointer", border: "1px solid",
+                        borderColor: seoTitleMode === m ? "var(--color-primary)" : "var(--color-border, #e5e7eb)",
+                        background: seoTitleMode === m ? "var(--color-primary)" : "transparent",
+                        color: seoTitleMode === m ? "#fff" : "var(--color-text-secondary)",
+                      }}>
+                      {m === "Auto" ? "تلقائي" : m === "Template" ? "قالب" : "مخصص"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {seoTitleMode === "Template" && (
+                <p style={{ margin: "0 0 0.4rem", fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace", padding: "0.3rem 0.5rem", background: "var(--color-bg-muted, #f9fafb)", borderRadius: 5 }}>
+                  {seoSettings?.defaultPostSeoTitleTemplate ?? "{PostTitle} | {SiteName}"}
+                </p>
+              )}
+              {seoTitleMode === "Custom" && (
+                <>
+                  <input
+                    value={seoTitle}
+                    onChange={e => setSeoTitle(e.target.value)}
+                    style={inputStyle}
+                    placeholder="أدخل عنوان SEO المخصص"
+                    disabled={busy}
+                  />
+                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: seoTitle.length > 60 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
+                    {seoTitle.length} / 60 حرف
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* SEO Description */}
+            <div style={{ marginBottom: "0.9rem" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.3rem" }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>وصف SEO</label>
+                <div style={{ display: "flex", gap: "0.3rem" }}>
+                  {(["Auto", "Template", "Custom"] as const).map(m => (
+                    <button key={m} type="button" onClick={() => setSeoDescriptionMode(m)} disabled={busy}
+                      style={{
+                        fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: 4, cursor: "pointer", border: "1px solid",
+                        borderColor: seoDescriptionMode === m ? "var(--color-primary)" : "var(--color-border, #e5e7eb)",
+                        background: seoDescriptionMode === m ? "var(--color-primary)" : "transparent",
+                        color: seoDescriptionMode === m ? "#fff" : "var(--color-text-secondary)",
+                      }}>
+                      {m === "Auto" ? "تلقائي" : m === "Template" ? "قالب" : "مخصص"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {seoDescriptionMode === "Template" && (
+                <p style={{ margin: "0 0 0.4rem", fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace", padding: "0.3rem 0.5rem", background: "var(--color-bg-muted, #f9fafb)", borderRadius: 5 }}>
+                  {seoSettings?.defaultPostSeoDescriptionTemplate ?? "{Excerpt}"}
+                </p>
+              )}
+              {seoDescriptionMode === "Custom" && (
+                <>
+                  <textarea
+                    value={seoDescription}
+                    onChange={e => setSeoDescription(e.target.value)}
+                    style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
+                    placeholder="أدخل وصف SEO المخصص"
+                    disabled={busy}
+                  />
+                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: seoDescription.length > 160 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
+                    {seoDescription.length} / 160 حرف
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Live Google Preview */}
+            <div style={{ borderTop: "1px solid var(--color-border, #e5e7eb)", paddingTop: "0.75rem" }}>
+              <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-secondary)" }}>معاينة نتيجة البحث</p>
+              <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, padding: "0.7rem 0.9rem", fontSize: "0.85rem" }}>
+                <div style={{ color: "#1a0dab", fontSize: "1rem", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "0.15rem" }}>
+                  {previewSeoTitle || `${title || "عنوان المقال"} | بيوت`}
+                </div>
+                <div style={{ color: "#006621", fontSize: "0.78rem", marginBottom: "0.2rem", direction: "ltr", textAlign: "left" }} dir="ltr">
+                  boioot.sy{previewUrl}
+                </div>
+                <div style={{ color: "#545454", fontSize: "0.82rem", lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                  {previewSeoDescription || <span style={{ color: "#aaa" }}>الوصف يظهر هنا عند حفظ المقال...</span>}
+                </div>
+              </div>
             </div>
           </div>
 

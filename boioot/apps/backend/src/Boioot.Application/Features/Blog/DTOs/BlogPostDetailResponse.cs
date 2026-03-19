@@ -16,8 +16,20 @@ public class BlogPostDetailResponse
     public bool IsFeatured { get; set; }
     public int? ReadTimeMinutes { get; set; }
     public int ViewCount { get; set; }
+
+    // Raw stored SEO values
     public string? SeoTitle { get; set; }
     public string? SeoDescription { get; set; }
+
+    // SEO modes
+    public string SeoTitleMode { get; set; } = "Auto";
+    public string SeoDescriptionMode { get; set; } = "Auto";
+    public string SlugMode { get; set; } = "Auto";
+
+    // Resolved SEO (computed at fetch time)
+    public string ResolvedSeoTitle { get; set; } = string.Empty;
+    public string ResolvedSeoDescription { get; set; } = string.Empty;
+
     public DateTime? PublishedAt { get; set; }
     public Guid CreatedByUserId { get; set; }
     public string CreatedByName { get; set; } = string.Empty;

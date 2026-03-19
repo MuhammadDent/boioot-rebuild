@@ -4,10 +4,12 @@ import type {
   BlogPostSummaryResponse,
   BlogPostDetailResponse,
   BlogCategoryResponse,
+  BlogSeoSettingsDto,
   CreateBlogPostRequest,
   UpdateBlogPostRequest,
   CreateBlogCategoryRequest,
   UpdateBlogCategoryRequest,
+  UpdateBlogSeoSettingsRequest,
 } from "@/types";
 
 // ── Filter types ──────────────────────────────────────────────────────────────
@@ -66,6 +68,16 @@ export const blogAdminApi = {
 
   archivePost(id: string): Promise<BlogPostDetailResponse> {
     return api.post(`/admin/blog/posts/${id}/archive`, {});
+  },
+
+  // ── SEO Settings ──────────────────────────────────────────────────────────
+
+  getSeoSettings(): Promise<BlogSeoSettingsDto> {
+    return api.get("/admin/blog/seo-settings");
+  },
+
+  updateSeoSettings(request: UpdateBlogSeoSettingsRequest): Promise<BlogSeoSettingsDto> {
+    return api.put("/admin/blog/seo-settings", request);
   },
 
   // ── Categories ─────────────────────────────────────────────────────────────

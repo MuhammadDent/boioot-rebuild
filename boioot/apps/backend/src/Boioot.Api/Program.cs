@@ -185,6 +185,36 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN Tags TEXT"); }
         catch { /* column already exists */ }
 
+        // ── Blog SEO modes ────────────────────────────────────────────────────
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SeoTitleMode TEXT NOT NULL DEFAULT 'Auto'"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SeoDescriptionMode TEXT NOT NULL DEFAULT 'Auto'"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SlugMode TEXT NOT NULL DEFAULT 'Auto'"); }
+        catch { /* column already exists */ }
+
+        // ── Blog SEO Settings singleton table ─────────────────────────────────
+        // Note: {{...}} escapes the curly braces so EF Core doesn't treat them as format params
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS BlogSeoSettings (
+                Id                               TEXT NOT NULL PRIMARY KEY,
+                SiteName                         TEXT NOT NULL DEFAULT 'بيوت',
+                DefaultPostSeoTitleTemplate      TEXT NOT NULL DEFAULT '{{PostTitle}} | {{SiteName}}',
+                DefaultPostSeoDescriptionTemplate TEXT NOT NULL DEFAULT '{{Excerpt}}',
+                DefaultBlogListSeoTitle          TEXT NOT NULL DEFAULT 'المدونة | بيوت',
+                DefaultBlogListSeoDescription    TEXT NOT NULL DEFAULT 'تصفح أحدث المقالات العقارية من بيوت سوريا'
+            )");
+
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogSeoSettings ADD COLUMN DefaultBlogListSeoTitle TEXT NOT NULL DEFAULT 'المدونة | بيوت'"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogSeoSettings ADD COLUMN DefaultBlogListSeoDescription TEXT NOT NULL DEFAULT 'تصفح أحدث المقالات العقارية من بيوت سوريا'"); }
+        catch { /* column already exists */ }
+
+        // Seed singleton row if missing ({{...}} → {PostTitle} etc. after EF Core format processing)
+        var seoSettingsExists = await db.Database.ExecuteSqlRawAsync(
+            "INSERT OR IGNORE INTO BlogSeoSettings (Id, SiteName, DefaultPostSeoTitleTemplate, DefaultPostSeoDescriptionTemplate, DefaultBlogListSeoTitle, DefaultBlogListSeoDescription) VALUES ('00000000-0000-0000-0000-000000000001', 'بيوت', '{{PostTitle}} | {{SiteName}}', '{{Excerpt}}', 'المدونة | بيوت', 'تصفح أحدث المقالات العقارية من بيوت سوريا')");
+
+
         // ── Phase A: Subscription architecture (tables + unique index + seed) ─
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS Plans (

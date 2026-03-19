@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Blog.DTOs;
@@ -17,6 +18,8 @@ public class BlogService : IBlogService
     private readonly BoiootDbContext _db;
     private readonly IBlogSlugService _slugService;
     private readonly ILogger<BlogService> _logger;
+
+    private static readonly Guid SeoSettingsId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
     public BlogService(BoiootDbContext db, IBlogSlugService slugService, ILogger<BlogService> logger)
     {
@@ -57,6 +60,75 @@ public class BlogService : IBlogService
         return joined.Length == 0 ? null : joined;
     }
 
+    // ── SEO template resolution ───────────────────────────────────────────────
+
+    /// <summary>Replaces {Variable} tokens in a template with resolved values.</summary>
+    private static string ResolveTemplate(string template, BlogPost post, BlogSeoSettings settings)
+    {
+        var primaryCategory = post.BlogPostCategories
+            .Select(bpc => bpc.BlogCategory?.Name)
+            .FirstOrDefault(n => n != null) ?? "";
+
+        var publishDate = post.PublishedAt.HasValue
+            ? post.PublishedAt.Value.ToString("yyyy-MM-dd")
+            : DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+        var readTime = post.ReadTimeMinutes.HasValue
+            ? $"{post.ReadTimeMinutes} دقائق"
+            : "";
+
+        var result = template
+            .Replace("{PostTitle}",       post.Title)
+            .Replace("{Excerpt}",         post.Excerpt ?? "")
+            .Replace("{PrimaryCategory}", primaryCategory)
+            .Replace("{SiteName}",        settings.SiteName)
+            .Replace("{PublishDate}",     publishDate)
+            .Replace("{Year}",            DateTime.UtcNow.Year.ToString())
+            .Replace("{ReadTime}",        readTime);
+
+        // Remove any unknown {Token} patterns
+        result = Regex.Replace(result, @"\{[^}]+\}", "").Trim();
+
+        return result;
+    }
+
+    /// <summary>Strips HTML tags and truncates to maxLength chars.</summary>
+    private static string StripHtml(string? html, int maxLength = 160)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return "";
+        var text = Regex.Replace(html, "<[^>]+>", " ");
+        text = Regex.Replace(text, @"\s+", " ").Trim();
+        return text.Length <= maxLength ? text : text[..maxLength].TrimEnd() + "…";
+    }
+
+    private static string ResolveSeoTitle(BlogPost post, BlogSeoSettings settings)
+    {
+        return post.SeoTitleMode switch
+        {
+            "Custom" when !string.IsNullOrWhiteSpace(post.SeoTitle)
+                => post.SeoTitle,
+            "Template"
+                => ResolveTemplate(settings.DefaultPostSeoTitleTemplate, post, settings),
+            _ // Auto (default) + Custom when empty
+                => $"{post.Title} | {settings.SiteName}"
+        };
+    }
+
+    private static string ResolveSeoDescription(BlogPost post, BlogSeoSettings settings)
+    {
+        return post.SeoDescriptionMode switch
+        {
+            "Custom" when !string.IsNullOrWhiteSpace(post.SeoDescription)
+                => post.SeoDescription,
+            "Template"
+                => ResolveTemplate(settings.DefaultPostSeoDescriptionTemplate, post, settings),
+            _ // Auto (default) + Custom when empty
+                => !string.IsNullOrWhiteSpace(post.Excerpt)
+                    ? post.Excerpt
+                    : StripHtml(post.Content)
+        };
+    }
+
     // Admin maps — include all fields
     private static BlogPostSummaryResponse MapToAdminSummary(BlogPost p) => new()
     {
@@ -79,31 +151,36 @@ public class BlogService : IBlogService
         UpdatedAt       = p.UpdatedAt
     };
 
-    private static BlogPostDetailResponse MapToAdminDetail(BlogPost p) => new()
+    private static BlogPostDetailResponse MapToAdminDetail(BlogPost p, BlogSeoSettings settings) => new()
     {
-        Id                = p.Id,
-        Title             = p.Title,
-        Slug              = p.Slug,
-        Excerpt           = p.Excerpt,
-        Content           = p.Content,
-        CoverImageUrl     = p.CoverImageUrl,
-        CoverImageAlt     = p.CoverImageAlt,
-        Tags              = ParseTags(p.Tags),
-        Status            = p.Status,
-        IsFeatured        = p.IsFeatured,
-        ReadTimeMinutes   = p.ReadTimeMinutes,
-        ViewCount         = p.ViewCount,
-        SeoTitle          = p.SeoTitle,
-        SeoDescription    = p.SeoDescription,
-        PublishedAt       = p.PublishedAt,
-        CreatedByUserId   = p.CreatedByUserId,
-        CreatedByName     = p.CreatedBy?.FullName ?? string.Empty,
-        UpdatedByUserId   = p.UpdatedByUserId,
-        PublishedByUserId = p.PublishedByUserId,
-        IsDeleted         = p.IsDeleted,
-        Categories        = MapCategories(p),
-        CreatedAt         = p.CreatedAt,
-        UpdatedAt         = p.UpdatedAt
+        Id                    = p.Id,
+        Title                 = p.Title,
+        Slug                  = p.Slug,
+        Excerpt               = p.Excerpt,
+        Content               = p.Content,
+        CoverImageUrl         = p.CoverImageUrl,
+        CoverImageAlt         = p.CoverImageAlt,
+        Tags                  = ParseTags(p.Tags),
+        Status                = p.Status,
+        IsFeatured            = p.IsFeatured,
+        ReadTimeMinutes       = p.ReadTimeMinutes,
+        ViewCount             = p.ViewCount,
+        SeoTitle              = p.SeoTitle,
+        SeoDescription        = p.SeoDescription,
+        SeoTitleMode          = p.SeoTitleMode,
+        SeoDescriptionMode    = p.SeoDescriptionMode,
+        SlugMode              = p.SlugMode,
+        ResolvedSeoTitle      = ResolveSeoTitle(p, settings),
+        ResolvedSeoDescription= ResolveSeoDescription(p, settings),
+        PublishedAt           = p.PublishedAt,
+        CreatedByUserId       = p.CreatedByUserId,
+        CreatedByName         = p.CreatedBy?.FullName ?? string.Empty,
+        UpdatedByUserId       = p.UpdatedByUserId,
+        PublishedByUserId     = p.PublishedByUserId,
+        IsDeleted             = p.IsDeleted,
+        Categories            = MapCategories(p),
+        CreatedAt             = p.CreatedAt,
+        UpdatedAt             = p.UpdatedAt
     };
 
     // Public maps — no internal fields, no content in summary
@@ -156,6 +233,17 @@ public class BlogService : IBlogService
             .Include(p => p.CreatedBy)
             .Include(p => p.BlogPostCategories)
                 .ThenInclude(bpc => bpc.BlogCategory);
+    }
+
+    private async Task<BlogSeoSettings> GetOrCreateSettingsAsync(CancellationToken ct = default)
+    {
+        var s = await _db.Set<BlogSeoSettings>().FindAsync(new object[] { SeoSettingsId }, ct);
+        if (s != null) return s;
+
+        s = new BlogSeoSettings { Id = SeoSettingsId };
+        _db.Set<BlogSeoSettings>().Add(s);
+        await _db.SaveChangesAsync(ct);
+        return s;
     }
 
     // ── Category sync ─────────────────────────────────────────────────────────
@@ -239,7 +327,8 @@ public class BlogService : IBlogService
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new BoiootException("المقال غير موجود", 404);
 
-        return MapToAdminDetail(post);
+        var settings = await GetOrCreateSettingsAsync(ct);
+        return MapToAdminDetail(post, settings);
     }
 
     public async Task<BlogPostDetailResponse> AdminCreatePostAsync(
@@ -253,20 +342,23 @@ public class BlogService : IBlogService
 
         var post = new BlogPost
         {
-            Title           = request.Title.Trim(),
-            Slug            = slug,
-            Excerpt         = request.Excerpt?.Trim(),
-            Content         = request.Content.Trim(),
-            CoverImageUrl   = request.CoverImageUrl?.Trim(),
-            CoverImageAlt   = request.CoverImageAlt?.Trim(),
-            Tags            = SerializeTags(request.Tags),
-            Status          = BlogPostStatus.Draft,
-            IsFeatured      = request.IsFeatured,
-            SeoTitle        = request.SeoTitle?.Trim(),
-            SeoDescription  = request.SeoDescription?.Trim(),
-            ReadTimeMinutes = request.ReadTimeMinutes,
-            CreatedByUserId = createdByUserId,
-            ViewCount       = 0
+            Title             = request.Title.Trim(),
+            Slug              = slug,
+            Excerpt           = request.Excerpt?.Trim(),
+            Content           = request.Content.Trim(),
+            CoverImageUrl     = request.CoverImageUrl?.Trim(),
+            CoverImageAlt     = request.CoverImageAlt?.Trim(),
+            Tags              = SerializeTags(request.Tags),
+            Status            = BlogPostStatus.Draft,
+            IsFeatured        = request.IsFeatured,
+            SeoTitle          = request.SeoTitle?.Trim(),
+            SeoDescription    = request.SeoDescription?.Trim(),
+            SeoTitleMode      = request.SeoTitleMode,
+            SeoDescriptionMode= request.SeoDescriptionMode,
+            SlugMode          = request.SlugMode,
+            ReadTimeMinutes   = request.ReadTimeMinutes,
+            CreatedByUserId   = createdByUserId,
+            ViewCount         = 0
         };
 
         _db.Set<BlogPost>().Add(post);
@@ -309,7 +401,10 @@ public class BlogService : IBlogService
         if (request.IsFeatured     != null) post.IsFeatured    = request.IsFeatured.Value;
         if (request.SeoTitle       != null) post.SeoTitle      = request.SeoTitle.Trim();
         if (request.SeoDescription != null) post.SeoDescription = request.SeoDescription.Trim();
-        if (request.ReadTimeMinutes != null) post.ReadTimeMinutes = request.ReadTimeMinutes;
+        if (request.SeoTitleMode       != null) post.SeoTitleMode       = request.SeoTitleMode;
+        if (request.SeoDescriptionMode != null) post.SeoDescriptionMode = request.SeoDescriptionMode;
+        if (request.SlugMode           != null) post.SlugMode           = request.SlugMode;
+        if (request.ReadTimeMinutes    != null) post.ReadTimeMinutes    = request.ReadTimeMinutes;
 
         post.UpdatedByUserId = updatedByUserId;
 
@@ -342,11 +437,10 @@ public class BlogService : IBlogService
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new BoiootException("المقال غير موجود", 404);
 
-        // Runs all publish-readiness checks (including archived check)
         BlogPostValidation.EnsurePublishReady(post);
 
         post.Status            = BlogPostStatus.Published;
-        post.PublishedAt     ??= DateTime.UtcNow;   // Set only on first publish
+        post.PublishedAt     ??= DateTime.UtcNow;
         post.PublishedByUserId = publishedByUserId;
 
         await _db.SaveChangesAsync(ct);
@@ -382,6 +476,41 @@ public class BlogService : IBlogService
 
         return await AdminGetPostByIdAsync(post.Id, ct);
     }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Admin: Blog SEO Settings
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public async Task<BlogSeoSettingsDto> GetBlogSeoSettingsAsync(CancellationToken ct = default)
+    {
+        var s = await GetOrCreateSettingsAsync(ct);
+        return MapSeoDto(s);
+    }
+
+    public async Task<BlogSeoSettingsDto> UpdateBlogSeoSettingsAsync(
+        UpdateBlogSeoSettingsRequest request, CancellationToken ct = default)
+    {
+        var s = await GetOrCreateSettingsAsync(ct);
+
+        if (request.SiteName                          != null) s.SiteName                           = request.SiteName.Trim();
+        if (request.DefaultPostSeoTitleTemplate       != null) s.DefaultPostSeoTitleTemplate        = request.DefaultPostSeoTitleTemplate.Trim();
+        if (request.DefaultPostSeoDescriptionTemplate != null) s.DefaultPostSeoDescriptionTemplate  = request.DefaultPostSeoDescriptionTemplate.Trim();
+        if (request.DefaultBlogListSeoTitle           != null) s.DefaultBlogListSeoTitle            = request.DefaultBlogListSeoTitle.Trim();
+        if (request.DefaultBlogListSeoDescription     != null) s.DefaultBlogListSeoDescription      = request.DefaultBlogListSeoDescription.Trim();
+
+        await _db.SaveChangesAsync(ct);
+
+        return MapSeoDto(s);
+    }
+
+    private static BlogSeoSettingsDto MapSeoDto(BlogSeoSettings s) => new()
+    {
+        SiteName                          = s.SiteName,
+        DefaultPostSeoTitleTemplate       = s.DefaultPostSeoTitleTemplate,
+        DefaultPostSeoDescriptionTemplate = s.DefaultPostSeoDescriptionTemplate,
+        DefaultBlogListSeoTitle           = s.DefaultBlogListSeoTitle,
+        DefaultBlogListSeoDescription     = s.DefaultBlogListSeoDescription,
+    };
 
     // ═════════════════════════════════════════════════════════════════════════
     // Admin: Categories
@@ -506,7 +635,6 @@ public class BlogService : IBlogService
         page     = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 50);
 
-        // Query filter (HasQueryFilter) already excludes IsDeleted=true
         var q = PostsWithIncludes()
             .AsNoTracking()
             .Where(p => p.Status == BlogPostStatus.Published);
@@ -530,7 +658,6 @@ public class BlogService : IBlogService
 
     public async Task<PublicBlogPostDetail> PublicGetPostBySlugAsync(string slug, CancellationToken ct = default)
     {
-        // Query filter excludes IsDeleted=true automatically
         var post = await PostsWithIncludes()
             .FirstOrDefaultAsync(p => p.Slug == slug && p.Status == BlogPostStatus.Published, ct)
             ?? throw new BoiootException("المقال غير موجود", 404);

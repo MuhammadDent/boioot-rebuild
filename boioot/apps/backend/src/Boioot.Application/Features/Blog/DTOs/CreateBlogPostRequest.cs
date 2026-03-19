@@ -10,8 +10,16 @@ public class CreateBlogPostRequest
     public string? CoverImageAlt { get; set; }
     public List<string> Tags { get; set; } = new();
     public bool IsFeatured { get; set; } = false;
+
+    // Raw SEO fields (used only when mode is Custom)
     public string? SeoTitle { get; set; }
     public string? SeoDescription { get; set; }
+
+    // SEO modes
+    public string SeoTitleMode { get; set; } = "Auto";
+    public string SeoDescriptionMode { get; set; } = "Auto";
+    public string SlugMode { get; set; } = "Auto";
+
     public int? ReadTimeMinutes { get; set; }
     public List<Guid> CategoryIds { get; set; } = new();
 }

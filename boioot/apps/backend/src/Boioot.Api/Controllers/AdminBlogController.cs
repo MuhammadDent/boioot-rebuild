@@ -115,6 +115,21 @@ public class AdminBlogController : BaseController
     public async Task<IActionResult> ArchivePost(Guid id, CancellationToken ct)
         => Ok(await _blog.AdminArchivePostAsync(id, ct));
 
+    // ── SEO Settings ──────────────────────────────────────────────────────────
+
+    /// <summary>GET /api/admin/blog/seo-settings — global blog SEO template settings</summary>
+    [HttpGet("seo-settings")]
+    [Authorize(Policy = BlogPermissions.EditPost)]
+    public async Task<IActionResult> GetSeoSettings(CancellationToken ct)
+        => Ok(await _blog.GetBlogSeoSettingsAsync(ct));
+
+    /// <summary>PUT /api/admin/blog/seo-settings — update global blog SEO templates</summary>
+    [HttpPut("seo-settings")]
+    [Authorize(Policy = BlogPermissions.EditPost)]
+    public async Task<IActionResult> UpdateSeoSettings(
+        [FromBody] UpdateBlogSeoSettingsRequest request, CancellationToken ct)
+        => Ok(await _blog.UpdateBlogSeoSettingsAsync(request, ct));
+
     // ── Categories ────────────────────────────────────────────────────────────
 
     /// <summary>GET /api/admin/blog/categories — all categories with total post counts</summary>
