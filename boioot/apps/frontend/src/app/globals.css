@@ -1,3 +1,4 @@
+@import "tailwindcss";
 @import "../styles/theme.css";
 @import "../styles/components.css";
 
@@ -248,30 +249,3 @@ a {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ── Dashboard Metrics Cards ────────────────────────────────────── */
-.dash-stat-section {
-  margin-bottom: 2rem;
-}
-.dash-section-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #f1f5f9;
-}
-.dash-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-@media (min-width: 480px) {
-  .dash-stat-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-@media (min-width: 768px) {
-  .dash-stat-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}

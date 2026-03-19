@@ -459,9 +459,9 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Business Metrics ─────────────────────────────────────────────── */}
-        <div className="dash-stat-section">
-          <h2 className="dash-section-title">مؤشرات الأعمال</h2>
-          <div className="dash-stat-grid">
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">مؤشرات الأعمال</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <StatCard title="عدد الصفقات"         value={24}  icon={Handshake} accent="green"  subtitle="صفقة مكتملة" />
             <StatCard title="عدد العقارات"         value={38}  icon={Building2}  accent="blue"   subtitle="عقار مُدار" />
             <StatCard title="عدد الإعلانات"        value={17}  icon={Megaphone}  accent="purple" subtitle="إعلان منشور" />
@@ -470,9 +470,9 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Activity Metrics ──────────────────────────────────────────────── */}
-        <div className="dash-stat-section">
-          <h2 className="dash-section-title">مؤشرات النشاط</h2>
-          <div className="dash-stat-grid">
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">مؤشرات النشاط</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <StatCard title="عدد الطلبات"       value={52}  icon={InboxIcon}     accent="blue"   subtitle="طلب مُستلم" />
             <StatCard title="عدد الرسائل"       value={134} icon={MessageSquare}  accent="green"  subtitle="رسالة" />
             <StatCard title="أرشيف المحادثات"   value={29}  icon={Archive}        accent="purple" subtitle="محادثة مؤرشفة" />
@@ -480,9 +480,9 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Team & Rating ─────────────────────────────────────────────────── */}
-        <div className="dash-stat-section">
-          <h2 className="dash-section-title">الفريق والتقييم</h2>
-          <div className="dash-stat-grid">
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">الفريق والتقييم</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <StatCard title="عدد الوكلاء"  value={6}    icon={Users} accent="blue"  subtitle="وكيل نشط" />
             <StatCard title="التقييم"       value="4.8"  icon={Star}  accent="orange" subtitle="بناءً على 93 مراجعة" />
           </div>
