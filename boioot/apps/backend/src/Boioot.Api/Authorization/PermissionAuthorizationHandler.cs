@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using Boioot.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Boioot.Api.Authorization;
@@ -7,11 +6,16 @@ namespace Boioot.Api.Authorization;
 /// <summary>
 /// Evaluates <see cref="PermissionRequirement"/> against the current user's JWT claims.
 ///
-/// Strategy:
-///   1. SuperAdmin (role == "Admin") always succeeds — no further checks needed.
-///   2. For all other roles: check the "permission" claims embedded in the JWT.
-///      The JWT is generated with individual permission claims per role.
-///      See AuthService.GenerateToken().
+/// Single normalized authorization path for all users, including Admin:
+///   1. Verify the principal is authenticated.
+///   2. Look for a "permission" claim whose value matches the required permission.
+///   3. Succeed if found; fail otherwise.
+///
+/// Admin retains full access because AuthService.GenerateToken embeds all
+/// permissions (Permissions.All) as individual "permission" claims in the Admin
+/// JWT — not through a role-based shortcut in this handler.
+///
+/// See: AuthService.GenerateToken and StaffRolePermissions.GetPermissions("Admin").
 /// </summary>
 public sealed class PermissionAuthorizationHandler
     : AuthorizationHandler<PermissionRequirement>
@@ -27,16 +31,8 @@ public sealed class PermissionAuthorizationHandler
             return Task.CompletedTask;
         }
 
-        var role = context.User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
-
-        // SuperAdmin always passes
-        if (role == RoleNames.Admin)
-        {
-            context.Succeed(requirement);
-            return Task.CompletedTask;
-        }
-
-        // Check individual "permission" claims embedded in the JWT
+        // Check individual "permission" claims embedded in the JWT.
+        // This path applies to all users — Admin, staff roles, and future roles alike.
         var hasPermission = context.User
             .FindAll("permission")
             .Any(c => c.Value == requirement.Permission);
