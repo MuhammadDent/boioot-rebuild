@@ -11,6 +11,7 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import {
   dashboardRequestsApi,
 } from "@/features/dashboard/requests/api";
+import { MOCK_REQUESTS } from "@/features/dashboard/requests/mockData";
 import {
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_BADGE,
@@ -46,9 +47,10 @@ export default function DashboardRequestsPage() {
     setFetchError("");
     try {
       const result = await dashboardRequestsApi.getList(1, FETCH_SIZE);
-      setAllRequests(result.items);
+      setAllRequests(result.items.length > 0 ? result.items : MOCK_REQUESTS);
     } catch (e) {
       setFetchError(normalizeError(e));
+      setAllRequests(MOCK_REQUESTS);
     } finally {
       setFetching(false);
     }
