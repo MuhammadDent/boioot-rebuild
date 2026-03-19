@@ -32,7 +32,7 @@ export default function Navbar() {
       <div className="navbar__inner">
 
         {/* Logo — bigger to match old platform */}
-        <Link href="/" style={{ flexShrink: 0, lineHeight: 0, display: "block" }}>
+        <Link href="/" className="navbar__logo" style={{ lineHeight: 0, display: "block" }}>
           <Image
             src="/logo-boioot.png"
             alt="بيوت"

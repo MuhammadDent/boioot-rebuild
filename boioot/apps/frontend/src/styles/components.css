@@ -884,6 +884,11 @@
   .navbar__links  { display: none; }
   .navbar__inner  { height: 60px; }
   .navbar__actions { min-width: unset !important; }
+  /* Shrink logo on mobile so auth buttons stay within viewport */
+  .navbar__logo img {
+    width: 130px !important;
+    height: auto !important;
+  }
 }
 
 /* ── Home page header (responsive) ── */
