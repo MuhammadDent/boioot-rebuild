@@ -247,3 +247,15 @@ a {
 .admin-sidebar-close:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* ── Dashboard Stat Grid (responsive) ──────────────────────────── */
+@media (min-width: 480px) {
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+@media (min-width: 720px) {
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}

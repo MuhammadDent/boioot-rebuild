@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import Link from "next/link";
+import {
+  Handshake, Building2, Megaphone, ListTodo,
+  InboxIcon, MessageSquare, Archive,
+  Users, Star,
+} from "lucide-react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { dashboardSummaryApi } from "@/features/dashboard/summary/api";
@@ -13,6 +18,7 @@ import { normalizeError } from "@/lib/api";
 import { hasPermission } from "@/lib/permissions";
 import { formatPrice, LISTING_TYPE_LABELS, PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
 import type { DashboardSummary, FavoriteResponse } from "@/types";
+import StatCard from "@/components/dashboard/StatCard";
 
 const SUMMARY_ROLES = ["Admin", "CompanyOwner", "Broker", "Agent"] as const;
 type SummaryRole = (typeof SUMMARY_ROLES)[number];
@@ -450,6 +456,48 @@ export default function DashboardPage() {
               </div>
             </form>
           )}
+        </div>
+
+        {/* ── Business Metrics ─────────────────────────────────────────────── */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <SectionLabel>مؤشرات الأعمال</SectionLabel>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: "0.75rem",
+          }} className="stat-grid">
+            <StatCard title="عدد الصفقات"         value={24}  icon={Handshake} accent="green"  subtitle="صفقة مكتملة" />
+            <StatCard title="عدد العقارات"         value={38}  icon={Building2}  accent="blue"   subtitle="عقار مُدار" />
+            <StatCard title="عدد الإعلانات"        value={17}  icon={Megaphone}  accent="purple" subtitle="إعلان منشور" />
+            <StatCard title="الإعلانات المتبقية"   value={13}  icon={ListTodo}   accent="orange" subtitle="من أصل 30 في الباقة" />
+          </div>
+        </div>
+
+        {/* ── Activity Metrics ──────────────────────────────────────────────── */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <SectionLabel>مؤشرات النشاط</SectionLabel>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: "0.75rem",
+          }} className="stat-grid">
+            <StatCard title="عدد الطلبات"       value={52}  icon={InboxIcon}     accent="blue"   subtitle="طلب مُستلم" />
+            <StatCard title="عدد الرسائل"       value={134} icon={MessageSquare}  accent="green"  subtitle="رسالة" />
+            <StatCard title="أرشيف المحادثات"   value={29}  icon={Archive}        accent="purple" subtitle="محادثة مؤرشفة" />
+          </div>
+        </div>
+
+        {/* ── Team & Rating ─────────────────────────────────────────────────── */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <SectionLabel>الفريق والتقييم</SectionLabel>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: "0.75rem",
+          }} className="stat-grid">
+            <StatCard title="عدد الوكلاء"  value={6}    icon={Users} accent="blue"  subtitle="وكيل نشط" />
+            <StatCard title="التقييم"       value="4.8"  icon={Star}  accent="orange" subtitle="بناءً على 93 مراجعة" />
+          </div>
         </div>
 
         {/* ── Stats (management roles) ─────────────────────────────────────── */}
