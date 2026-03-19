@@ -26,6 +26,11 @@ public class BlogPostDetailResponse
     public string SeoDescriptionMode { get; set; } = "Auto";
     public string SlugMode { get; set; } = "Auto";
 
+    // Unified SEO mode + OG fields
+    public string SeoMode { get; set; } = "Auto";
+    public string? OgTitle { get; set; }
+    public string? OgDescription { get; set; }
+
     // Resolved SEO (computed at fetch time)
     public string ResolvedSeoTitle { get; set; } = string.Empty;
     public string ResolvedSeoDescription { get; set; } = string.Empty;

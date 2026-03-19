@@ -20,6 +20,11 @@ public class UpdateBlogPostRequest
     public string? SeoDescriptionMode { get; set; }
     public string? SlugMode { get; set; }
 
+    // Unified SEO mode + OG fields (null = don't change)
+    public string? SeoMode { get; set; }
+    public string? OgTitle { get; set; }
+    public string? OgDescription { get; set; }
+
     public int? ReadTimeMinutes { get; set; }
     public List<Guid>? CategoryIds { get; set; }
 }

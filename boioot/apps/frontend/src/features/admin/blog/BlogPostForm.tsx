@@ -6,14 +6,15 @@ import { blogAdminApi } from "@/features/admin/blog-api";
 import { BlogStatusBadge } from "./BlogStatusBadge";
 import { normalizeError } from "@/lib/api";
 import { tokenStorage } from "@/lib/token";
+import { resolveTemplate, SEO_VARIABLES } from "@/lib/seo-resolver";
 import type {
   BlogPostDetailResponse,
   BlogCategoryResponse,
   BlogSeoSettingsDto,
-  SeoTitleMode,
-  SeoDescriptionMode,
   SlugMode,
 } from "@/types";
+
+type SeoMode = "Auto" | "Template" | "Custom";
 
 const RichTextEditor = dynamic(
   () => import("./RichTextEditor").then((m) => ({ default: m.RichTextEditor })),
@@ -341,9 +342,11 @@ export function BlogPostForm({
     initialData?.categories.map(c => c.id) ?? []
   );
 
-  const [seoTitleMode,       setSeoTitleMode]       = useState<SeoTitleMode>(initialData?.seoTitleMode ?? "Auto");
-  const [seoDescriptionMode, setSeoDescriptionMode] = useState<SeoDescriptionMode>(initialData?.seoDescriptionMode ?? "Auto");
-  const [slugMode,           setSlugMode]           = useState<SlugMode>(initialData?.slugMode ?? "Auto");
+  const [seoMode,  setSeoMode]  = useState<SeoMode>(initialData?.seoMode ?? "Auto");
+  const [ogTitle,  setOgTitle]  = useState(initialData?.ogTitle  ?? "");
+  const [ogDescription, setOgDescription] = useState(initialData?.ogDescription ?? "");
+  const [slugMode, setSlugMode] = useState<SlugMode>(initialData?.slugMode ?? "Auto");
+  const [showVars, setShowVars] = useState(false);
 
   const [seoSettings,    setSeoSettings]    = useState<BlogSeoSettingsDto | null>(null);
 
@@ -358,30 +361,35 @@ export function BlogPostForm({
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   function buildPayload() {
+    const isCustom = seoMode === "Custom";
     return {
-      title:              title.trim(),
-      slug:               slug.trim() || undefined,
-      excerpt:            excerpt.trim() || undefined,
-      content:            content,
-      coverImageUrl:      coverImageUrl.trim() || undefined,
-      coverImageAlt:      coverImageAlt.trim() || undefined,
-      tags:               tags.length > 0 ? tags : undefined,
-      categoryIds:        selectedCatIds,
+      title:          title.trim(),
+      slug:           slug.trim() || undefined,
+      excerpt:        excerpt.trim() || undefined,
+      content,
+      coverImageUrl:  coverImageUrl.trim() || undefined,
+      coverImageAlt:  coverImageAlt.trim() || undefined,
+      tags:           tags.length > 0 ? tags : undefined,
+      categoryIds:    selectedCatIds,
       isFeatured,
-      seoTitle:           seoTitleMode === "Custom" ? (seoTitle.trim() || undefined) : undefined,
-      seoDescription:     seoDescriptionMode === "Custom" ? (seoDescription.trim() || undefined) : undefined,
-      seoTitleMode,
-      seoDescriptionMode,
+      seoMode,
+      seoTitle:       isCustom ? (seoTitle.trim() || undefined) : undefined,
+      seoDescription: isCustom ? (seoDescription.trim() || undefined) : undefined,
+      ogTitle:        isCustom ? (ogTitle.trim() || undefined) : undefined,
+      ogDescription:  isCustom ? (ogDescription.trim() || undefined) : undefined,
+      seoTitleMode:   seoMode,
+      seoDescriptionMode: seoMode,
       slugMode,
-      readTimeMinutes:    readTimeMinutes ? parseInt(readTimeMinutes) : undefined,
+      readTimeMinutes: readTimeMinutes ? parseInt(readTimeMinutes) : undefined,
     };
   }
 
   function applyResult(post: BlogPostDetailResponse) {
     setCurrentPost(post);
     setSlug(post.slug);
-    setSeoTitleMode(post.seoTitleMode ?? "Auto");
-    setSeoDescriptionMode(post.seoDescriptionMode ?? "Auto");
+    setSeoMode(post.seoMode ?? "Auto");
+    setOgTitle(post.ogTitle ?? "");
+    setOgDescription(post.ogDescription ?? "");
     setSlugMode(post.slugMode ?? "Auto");
     onSaved(post);
   }
@@ -511,37 +519,46 @@ export function BlogPostForm({
       .catch(() => {});
   }, []);
 
-  // ── Live SEO preview resolution (client-side mirror of server logic) ──────
-  const primaryCategory = (initialData?.categories ?? []).length > 0
-    ? (initialData?.categories[0].name ?? "")
+  // ── Live SEO preview (shared resolver logic) ─────────────────────────────
+  const siteName = seoSettings?.siteName ?? "بيوت";
+  const firstCatName = selectedCatIds.length > 0
+    ? (categories.find(c => c.id === selectedCatIds[0])?.name ?? "")
     : "";
 
-  function resolveTemplate(template: string): string {
-    if (!template) return "";
-    const year = new Date().getFullYear().toString();
-    const readTime = readTimeMinutes ? `${readTimeMinutes} دقائق` : "";
-    let result = template
-      .replace(/\{PostTitle\}/g,       title || "")
-      .replace(/\{Excerpt\}/g,         excerpt || "")
-      .replace(/\{PrimaryCategory\}/g, primaryCategory)
-      .replace(/\{SiteName\}/g,        seoSettings?.siteName ?? "بيوت")
-      .replace(/\{Year\}/g,            year)
-      .replace(/\{ReadTime\}/g,        readTime)
-      .replace(/\{PublishDate\}/g,     new Date().toISOString().slice(0, 10));
-    result = result.replace(/\{[^}]+\}/g, "").trim();
-    return result;
-  }
+  const seoVars: Record<string, string> = {
+    PostTitle:   title || "",
+    Excerpt:     excerpt || "",
+    Category:    firstCatName,
+    SiteName:    siteName,
+    AuthorName:  "",
+    PublishDate: new Date().toLocaleDateString("ar-SY", { year: "numeric", month: "long", day: "numeric" }),
+  };
 
-  const previewSeoTitle = (() => {
-    if (seoTitleMode === "Custom") return seoTitle || `${title} | ${seoSettings?.siteName ?? "بيوت"}`;
-    if (seoTitleMode === "Template") return resolveTemplate(seoSettings?.defaultPostSeoTitleTemplate ?? "{PostTitle} | {SiteName}");
-    return `${title || "عنوان المقال"} | ${seoSettings?.siteName ?? "بيوت"}`;
+  const autoMetaTitle = `${title || "عنوان المقال"} | ${siteName}`;
+  const autoMetaDesc  = excerpt || "";
+
+  const previewMetaTitle = (() => {
+    if (seoMode === "Custom") return seoTitle.trim() || autoMetaTitle;
+    if (seoMode === "Template") return resolveTemplate(seoSettings?.defaultPostSeoTitleTemplate ?? "{PostTitle} | {SiteName}", seoVars).trim() || autoMetaTitle;
+    return autoMetaTitle;
   })();
 
-  const previewSeoDescription = (() => {
-    if (seoDescriptionMode === "Custom") return seoDescription || excerpt || "";
-    if (seoDescriptionMode === "Template") return resolveTemplate(seoSettings?.defaultPostSeoDescriptionTemplate ?? "{Excerpt}");
-    return excerpt || "";
+  const previewMetaDesc = (() => {
+    if (seoMode === "Custom") return seoDescription.trim() || autoMetaDesc;
+    if (seoMode === "Template") return resolveTemplate(seoSettings?.defaultPostSeoDescriptionTemplate ?? "{Excerpt}", seoVars).trim() || autoMetaDesc;
+    return autoMetaDesc;
+  })();
+
+  const previewOgTitle = (() => {
+    if (seoMode === "Custom") return ogTitle.trim() || previewMetaTitle;
+    if (seoMode === "Template") return resolveTemplate(seoSettings?.defaultOgTitleTemplate ?? "{PostTitle} | {SiteName}", seoVars).trim() || autoMetaTitle;
+    return autoMetaTitle;
+  })();
+
+  const previewOgDesc = (() => {
+    if (seoMode === "Custom") return ogDescription.trim() || previewMetaDesc;
+    if (seoMode === "Template") return resolveTemplate(seoSettings?.defaultOgDescriptionTemplate ?? "{Excerpt}", seoVars).trim() || autoMetaDesc;
+    return autoMetaDesc;
   })();
 
   const previewUrl = `/blog/${slug || "url-slug"}`;
@@ -756,15 +773,16 @@ export function BlogPostForm({
 
           {/* SEO */}
           <div style={cardStyle}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
               <p style={{ margin: 0, fontWeight: 700, fontSize: "0.92rem" }}>تحسين محركات البحث (SEO)</p>
               <a href="/dashboard/admin/blog/seo-settings" target="_blank" style={{ fontSize: "0.75rem", color: "var(--color-primary)" }}>
-                إعدادات SEO ⚙
+                إعدادات عامة ⚙
               </a>
             </div>
 
-            {/* Slug / URL */}
-            <div style={{ marginBottom: "0.9rem" }}>
+            {/* ── Slug / URL ── */}
+            <div style={{ marginBottom: "1rem" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.3rem" }}>
                 <label style={{ ...labelStyle, marginBottom: 0 }}>رابط الصفحة (Slug)</label>
                 <div style={{ display: "flex", gap: "0.3rem" }}>
@@ -805,96 +823,243 @@ export function BlogPostForm({
               {isPublished && <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: "var(--color-warning, #b45309)" }}>الرابط مقفل بعد النشر</p>}
             </div>
 
-            {/* SEO Title */}
-            <div style={{ marginBottom: "0.9rem" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.3rem" }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>عنوان SEO</label>
-                <div style={{ display: "flex", gap: "0.3rem" }}>
-                  {(["Auto", "Template", "Custom"] as const).map(m => (
-                    <button key={m} type="button" onClick={() => setSeoTitleMode(m)} disabled={busy}
-                      style={{
-                        fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: 4, cursor: "pointer", border: "1px solid",
-                        borderColor: seoTitleMode === m ? "var(--color-primary)" : "var(--color-border, #e5e7eb)",
-                        background: seoTitleMode === m ? "var(--color-primary)" : "transparent",
-                        color: seoTitleMode === m ? "#fff" : "var(--color-text-secondary)",
-                      }}>
-                      {m === "Auto" ? "تلقائي" : m === "Template" ? "قالب" : "مخصص"}
-                    </button>
-                  ))}
-                </div>
+            {/* ── Unified SEO Mode selector ── */}
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ ...labelStyle, marginBottom: "0.4rem" }}>وضع الـ SEO</label>
+              <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1.5px solid var(--color-border, #e5e7eb)" }}>
+                {([
+                  { value: "Auto",     ar: "تلقائي",  hint: "يُولَّد من العنوان والملخص" },
+                  { value: "Template", ar: "قالب",     hint: "يستخدم قوالب الموقع" },
+                  { value: "Custom",   ar: "مخصص",    hint: "حقول مخصصة لكل مقال" },
+                ] as const).map(({ value, ar, hint }, i) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSeoMode(value)}
+                    disabled={busy}
+                    title={hint}
+                    style={{
+                      flex: 1,
+                      padding: "0.45rem 0",
+                      fontSize: "0.82rem",
+                      fontWeight: seoMode === value ? 700 : 400,
+                      border: "none",
+                      borderRight: i < 2 ? "1.5px solid var(--color-border, #e5e7eb)" : "none",
+                      background: seoMode === value ? "var(--color-primary)" : "transparent",
+                      color: seoMode === value ? "#fff" : "var(--color-text-secondary)",
+                      cursor: busy ? "not-allowed" : "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {ar}
+                  </button>
+                ))}
               </div>
-              {seoTitleMode === "Template" && (
-                <p style={{ margin: "0 0 0.4rem", fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace", padding: "0.3rem 0.5rem", background: "var(--color-bg-muted, #f9fafb)", borderRadius: 5 }}>
+              <p style={{ margin: "0.3rem 0 0", fontSize: "0.74rem", color: "var(--color-text-secondary)" }}>
+                {seoMode === "Auto" && "سيُولَّد العنوان والوصف تلقائياً من بيانات المقال."}
+                {seoMode === "Template" && "سيُستخدم القالب العالمي مع استبدال المتغيرات تلقائياً."}
+                {seoMode === "Custom" && "يمكنك تحديد عنوان ووصف مخصص لكل حقل."}
+              </p>
+            </div>
+
+            {/* ── Template mode: show active templates ── */}
+            {seoMode === "Template" && (
+              <div style={{
+                background: "var(--color-bg-muted, #f9fafb)",
+                border: "1px solid var(--color-border, #e5e7eb)",
+                borderRadius: 8, padding: "0.6rem 0.75rem", marginBottom: "1rem",
+                fontSize: "0.78rem", color: "var(--color-text-secondary)",
+              }}>
+                <p style={{ margin: "0 0 0.3rem", fontWeight: 600 }}>القوالب النشطة:</p>
+                <p style={{ margin: "0 0 0.2rem", fontFamily: "monospace" }}>
+                  <span style={{ color: "#888" }}>عنوان: </span>
                   {seoSettings?.defaultPostSeoTitleTemplate ?? "{PostTitle} | {SiteName}"}
                 </p>
-              )}
-              {seoTitleMode === "Custom" && (
-                <>
+                <p style={{ margin: "0 0 0.2rem", fontFamily: "monospace" }}>
+                  <span style={{ color: "#888" }}>وصف: </span>
+                  {seoSettings?.defaultPostSeoDescriptionTemplate ?? "{Excerpt}"}
+                </p>
+                <p style={{ margin: "0 0 0.2rem", fontFamily: "monospace" }}>
+                  <span style={{ color: "#888" }}>OG عنوان: </span>
+                  {seoSettings?.defaultOgTitleTemplate ?? "{PostTitle} | {SiteName}"}
+                </p>
+                <p style={{ margin: 0, fontFamily: "monospace" }}>
+                  <span style={{ color: "#888" }}>OG وصف: </span>
+                  {seoSettings?.defaultOgDescriptionTemplate ?? "{Excerpt}"}
+                </p>
+              </div>
+            )}
+
+            {/* ── Custom mode: 4 input fields ── */}
+            {seoMode === "Custom" && (
+              <div style={{ marginBottom: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {/* Meta Title */}
+                <div>
+                  <label style={labelStyle}>
+                    عنوان Meta
+                    <span style={{ fontWeight: 400, fontSize: "0.72rem", marginRight: "0.3rem", color: "var(--color-text-secondary)" }}>(يظهر في نتائج البحث)</span>
+                  </label>
                   <input
                     value={seoTitle}
                     onChange={e => setSeoTitle(e.target.value)}
-                    style={inputStyle}
-                    placeholder="أدخل عنوان SEO المخصص"
+                    style={{ ...inputStyle, borderColor: seoTitle.length > 60 ? "var(--color-error)" : undefined }}
+                    placeholder={`مثال: ${title || "عنوان المقال"} | ${siteName}`}
                     disabled={busy}
                   />
                   <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: seoTitle.length > 60 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
-                    {seoTitle.length} / 60 حرف
+                    {seoTitle.length} / 60 حرف {seoTitle.length > 60 ? "⚠ طويل جداً" : ""}
                   </p>
-                </>
-              )}
-            </div>
-
-            {/* SEO Description */}
-            <div style={{ marginBottom: "0.9rem" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.3rem" }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>وصف SEO</label>
-                <div style={{ display: "flex", gap: "0.3rem" }}>
-                  {(["Auto", "Template", "Custom"] as const).map(m => (
-                    <button key={m} type="button" onClick={() => setSeoDescriptionMode(m)} disabled={busy}
-                      style={{
-                        fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: 4, cursor: "pointer", border: "1px solid",
-                        borderColor: seoDescriptionMode === m ? "var(--color-primary)" : "var(--color-border, #e5e7eb)",
-                        background: seoDescriptionMode === m ? "var(--color-primary)" : "transparent",
-                        color: seoDescriptionMode === m ? "#fff" : "var(--color-text-secondary)",
-                      }}>
-                      {m === "Auto" ? "تلقائي" : m === "Template" ? "قالب" : "مخصص"}
-                    </button>
-                  ))}
                 </div>
-              </div>
-              {seoDescriptionMode === "Template" && (
-                <p style={{ margin: "0 0 0.4rem", fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace", padding: "0.3rem 0.5rem", background: "var(--color-bg-muted, #f9fafb)", borderRadius: 5 }}>
-                  {seoSettings?.defaultPostSeoDescriptionTemplate ?? "{Excerpt}"}
-                </p>
-              )}
-              {seoDescriptionMode === "Custom" && (
-                <>
+
+                {/* Meta Description */}
+                <div>
+                  <label style={labelStyle}>
+                    وصف Meta
+                    <span style={{ fontWeight: 400, fontSize: "0.72rem", marginRight: "0.3rem", color: "var(--color-text-secondary)" }}>(يظهر في نتائج البحث)</span>
+                  </label>
                   <textarea
                     value={seoDescription}
                     onChange={e => setSeoDescription(e.target.value)}
-                    style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
-                    placeholder="أدخل وصف SEO المخصص"
+                    style={{ ...inputStyle, minHeight: 65, resize: "vertical", borderColor: seoDescription.length > 160 ? "var(--color-error)" : undefined }}
+                    placeholder={excerpt || "وصف مختصر يظهر في نتائج البحث..."}
                     disabled={busy}
                   />
                   <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: seoDescription.length > 160 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
-                    {seoDescription.length} / 160 حرف
+                    {seoDescription.length} / 160 حرف {seoDescription.length > 160 ? "⚠ طويل جداً" : ""}
                   </p>
-                </>
-              )}
+                </div>
+
+                {/* OG Title */}
+                <div>
+                  <label style={labelStyle}>
+                    عنوان OG
+                    <span style={{ fontWeight: 400, fontSize: "0.72rem", marginRight: "0.3rem", color: "var(--color-text-secondary)" }}>(يظهر عند المشاركة)</span>
+                  </label>
+                  <input
+                    value={ogTitle}
+                    onChange={e => setOgTitle(e.target.value)}
+                    style={{ ...inputStyle, borderColor: ogTitle.length > 60 ? "var(--color-error)" : undefined }}
+                    placeholder={`سيُستخدم عنوان Meta كقيمة افتراضية`}
+                    disabled={busy}
+                  />
+                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: ogTitle.length > 60 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
+                    {ogTitle.length} / 60 حرف {ogTitle.length > 60 ? "⚠ طويل جداً" : ""}
+                  </p>
+                </div>
+
+                {/* OG Description */}
+                <div>
+                  <label style={labelStyle}>
+                    وصف OG
+                    <span style={{ fontWeight: 400, fontSize: "0.72rem", marginRight: "0.3rem", color: "var(--color-text-secondary)" }}>(يظهر عند المشاركة)</span>
+                  </label>
+                  <textarea
+                    value={ogDescription}
+                    onChange={e => setOgDescription(e.target.value)}
+                    style={{ ...inputStyle, minHeight: 65, resize: "vertical", borderColor: ogDescription.length > 200 ? "var(--color-error)" : undefined }}
+                    placeholder="سيُستخدم وصف Meta كقيمة افتراضية"
+                    disabled={busy}
+                  />
+                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.72rem", color: ogDescription.length > 200 ? "var(--color-error)" : "var(--color-text-secondary)" }}>
+                    {ogDescription.length} / 200 حرف {ogDescription.length > 200 ? "⚠ طويل جداً" : ""}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ── Variables helper (collapsible) ── */}
+            {seoMode !== "Auto" && (
+              <div style={{ marginBottom: "1rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowVars(v => !v)}
+                  style={{
+                    background: "none", border: "none", padding: 0, cursor: "pointer",
+                    fontSize: "0.75rem", color: "var(--color-primary)", fontWeight: 600,
+                    display: "flex", alignItems: "center", gap: "0.3rem",
+                  }}
+                >
+                  <span>{showVars ? "▲" : "▼"}</span>
+                  المتغيرات المتاحة
+                </button>
+                {showVars && (
+                  <div style={{
+                    marginTop: "0.4rem",
+                    background: "var(--color-bg-muted, #f9fafb)",
+                    border: "1px solid var(--color-border, #e5e7eb)",
+                    borderRadius: 8, padding: "0.6rem 0.75rem",
+                  }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+                      {SEO_VARIABLES.map(({ key, label }) => (
+                        <span
+                          key={key}
+                          title={label}
+                          style={{
+                            background: "#e8f5e9", color: "var(--color-primary)",
+                            borderRadius: 4, padding: "0.18rem 0.45rem",
+                            fontSize: "0.72rem", fontFamily: "monospace",
+                            cursor: "help", fontWeight: 600,
+                          }}
+                        >
+                          {key}
+                        </span>
+                      ))}
+                    </div>
+                    <p style={{ margin: "0.4rem 0 0", fontSize: "0.72rem", color: "var(--color-text-secondary)" }}>
+                      مرّر على المتغير لرؤية معناه. يمكن استخدام هذه المتغيرات في القوالب العالمية.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Google Search Preview ── */}
+            <div style={{ borderTop: "1px solid var(--color-border, #e5e7eb)", paddingTop: "0.75rem", marginBottom: "0.85rem" }}>
+              <p style={{ margin: "0 0 0.45rem", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <span>🔍</span> معاينة نتيجة البحث
+              </p>
+              <div style={{ background: "#fff", border: "1px solid #dfe1e5", borderRadius: 10, padding: "0.75rem 1rem", fontFamily: "arial, sans-serif" }}>
+                <div style={{ color: "#1a0dab", fontSize: "1rem", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "0.1rem" }}>
+                  {previewMetaTitle}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", marginBottom: "0.2rem" }}>
+                  <span style={{ color: "#006621", fontSize: "0.78rem" }} dir="ltr">boioot.sy{previewUrl}</span>
+                  <span style={{ color: "#70757a", fontSize: "0.75rem" }}>›</span>
+                </div>
+                <div style={{ color: "#545454", fontSize: "0.84rem", lineHeight: 1.5, display: "-webkit-box", overflow: "hidden", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                  {previewMetaDesc || <span style={{ color: "#aaa", fontStyle: "italic" }}>لا يوجد وصف — أضف ملخصاً للمقال</span>}
+                </div>
+              </div>
             </div>
 
-            {/* Live Google Preview */}
-            <div style={{ borderTop: "1px solid var(--color-border, #e5e7eb)", paddingTop: "0.75rem" }}>
-              <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-secondary)" }}>معاينة نتيجة البحث</p>
-              <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, padding: "0.7rem 0.9rem", fontSize: "0.85rem" }}>
-                <div style={{ color: "#1a0dab", fontSize: "1rem", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "0.15rem" }}>
-                  {previewSeoTitle || `${title || "عنوان المقال"} | بيوت`}
+            {/* ── OG Card Preview ── */}
+            <div>
+              <p style={{ margin: "0 0 0.45rem", fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <span>📤</span> معاينة بطاقة المشاركة (OG)
+              </p>
+              <div style={{
+                border: "1px solid #dfe1e5", borderRadius: 10, overflow: "hidden",
+                background: "#fff", fontSize: "0.84rem",
+              }}>
+                {/* Cover image or placeholder */}
+                <div style={{
+                  width: "100%", height: 90,
+                  background: coverImageUrl ? `url(${coverImageUrl}) center/cover no-repeat` : "linear-gradient(135deg, #e8f5e9, #c8e6c9)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {!coverImageUrl && (
+                    <span style={{ fontSize: "1.5rem", opacity: 0.4 }}>🏠</span>
+                  )}
                 </div>
-                <div style={{ color: "#006621", fontSize: "0.78rem", marginBottom: "0.2rem", direction: "ltr", textAlign: "left" }} dir="ltr">
-                  boioot.sy{previewUrl}
-                </div>
-                <div style={{ color: "#545454", fontSize: "0.82rem", lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                  {previewSeoDescription || <span style={{ color: "#aaa" }}>الوصف يظهر هنا عند حفظ المقال...</span>}
+                {/* OG info */}
+                <div style={{ padding: "0.6rem 0.75rem" }}>
+                  <p style={{ margin: "0 0 0.15rem", fontSize: "0.72rem", color: "#888", textTransform: "uppercase" }} dir="ltr">boioot.sy</p>
+                  <p style={{ margin: "0 0 0.15rem", fontWeight: 700, fontSize: "0.88rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {previewOgTitle}
+                  </p>
+                  <p style={{ margin: 0, fontSize: "0.78rem", color: "#606060", display: "-webkit-box", overflow: "hidden", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                    {previewOgDesc || <span style={{ color: "#aaa", fontStyle: "italic" }}>لا يوجد وصف OG</span>}
+                  </p>
                 </div>
               </div>
             </div>

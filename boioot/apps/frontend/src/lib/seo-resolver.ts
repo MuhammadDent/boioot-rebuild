@@ -1,5 +1,7 @@
 import type { PublicBlogPostDetail, BlogSeoSettingsDto } from "@/types";
 
+export type SeoMode = "Auto" | "Template" | "Custom";
+
 export interface ResolvedBlogSeo {
   metaTitle: string;
   metaDescription: string;
@@ -34,12 +36,21 @@ function buildVars(
   };
 }
 
-function resolveTemplate(
+export function resolveTemplate(
   template: string,
   vars: Record<string, string>
 ): string {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => vars[key] ?? "");
 }
+
+export const SEO_VARIABLES: Array<{ key: string; label: string }> = [
+  { key: "{PostTitle}",   label: "عنوان المقال" },
+  { key: "{Excerpt}",     label: "الملخص" },
+  { key: "{Category}",    label: "التصنيف" },
+  { key: "{SiteName}",    label: "اسم الموقع" },
+  { key: "{AuthorName}",  label: "اسم الكاتب" },
+  { key: "{PublishDate}", label: "تاريخ النشر" },
+];
 
 function autoTitle(post: PublicBlogPostDetail, siteName: string): string {
   return `${post.title} | ${siteName || FALLBACK_SITE_NAME}`;

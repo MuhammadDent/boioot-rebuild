@@ -170,6 +170,9 @@ public class BlogService : IBlogService
         SeoTitleMode          = p.SeoTitleMode,
         SeoDescriptionMode    = p.SeoDescriptionMode,
         SlugMode              = p.SlugMode,
+        SeoMode               = p.SeoMode,
+        OgTitle               = p.OgTitle,
+        OgDescription         = p.OgDescription,
         ResolvedSeoTitle      = ResolveSeoTitle(p, settings),
         ResolvedSeoDescription= ResolveSeoDescription(p, settings),
         PublishedAt           = p.PublishedAt,
@@ -367,6 +370,9 @@ public class BlogService : IBlogService
             SeoTitleMode      = request.SeoTitleMode,
             SeoDescriptionMode= request.SeoDescriptionMode,
             SlugMode          = request.SlugMode,
+            SeoMode           = request.SeoMode,
+            OgTitle           = request.OgTitle?.Trim(),
+            OgDescription     = request.OgDescription?.Trim(),
             ReadTimeMinutes   = request.ReadTimeMinutes,
             CreatedByUserId   = createdByUserId,
             ViewCount         = 0
@@ -410,11 +416,14 @@ public class BlogService : IBlogService
         if (request.CoverImageAlt  != null) post.CoverImageAlt = request.CoverImageAlt.Trim();
         if (request.Tags           != null) post.Tags          = SerializeTags(request.Tags);
         if (request.IsFeatured     != null) post.IsFeatured    = request.IsFeatured.Value;
-        if (request.SeoTitle       != null) post.SeoTitle      = request.SeoTitle.Trim();
-        if (request.SeoDescription != null) post.SeoDescription = request.SeoDescription.Trim();
+        if (request.SeoTitle           != null) post.SeoTitle           = request.SeoTitle.Trim();
+        if (request.SeoDescription     != null) post.SeoDescription     = request.SeoDescription.Trim();
         if (request.SeoTitleMode       != null) post.SeoTitleMode       = request.SeoTitleMode;
         if (request.SeoDescriptionMode != null) post.SeoDescriptionMode = request.SeoDescriptionMode;
         if (request.SlugMode           != null) post.SlugMode           = request.SlugMode;
+        if (request.SeoMode            != null) post.SeoMode            = request.SeoMode;
+        if (request.OgTitle            != null) post.OgTitle            = request.OgTitle.Trim();
+        if (request.OgDescription      != null) post.OgDescription      = request.OgDescription.Trim();
         if (request.ReadTimeMinutes    != null) post.ReadTimeMinutes    = request.ReadTimeMinutes;
 
         post.UpdatedByUserId = updatedByUserId;

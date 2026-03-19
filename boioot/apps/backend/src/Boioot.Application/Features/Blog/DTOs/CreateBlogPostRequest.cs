@@ -20,6 +20,11 @@ public class CreateBlogPostRequest
     public string SeoDescriptionMode { get; set; } = "Auto";
     public string SlugMode { get; set; } = "Auto";
 
+    // Unified SEO mode + OG fields
+    public string SeoMode { get; set; } = "Auto";
+    public string? OgTitle { get; set; }
+    public string? OgDescription { get; set; }
+
     public int? ReadTimeMinutes { get; set; }
     public List<Guid> CategoryIds { get; set; } = new();
 }

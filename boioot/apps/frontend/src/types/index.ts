@@ -569,6 +569,9 @@ export interface BlogPostDetailResponse extends BlogPostSummaryResponse {
   seoTitleMode: SeoTitleMode;
   seoDescriptionMode: SeoDescriptionMode;
   slugMode: SlugMode;
+  seoMode: "Auto" | "Template" | "Custom";
+  ogTitle?: string;
+  ogDescription?: string;
   resolvedSeoTitle: string;
   resolvedSeoDescription: string;
   updatedByUserId?: string;
@@ -591,6 +594,9 @@ export interface CreateBlogPostRequest {
   seoTitleMode?: SeoTitleMode;
   seoDescriptionMode?: SeoDescriptionMode;
   slugMode?: SlugMode;
+  seoMode?: "Auto" | "Template" | "Custom";
+  ogTitle?: string;
+  ogDescription?: string;
   readTimeMinutes?: number;
 }
 
@@ -609,6 +615,9 @@ export interface UpdateBlogPostRequest {
   seoTitleMode?: SeoTitleMode;
   seoDescriptionMode?: SeoDescriptionMode;
   slugMode?: SlugMode;
+  seoMode?: "Auto" | "Template" | "Custom";
+  ogTitle?: string;
+  ogDescription?: string;
   readTimeMinutes?: number;
 }
 
