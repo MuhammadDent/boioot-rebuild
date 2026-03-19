@@ -194,6 +194,12 @@ using (var scope = app.Services.CreateScope())
         catch (Exception ex) { logger.LogWarning("SeoDescriptionMode: {msg}", ex.Message); }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SlugMode TEXT NOT NULL DEFAULT 'Auto'"); logger.LogInformation("MIGRATED: Added SlugMode"); }
         catch (Exception ex) { logger.LogWarning("SlugMode: {msg}", ex.Message); }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN SeoMode TEXT NOT NULL DEFAULT 'Auto'"); logger.LogInformation("MIGRATED: Added SeoMode"); }
+        catch (Exception ex) { logger.LogWarning("SeoMode: {msg}", ex.Message); }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN OgTitle TEXT"); logger.LogInformation("MIGRATED: Added OgTitle"); }
+        catch (Exception ex) { logger.LogWarning("OgTitle: {msg}", ex.Message); }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogPosts ADD COLUMN OgDescription TEXT"); logger.LogInformation("MIGRATED: Added OgDescription"); }
+        catch (Exception ex) { logger.LogWarning("OgDescription: {msg}", ex.Message); }
 
         // ── Blog SEO Settings singleton table ─────────────────────────────────
         // Note: {{...}} double-brace escapes prevent EF Core's format-string parser from
@@ -215,6 +221,10 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogSeoSettings ADD COLUMN DefaultBlogListSeoTitle TEXT NOT NULL DEFAULT 'المدونة | بيوت'"); }
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogSeoSettings ADD COLUMN DefaultBlogListSeoDescription TEXT NOT NULL DEFAULT 'تصفح أحدث المقالات العقارية من بيوت سوريا'"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogSeoSettings ADD COLUMN DefaultOgTitleTemplate TEXT NOT NULL DEFAULT '{{PostTitle}} | {{SiteName}}'"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE BlogSeoSettings ADD COLUMN DefaultOgDescriptionTemplate TEXT NOT NULL DEFAULT '{{Excerpt}}'"); }
         catch { /* column already exists */ }
 
         // Seed singleton row if missing — {{...}} resolves to {PostTitle} etc. after EF Core processes

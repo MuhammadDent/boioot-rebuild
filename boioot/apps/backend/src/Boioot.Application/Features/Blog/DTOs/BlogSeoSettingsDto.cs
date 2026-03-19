@@ -7,4 +7,6 @@ public class BlogSeoSettingsDto
     public string DefaultPostSeoDescriptionTemplate { get; set; } = "{Excerpt}";
     public string DefaultBlogListSeoTitle { get; set; } = "المدونة | بيوت";
     public string DefaultBlogListSeoDescription { get; set; } = "";
+    public string DefaultOgTitleTemplate { get; set; } = "{PostTitle} | {SiteName}";
+    public string DefaultOgDescriptionTemplate { get; set; } = "{Excerpt}";
 }

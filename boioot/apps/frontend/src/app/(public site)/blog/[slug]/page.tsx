@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { serverGetBlogPost } from "@/lib/server-blog-api";
+import { serverGetBlogPost, serverGetBlogSeoSettings } from "@/lib/server-blog-api";
+import { resolveBlogSeo } from "@/lib/seo-resolver";
 import RelatedArticles from "./RelatedArticles";
 
 interface Props {
@@ -12,7 +13,10 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = await serverGetBlogPost(slug);
+  const [post, seoSettings] = await Promise.all([
+    serverGetBlogPost(slug),
+    serverGetBlogSeoSettings(),
+  ]);
 
   if (!post) {
     return {
@@ -21,15 +25,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const title = post.seoTitle || `${post.title} | بيوت`;
-  const description = post.seoDescription || post.excerpt || "اقرأ المزيد في مدونة بيوت العقارية";
+  const { metaTitle, metaDescription, ogTitle, ogDescription } =
+    resolveBlogSeo(post, seoSettings);
 
   return {
-    title,
-    description,
+    title: metaTitle,
+    description: metaDescription,
     openGraph: {
-      title: post.seoTitle || post.title,
-      description: post.seoDescription || post.excerpt || "",
+      title: ogTitle,
+      description: ogDescription,
       ...(post.coverImageUrl
         ? { images: [{ url: post.coverImageUrl, alt: post.coverImageAlt ?? post.title }] }
         : {}),

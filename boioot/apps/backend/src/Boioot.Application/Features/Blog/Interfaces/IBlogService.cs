@@ -37,4 +37,7 @@ public interface IBlogService
     // ── Public: Categories ────────────────────────────────────────────────────
     Task<List<BlogCategoryResponse>> PublicGetCategoriesAsync(CancellationToken ct = default);
     Task<PagedResult<PublicBlogPostSummary>> PublicGetPostsByCategorySlugAsync(string categorySlug, int page, int pageSize, CancellationToken ct = default);
+
+    // ── Public: SEO Settings ──────────────────────────────────────────────────
+    Task<BlogSeoSettingsDto> PublicGetSeoSettingsAsync(CancellationToken ct = default);
 }

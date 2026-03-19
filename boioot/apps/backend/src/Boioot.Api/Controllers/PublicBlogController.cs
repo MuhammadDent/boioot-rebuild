@@ -64,6 +64,17 @@ public class PublicBlogController : BaseController
     }
 
     /// <summary>
+    /// GET /api/blog/seo-settings
+    /// Global blog SEO settings (templates, site name). Used by frontend SEO resolver.
+    /// </summary>
+    [HttpGet("seo-settings")]
+    public async Task<IActionResult> GetSeoSettings(CancellationToken ct)
+    {
+        var result = await _blog.PublicGetSeoSettingsAsync(ct);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// GET /api/blog/categories/{categorySlug}/posts
     /// Published posts in a specific active category, ordered by PublishedAt desc.
     /// </summary>

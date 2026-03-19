@@ -20,4 +20,10 @@ public class BlogSeoSettings
 
     /// <summary>Static SEO description for the /blog list page.</summary>
     public string DefaultBlogListSeoDescription { get; set; } = "تصفح أحدث المقالات والأخبار العقارية من بيوت سوريا";
+
+    /// <summary>Used when a post is in Template mode for OG title.</summary>
+    public string DefaultOgTitleTemplate { get; set; } = "{PostTitle} | {SiteName}";
+
+    /// <summary>Used when a post is in Template mode for OG description.</summary>
+    public string DefaultOgDescriptionTemplate { get; set; } = "{Excerpt}";
 }

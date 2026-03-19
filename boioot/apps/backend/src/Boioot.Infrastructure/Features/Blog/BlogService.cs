@@ -216,6 +216,9 @@ public class BlogService : IBlogService
         ViewCount       = p.ViewCount,
         SeoTitle        = p.SeoTitle,
         SeoDescription  = p.SeoDescription,
+        SeoMode         = p.SeoMode,
+        OgTitle         = p.OgTitle,
+        OgDescription   = p.OgDescription,
         PublishedAt     = p.PublishedAt,
         Categories      = MapCategories(p),
         CreatedAt       = p.CreatedAt
@@ -518,7 +521,15 @@ public class BlogService : IBlogService
         DefaultPostSeoDescriptionTemplate = s.DefaultPostSeoDescriptionTemplate,
         DefaultBlogListSeoTitle           = s.DefaultBlogListSeoTitle,
         DefaultBlogListSeoDescription     = s.DefaultBlogListSeoDescription,
+        DefaultOgTitleTemplate            = s.DefaultOgTitleTemplate,
+        DefaultOgDescriptionTemplate      = s.DefaultOgDescriptionTemplate,
     };
+
+    public async Task<BlogSeoSettingsDto> PublicGetSeoSettingsAsync(CancellationToken ct = default)
+    {
+        var s = await GetOrCreateSettingsAsync(ct);
+        return MapSeoDto(s);
+    }
 
     // ═════════════════════════════════════════════════════════════════════════
     // Admin: Categories

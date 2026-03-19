@@ -492,6 +492,9 @@ export interface PublicBlogPostDetail {
   viewCount: number;
   seoTitle?: string;
   seoDescription?: string;
+  seoMode: "Auto" | "Template" | "Custom";
+  ogTitle?: string;
+  ogDescription?: string;
   publishedAt?: string;
   categories: PublicBlogCategory[];
   createdAt: string;
@@ -515,6 +518,8 @@ export interface BlogSeoSettingsDto {
   defaultPostSeoDescriptionTemplate: string;
   defaultBlogListSeoTitle: string;
   defaultBlogListSeoDescription: string;
+  defaultOgTitleTemplate: string;
+  defaultOgDescriptionTemplate: string;
 }
 
 export interface UpdateBlogSeoSettingsRequest {

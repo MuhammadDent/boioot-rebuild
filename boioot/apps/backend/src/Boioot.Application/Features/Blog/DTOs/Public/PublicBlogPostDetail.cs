@@ -21,6 +21,9 @@ public class PublicBlogPostDetail
     public int ViewCount { get; set; }
     public string? SeoTitle { get; set; }
     public string? SeoDescription { get; set; }
+    public string SeoMode { get; set; } = "Auto";
+    public string? OgTitle { get; set; }
+    public string? OgDescription { get; set; }
     public DateTime? PublishedAt { get; set; }
     public List<BlogCategoryResponse> Categories { get; set; } = new();
     public DateTime CreatedAt { get; set; }

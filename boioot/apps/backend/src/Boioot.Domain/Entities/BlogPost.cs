@@ -25,8 +25,15 @@ public class BlogPost : BaseEntity, ISoftDeletable
     public string SeoTitleMode { get; set; } = "Auto";
     public string SeoDescriptionMode { get; set; } = "Auto";
 
+    // Unified SEO mode — controls meta title, meta description, OG title, OG description
+    public string SeoMode { get; set; } = "Auto";
+
     // Values: "Auto" | "Custom"
     public string SlugMode { get; set; } = "Auto";
+
+    // ── Open Graph custom fields ───────────────────────────────────────────────
+    public string? OgTitle { get; set; }
+    public string? OgDescription { get; set; }
 
     public int? ReadTimeMinutes { get; set; }
     public int ViewCount { get; set; } = 0;
