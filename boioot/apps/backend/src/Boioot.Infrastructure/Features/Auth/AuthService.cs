@@ -155,65 +155,83 @@ public class AuthService : IAuthService
         return MapToProfileResponse(user, permissions);
     }
 
-    // ── Permission resolution — Dual Mode (Phase 2) ───────────────────────────
+    // ── Permission resolution — Phase 3 (Selective DB Mode) ──────────────────
     //
-    // Pass 1: query the dynamic RBAC tables (UserRoles → RolePermissions → Permissions).
-    // Pass 2: if no DB permissions found, fall back to StaffRolePermissions (legacy).
+    // CompanyOwner → DB ONLY. No fallback to legacy. Source of truth = DB rows.
+    // All other roles → DB first, fallback to legacy if no DB rows found.
     //
-    // Temporarily logs both sets so we can compare them during the transition.
+    // Phase 3 activates DB-driven permissions for CompanyOwner exclusively.
+    // Remaining roles will follow suit in subsequent phases.
+
+    private static readonly IReadOnlySet<UserRole> DbOnlyRoles =
+        new HashSet<UserRole> { UserRole.CompanyOwner };
 
     private async Task<IReadOnlyList<string>> ResolvePermissionsAsync(User user, CancellationToken ct)
     {
-        var roleStr = user.Role.ToString();
+        var roleStr  = user.Role.ToString();
+        var isDbOnly = DbOnlyRoles.Contains(user.Role);
 
-        // Pass 1 — DB-driven permissions
+        // Pass 1 — DB-driven permissions (always queried)
         var dbPermissions = await _rbac.GetUserPermissionsAsync(user.Id, ct);
 
-        // Pass 2 — legacy static mapping (always computed for comparison logging)
+        // ── CompanyOwner: DB ONLY — no legacy fallback ────────────────────────
+        if (isDbOnly)
+        {
+            _logger.LogInformation(
+                "[RBAC] {Email} ({Role}) → DB ONLY ({Count} perms): [{Perms}]",
+                user.Email, roleStr, dbPermissions.Count,
+                string.Join(", ", dbPermissions));
+
+            return dbPermissions;
+        }
+
+        // ── All other roles: DB first, legacy fallback ────────────────────────
         var legacyPermissions = StaffRolePermissions.GetPermissions(roleStr);
 
-        // ── Comparison log (Phase 2 diagnostic) ──────────────────────────────
         if (dbPermissions.Count == 0 && legacyPermissions.Count == 0)
         {
             _logger.LogDebug(
-                "[RBAC] {Email} ({Role}) — DB: none, Legacy: none → no permissions",
+                "[RBAC] {Email} ({Role}) → fallback legacy — DB: none, Legacy: none → no permissions",
                 user.Email, roleStr);
+
+            return Array.Empty<string>();
         }
-        else if (dbPermissions.Count == 0)
+
+        if (dbPermissions.Count == 0)
         {
             _logger.LogInformation(
-                "[RBAC] {Email} ({Role}) — DB: none (no UserRole rows) → FALLBACK to legacy ({LegacyCount} perms): [{Legacy}]",
+                "[RBAC] {Email} ({Role}) → fallback legacy ({LegacyCount} perms): [{Legacy}]",
                 user.Email, roleStr, legacyPermissions.Count,
                 string.Join(", ", legacyPermissions));
+
+            return legacyPermissions;
+        }
+
+        // DB has rows — log comparison and use DB
+        var onlyInDb     = dbPermissions.Except(legacyPermissions).ToList();
+        var onlyInLegacy = legacyPermissions.Except(dbPermissions).ToList();
+
+        if (onlyInDb.Count == 0 && onlyInLegacy.Count == 0)
+        {
+            _logger.LogInformation(
+                "[RBAC] {Email} ({Role}) → DB ({DbCount}) == Legacy ({LegacyCount}) ✓ identical",
+                user.Email, roleStr, dbPermissions.Count, legacyPermissions.Count);
         }
         else
         {
-            var onlyInDb     = dbPermissions.Except(legacyPermissions).ToList();
-            var onlyInLegacy = legacyPermissions.Except(dbPermissions).ToList();
-
-            if (onlyInDb.Count == 0 && onlyInLegacy.Count == 0)
-            {
-                _logger.LogInformation(
-                    "[RBAC] {Email} ({Role}) — DB ({DbCount}) == Legacy ({LegacyCount}) ✓ identical",
-                    user.Email, roleStr, dbPermissions.Count, legacyPermissions.Count);
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "[RBAC] {Email} ({Role}) — DB vs Legacy DIFF: only-in-DB=[{OnlyDb}] only-in-Legacy=[{OnlyLegacy}]",
-                    user.Email, roleStr,
-                    string.Join(", ", onlyInDb),
-                    string.Join(", ", onlyInLegacy));
-            }
-
-            _logger.LogInformation(
-                "[RBAC] {Email} ({Role}) — using DB permissions ({Count}): [{Perms}]",
-                user.Email, roleStr, dbPermissions.Count,
-                string.Join(", ", dbPermissions));
+            _logger.LogWarning(
+                "[RBAC] {Email} ({Role}) → DB vs Legacy DIFF: only-in-DB=[{OnlyDb}] only-in-Legacy=[{OnlyLegacy}]",
+                user.Email, roleStr,
+                string.Join(", ", onlyInDb),
+                string.Join(", ", onlyInLegacy));
         }
 
-        // ── Resolution: DB first, legacy fallback ─────────────────────────────
-        return dbPermissions.Count > 0 ? dbPermissions : legacyPermissions;
+        _logger.LogInformation(
+            "[RBAC] {Email} ({Role}) → DB ({Count} perms): [{Perms}]",
+            user.Email, roleStr, dbPermissions.Count,
+            string.Join(", ", dbPermissions));
+
+        return dbPermissions;
     }
 
     // ── Auth response builder ──────────────────────────────────────────────────
