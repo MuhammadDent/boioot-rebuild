@@ -1,4 +1,4 @@
-import type { DashboardRequestItem } from "@/types";
+import type { DashboardRequestItem, RequestResponse } from "@/types";
 
 /**
  * Temporary dev mock data — replace with real API response when backend is ready.
@@ -207,6 +207,20 @@ export const MOCK_REQUESTS: DashboardRequestItem[] = [
     createdAt: daysAgo(30),
   },
 ];
+
+/**
+ * Temporary dev mock data for Admin Requests page (/dashboard/admin/requests).
+ * Uses RequestResponse shape (superset of DashboardRequestItem — adds updatedAt, email, message, companyName).
+ * Used as fallback when adminApi.getRequests() returns 0 items.
+ */
+export const MOCK_ADMIN_REQUESTS: RequestResponse[] = MOCK_REQUESTS.map(r => ({
+  ...r,
+  updatedAt: r.createdAt,
+  email: undefined,
+  message: undefined,
+  companyId: undefined,
+  companyName: "بويوت العقارية",
+}));
 
 function daysAgo(n: number): string {
   const d = new Date();

@@ -9,6 +9,7 @@ import {
   adminApi,
   type AdminRequestsParams,
 } from "@/features/admin/api";
+import { MOCK_ADMIN_REQUESTS } from "@/features/dashboard/requests/mockData";
 import { ADMIN_PAGE_SIZE } from "@/features/admin/constants";
 import {
   REQUEST_STATUS_LABELS,
@@ -40,12 +41,25 @@ export default function AdminRequestsPage() {
     setFetchError("");
     try {
       const result = await adminApi.getRequests(p, ADMIN_PAGE_SIZE, params);
-      setRequests(result.items);
-      setTotalPages(result.totalPages);
-      setTotalCount(result.totalCount);
-      setPage(p);
+      if (result.items.length > 0) {
+        setRequests(result.items);
+        setTotalPages(result.totalPages);
+        setTotalCount(result.totalCount);
+        setPage(p);
+      } else {
+        const mock = params.status
+          ? MOCK_ADMIN_REQUESTS.filter(r => r.status === params.status)
+          : MOCK_ADMIN_REQUESTS;
+        setRequests(mock);
+        setTotalPages(1);
+        setTotalCount(mock.length);
+        setPage(1);
+      }
     } catch (e) {
       setFetchError(normalizeError(e));
+      setRequests(MOCK_ADMIN_REQUESTS);
+      setTotalPages(1);
+      setTotalCount(MOCK_ADMIN_REQUESTS.length);
     } finally {
       setFetching(false);
     }

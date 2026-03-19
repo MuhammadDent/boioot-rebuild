@@ -1,0 +1,86 @@
+The Requests page is still empty even after adding MOCK_REQUESTS.
+
+We need to DEBUG the page properly and fix the actual rendering/data flow issue.
+
+IMPORTANT:
+- Do NOT redesign the page
+- Do NOT add new features
+- Only debug why mock data is not appearing
+- Keep business logic intact
+
+==================================================
+PROBLEM
+==================================================
+
+The page still shows:
+"لا توجد طلبات مطابقة لهذه المعايير"
+
+even though MOCK_REQUESTS was added.
+
+==================================================
+DEBUG TASK
+==================================================
+
+Please inspect the full requests page data flow step by step and find the real issue.
+
+Check all of the following carefully:
+
+1. Is MOCK_REQUESTS imported correctly?
+2. Is MOCK_REQUESTS actually passed into the state used by rendering?
+3. Which state is the UI rendering from exactly?
+   - allRequests?
+   - filteredRequests?
+   - requests?
+   - another derived state?
+4. Is the fallback code path actually executed?
+5. Is result.items undefined, empty, or different shape?
+6. Are filters hiding all mock items by default?
+7. Does the mock data shape match the page expectations exactly?
+
+==================================================
+REQUIRED ACTIONS
+==================================================
+
+1. Add temporary console logs for:
+- result
+- result.items
+- MOCK_REQUESTS.length
+- allRequests.length
+- filteredRequests.length
+- active filters
+
+2. Verify the exact shape expected by the page for each request item.
+
+3. Compare that expected shape against MOCK_REQUESTS.
+
+4. Fix any mismatch, such as:
+- status values mismatch (new vs New)
+- type/propertyType mismatch
+- budget fields mismatch
+- date field mismatch
+- missing required fields
+
+5. Ensure that if API returns empty or fails:
+- the page definitely renders MOCK_REQUESTS
+
+6. Ensure that the filtering logic does not remove all mock items by default.
+
+7. Ensure KPI cards and request list both use the same final data source.
+
+==================================================
+EXPECTED OUTCOME
+==================================================
+
+After the fix:
+- Requests page must display mock requests
+- KPI cards must show non-zero values
+- filters must work
+- empty state must disappear
+
+==================================================
+IMPORTANT
+==================================================
+
+Do not just explain what might be wrong.
+Actually inspect the page logic and fix the real issue in code.
+Then report exactly what the root cause was.
