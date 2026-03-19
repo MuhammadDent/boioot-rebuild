@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { blogAdminApi } from "@/features/admin/blog-api";
 import { BlogStatusBadge } from "./BlogStatusBadge";
-import { RichTextEditor } from "./RichTextEditor";
 import { normalizeError } from "@/lib/api";
 import { tokenStorage } from "@/lib/token";
 import type {
@@ -14,6 +14,11 @@ import type {
   SeoDescriptionMode,
   SlugMode,
 } from "@/types";
+
+const RichTextEditor = dynamic(
+  () => import("./RichTextEditor").then((m) => ({ default: m.RichTextEditor })),
+  { ssr: false }
+);
 
 // ── Shared input styles ────────────────────────────────────────────────────────
 

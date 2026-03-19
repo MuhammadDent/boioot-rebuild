@@ -94,6 +94,12 @@ export default function PropertyDetailPage() {
   const [msgLoading, setMsgLoading] = useState(false);
   const [msgError, setMsgError]     = useState("");
 
+  const [pageUrl, setPageUrl]       = useState("");
+
+  useEffect(() => {
+    setPageUrl(window.location.href);
+  }, []);
+
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -162,7 +168,6 @@ export default function PropertyDetailPage() {
 
   const sortedImages = property.images;
   const activeImage  = sortedImages[selectedImageIdx] ?? sortedImages[0];
-  const pageUrl      = typeof window !== "undefined" ? window.location.href : "";
   const shares       = shareUrls(pageUrl, property.title);
   const hasRecipient = !!(property.ownerId ?? property.agentId);
   const isOwn = user && (user.id === property.ownerId || user.id === property.agentId?.toString());
