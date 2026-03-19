@@ -220,8 +220,8 @@ export default function AdminOverviewPage() {
         </div>
       </div>
 
-      {/* Role-aware hint */}
-      {role === "Admin" && (
+      {/* SuperAdmin hint — visible only to users who hold roles.manage (Admin only) */}
+      {hasPermission("roles.manage") && (
         <div style={{
           marginTop: "1.5rem",
           padding: "1rem 1.25rem",
