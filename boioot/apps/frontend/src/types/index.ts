@@ -364,6 +364,7 @@ export interface AdminUserResponse {
   fullName: string;
   email: string;
   phone?: string;
+  profileImageUrl?: string;
   /** Admin | CompanyOwner | Agent | User */
   role: string;
   isActive: boolean;

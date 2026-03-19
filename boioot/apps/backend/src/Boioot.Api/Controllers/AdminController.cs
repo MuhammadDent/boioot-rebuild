@@ -44,6 +44,25 @@ public class AdminController : BaseController
         return Ok(result);
     }
 
+    [HttpGet("users/{userId:guid}")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetAdminUser(Guid userId, CancellationToken ct = default)
+    {
+        var result = await _admin.GetAdminUserAsync(userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPut("users/{userId:guid}")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateAdminUser(
+        Guid userId,
+        [FromBody] UpdateAdminUserRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateAdminUserAsync(userId, request, ct);
+        return Ok(result);
+    }
+
     [HttpPatch("users/{userId:guid}/status")]
     [RequirePermission(Permissions.UsersDisable)]
     public async Task<IActionResult> UpdateUserStatus(

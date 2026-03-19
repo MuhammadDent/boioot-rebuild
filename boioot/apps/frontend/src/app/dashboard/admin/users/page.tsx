@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
@@ -23,6 +24,7 @@ import type { AdminUserResponse } from "@/types";
 
 export default function AdminUsersPage() {
   const { user, isLoading } = useProtectedRoute({ requiredPermission: "users.view" });
+  const router = useRouter();
 
   const [users, setUsers]           = useState<AdminUserResponse[]>([]);
   const [roles, setRoles]           = useState<RbacRole[]>([]);
@@ -424,6 +426,7 @@ export default function AdminUsersPage() {
                 actionLoading={actionLoading}
                 onToggle={handleToggleStatus}
                 onRoleChange={handleRoleChange}
+                onViewProfile={() => router.push(`/dashboard/admin/users/${u.id}`)}
               />
             ))}
           </div>
@@ -452,6 +455,7 @@ function UserRow({
   actionLoading,
   onToggle,
   onRoleChange,
+  onViewProfile,
 }: {
   userData: AdminUserResponse;
   isSelf: boolean;
@@ -459,6 +463,7 @@ function UserRow({
   actionLoading: string | null;
   onToggle: (id: string, current: boolean) => void;
   onRoleChange: (userId: string, roleId: string, roleName: string) => void;
+  onViewProfile: () => void;
 }) {
   const [showRoleEdit, setShowRoleEdit] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState("");
@@ -486,9 +491,19 @@ function UserRow({
             display: "flex", alignItems: "center",
             gap: "0.5rem", marginBottom: "0.45rem", flexWrap: "wrap",
           }}>
-            <p style={{ fontWeight: 700, fontSize: "1rem", margin: 0, color: "var(--color-text-primary)" }}>
+            <span
+              onClick={onViewProfile}
+              role="button"
+              title={`عرض ملف ${u.fullName}`}
+              style={{
+                fontWeight: 700, fontSize: "1rem",
+                color: "var(--color-primary)",
+                textDecoration: "underline", textDecorationStyle: "dotted",
+                cursor: "pointer",
+              }}
+            >
               {u.fullName}
-            </p>
+            </span>
             <span className={ROLE_BADGE[u.role] ?? "badge badge-gray"}>
               {ROLE_LABELS[u.role] ?? u.role}
             </span>

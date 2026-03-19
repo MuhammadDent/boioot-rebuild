@@ -85,6 +85,14 @@ export const adminApi = {
     return api.get(`/admin/users?${qs}`);
   },
 
+  getAdminUser(userId: string): Promise<AdminUserResponse> {
+    return api.get(`/admin/users/${userId}`);
+  },
+
+  updateAdminUser(userId: string, data: { fullName?: string; phone?: string }): Promise<AdminUserResponse> {
+    return api.put(`/admin/users/${userId}`, data);
+  },
+
   getCompanies(
     page: number,
     pageSize: number,

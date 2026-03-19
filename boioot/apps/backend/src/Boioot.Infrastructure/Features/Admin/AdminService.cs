@@ -52,6 +52,7 @@ public class AdminService : IAdminService
                 FullName = u.FullName,
                 Email = u.Email,
                 Phone = u.Phone,
+                ProfileImageUrl = u.ProfileImageUrl,
                 Role = u.Role.ToString(),
                 IsActive = u.IsActive,
                 IsDeleted = u.IsDeleted,
@@ -61,6 +62,60 @@ public class AdminService : IAdminService
             .ToListAsync(ct);
 
         return new PagedResult<AdminUserResponse>(items, page, pageSize, total);
+    }
+
+    public async Task<AdminUserResponse> GetAdminUserAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new KeyNotFoundException($"User {userId} not found");
+
+        return new AdminUserResponse
+        {
+            Id              = user.Id,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            ProfileImageUrl = user.ProfileImageUrl,
+            Role            = user.Role.ToString(),
+            IsActive        = user.IsActive,
+            IsDeleted       = user.IsDeleted,
+            CreatedAt       = user.CreatedAt,
+            UpdatedAt       = user.UpdatedAt,
+        };
+    }
+
+    public async Task<AdminUserResponse> UpdateAdminUserAsync(Guid userId, UpdateAdminUserRequest request, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new KeyNotFoundException($"User {userId} not found");
+
+        if (!string.IsNullOrWhiteSpace(request.FullName))
+            user.FullName = request.FullName.Trim();
+
+        if (request.Phone is not null)
+            user.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(ct);
+
+        return new AdminUserResponse
+        {
+            Id              = user.Id,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            ProfileImageUrl = user.ProfileImageUrl,
+            Role            = user.Role.ToString(),
+            IsActive        = user.IsActive,
+            IsDeleted       = user.IsDeleted,
+            CreatedAt       = user.CreatedAt,
+            UpdatedAt       = user.UpdatedAt,
+        };
     }
 
     public async Task<PagedResult<AdminAgentResponse>> GetAdminAgentsAsync(
