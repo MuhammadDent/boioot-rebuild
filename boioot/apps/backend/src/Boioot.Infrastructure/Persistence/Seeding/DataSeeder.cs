@@ -26,7 +26,10 @@ public class DataSeeder
     {
         await SeedAdminUserAsync();
         await SeedSyrianCitiesAsync();
+        await SeedRbacAsync();
     }
+
+    // ── Admin user ────────────────────────────────────────────────────────────
 
     private async Task SeedAdminUserAsync()
     {
@@ -66,6 +69,8 @@ public class DataSeeder
 
         _logger.LogInformation("Admin user seeded: {Email}", emailLower);
     }
+
+    // ── Syrian cities ─────────────────────────────────────────────────────────
 
     private async Task SeedSyrianCitiesAsync()
     {
@@ -112,5 +117,204 @@ public class DataSeeder
         {
             _logger.LogDebug("All default Syrian cities already exist — skipping city seed");
         }
+    }
+
+    // ── Dynamic RBAC — Phase 1 seed ───────────────────────────────────────────
+    //
+    // Seeds:
+    //   Roles      — Admin, CompanyOwner, Broker, Agent
+    //   Permissions — all permission keys listed in the task spec
+    //   RolePermissions — role → permission mapping per task spec
+    //   UserRoles  — NOT seeded here; assigned when users register/change role
+    //
+    // Safe to call multiple times — uses INSERT OR IGNORE.
+    // Does NOT touch the existing auth flow (User.Role enum / JWT generation).
+
+    private async Task SeedRbacAsync()
+    {
+        // ── 1. Roles ──────────────────────────────────────────────────────────
+
+        var roleNames = new[]
+        {
+            "Admin",
+            "AdminManager",
+            "CustomerSupport",
+            "TechnicalSupport",
+            "ContentEditor",
+            "SeoSpecialist",
+            "MarketingStaff",
+            "CompanyOwner",
+            "Broker",
+            "Agent",
+            "Owner",
+            "User",
+        };
+
+        var now = DateTime.UtcNow.ToString("o"); // ISO 8601
+
+        foreach (var name in roleNames)
+        {
+            await _context.Database.ExecuteSqlRawAsync(
+                "INSERT OR IGNORE INTO Roles (Id, Name, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {2})",
+                Guid.NewGuid().ToString(), name, now);
+        }
+
+        // ── 2. Permissions ────────────────────────────────────────────────────
+
+        var permissionKeys = new[]
+        {
+            // Properties
+            "properties.view",
+            "properties.create",
+            "properties.edit",
+            "properties.delete",
+            // Projects
+            "projects.view",
+            "projects.create",
+            "projects.edit",
+            "projects.delete",
+            // Agents
+            "agents.view",
+            "agents.manage",
+            // Users
+            "users.view",
+            "users.edit",
+            "users.disable",
+            // Staff
+            "staff.view",
+            "staff.create",
+            "staff.edit",
+            "staff.disable",
+            // Roles
+            "roles.view",
+            "roles.manage",
+            // Companies
+            "companies.view",
+            "companies.edit",
+            // Requests
+            "requests.view",
+            "requests.assign",
+            "requests.edit",
+            // Blog
+            "blog.view",
+            "blog.create",
+            "blog.edit",
+            "blog.publish",
+            "blog.delete",
+            "blog.seo.manage",
+            // SEO
+            "seo.settings.manage",
+            // Marketing
+            "marketing.view",
+            "marketing.manage",
+            // Settings
+            "settings.view",
+            "settings.manage",
+            // Billing
+            "billing.view",
+            "billing.manage",
+        };
+
+        foreach (var key in permissionKeys)
+        {
+            await _context.Database.ExecuteSqlRawAsync(
+                "INSERT OR IGNORE INTO Permissions (Id, Key, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {2})",
+                Guid.NewGuid().ToString(), key, now);
+        }
+
+        // ── 3. Role → Permission mapping ──────────────────────────────────────
+
+        var mapping = new Dictionary<string, string[]>
+        {
+            ["Admin"] = permissionKeys, // All permissions
+
+            ["AdminManager"] = new[]
+            {
+                "users.view", "users.edit", "users.disable",
+                "staff.view", "staff.create", "staff.edit",
+                "roles.view",
+                "properties.view", "properties.edit",
+                "projects.view", "projects.edit",
+                "requests.view", "requests.assign", "requests.edit",
+                "companies.view", "companies.edit",
+                "blog.view", "blog.create", "blog.edit", "blog.publish",
+                "blog.seo.manage", "seo.settings.manage",
+                "settings.view", "settings.manage",
+                "billing.view",
+            },
+
+            ["CustomerSupport"] = new[]
+            {
+                "users.view",
+                "properties.view",
+                "projects.view",
+                "requests.view", "requests.assign", "requests.edit",
+                "companies.view",
+                "blog.view",
+            },
+
+            ["TechnicalSupport"] = new[]
+            {
+                "users.view", "users.edit",
+                "properties.view", "properties.edit",
+                "projects.view",
+                "requests.view",
+                "companies.view",
+                "settings.view",
+            },
+
+            ["ContentEditor"] = new[]
+            {
+                "blog.view", "blog.create", "blog.edit",
+            },
+
+            ["SeoSpecialist"] = new[]
+            {
+                "blog.view", "blog.edit",
+                "blog.seo.manage", "seo.settings.manage",
+            },
+
+            ["MarketingStaff"] = new[]
+            {
+                "marketing.view", "marketing.manage",
+                "blog.view",
+            },
+
+            // Platform roles
+            ["CompanyOwner"] = new[]
+            {
+                "properties.view", "properties.create", "properties.edit", "properties.delete",
+                "projects.view", "projects.create", "projects.edit", "projects.delete",
+                "agents.view", "agents.manage",
+            },
+
+            ["Broker"] = new[]
+            {
+                "properties.view", "properties.create",
+                "agents.view", "agents.manage",
+            },
+
+            ["Agent"] = new[]
+            {
+                "agents.view",
+                "properties.view",
+            },
+        };
+
+        foreach (var (roleName, perms) in mapping)
+        {
+            foreach (var permKey in perms)
+            {
+                await _context.Database.ExecuteSqlRawAsync(@"
+                    INSERT OR IGNORE INTO RolePermissions (RoleId, PermissionId)
+                    SELECT r.Id, p.Id
+                    FROM   Roles r, Permissions p
+                    WHERE  r.Name = {0} AND p.Key = {1}",
+                    roleName, permKey);
+            }
+        }
+
+        _logger.LogInformation("Dynamic RBAC seed complete: {RoleCount} roles, {PermCount} permissions",
+            roleNames.Length, permissionKeys.Length);
     }
 }

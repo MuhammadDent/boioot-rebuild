@@ -247,6 +247,48 @@ using (var scope = app.Services.CreateScope())
         catch { /* row already exists or BlogSeoSettings missing — GetOrCreateSettingsAsync handles at runtime */ }
 
 
+        // ── Dynamic RBAC — Phase 1: table creation ────────────────────────────
+        // Creates Roles, Permissions, RolePermissions, UserRoles tables.
+        // These tables are infrastructure only — NOT wired to the auth flow yet.
+        // Seeding happens in DataSeeder.SeedRbacAsync().
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS Roles (
+                Id        TEXT NOT NULL PRIMARY KEY,
+                Name      TEXT NOT NULL,
+                CreatedAt TEXT NOT NULL DEFAULT '',
+                UpdatedAt TEXT NOT NULL DEFAULT ''
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS IX_Roles_Name ON Roles(Name)");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS Permissions (
+                Id        TEXT NOT NULL PRIMARY KEY,
+                Key       TEXT NOT NULL,
+                CreatedAt TEXT NOT NULL DEFAULT '',
+                UpdatedAt TEXT NOT NULL DEFAULT ''
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS IX_Permissions_Key ON Permissions(Key)");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS RolePermissions (
+                RoleId       TEXT NOT NULL REFERENCES Roles(Id) ON DELETE CASCADE,
+                PermissionId TEXT NOT NULL REFERENCES Permissions(Id) ON DELETE CASCADE,
+                PRIMARY KEY (RoleId, PermissionId)
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS UserRoles (
+                UserId TEXT NOT NULL REFERENCES Users(Id) ON DELETE CASCADE,
+                RoleId TEXT NOT NULL REFERENCES Roles(Id) ON DELETE CASCADE,
+                PRIMARY KEY (UserId, RoleId)
+            )");
+
+        logger.LogInformation("Dynamic RBAC tables ensured (Phase 1)");
+
         // ── Phase A: Subscription architecture (tables + unique index + seed) ─
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS Plans (

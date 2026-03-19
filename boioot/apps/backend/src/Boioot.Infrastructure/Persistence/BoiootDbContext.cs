@@ -45,6 +45,12 @@ public class BoiootDbContext : DbContext
     public DbSet<BlogPostCategory> BlogPostCategories => Set<BlogPostCategory>();
     public DbSet<BlogSeoSettings> BlogSeoSettings => Set<BlogSeoSettings>();
 
+    // ── Dynamic RBAC (Phase 1 — infrastructure only, not wired to auth flow yet) ──
+    public DbSet<RbacRole>           RbacRoles           => Set<RbacRole>();
+    public DbSet<RbacPermission>     RbacPermissions     => Set<RbacPermission>();
+    public DbSet<RbacRolePermission> RbacRolePermissions => Set<RbacRolePermission>();
+    public DbSet<RbacUserRole>       RbacUserRoles       => Set<RbacUserRole>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BoiootDbContext).Assembly);
