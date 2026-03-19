@@ -27,6 +27,7 @@ public class DataSeeder
         await SeedAdminUserAsync();
         await SeedSyrianCitiesAsync();
         await SeedRbacAsync();
+        await SeedAdminUserRoleAsync();
         await SeedSamplePropertiesAsync();
     }
 
@@ -69,6 +70,32 @@ public class DataSeeder
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Admin user seeded: {Email}", emailLower);
+    }
+
+    // ── Admin UserRole assignment (DB-driven RBAC) ────────────────────────────
+
+    private async Task SeedAdminUserRoleAsync()
+    {
+        var adminEmail = _configuration["AdminSeed:Email"];
+        if (string.IsNullOrWhiteSpace(adminEmail)) return;
+
+        var emailLower = adminEmail.ToLowerInvariant();
+
+        await _context.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO UserRoles (UserId, RoleId)
+            SELECT u.Id, r.Id
+            FROM   Users u, Roles r
+            WHERE  u.Email = {0} AND r.Name = 'Admin'",
+            emailLower);
+
+        var permCount = await _context.RbacRoles
+            .Where(r => r.Name == "Admin")
+            .SelectMany(r => r.RolePermissions)
+            .CountAsync();
+
+        _logger.LogInformation(
+            "[RBAC] Admin → DB ONLY ({PermCount} perms) — UserRole assigned for {Email}",
+            permCount, emailLower);
     }
 
     // ── Syrian cities ─────────────────────────────────────────────────────────

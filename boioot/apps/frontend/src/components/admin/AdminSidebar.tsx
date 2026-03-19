@@ -192,12 +192,8 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const { user, hasPermission } = useAuth();
 
-  // Admin role always sees all sidebar items regardless of cached permissions.
-  const isAdminRole = user?.role === "Admin";
-
   function can(permission?: string): boolean {
     if (!permission) return true;
-    if (isAdminRole) return true;
     return hasPermission(permission);
   }
 

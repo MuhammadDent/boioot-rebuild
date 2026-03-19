@@ -157,14 +157,11 @@ public class AuthService : IAuthService
 
     // ── Permission resolution — Phase 3 (Selective DB Mode) ──────────────────
     //
-    // CompanyOwner → DB ONLY. No fallback to legacy. Source of truth = DB rows.
+    // Admin + CompanyOwner → DB ONLY. No fallback to legacy. Source of truth = DB rows.
     // All other roles → DB first, fallback to legacy if no DB rows found.
-    //
-    // Phase 3 activates DB-driven permissions for CompanyOwner exclusively.
-    // Remaining roles will follow suit in subsequent phases.
 
     private static readonly IReadOnlySet<UserRole> DbOnlyRoles =
-        new HashSet<UserRole> { UserRole.CompanyOwner };
+        new HashSet<UserRole> { UserRole.Admin, UserRole.CompanyOwner };
 
     private async Task<IReadOnlyList<string>> ResolvePermissionsAsync(User user, CancellationToken ct)
     {
@@ -174,7 +171,7 @@ public class AuthService : IAuthService
         // Pass 1 — DB-driven permissions (always queried)
         var dbPermissions = await _rbac.GetUserPermissionsAsync(user.Id, ct);
 
-        // ── CompanyOwner: DB ONLY — no legacy fallback ────────────────────────
+        // ── Admin + CompanyOwner: DB ONLY — no legacy fallback ───────────────
         if (isDbOnly)
         {
             _logger.LogInformation(
