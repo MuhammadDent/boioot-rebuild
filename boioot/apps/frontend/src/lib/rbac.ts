@@ -257,19 +257,45 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 };
 
 // ── Helper functions ───────────────────────────────────────────────────────────
+
+/**
+ * Classification helper: returns true if the role string belongs to the
+ * known internal staff roles list.
+ *
+ * Use only for display, grouping, filtering, and metadata purposes.
+ * NOT for runtime authorization decisions — use useAuth().hasPermission() instead.
+ */
 export function isStaffRole(role: string): role is StaffRole {
   return STAFF_ROLES.includes(role as StaffRole);
 }
 
+/**
+ * @deprecated Do not use for runtime authorization.
+ * Returns the static permission list for a role (from the hardcoded map).
+ * This map is kept in sync with the backend as a reference and for UI documentation.
+ * For actual permission checks, use useAuth().hasPermission() which reads from the
+ * backend-issued JWT claims stored in the user's session.
+ */
 export function getPermissions(role: string): Permission[] {
   if (isStaffRole(role)) return ROLE_PERMISSIONS[role] ?? [];
   return [];
 }
 
+/**
+ * @deprecated Do not use for runtime authorization.
+ * Static role→permission lookup for display and documentation purposes only
+ * (e.g., the roles/permissions matrix page).
+ * For actual access control, use useAuth().hasPermission() instead.
+ */
 export function hasPermission(role: string, permission: Permission): boolean {
   return getPermissions(role).includes(permission);
 }
 
+/**
+ * @deprecated Do not use for runtime authorization.
+ * Classification helper for display purposes only.
+ * For access control, use useAuth().hasPermission() or useAuth().hasAnyPermission().
+ */
 export function isAdminRole(role: string): boolean {
   return role === "Admin" || role === "AdminManager";
 }

@@ -34,7 +34,10 @@ export default function LoginPage() {
     try {
       const res = await authApi.login({ email, password });
       login(res.token, res.user, res.expiresAt);
-      router.push(res.user.role === "Admin" ? "/admin" : "/dashboard");
+      // Redirect staff (any user with admin permissions) to the admin area.
+      // Permission-based, not role-based: platform users have permissions[] = [].
+      const isStaff = (res.user.permissions?.length ?? 0) > 0;
+      router.push(isStaff ? "/dashboard/admin" : "/dashboard");
     } catch (err) {
       setError(normalizeError(err));
     } finally {

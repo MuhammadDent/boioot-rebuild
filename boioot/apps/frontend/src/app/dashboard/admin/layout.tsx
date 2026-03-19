@@ -3,13 +3,19 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { isStaffRole } from "@/lib/rbac";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
 /**
- * Admin area layout guard.
- * Allows access to any authenticated internal staff member (isStaffRole).
- * Individual pages enforce their own required permission via useProtectedRoute.
+ * Admin shell layout guard.
+ *
+ * Access condition: the authenticated user must have at least one admin
+ * permission in their permissions[] (derived from backend JWT).
+ * Platform users (User, Agent, CompanyOwner, etc.) receive an empty
+ * permissions[] from the backend and are redirected to /dashboard.
+ *
+ * This is a permission-based gate, not a role-based one. Role is not
+ * inspected here. Individual pages each enforce their own specific
+ * required permission via useProtectedRoute({ requiredPermission }).
  */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -25,7 +31,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (!isStaffRole(user.role)) {
+    // Permission-based shell gate: any user with at least one admin permission
+    // is allowed into the admin shell. Platform users have permissions[] = [].
+    const hasAnyAdminPermission = (user.permissions?.length ?? 0) > 0;
+    if (!hasAnyAdminPermission) {
       redirected.current = true;
       router.replace("/dashboard");
     }

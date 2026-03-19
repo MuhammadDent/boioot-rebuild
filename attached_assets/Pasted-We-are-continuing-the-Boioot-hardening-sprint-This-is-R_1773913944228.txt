@@ -1,0 +1,166 @@
+We are continuing the Boioot hardening sprint.
+
+This is RBAC Refactor Phase 2.
+This is a controlled refactor, NOT a full rewrite.
+
+Current context:
+- Backend authorization is permission-based and already enforced with:
+  - RequirePermissionAttribute
+  - PermissionAuthorizationHandler
+  - PermissionPolicyProvider
+- Frontend has been partially migrated from role-based checks to permission-based checks
+- Some legacy transitional logic still remains
+- We want to remove role leakage and authorization ambiguity without breaking the current working system
+
+==================================================
+GOAL
+==================================================
+
+Clean up the transitional RBAC layer so that:
+- permissions are the runtime source of truth
+- roles are no longer used directly in frontend authorization decisions
+- "Admin bypass" patterns are removed or minimized safely
+- auth logic becomes explicit, consistent, and migration-friendly
+- the system remains stable and production-grade
+
+This is still NOT the DB-driven RBAC phase.
+
+==================================================
+PRIMARY CONCERNS TO FIX
+==================================================
+
+1) REMOVE ROLE LEAKAGE FROM FRONTEND AUTH LOGIC
+Audit and refactor any remaining runtime authorization logic that depends directly on:
+- isStaffRole(user.role)
+- role comparisons
+- role unions used to decide page access
+- role-based branching for protected admin routes/pages
+
+Important:
+- role can still exist as user metadata
+- role can still be used for display, grouping, labels, profile info
+- but NOT as the actual runtime authorization decision for protected access
+
+2) REMOVE / REPLACE ADMIN BYPASS LOGIC
+Audit the current frontend/backend auth helpers for any logic equivalent to:
+- if role === "Admin" return true
+- implicit full access for admin without checking normalized permission flow
+- hardcoded privileged branching outside the normal permission path
+
+We do NOT want silent bypass logic.
+
+Target behavior:
+- If Admin should have all permissions, that should happen through a normalized permission source
+- The permission check path should remain one path, not “normal users path” + “admin special path”
+
+3) NORMALIZE PERMISSION CHECK PATH
+Unify permission evaluation so the runtime path is conceptually:
+
+authenticated user
+→ current permission set from auth state / JWT-derived session data
+→ hasPermission(permissionKey)
+→ route/UI decision
+
+Avoid layered ambiguity such as:
+- route guard using one method
+- layout using another
+- cards using another
+- sidebar using another
+- admin landing page using static fallback maps
+
+4) SEPARATE ACCESS GATING FROM USER CLASSIFICATION
+Clarify and refactor code so that:
+- “is this an internal staff account?” is not confused with
+- “does this user have permission X?”
+
+If the admin area needs an internal/staff boundary:
+- make that boundary explicit and minimal
+- do not mix it with feature permissions
+- do not let it become a hidden replacement for permission checks
+
+5) IMPROVE TRANSITIONAL ARCHITECTURE
+Introduce or refine a clean transitional model such as:
+- auth user has permissions[]
+- optional helper: hasPermission(permission)
+- optional helper: hasAnyPermission([...])
+- optional helper: hasAllPermissions([...])
+
+And if needed separately:
+- isInternalStaff (classification only, not authorization)
+- canAccessAdminShell (very minimal shell boundary only if truly required)
+
+But do NOT create duplicate authorization systems.
+
+==================================================
+IMPLEMENTATION RULES
+==================================================
+
+- Do not introduce DB role/permission tables yet
+- Do not redesign unrelated features
+- Do not change working backend permission enforcement unless necessary for consistency
+- Prefer removing ambiguity over adding abstraction for its own sake
+- Keep changes incremental and safe
+- Preserve current behavior where valid, but eliminate security/architecture anti-patterns
+- If a concept cannot be fully removed yet, isolate it clearly and document why
+
+==================================================
+SPECIFIC REVIEW TARGETS
+==================================================
+
+Audit and clean up especially:
+- useProtectedRoute
+- auth context / useAuth
+- admin layout
+- dashboard/admin/page.tsx
+- sidebar/nav permission rendering
+- overview cards / quick actions
+- any helper in lib/rbac.ts or equivalent
+- any remaining Admin special-case logic
+- any remaining staff-role gate used as actual authorization
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+After implementation, provide a structured report:
+
+A) FILES CHANGED
+List all modified files.
+
+B) ROLE LEAKAGE REMOVED
+List every place where role-based runtime auth logic was removed or isolated.
+
+C) ADMIN BYPASS REVIEW
+Explicitly state:
+- where admin bypass existed
+- whether it was removed, normalized, or isolated
+- how Admin access now works
+
+D) AUTH FLOW AFTER REFACTOR
+Explain the final runtime permission decision flow in plain terms.
+
+E) REMAINING TRANSITIONAL ELEMENTS
+List anything intentionally kept for now, such as:
+- internal staff shell gating
+- classification helpers
+- legacy metadata fields
+and explain why they are acceptable temporarily.
+
+F) VALIDATION
+Manually verify and report scenarios such as:
+- regular public user cannot access admin area
+- staff user without permission cannot access protected admin page
+- staff user with permission can access allowed page
+- Admin access works through normalized permission flow
+- no hidden role shortcut remains in runtime authorization decisions
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+This task is successful only if:
+- roles no longer drive runtime frontend authorization decisions
+- admin bypass logic is removed or normalized
+- permission evaluation path is unified
+- internal/staff classification is separated from actual permission checks
+- the code becomes cleaner for future DB-driven RBAC migration

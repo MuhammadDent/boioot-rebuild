@@ -10,7 +10,6 @@ import {
 } from "react";
 import type { UserProfileResponse } from "@/types";
 import { tokenStorage } from "@/lib/token";
-import { ROLES } from "@/lib/rbac";
 
 interface AuthState {
   user: UserProfileResponse | null;
@@ -24,12 +23,21 @@ interface AuthContextValue extends AuthState {
   logout: () => void;
   setUser: (user: UserProfileResponse) => void;
   /**
-   * Returns true if the authenticated user has the given permission.
-   * SuperAdmin (Admin role) always returns true.
-   * Permissions are sourced from the backend response on login/profile fetch
-   * and stored in the user object.
+   * Returns true if the authenticated user holds the given permission string.
+   *
+   * Permission source: the `permissions[]` array embedded in the backend JWT
+   * and stored in the user profile after login. No role-based shortcuts exist —
+   * the check is the same for all users, including Admin.
+   *
+   * Admin always returns true because the backend issues all permissions in the
+   * Admin JWT (Permissions.All), not because of a role bypass here.
    */
   hasPermission: (permission: string) => boolean;
+  /**
+   * Returns true if the user holds at least one of the given permissions.
+   * Useful for showing UI sections that are unlocked by any one of several permissions.
+   */
+  hasAnyPermission: (permissions: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -86,22 +94,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Checks whether the current user holds a given permission string.
-   * SuperAdmin (Admin role) bypasses all checks and always returns true.
-   * For all other roles the check is against the `permissions[]` array
-   * returned by the backend and stored in the user profile.
+   * Single permission check path — no role shortcuts.
+   * All users (including Admin) are evaluated against their permissions[].
+   * Admin access works because the backend embeds Permissions.All in the Admin JWT.
    */
   const hasPermission = useCallback(
     (permission: string): boolean => {
       if (!state.user) return false;
-      if (state.user.role === ROLES.ADMIN) return true;
       return (state.user.permissions ?? []).includes(permission);
     },
     [state.user]
   );
 
+  /**
+   * Returns true if the user holds at least one of the listed permissions.
+   */
+  const hasAnyPermission = useCallback(
+    (permissions: string[]): boolean => {
+      if (!state.user) return false;
+      const userPerms = state.user.permissions ?? [];
+      return permissions.some((p) => userPerms.includes(p));
+    },
+    [state.user]
+  );
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, setUser, hasPermission }}>
+    <AuthContext.Provider value={{ ...state, login, logout, setUser, hasPermission, hasAnyPermission }}>
       {children}
     </AuthContext.Provider>
   );
