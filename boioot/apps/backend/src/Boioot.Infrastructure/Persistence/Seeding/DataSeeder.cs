@@ -221,8 +221,11 @@ public class DataSeeder
             "companies.edit",
             // Requests
             "requests.view",
+            "requests.create",
             "requests.assign",
             "requests.edit",
+            // Dashboard
+            "dashboard.view",
             // Blog
             "blog.view",
             "blog.create",
@@ -314,6 +317,8 @@ public class DataSeeder
                 "properties.view", "properties.create", "properties.edit", "properties.delete",
                 "projects.view", "projects.create", "projects.edit", "projects.delete",
                 "agents.view", "agents.manage",
+                "requests.view", "requests.create",
+                "dashboard.view",
             },
 
             ["Broker"] = new[]
