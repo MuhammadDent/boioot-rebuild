@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, type CSSProperties } from "react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
@@ -357,7 +357,7 @@ function RequestCard({ request: r }: { request: RequestResponse }) {
             margin: "0.4rem 0 0",
             fontSize: "0.81rem", color: "#64748b", lineHeight: 1.55,
             display: "-webkit-box", WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical", overflow: "hidden",
+            overflow: "hidden",
           }}>
             {r.message}
           </p>
@@ -401,7 +401,7 @@ function EmptyState({ isFiltered, onReset }: { isFiltered: boolean; onReset: () 
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function paginationBtnStyle(disabled: boolean): React.CSSProperties {
+function paginationBtnStyle(disabled: boolean): CSSProperties {
   return {
     padding: "0.45rem 1.1rem", borderRadius: 8,
     border: "1px solid #e2e8f0",
