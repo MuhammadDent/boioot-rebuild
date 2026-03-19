@@ -14,6 +14,8 @@ import {
 } from "@/features/dashboard/requests/constants";
 import { normalizeError } from "@/lib/api";
 import type { RequestResponse } from "@/types";
+import { AnalyticsSection } from "./_analytics";
+import { RequestModal } from "./_modal";
 
 const FETCH_SIZE = 500;
 
@@ -62,6 +64,8 @@ export default function AdminRequestsPage() {
   const [companyFilter,  setCompanyFilter]  = useState("");
   const [sortBy,         setSortBy]         = useState("newest");
   const [panelOpen,      setPanelOpen]      = useState(true);  // desktop default open
+  const [analyticsOpen,  setAnalyticsOpen]  = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<RequestResponse | null>(null);
 
   // ── Pagination state ─────────────────────────────────────────────────────────
   const [page, setPage] = useState(1);
@@ -203,7 +207,24 @@ export default function AdminRequestsPage() {
                   {allRequests.length} طلب إجمالاً
                 </span>
               )}
-              {/* Mobile filter toggle */}
+              {/* Analytics toggle */}
+              {!fetching && allRequests.length > 0 && (
+                <button
+                  onClick={() => setAnalyticsOpen(v => !v)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "0.35rem",
+                    padding: "0.4rem 0.9rem", borderRadius: 8,
+                    border: "1px solid #e2e8f0",
+                    backgroundColor: analyticsOpen ? "#7c3aed" : "#fff",
+                    color: analyticsOpen ? "#fff" : "#475569",
+                    fontSize: "0.82rem", fontWeight: 600,
+                    cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  📊 إحصائيات
+                </button>
+              )}
+              {/* Filter toggle */}
               <button
                 onClick={() => setPanelOpen(v => !v)}
                 style={{
@@ -391,6 +412,11 @@ export default function AdminRequestsPage() {
           </div>
         )}
 
+        {/* ═══ Analytics Section ════════════════════════════════════════════════ */}
+        {!fetching && analyticsOpen && allRequests.length > 0 && (
+          <AnalyticsSection allRequests={allRequests} />
+        )}
+
         {/* ═══ KPI Cards ════════════════════════════════════════════════════════ */}
         {!fetching && allRequests.length > 0 && (
           <div style={{
@@ -472,7 +498,12 @@ export default function AdminRequestsPage() {
         {!fetching && paginated.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {paginated.map(r => (
-              <RequestCard key={r.id} request={r} searchQuery={searchQuery} />
+              <RequestCard
+                key={r.id}
+                request={r}
+                searchQuery={searchQuery}
+                onClick={() => setSelectedRequest(r)}
+              />
             ))}
           </div>
         )}
@@ -496,6 +527,12 @@ export default function AdminRequestsPage() {
         )}
 
       </div>
+
+      {/* ═══ Request Detail Modal ═════════════════════════════════════════════ */}
+      <RequestModal
+        request={selectedRequest}
+        onClose={() => setSelectedRequest(null)}
+      />
     </div>
   );
 }
@@ -533,7 +570,11 @@ function KpiCard({
 }
 
 // ─── Request Card ─────────────────────────────────────────────────────────────
-function RequestCard({ request: r, searchQuery }: { request: RequestResponse; searchQuery: string }) {
+function RequestCard({
+  request: r, searchQuery, onClick,
+}: {
+  request: RequestResponse; searchQuery: string; onClick: () => void;
+}) {
   const subject     = r.propertyTitle ?? r.projectTitle;
   const subjectType = r.propertyTitle ? "عقار" : r.projectTitle ? "مشروع" : null;
   const initials    = r.name.trim().split(/\s+/).slice(0, 2).map(w => w[0] ?? "").join("");
@@ -557,12 +598,24 @@ function RequestCard({ request: r, searchQuery }: { request: RequestResponse; se
   }
 
   return (
-    <div style={{
-      backgroundColor: "#fff", borderRadius: 14,
-      border: "1px solid #e2e8f0", padding: "1.1rem 1.25rem",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-      display: "flex", gap: "1rem", alignItems: "flex-start",
-    }}>
+    <div
+      onClick={onClick}
+      style={{
+        backgroundColor: "#fff", borderRadius: 14,
+        border: "1px solid #e2e8f0", padding: "1.1rem 1.25rem",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+        display: "flex", gap: "1rem", alignItems: "flex-start",
+        cursor: "pointer", transition: "box-shadow 0.15s, border-color 0.15s",
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.10)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = "#c7d2fe";
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)";
+        (e.currentTarget as HTMLDivElement).style.borderColor = "#e2e8f0";
+      }}
+    >
 
       {/* Avatar */}
       <div style={{
