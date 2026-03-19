@@ -21,10 +21,9 @@ const RichTextEditor = dynamic(
   { ssr: false }
 );
 
-const SeoPreview = dynamic(
-  () => import("./SeoPreview").then((m) => ({ default: m.SeoPreview })),
-  { ssr: false }
-);
+const SeoPreview = dynamic(() => import("./SeoPreview"), { ssr: false });
+
+const ClientDate = dynamic(() => import("./ClientDate"), { ssr: false });
 
 // ── Shared input styles ────────────────────────────────────────────────────────
 
@@ -663,9 +662,11 @@ export function BlogPostForm({
             </div>
 
             {currentPost && (
-              <p suppressHydrationWarning style={{ margin: "0.75rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+              <p style={{ margin: "0.75rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
                 {currentPost.viewCount} مشاهدة
-                {currentPost.publishedAt && ` · نُشر ${new Date(currentPost.publishedAt).toLocaleDateString("ar-SY")}`}
+                {currentPost.publishedAt && (
+                  <> · نُشر <ClientDate iso={currentPost.publishedAt} /></>
+                )}
               </p>
             )}
           </div>

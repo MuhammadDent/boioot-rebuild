@@ -19,7 +19,7 @@ export interface SeoPreviewProps {
   firstCatName: string;
 }
 
-export function SeoPreview({
+export default function SeoPreview({
   seoMode,
   title,
   excerpt,
