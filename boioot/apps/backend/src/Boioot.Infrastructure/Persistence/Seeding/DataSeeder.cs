@@ -27,6 +27,7 @@ public class DataSeeder
         await SeedAdminUserAsync();
         await SeedSyrianCitiesAsync();
         await SeedRbacAsync();
+        await SeedSamplePropertiesAsync();
     }
 
     // ── Admin user ────────────────────────────────────────────────────────────
@@ -316,5 +317,113 @@ public class DataSeeder
 
         _logger.LogInformation("Dynamic RBAC seed complete: {RoleCount} roles, {PermCount} permissions",
             roleNames.Length, permissionKeys.Length);
+    }
+
+    // ── Sample properties ─────────────────────────────────────────────────────
+    private async Task SeedSamplePropertiesAsync()
+    {
+        var hasProperties = await _context.Set<Boioot.Domain.Entities.Property>()
+            .IgnoreQueryFilters().AnyAsync();
+        if (hasProperties) return;
+
+        var now = DateTime.UtcNow.ToString("o");
+        var companyId = "00000000-0000-0000-0000-000000000001";
+
+        var properties = new[]
+        {
+            new
+            {
+                Id = "11111111-0000-0000-0000-000000000001",
+                Title = "شقة فاخرة في المزة",
+                Description = "شقة واسعة بإطلالة رائعة في حي المزة الراقي، تتميز بتشطيبات عالية الجودة وموقع متميز قريب من جميع الخدمات.",
+                Type = "Apartment",
+                ListingType = "Sale",
+                Price = 85000000m,
+                Area = 175m,
+                Bedrooms = 3,
+                Bathrooms = 2,
+                Province = "دمشق",
+                City = "دمشق",
+                Neighborhood = "المزة"
+            },
+            new
+            {
+                Id = "11111111-0000-0000-0000-000000000002",
+                Title = "فيلا مميزة في يلدا",
+                Description = "فيلا مستقلة ذات طابقين مع حديقة خاصة ومسبح، مناسبة للعائلات الكبيرة.",
+                Type = "Villa",
+                ListingType = "Sale",
+                Price = 350000000m,
+                Area = 400m,
+                Bedrooms = 5,
+                Bathrooms = 4,
+                Province = "ريف دمشق",
+                City = "دمشق",
+                Neighborhood = "يلدا"
+            },
+            new
+            {
+                Id = "11111111-0000-0000-0000-000000000003",
+                Title = "مكتب تجاري في وسط المدينة",
+                Description = "مكتب مجهز بالكامل في موقع تجاري مركزي، مناسب للشركات والمكاتب الاحترافية.",
+                Type = "Office",
+                ListingType = "Rent",
+                Price = 500000m,
+                Area = 80m,
+                Bedrooms = 0,
+                Bathrooms = 1,
+                Province = "دمشق",
+                City = "دمشق",
+                Neighborhood = "البرامكة"
+            },
+            new
+            {
+                Id = "11111111-0000-0000-0000-000000000004",
+                Title = "أرض سكنية في جرمانا",
+                Description = "أرض سكنية مستوية في منطقة جرمانا، جاهزة للبناء الفوري مع كامل الوثائق.",
+                Type = "Land",
+                ListingType = "Sale",
+                Price = 120000000m,
+                Area = 500m,
+                Bedrooms = 0,
+                Bathrooms = 0,
+                Province = "ريف دمشق",
+                City = "جرمانا",
+                Neighborhood = "جرمانا"
+            },
+            new
+            {
+                Id = "11111111-0000-0000-0000-000000000005",
+                Title = "شقة للإيجار في كفرسوسة",
+                Description = "شقة مفروشة بالكامل في كفرسوسة، مناسبة للعائلات والأفراد.",
+                Type = "Apartment",
+                ListingType = "Rent",
+                Price = 800000m,
+                Area = 120m,
+                Bedrooms = 2,
+                Bathrooms = 1,
+                Province = "دمشق",
+                City = "دمشق",
+                Neighborhood = "كفرسوسة"
+            },
+        };
+
+        foreach (var p in properties)
+        {
+            await _context.Database.ExecuteSqlRawAsync(@"
+                INSERT OR IGNORE INTO Properties
+                    (Id, Title, Description, Type, ListingType, Status, Price, Currency,
+                     Area, Bedrooms, Bathrooms, Province, City, Neighborhood,
+                     IsDeleted, PaymentType, HasCommission, ViewCount, CompanyId, CreatedAt, UpdatedAt)
+                VALUES
+                    ({0},{1},{2},{3},{4},'Available',{5},'SYP',
+                     {6},{7},{8},{9},{10},{11},
+                     0,'OneTime',0,0,{12},{13},{13})",
+                p.Id, p.Title, p.Description, p.Type, p.ListingType, p.Price,
+                p.Area, p.Bedrooms, p.Bathrooms, p.Province, p.City, p.Neighborhood,
+                companyId, now);
+        }
+
+        _logger.LogInformation("Sample properties seeded");
     }
 }

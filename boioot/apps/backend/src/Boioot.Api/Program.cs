@@ -125,32 +125,43 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 
-// ── Schema compatibility check (SEPARATE scope so connection is closed before delete) ─
-// The file descriptor must be closed before we delete the DB file; otherwise the new
-// EnsureCreatedAsync will reuse the stale fd and write into the deleted (invisible) file.
-var dbPath = "/home/runner/workspace/boioot/apps/backend/boioot.db";
+// ── Schema compatibility check: add missing columns WITHOUT deleting data ──────────────
 {
     var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
-    bool schemaOk = false;
     using (var checkScope = app.Services.CreateScope())
     {
         var checkDb = checkScope.ServiceProvider.GetRequiredService<BoiootDbContext>();
-        try
-        {
-            await checkDb.Database.ExecuteSqlRawAsync("SELECT OgDescription FROM BlogPosts LIMIT 0");
-            schemaOk = true;
-            startupLogger.LogInformation("Schema check: OgDescription VERIFIED — schema is current");
-        }
-        catch { /* column or table missing — reset needed */ }
-    } // checkScope disposed → SQLite connection properly closed
 
-    if (!schemaOk)
-    {
-        startupLogger.LogWarning("Schema check: OgDescription missing — resetting DB");
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        foreach (var f in new[] { dbPath, dbPath + "-wal", dbPath + "-shm" })
-            if (File.Exists(f)) { File.Delete(f); startupLogger.LogInformation("Deleted stale DB: {f}", f); }
-        startupLogger.LogInformation("SCHEMA RESET complete — new scope will create fresh DB");
+        // Add missing BlogPosts columns safely (ignore if already present)
+        var blogPostsColumns = new (string col, string def)[]
+        {
+            ("SeoMode",           "TEXT NOT NULL DEFAULT 'Auto'"),
+            ("OgTitle",           "TEXT"),
+            ("OgDescription",     "TEXT"),
+            ("CoverImageAlt",     "TEXT"),
+            ("SeoTitleMode",      "TEXT NOT NULL DEFAULT 'Auto'"),
+            ("SeoDescriptionMode","TEXT NOT NULL DEFAULT 'Auto'"),
+            ("SlugMode",          "TEXT NOT NULL DEFAULT 'Auto'"),
+        };
+        foreach (var (col, def) in blogPostsColumns)
+        {
+            try { await checkDb.Database.ExecuteSqlRawAsync($"ALTER TABLE BlogPosts ADD COLUMN {col} {def}"); }
+            catch { /* already exists — skip */ }
+        }
+
+        // Add missing BlogSeoSettings columns safely
+        var blogSeoColumns = new (string col, string def)[]
+        {
+            ("DefaultOgTitleTemplate",       "TEXT NOT NULL DEFAULT '{PostTitle} | {SiteName}'"),
+            ("DefaultOgDescriptionTemplate", "TEXT NOT NULL DEFAULT '{Excerpt}'"),
+        };
+        foreach (var (col, def) in blogSeoColumns)
+        {
+            try { await checkDb.Database.ExecuteSqlRawAsync($"ALTER TABLE BlogSeoSettings ADD COLUMN {col} {def}"); }
+            catch { /* already exists — skip */ }
+        }
+
+        startupLogger.LogInformation("Schema migration columns applied (ALTER TABLE, safe)");
     }
 }
 
