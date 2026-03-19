@@ -1,5 +1,7 @@
+using Boioot.Api.Authorization;
 using Boioot.Application.Features.Billing.DTOs;
 using Boioot.Application.Features.Billing.Interfaces;
+using Boioot.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,7 +11,8 @@ namespace Boioot.Api.Controllers;
 /// Admin billing endpoints: list all invoices, confirm or reject payments.
 /// Confirming a payment automatically activates the user's subscription.
 /// </summary>
-[Authorize(Roles = "Admin")]
+[Authorize]
+[RequirePermission(Permissions.BillingView)]
 [Route("api/admin/billing")]
 public class AdminBillingController : BaseController
 {

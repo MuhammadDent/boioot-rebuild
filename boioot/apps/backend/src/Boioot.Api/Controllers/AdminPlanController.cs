@@ -1,12 +1,15 @@
+using Boioot.Api.Authorization;
 using Boioot.Application.Features.Plans.DTOs;
 using Boioot.Application.Features.Plans.Interfaces;
+using Boioot.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Boioot.Api.Controllers;
 
 [Route("api/admin/plans")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize]
+[RequirePermission(Permissions.SettingsManage)]
 public class AdminPlanController : BaseController
 {
     private readonly IAdminPlanService _plans;

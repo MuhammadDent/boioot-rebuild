@@ -1,3 +1,14 @@
+// ── Role constants ─────────────────────────────────────────────────────────────
+export const ROLES = {
+  ADMIN:            "Admin",
+  ADMIN_MANAGER:    "AdminManager",
+  CUSTOMER_SUPPORT: "CustomerSupport",
+  TECHNICAL_SUPPORT:"TechnicalSupport",
+  CONTENT_EDITOR:   "ContentEditor",
+  SEO_SPECIALIST:   "SeoSpecialist",
+  MARKETING_STAFF:  "MarketingStaff",
+} as const;
+
 // ── Platform (customer-facing) roles ──────────────────────────────────────────
 export type PlatformRole =
   | "User"

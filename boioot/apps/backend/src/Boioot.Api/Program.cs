@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using Boioot.Api.Authorization;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Domain.Constants;
@@ -7,6 +8,7 @@ using Boioot.Infrastructure.Extensions;
 using Boioot.Infrastructure.Persistence;
 using Boioot.Infrastructure.Persistence.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -58,6 +60,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
+    // ── Role-based policies (kept for non-admin areas) ────────────────────────
     options.AddPolicy("AdminOnly", policy =>
         policy.RequireRole(RoleNames.Admin));
 
@@ -73,13 +76,21 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanListProperty", policy =>
         policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Broker, RoleNames.Agent, RoleNames.Owner, RoleNames.User));
 
-    // ── Blog permissions (all Admin-only in V1; extensible for future roles) ──
+    // ── Legacy blog policies — retained for backward compatibility ─────────────
+    // AdminBlogController now uses [RequirePermission] directly, but we keep
+    // these so any external callers or older attributes don't break.
     options.AddPolicy(BlogPermissions.CreatePost,       p => p.RequireRole(RoleNames.Admin));
     options.AddPolicy(BlogPermissions.EditPost,         p => p.RequireRole(RoleNames.Admin));
     options.AddPolicy(BlogPermissions.PublishPost,      p => p.RequireRole(RoleNames.Admin));
     options.AddPolicy(BlogPermissions.DeletePost,       p => p.RequireRole(RoleNames.Admin));
     options.AddPolicy(BlogPermissions.ManageCategories, p => p.RequireRole(RoleNames.Admin));
 });
+
+// ── Permission-based authorization (RBAC) ─────────────────────────────────────
+// PermissionPolicyProvider dynamically creates a policy for any "Permission:X" request.
+// PermissionAuthorizationHandler evaluates the "permission" JWT claims.
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 var app = builder.Build();
 

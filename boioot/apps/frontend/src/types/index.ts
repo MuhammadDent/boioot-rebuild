@@ -7,6 +7,8 @@ export interface UserProfileResponse {
   role: string;
   profileImageUrl?: string;
   createdAt: string;
+  /** Permissions granted by the backend based on the user's role. */
+  permissions: string[];
 }
 
 export interface FavoriteResponse {

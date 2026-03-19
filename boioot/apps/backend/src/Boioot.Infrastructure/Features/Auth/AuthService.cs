@@ -167,14 +167,23 @@ public class AuthService : IAuthService
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var roleStr = user.Role.ToString();
+
+        // Base claims
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(JwtRegisteredClaimNames.Name, user.FullName),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(JwtRegisteredClaimNames.Name, user.FullName),
+            new(ClaimTypes.Role, roleStr),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        // Embed individual permission claims so the PermissionAuthorizationHandler
+        // can verify them without a DB lookup on every request.
+        // SuperAdmin (Admin) has all permissions — still embedded for frontend use.
+        foreach (var perm in Domain.Constants.StaffRolePermissions.GetPermissions(roleStr))
+            claims.Add(new Claim("permission", perm));
 
         var token = new JwtSecurityToken(
             issuer: _configuration["Jwt:Issuer"] ?? "Boioot",
@@ -220,15 +229,20 @@ public class AuthService : IAuthService
     private int GetExpiryMinutes() =>
         int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var mins) ? mins : 1440;
 
-    private static UserProfileResponse MapToProfileResponse(User user) => new()
+    private static UserProfileResponse MapToProfileResponse(User user)
     {
-        Id = user.Id,
-        UserCode = user.UserCode,
-        FullName = user.FullName,
-        Email = user.Email,
-        Phone = user.Phone,
-        Role = user.Role.ToString(),
-        ProfileImageUrl = user.ProfileImageUrl,
-        CreatedAt = user.CreatedAt
-    };
+        var roleStr = user.Role.ToString();
+        return new UserProfileResponse
+        {
+            Id             = user.Id,
+            UserCode       = user.UserCode,
+            FullName       = user.FullName,
+            Email          = user.Email,
+            Phone          = user.Phone,
+            Role           = roleStr,
+            ProfileImageUrl = user.ProfileImageUrl,
+            CreatedAt      = user.CreatedAt,
+            Permissions    = Domain.Constants.StaffRolePermissions.GetPermissions(roleStr),
+        };
+    }
 }

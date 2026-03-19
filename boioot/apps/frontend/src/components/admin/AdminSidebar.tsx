@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { hasPermission, type Permission } from "@/lib/rbac";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type NavItem = {
   href: string;
   label: string;
   icon: React.ReactNode;
-  permission?: Permission;
+  permission?: string;
   exact?: boolean;
 };
 
@@ -18,7 +17,7 @@ type NavGroup = {
   label: string;
   icon: React.ReactNode;
   items: NavItem[];
-  permission?: Permission;
+  permission?: string;
 };
 
 // ── Icon helpers ───────────────────────────────────────────────────────────────
@@ -191,8 +190,7 @@ const NAV_GROUPS: NavGroup[] = [
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const { user } = useAuth();
-  const role = user?.role ?? "";
+  const { user, hasPermission } = useAuth();
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
@@ -254,10 +252,10 @@ export default function AdminSidebar() {
       <nav style={{ flex: 1, padding: "0.5rem 0 1rem" }}>
         {NAV_GROUPS.map((group) => {
           const groupPermission = group.permission;
-          if (groupPermission && !hasPermission(role, groupPermission)) return null;
+          if (groupPermission && !hasPermission(groupPermission)) return null;
 
           const visibleItems = group.items.filter(
-            (item) => !item.permission || hasPermission(role, item.permission)
+            (item) => !item.permission || hasPermission(item.permission)
           );
           if (visibleItems.length === 0) return null;
 
