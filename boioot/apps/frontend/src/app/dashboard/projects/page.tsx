@@ -16,6 +16,7 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { normalizeError } from "@/lib/api";
+import { hasPermission } from "@/lib/permissions";
 import type { DashboardProjectItem } from "@/types";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -35,8 +36,8 @@ export default function DashboardProjectsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
 
-  // Only Admin and CompanyOwner may create, edit, or delete projects.
-  const canManage = user?.role === "Admin" || user?.role === "CompanyOwner";
+  // "projects.create" → CompanyOwner, Admin (see PLATFORM_ROLE_PERMISSIONS in rbac.ts).
+  const canManage = hasPermission(user, "projects.create");
 
   const load = useCallback(async (p: number) => {
     setFetching(true);

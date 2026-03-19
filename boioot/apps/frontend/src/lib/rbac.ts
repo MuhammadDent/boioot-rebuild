@@ -256,6 +256,58 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "billing.manage":    "إدارة",
 };
 
+// ── Platform (customer-facing) permission types ────────────────────────────────
+//
+// These permissions govern the customer-facing dashboard (platform layer).
+// They are NOT embedded in the JWT — they are derived on the frontend from the
+// user's role via PLATFORM_ROLE_PERMISSIONS.
+//
+// Staff (Admin) also appear here so that platform pages work seamlessly when an
+// Admin browses the platform dashboard. Admin's JWT already contains the shared
+// strings (properties.view/edit/delete, projects.view/edit) via the admin RBAC.
+// The new strings below (properties.create, projects.create, etc.) are added to
+// the Admin entry so a two-pass permission check covers them too.
+export type PlatformPermission =
+  | "properties.create"  // create a new listing  (CompanyOwner, Admin)
+  | "projects.create"    // create a new project  (CompanyOwner, Admin)
+  | "projects.delete"    // delete a project      (CompanyOwner, Admin)
+  | "agents.view"        // view agents section   (Agent, CompanyOwner, Admin)
+  | "agents.manage";     // create/toggle agents  (Broker, CompanyOwner, Admin)
+
+// ── Platform role → permissions map ───────────────────────────────────────────
+//
+// Consumed by hasPermission() in lib/permissions.ts as Pass 2 when the
+// permission is not found in the user's JWT claims (user.permissions[]).
+//
+// Only capabilities that are GATED in the platform UI are listed here.
+// Viewing is controlled by useProtectedRoute({ allowedRoles }) and is
+// intentionally kept role-based at the page-access level.
+export const PLATFORM_ROLE_PERMISSIONS: Record<string, string[]> = {
+  CompanyOwner: [
+    "properties.create",
+    "projects.create",
+    "projects.delete",
+    "agents.manage",
+  ],
+  Broker: [
+    "agents.manage",
+  ],
+  // Agent: can view and edit their own listings (no create/delete in platform dashboard).
+  // "agents.view" used as a lightweight marker so navigation/summary logic can detect
+  // platform management participants without relying on the role string.
+  Agent: [
+    "agents.view",
+  ],
+  // Admin (staff) gets full platform manage access in addition to JWT staff claims.
+  Admin: [
+    "properties.create",
+    "projects.create",
+    "projects.delete",
+    "agents.manage",
+    "agents.view",
+  ],
+};
+
 // ── Helper functions ───────────────────────────────────────────────────────────
 
 /**

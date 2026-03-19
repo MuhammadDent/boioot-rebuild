@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { hasPermission } from "@/lib/permissions";
 import Spinner from "@/components/ui/Spinner";
 
 interface AgentSummary {
@@ -48,8 +49,8 @@ export default function AgentsPage() {
   const [formError, setFormError] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  const canManageAgents =
-    user?.role === "Broker" || user?.role === "CompanyOwner";
+  // "agents.manage" → Broker, CompanyOwner, Admin (see PLATFORM_ROLE_PERMISSIONS in rbac.ts).
+  const canManageAgents = hasPermission(user, "agents.manage");
 
   useEffect(() => {
     if (!isLoading && !canManageAgents) {

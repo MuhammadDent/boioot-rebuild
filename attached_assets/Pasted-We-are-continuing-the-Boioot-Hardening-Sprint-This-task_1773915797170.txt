@@ -1,0 +1,151 @@
+We are continuing the Boioot Hardening Sprint.
+
+This task focuses on eliminating ROLE-BASED LOGIC from the PLATFORM layer.
+
+==================================================
+GOAL
+==================================================
+
+Unify authorization across the entire system:
+
+- Admin panel → already permission-based ✅
+- Platform (dashboard) → must become permission-based ❗
+
+NO MORE ROLE CHECKS ANYWHERE.
+
+==================================================
+CURRENT PROBLEM
+==================================================
+
+The following files still use role-based logic:
+
+- dashboard/properties/page.tsx
+- dashboard/projects/page.tsx
+- dashboard/agents/page.tsx
+
+Examples:
+
+if (user?.role === "Admin")
+if (user?.role === "CompanyOwner")
+
+This creates inconsistency with the admin system.
+
+==================================================
+TASKS
+==================================================
+
+1) REMOVE ALL ROLE CHECKS IN PLATFORM
+
+Replace:
+
+❌ user.role === "Admin"
+❌ user.role === "CompanyOwner"
+❌ user.role === "Broker"
+
+WITH:
+
+✅ permission-based checks
+
+==================================================
+
+2) DEFINE PLATFORM PERMISSIONS
+
+Introduce clear permissions such as:
+
+properties.view
+properties.create
+properties.edit
+properties.delete
+
+projects.view
+projects.create
+projects.edit
+projects.delete
+
+agents.view
+agents.manage
+
+==================================================
+
+3) MAP OLD ROLES → PERMISSIONS
+
+Define mapping:
+
+Admin:
+- all permissions
+
+CompanyOwner:
+- properties.*
+- projects.*
+- agents.manage
+
+Broker:
+- properties.view
+- properties.create
+
+==================================================
+
+4) UPDATE FRONTEND LOGIC
+
+Example:
+
+Before:
+if (user.role === "CompanyOwner") {
+  showProjects()
+}
+
+After:
+if (hasPermission(user, "projects.view")) {
+  showProjects()
+}
+
+==================================================
+
+5) UPDATE UI VISIBILITY
+
+Ensure:
+
+- buttons
+- pages
+- actions
+
+are all permission-based
+
+==================================================
+
+6) KEEP ROLE ONLY FOR DISPLAY
+
+user.role can remain for:
+
+- UI labels
+- analytics
+
+BUT NEVER for authorization
+
+==================================================
+
+7) VALIDATION
+
+Test:
+
+CompanyOwner:
+- can manage properties
+- can manage projects
+
+Broker:
+- can create property
+- cannot access projects
+
+Admin:
+- full access
+
+==================================================
+OUTPUT
+==================================================
+
+Provide:
+
+- list of removed role checks
+- new permission mapping
+- updated files
+- before/after examples

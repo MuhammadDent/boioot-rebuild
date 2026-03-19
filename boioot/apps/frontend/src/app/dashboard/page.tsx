@@ -10,6 +10,7 @@ import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
 import { ROLE_LABELS } from "@/features/admin/constants";
 import { normalizeError } from "@/lib/api";
+import { hasPermission } from "@/lib/permissions";
 import { formatPrice, LISTING_TYPE_LABELS, PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
 import type { DashboardSummary, FavoriteResponse } from "@/types";
 
@@ -92,8 +93,10 @@ export default function DashboardPage() {
   if (isLoading || !user) return null;
 
   const isManagementRole = canSeeSummary(user.role);
-  const isCompanyOrAdmin = user.role === "Admin" || user.role === "CompanyOwner";
-  const canManageAgents  = user.role === "Broker" || user.role === "CompanyOwner" || user.role === "Admin";
+  // "projects.create" → CompanyOwner, Admin (PLATFORM_ROLE_PERMISSIONS)
+  const isCompanyOrAdmin = hasPermission(user, "projects.create");
+  // "agents.manage" → Broker, CompanyOwner, Admin (PLATFORM_ROLE_PERMISSIONS)
+  const canManageAgents  = hasPermission(user, "agents.manage");
 
   async function handleEditSave(e: FormEvent) {
     e.preventDefault();
@@ -486,8 +489,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Admin Section ─────────────────────────────────────────────────── */}
-        {user.role === "Admin" && (
+        {/* ── Admin Section — visible to users who hold roles.manage (Admin only) ── */}
+        {hasPermission(user, "roles.manage") && (
           <div style={{ marginBottom: "1.25rem" }}>
             <SectionLabel>إدارة النظام</SectionLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
@@ -531,12 +534,13 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Management section (CompanyOwner / Agent) ──────────────────────── */}
-        {isManagementRole && user.role !== "Admin" && (
+        {/* ── Management section (CompanyOwner / Broker / Agent) ─────────────── */}
+        {isManagementRole && !hasPermission(user, "roles.manage") && (
           <div style={{ marginBottom: "1.25rem" }}>
             <SectionLabel>إدارة الإعلانات</SectionLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              {(user.role === "CompanyOwner" || user.role === "Broker" || user.role === "Admin") && (
+              {/* "properties.create" → CompanyOwner, Admin (Broker excluded — Broker manages agents, not listings) */}
+              {hasPermission(user, "properties.create") && (
                 <QuickActionCard
                   href="/dashboard/properties/new"
                   label="إضافة عقار جديد"

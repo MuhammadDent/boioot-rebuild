@@ -17,6 +17,7 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { normalizeError } from "@/lib/api";
+import { hasPermission } from "@/lib/permissions";
 import type { DashboardPropertyItem } from "@/types";
 
 // ─── Badge maps ───────────────────────────────────────────────────────────────
@@ -50,8 +51,9 @@ export default function DashboardPropertiesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
 
-  // Admin and CompanyOwner share the same create/delete rights (AdminOrCompanyOwner policy).
-  const canManage = user?.role === "Admin" || user?.role === "CompanyOwner";
+  // "properties.create" → CompanyOwner, Admin (see PLATFORM_ROLE_PERMISSIONS in rbac.ts).
+  // Agent is allowed on this page (via allowedRoles) but cannot create/delete — only edit.
+  const canManage = hasPermission(user, "properties.create");
 
   const load = useCallback(async (p: number) => {
     setFetching(true);
