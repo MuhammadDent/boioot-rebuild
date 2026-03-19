@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Boioot.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ab49c8242167d3505e6ce4d8ecc3306b97be7522")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+95ca37f69a1e6ffc997709f4565bbf2bcb4add80")]
 [assembly: System.Reflection.AssemblyProductAttribute("Boioot.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Boioot.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -21,6 +21,16 @@ public class AdminController : BaseController
 
     // ── Users ─────────────────────────────────────────────────────────────────
 
+    [HttpPost("users")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> CreateUser(
+        [FromBody] CreateAdminUserRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateUserAsync(request, ct);
+        return Created($"api/admin/users/{result.Id}", result);
+    }
+
     [HttpGet("users")]
     [RequirePermission(Permissions.UsersView)]
     public async Task<IActionResult> GetUsers(

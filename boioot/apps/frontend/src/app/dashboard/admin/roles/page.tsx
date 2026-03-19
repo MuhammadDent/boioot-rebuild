@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { normalizeError } from "@/lib/api";
 import {
@@ -11,6 +12,7 @@ import {
   type RbacRole,
   type RbacPermission,
 } from "@/features/admin/rbac/api";
+import { ROLE_TEMPLATES, type RoleTemplate } from "@/features/admin/rbac/templates";
 import type { AdminUserResponse } from "@/types";
 
 // ── Role category helpers ────────────────────────────────────────────────────
@@ -84,18 +86,202 @@ function Toast({ msg, type }: { msg: string; type: "ok" | "err" }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
+// Template Card component
+// ════════════════════════════════════════════════════════════════════════════════
+
+function TemplateCard({
+  tpl,
+  selected,
+  onSelect,
+}: {
+  tpl: RoleTemplate;
+  selected: boolean;
+  onSelect: (t: RoleTemplate) => void;
+}) {
+  return (
+    <button
+      onClick={() => onSelect(tpl)}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.5rem",
+        padding: "1rem",
+        borderRadius: 12,
+        border: selected
+          ? `2px solid ${tpl.color}`
+          : `1.5px solid ${tpl.border}`,
+        backgroundColor: selected ? tpl.bg : "#fff",
+        cursor: "pointer",
+        textAlign: "right",
+        fontFamily: "inherit",
+        transition: "all 0.15s",
+        boxShadow: selected
+          ? `0 0 0 3px ${tpl.color}22`
+          : "0 1px 3px rgba(0,0,0,0.04)",
+        position: "relative",
+        minHeight: 120,
+      }}
+    >
+      {/* Selected tick */}
+      {selected && (
+        <div style={{
+          position: "absolute",
+          top: 10,
+          left: 10,
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          backgroundColor: tpl.color,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+          <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+      )}
+
+      {/* Icon */}
+      <div style={{
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: `${tpl.color}18`,
+        color: tpl.color,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}>
+        <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d={tpl.iconPath} />
+        </svg>
+      </div>
+
+      {/* Name + description */}
+      <div>
+        <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.2rem" }}>
+          {tpl.name}
+        </div>
+        <div style={{ fontSize: "0.72rem", color: "#94a3b8", lineHeight: 1.5 }}>
+          {tpl.description}
+        </div>
+      </div>
+
+      {/* Permission count badge */}
+      {tpl.permissions.length > 0 && (
+        <div style={{
+          marginTop: "auto",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.3rem",
+          fontSize: "0.68rem",
+          fontWeight: 700,
+          color: tpl.color,
+          backgroundColor: `${tpl.color}14`,
+          padding: "0.18rem 0.55rem",
+          borderRadius: 20,
+          width: "fit-content",
+        }}>
+          <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          {tpl.permissions.length} صلاحية
+        </div>
+      )}
+    </button>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// Permission Preview (inside create panel)
+// ════════════════════════════════════════════════════════════════════════════════
+
+function PermissionPreview({ permissions }: { permissions: string[] }) {
+  if (permissions.length === 0) return null;
+
+  const grouped = permissions.reduce<Record<string, string[]>>((acc, key) => {
+    const module = key.split(".")[0];
+    (acc[module] ||= []).push(key);
+    return acc;
+  }, {});
+
+  return (
+    <div style={{
+      backgroundColor: "#f8fafc",
+      border: "1px solid #e8ecf0",
+      borderRadius: 10,
+      padding: "1rem",
+    }}>
+      <div style={{
+        fontSize: "0.75rem",
+        fontWeight: 700,
+        color: "#64748b",
+        marginBottom: "0.75rem",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.4rem",
+      }}>
+        <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+        </svg>
+        معاينة الصلاحيات المضمّنة
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        {Object.entries(grouped).map(([module, keys]) => (
+          <div key={module}>
+            <div style={{
+              fontSize: "0.69rem",
+              fontWeight: 700,
+              color: "#94a3b8",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              marginBottom: "0.3rem",
+            }}>
+              {MODULE_LABELS[module] ?? module}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+              {keys.map(k => (
+                <span key={k} style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  color: "#374151",
+                  backgroundColor: "#fff",
+                  border: "1px solid #e5e7eb",
+                  padding: "0.18rem 0.55rem",
+                  borderRadius: 6,
+                }}>
+                  {PERMISSION_LABEL[k] ?? k}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
 // TAB 1 — Roles Management
 // ════════════════════════════════════════════════════════════════════════════════
 
 function RolesTab({ toast }: { toast: (m: string, t?: "ok" | "err") => void }) {
+  const router = useRouter();
+
   const [roles, setRoles]         = useState<RbacRole[]>([]);
   const [loading, setLoading]     = useState(true);
-  const [newName, setNewName]     = useState("");
-  const [creating, setCreating]   = useState(false);
   const [editId, setEditId]       = useState<string | null>(null);
   const [editName, setEditName]   = useState("");
   const [saving, setSaving]       = useState(false);
   const [deleting, setDeleting]   = useState<string | null>(null);
+
+  // Create panel state
+  const [showCreate, setShowCreate]     = useState(false);
+  const [selectedTpl, setSelectedTpl]   = useState<RoleTemplate>(ROLE_TEMPLATES[0]);
+  const [newName, setNewName]           = useState("");
+  const [creating, setCreating]         = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,14 +296,27 @@ function RolesTab({ toast }: { toast: (m: string, t?: "ok" | "err") => void }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // When template selection changes, auto-fill suggested role name if field is empty or was auto-filled
+  const handleSelectTemplate = (tpl: RoleTemplate) => {
+    setSelectedTpl(tpl);
+    if (!newName || newName === selectedTpl.suggestedRoleName) {
+      setNewName(tpl.suggestedRoleName);
+    }
+  };
+
   const handleCreate = async () => {
-    if (!newName.trim()) return;
+    const name = newName.trim();
+    if (!name) return;
     setCreating(true);
     try {
-      const role = await rbacApi.createRole(newName.trim());
-      setRoles(r => [...r, role].sort((a, b) => a.name.localeCompare(b.name)));
-      setNewName("");
-      toast("تم إنشاء الدور بنجاح");
+      const role = await rbacApi.createRole(name);
+      // Apply template permissions if any
+      if (selectedTpl.permissions.length > 0) {
+        await rbacApi.setRolePermissions(role.id, selectedTpl.permissions);
+      }
+      toast(`تم إنشاء الدور "${name}" بنجاح`);
+      // Navigate to role detail page for further customisation
+      router.push(`/dashboard/admin/roles/${role.id}`);
     } catch (e) {
       toast(normalizeError(e), "err");
     } finally {
@@ -157,26 +356,183 @@ function RolesTab({ toast }: { toast: (m: string, t?: "ok" | "err") => void }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-      {/* Create role */}
-      <div style={{ ...card, display: "flex", gap: "0.75rem", alignItems: "center" }}>
-        <input
-          style={{ ...inputStyle, maxWidth: 280 }}
-          placeholder="اسم الدور الجديد"
-          value={newName}
-          onChange={e => setNewName(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handleCreate()}
-          disabled={creating}
-        />
-        <button
-          style={btn()}
-          onClick={handleCreate}
-          disabled={creating || !newName.trim()}
-        >
-          {creating ? "..." : "+ إنشاء دور"}
-        </button>
-      </div>
+      {/* ── Create role button / panel ── */}
+      {!showCreate ? (
+        <div style={{ display: "flex", justifyContent: "flex-start" }}>
+          <button
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "0.5rem",
+              padding: "0.6rem 1.25rem",
+              fontSize: "0.85rem", fontWeight: 700,
+              borderRadius: 10,
+              border: "none",
+              background: "linear-gradient(135deg,#16a34a,#15803d)",
+              color: "#fff",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              boxShadow: "0 2px 8px rgba(22,163,74,0.3)",
+            }}
+            onClick={() => setShowCreate(true)}
+          >
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            إنشاء دور جديد
+          </button>
+        </div>
+      ) : (
+        /* ── Create panel ── */
+        <div style={{
+          backgroundColor: "#fff",
+          border: "1px solid #e8ecf0",
+          borderRadius: 16,
+          padding: "1.5rem",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+        }}>
 
-      {/* Roles table */}
+          {/* Panel header */}
+          <div style={{
+            display: "flex", alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "1.25rem",
+          }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                إنشاء دور جديد
+              </h3>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "#94a3b8" }}>
+                اختر نقطة البداية ثم اضبط الصلاحيات
+              </p>
+            </div>
+            <button
+              onClick={() => { setShowCreate(false); setNewName(""); setSelectedTpl(ROLE_TEMPLATES[0]); }}
+              style={{
+                background: "none", border: "none",
+                cursor: "pointer", color: "#94a3b8",
+                padding: "0.25rem",
+                display: "flex", alignItems: "center",
+              }}
+            >
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Step 1: Template selection */}
+          <div style={{ marginBottom: "1.25rem" }}>
+            <div style={{
+              fontSize: "0.75rem", fontWeight: 700,
+              color: "#64748b", marginBottom: "0.75rem",
+              display: "flex", alignItems: "center", gap: "0.4rem",
+            }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                width: 18, height: 18, borderRadius: "50%",
+                backgroundColor: "#1e293b", color: "#fff",
+                fontSize: "0.65rem", fontWeight: 800, flexShrink: 0,
+              }}>1</span>
+              اختر القالب
+            </div>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+              gap: "0.65rem",
+            }}>
+              {ROLE_TEMPLATES.map(tpl => (
+                <TemplateCard
+                  key={tpl.id}
+                  tpl={tpl}
+                  selected={selectedTpl.id === tpl.id}
+                  onSelect={handleSelectTemplate}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Permission preview */}
+          {selectedTpl.permissions.length > 0 && (
+            <div style={{ marginBottom: "1.25rem" }}>
+              <PermissionPreview permissions={selectedTpl.permissions} />
+            </div>
+          )}
+
+          {/* Step 2: Role name */}
+          <div style={{ marginBottom: "1.25rem" }}>
+            <div style={{
+              fontSize: "0.75rem", fontWeight: 700,
+              color: "#64748b", marginBottom: "0.6rem",
+              display: "flex", alignItems: "center", gap: "0.4rem",
+            }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                width: 18, height: 18, borderRadius: "50%",
+                backgroundColor: "#1e293b", color: "#fff",
+                fontSize: "0.65rem", fontWeight: 800, flexShrink: 0,
+              }}>2</span>
+              اسم الدور
+            </div>
+            <div style={{ display: "flex", gap: "0.65rem", alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                style={{
+                  ...inputStyle,
+                  maxWidth: 320,
+                  border: "1.5px solid #d1d5db",
+                  borderRadius: 10,
+                  padding: "0.65rem 0.9rem",
+                  fontSize: "0.88rem",
+                }}
+                placeholder="مثال: MarketingManager"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleCreate()}
+                disabled={creating}
+                autoFocus
+              />
+              <button
+                style={{
+                  padding: "0.65rem 1.75rem",
+                  fontSize: "0.86rem",
+                  fontWeight: 700,
+                  borderRadius: 10,
+                  border: "none",
+                  background: !newName.trim() || creating
+                    ? "#d1fae5"
+                    : "linear-gradient(135deg,#16a34a,#15803d)",
+                  color: "#fff",
+                  cursor: !newName.trim() || creating ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                  opacity: !newName.trim() || creating ? 0.7 : 1,
+                  boxShadow: !newName.trim() || creating ? "none" : "0 2px 8px rgba(22,163,74,0.3)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                }}
+                onClick={handleCreate}
+                disabled={creating || !newName.trim()}
+              >
+                {creating ? (
+                  "جاري الإنشاء…"
+                ) : (
+                  <>
+                    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    إنشاء وتخصيص الصلاحيات
+                  </>
+                )}
+              </button>
+            </div>
+            {selectedTpl.permissions.length > 0 && (
+              <p style={{ margin: "0.5rem 0 0", fontSize: "0.73rem", color: "#94a3b8" }}>
+                سيتم تطبيق {selectedTpl.permissions.length} صلاحية تلقائياً — يمكنك التعديل بعد الإنشاء
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Roles table ── */}
       <div style={{ ...card, padding: 0, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
           <thead>

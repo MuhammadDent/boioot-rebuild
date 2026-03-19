@@ -1,8 +1,16 @@
 {
   "Files": [
     {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/26839264-46dd-44eb-b8c5-24240e7be6da.jpg",
+      "PackagePath": "staticwebassets/uploads/26839264-46dd-44eb-b8c5-24240e7be6da.jpg"
+    },
+    {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/38993e88-bcc5-4d80-87a3-d47f45dfcdda.jpg",
       "PackagePath": "staticwebassets/uploads/38993e88-bcc5-4d80-87a3-d47f45dfcdda.jpg"
+    },
+    {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/5287f71f-2e9b-48a0-8949-bf09dd4fae57.jpg",
+      "PackagePath": "staticwebassets/uploads/5287f71f-2e9b-48a0-8949-bf09dd4fae57.jpg"
     },
     {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/b18ce154-732d-4252-85e7-786e114aea54.jpg",

@@ -43,6 +43,17 @@ export default function AdminUsersPage() {
   // Applied filter params stored in ref so pagination can reuse them
   const appliedFiltersRef = useRef<AdminUsersParams>({});
 
+  // ── Create user panel state ──────────────────────────────────────────────
+  const [showCreate, setShowCreate]         = useState(false);
+  const [createFullName, setCreateFullName] = useState("");
+  const [createEmail, setCreateEmail]       = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createPhone, setCreatePhone]       = useState("");
+  const [createRole, setCreateRole]         = useState("User");
+  const [createLoading, setCreateLoading]   = useState(false);
+  const [createError, setCreateError]       = useState("");
+  const [createNotice, setCreateNotice]     = useState("");
+
   const load = useCallback(async (p: number, params: AdminUsersParams = {}) => {
     setFetching(true);
     setFetchError("");
@@ -114,22 +125,197 @@ export default function AdminUsersPage() {
     }
   }
 
+  function handleOpenCreate() {
+    setShowCreate(v => !v);
+    setCreateFullName("");
+    setCreateEmail("");
+    setCreatePassword("");
+    setCreatePhone("");
+    setCreateRole("User");
+    setCreateError("");
+  }
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (createLoading) return;
+    setCreateLoading(true);
+    setCreateError("");
+    try {
+      const created = await adminApi.createUser({
+        fullName: createFullName.trim(),
+        email: createEmail.trim(),
+        password: createPassword,
+        phone: createPhone.trim() || undefined,
+        role: createRole,
+      });
+      setUsers(prev => [created, ...prev]);
+      setTotalCount(c => c + 1);
+      setShowCreate(false);
+      setCreateFullName("");
+      setCreateEmail("");
+      setCreatePassword("");
+      setCreatePhone("");
+      setCreateRole("User");
+      setCreateNotice(`تم إنشاء المستخدم "${created.fullName}" بنجاح`);
+      setTimeout(() => setCreateNotice(""), 4000);
+    } catch (e) {
+      setCreateError(normalizeError(e));
+    } finally {
+      setCreateLoading(false);
+    }
+  }
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
 
         {/* ── Header ── */}
-        <div style={{ marginBottom: "1.75rem" }}>
-          <DashboardBackLink href="/dashboard" label="← لوحة التحكم" />
-          <h1 style={{ fontSize: "1.4rem", fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>
-            إدارة المستخدمين
-          </h1>
-          {totalCount > 0 && (
-            <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
-              {totalCount} مستخدم
-            </p>
-          )}
+        <div style={{ marginBottom: "1.75rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
+          <div>
+            <DashboardBackLink href="/dashboard" label="← لوحة التحكم" />
+            <h1 style={{ fontSize: "1.4rem", fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>
+              إدارة المستخدمين
+            </h1>
+            {totalCount > 0 && (
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                {totalCount} مستخدم
+              </p>
+            )}
+          </div>
+
+          <button
+            className="btn btn-primary"
+            style={{
+              padding: "0.55rem 1.25rem",
+              display: "flex", alignItems: "center", gap: "0.4rem",
+              backgroundColor: showCreate ? "#1d4ed8" : undefined,
+            }}
+            onClick={handleOpenCreate}
+          >
+            {showCreate ? "✕ إلغاء" : "+ إضافة مستخدم"}
+          </button>
         </div>
+
+        {/* ── Create User Panel ── */}
+        {showCreate && (
+          <div className="form-card" style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
+            <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem", color: "var(--color-text-primary)" }}>
+              إضافة مستخدم جديد
+            </h2>
+
+            {createError && (
+              <div style={{
+                marginBottom: "1rem", padding: "0.65rem 1rem",
+                backgroundColor: "#fef2f2", border: "1px solid #fecaca",
+                borderRadius: 8, fontSize: "0.83rem", color: "#b91c1c",
+              }}>
+                {createError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateUser}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.9rem", marginBottom: "1rem" }}>
+
+                {/* Full name */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  <label className="form-label" style={{ margin: 0 }}>الاسم الكامل *</label>
+                  <input
+                    className="form-input"
+                    placeholder="مثال: أحمد محمد"
+                    value={createFullName}
+                    onChange={e => setCreateFullName(e.target.value)}
+                    required
+                    disabled={createLoading}
+                    style={{ padding: "0.5rem 0.75rem" }}
+                  />
+                </div>
+
+                {/* Email */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  <label className="form-label" style={{ margin: 0 }}>البريد الإلكتروني *</label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    placeholder="example@email.com"
+                    value={createEmail}
+                    onChange={e => setCreateEmail(e.target.value)}
+                    required
+                    disabled={createLoading}
+                    style={{ padding: "0.5rem 0.75rem", direction: "ltr", textAlign: "right" }}
+                  />
+                </div>
+
+                {/* Password */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  <label className="form-label" style={{ margin: 0 }}>كلمة المرور *</label>
+                  <input
+                    className="form-input"
+                    type="password"
+                    placeholder="8 أحرف على الأقل"
+                    value={createPassword}
+                    onChange={e => setCreatePassword(e.target.value)}
+                    required
+                    minLength={8}
+                    disabled={createLoading}
+                    style={{ padding: "0.5rem 0.75rem" }}
+                  />
+                </div>
+
+                {/* Phone */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  <label className="form-label" style={{ margin: 0 }}>رقم الهاتف (اختياري)</label>
+                  <input
+                    className="form-input"
+                    type="tel"
+                    placeholder="+963..."
+                    value={createPhone}
+                    onChange={e => setCreatePhone(e.target.value)}
+                    disabled={createLoading}
+                    style={{ padding: "0.5rem 0.75rem", direction: "ltr", textAlign: "right" }}
+                  />
+                </div>
+
+                {/* Role */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  <label className="form-label" style={{ margin: 0 }}>الدور</label>
+                  <select
+                    className="form-input"
+                    value={createRole}
+                    onChange={e => setCreateRole(e.target.value)}
+                    disabled={createLoading}
+                    style={{ padding: "0.5rem 0.75rem" }}
+                  >
+                    <option value="Admin">مدير النظام</option>
+                    <option value="CompanyOwner">مالك شركة</option>
+                    <option value="Agent">وكيل عقاري</option>
+                    <option value="User">مستخدم عادي</option>
+                  </select>
+                </div>
+
+              </div>
+
+              <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-start" }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: "0.55rem 1.5rem" }}
+                  disabled={createLoading}
+                >
+                  {createLoading ? "جارٍ الإنشاء..." : "إنشاء المستخدم"}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ padding: "0.55rem 1rem" }}
+                  onClick={handleOpenCreate}
+                  disabled={createLoading}
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* ── Filter bar ── */}
         <div className="form-card" style={{
@@ -175,6 +361,22 @@ export default function AdminUsersPage() {
             </button>
           </div>
         </div>
+
+        {/* ── Create success notice ── */}
+        {createNotice && (
+          <div style={{
+            marginBottom: "0.75rem",
+            padding: "0.65rem 1rem",
+            backgroundColor: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: 8,
+            fontSize: "0.83rem",
+            color: "#15803d",
+            fontWeight: 600,
+          }}>
+            ✓ {createNotice}
+          </div>
+        )}
 
         {/* ── Action error ── */}
         <InlineBanner message={actionError} />
@@ -409,4 +611,3 @@ function UserRow({
     </div>
   );
 }
-

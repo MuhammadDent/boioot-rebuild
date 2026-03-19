@@ -249,6 +249,78 @@ public class AdminService : IAdminService
         return new PagedResult<RequestResponse>(items, page, pageSize, total);
     }
 
+    public async Task<AdminUserResponse> CreateUserAsync(
+        CreateAdminUserRequest request, CancellationToken ct = default)
+    {
+        var emailLower = request.Email.ToLowerInvariant().Trim();
+
+        var emailExists = await _context.Users
+            .IgnoreQueryFilters()
+            .AnyAsync(u => u.Email == emailLower, ct);
+
+        if (emailExists)
+            throw new BoiootException("البريد الإلكتروني مستخدم بالفعل", 409);
+
+        var role = Enum.TryParse<UserRole>(request.Role, out var parsedRole)
+            ? parsedRole
+            : UserRole.User;
+
+        var prefix = role switch
+        {
+            UserRole.Owner        => "OWN",
+            UserRole.Broker       => "BRK",
+            UserRole.Agent        => "AGT",
+            UserRole.CompanyOwner => "CO",
+            UserRole.Admin        => "ADM",
+            _                     => "U",
+        };
+
+        var count = await _context.Users
+            .IgnoreQueryFilters()
+            .CountAsync(u => u.Role == role, ct);
+
+        var candidate = count + 1;
+        string userCode;
+        do
+        {
+            userCode = $"{prefix}-{candidate:D4}";
+            var codeExists = await _context.Users
+                .IgnoreQueryFilters()
+                .AnyAsync(u => u.UserCode == userCode, ct);
+            if (!codeExists) break;
+            candidate++;
+        } while (true);
+
+        var user = new User
+        {
+            UserCode     = userCode,
+            FullName     = request.FullName.Trim(),
+            Email        = emailLower,
+            Phone        = request.Phone?.Trim(),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role         = role,
+            IsActive     = true,
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Admin created new user: {Email} | Role: {Role}", emailLower, user.Role);
+
+        return new AdminUserResponse
+        {
+            Id        = user.Id,
+            FullName  = user.FullName,
+            Email     = user.Email,
+            Phone     = user.Phone,
+            Role      = user.Role.ToString(),
+            IsActive  = user.IsActive,
+            IsDeleted = user.IsDeleted,
+            CreatedAt = user.CreatedAt,
+            UpdatedAt = user.UpdatedAt
+        };
+    }
+
     public async Task<AdminUserResponse> UpdateUserStatusAsync(
         Guid adminUserId, Guid targetUserId, bool isActive, CancellationToken ct = default)
     {

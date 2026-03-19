@@ -126,6 +126,17 @@ export const adminApi = {
     return api.get(`/admin/requests?${qs}`);
   },
 
+  /** POST /api/admin/users — admin creates a user directly */
+  createUser(payload: {
+    fullName: string;
+    email: string;
+    password: string;
+    phone?: string;
+    role?: string;
+  }): Promise<AdminUserResponse> {
+    return api.post("/admin/users", payload);
+  },
+
   /** PATCH /api/admin/users/{userId}/status */
   updateUserStatus(userId: string, isActive: boolean): Promise<AdminUserResponse> {
     return api.patch(`/admin/users/${userId}/status`, { isActive });

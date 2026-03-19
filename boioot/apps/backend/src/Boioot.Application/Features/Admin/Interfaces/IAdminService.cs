@@ -24,6 +24,9 @@ public interface IAdminService
     Task<PagedResult<RequestResponse>> GetRequestsAsync(
         int page, int pageSize, RequestStatus? status, CancellationToken ct = default);
 
+    Task<AdminUserResponse> CreateUserAsync(
+        CreateAdminUserRequest request, CancellationToken ct = default);
+
     Task<AdminUserResponse> UpdateUserStatusAsync(
         Guid adminUserId, Guid targetUserId, bool isActive, CancellationToken ct = default);
 
