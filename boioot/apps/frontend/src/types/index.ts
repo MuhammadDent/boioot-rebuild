@@ -375,8 +375,10 @@ export interface AdminUserResponse {
 export interface AdminCompanyResponse {
   id: string;
   name: string;
+  description?: string;
   email?: string;
   phone?: string;
+  address?: string;
   city?: string;
   logoUrl?: string;
   isVerified: boolean;

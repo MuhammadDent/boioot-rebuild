@@ -74,6 +74,27 @@ public class AdminController : BaseController
 
     // ── Companies ─────────────────────────────────────────────────────────────
 
+    [HttpPost("companies")]
+    [RequirePermission(Permissions.CompaniesEdit)]
+    public async Task<IActionResult> CreateCompany(
+        [FromBody] CreateAdminCompanyRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateCompanyAsync(request, ct);
+        return Created($"api/admin/companies/{result.Id}", result);
+    }
+
+    [HttpPut("companies/{companyId:guid}")]
+    [RequirePermission(Permissions.CompaniesEdit)]
+    public async Task<IActionResult> UpdateCompany(
+        Guid companyId,
+        [FromBody] UpdateAdminCompanyRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateCompanyAsync(companyId, request, ct);
+        return Ok(result);
+    }
+
     [HttpGet("companies")]
     [RequirePermission(Permissions.CompaniesView)]
     public async Task<IActionResult> GetCompanies(

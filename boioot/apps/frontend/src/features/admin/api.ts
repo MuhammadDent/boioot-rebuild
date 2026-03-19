@@ -147,6 +147,32 @@ export const adminApi = {
     return api.patch(`/admin/users/${userId}/role`, { role });
   },
 
+  /** POST /api/admin/companies */
+  createCompany(payload: {
+    name: string;
+    description?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    logoUrl?: string;
+  }): Promise<AdminCompanyResponse> {
+    return api.post("/admin/companies", payload);
+  },
+
+  /** PUT /api/admin/companies/{id} */
+  updateCompany(id: string, payload: {
+    name: string;
+    description?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    logoUrl?: string;
+  }): Promise<AdminCompanyResponse> {
+    return api.put(`/admin/companies/${id}`, payload);
+  },
+
   /** PATCH /api/admin/companies/{companyId}/verify */
   verifyCompany(companyId: string, isVerified: boolean): Promise<AdminCompanyResponse> {
     return api.patch(`/admin/companies/${companyId}/verify`, { isVerified });

@@ -89,8 +89,10 @@ public class AdminService : IAdminService
             {
                 Id = c.Id,
                 Name = c.Name,
+                Description = c.Description,
                 Email = c.Email,
                 Phone = c.Phone,
+                Address = c.Address,
                 City = c.City,
                 LogoUrl = c.LogoUrl,
                 IsVerified = c.IsVerified,
@@ -392,6 +394,106 @@ public class AdminService : IAdminService
         };
     }
 
+    public async Task<AdminCompanyResponse> CreateCompanyAsync(
+        CreateAdminCompanyRequest request, CancellationToken ct = default)
+    {
+        var nameExists = await _context.Companies
+            .IgnoreQueryFilters()
+            .AnyAsync(c => c.Name.ToLower() == request.Name.Trim().ToLower(), ct);
+
+        if (nameExists)
+            throw new BoiootException("يوجد شركة بهذا الاسم بالفعل", 409);
+
+        var company = new Company
+        {
+            Name        = request.Name.Trim(),
+            Description = request.Description?.Trim(),
+            Email       = request.Email?.Trim().ToLowerInvariant(),
+            Phone       = request.Phone?.Trim(),
+            Address     = request.Address?.Trim(),
+            City        = request.City?.Trim(),
+            LogoUrl     = request.LogoUrl?.Trim(),
+            IsVerified  = false,
+        };
+
+        _context.Companies.Add(company);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Admin created company: {Name}", company.Name);
+
+        return new AdminCompanyResponse
+        {
+            Id           = company.Id,
+            Name         = company.Name,
+            Description  = company.Description,
+            Email        = company.Email,
+            Phone        = company.Phone,
+            Address      = company.Address,
+            City         = company.City,
+            LogoUrl      = company.LogoUrl,
+            IsVerified   = company.IsVerified,
+            IsDeleted    = company.IsDeleted,
+            AgentCount   = 0,
+            PropertyCount = 0,
+            ProjectCount = 0,
+            CreatedAt    = company.CreatedAt,
+            UpdatedAt    = company.UpdatedAt,
+        };
+    }
+
+    public async Task<AdminCompanyResponse> UpdateCompanyAsync(
+        Guid companyId, UpdateAdminCompanyRequest request, CancellationToken ct = default)
+    {
+        var company = await _context.Companies
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.Id == companyId, ct)
+            ?? throw new BoiootException("الشركة غير موجودة", 404);
+
+        var nameTaken = await _context.Companies
+            .IgnoreQueryFilters()
+            .AnyAsync(c => c.Id != companyId && c.Name.ToLower() == request.Name.Trim().ToLower(), ct);
+
+        if (nameTaken)
+            throw new BoiootException("يوجد شركة أخرى بهذا الاسم", 409);
+
+        company.Name        = request.Name.Trim();
+        company.Description = request.Description?.Trim();
+        company.Email       = request.Email?.Trim().ToLowerInvariant();
+        company.Phone       = request.Phone?.Trim();
+        company.Address     = request.Address?.Trim();
+        company.City        = request.City?.Trim();
+        company.LogoUrl     = request.LogoUrl?.Trim();
+        company.UpdatedAt   = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Admin updated company: {CompanyId}", companyId);
+
+        return await _context.Companies
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(c => c.Id == companyId)
+            .Select(c => new AdminCompanyResponse
+            {
+                Id            = c.Id,
+                Name          = c.Name,
+                Description   = c.Description,
+                Email         = c.Email,
+                Phone         = c.Phone,
+                Address       = c.Address,
+                City          = c.City,
+                LogoUrl       = c.LogoUrl,
+                IsVerified    = c.IsVerified,
+                IsDeleted     = c.IsDeleted,
+                AgentCount    = c.Agents.Count(),
+                PropertyCount = c.Properties.Count(p => !p.IsDeleted),
+                ProjectCount  = c.Projects.Count(p => !p.IsDeleted),
+                CreatedAt     = c.CreatedAt,
+                UpdatedAt     = c.UpdatedAt,
+            })
+            .FirstAsync(ct);
+    }
+
     public async Task<AdminCompanyResponse> VerifyCompanyAsync(
         Guid companyId, bool isVerified, CancellationToken ct = default)
     {
@@ -416,8 +518,10 @@ public class AdminService : IAdminService
             {
                 Id = c.Id,
                 Name = c.Name,
+                Description = c.Description,
                 Email = c.Email,
                 Phone = c.Phone,
+                Address = c.Address,
                 City = c.City,
                 LogoUrl = c.LogoUrl,
                 IsVerified = c.IsVerified,

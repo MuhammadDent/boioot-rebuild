@@ -33,6 +33,12 @@ public interface IAdminService
     Task<AdminUserResponse> UpdateUserRoleAsync(
         Guid adminUserId, Guid targetUserId, UserRole newRole, CancellationToken ct = default);
 
+    Task<AdminCompanyResponse> CreateCompanyAsync(
+        CreateAdminCompanyRequest request, CancellationToken ct = default);
+
+    Task<AdminCompanyResponse> UpdateCompanyAsync(
+        Guid companyId, UpdateAdminCompanyRequest request, CancellationToken ct = default);
+
     Task<AdminCompanyResponse> VerifyCompanyAsync(
         Guid companyId, bool isVerified, CancellationToken ct = default);
 
