@@ -459,13 +459,9 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Business Metrics ─────────────────────────────────────────────── */}
-        <div style={{ marginBottom: "1.5rem" }}>
-          <SectionLabel>مؤشرات الأعمال</SectionLabel>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: "0.75rem",
-          }} className="stat-grid">
+        <div className="dash-stat-section">
+          <h2 className="dash-section-title">مؤشرات الأعمال</h2>
+          <div className="dash-stat-grid">
             <StatCard title="عدد الصفقات"         value={24}  icon={Handshake} accent="green"  subtitle="صفقة مكتملة" />
             <StatCard title="عدد العقارات"         value={38}  icon={Building2}  accent="blue"   subtitle="عقار مُدار" />
             <StatCard title="عدد الإعلانات"        value={17}  icon={Megaphone}  accent="purple" subtitle="إعلان منشور" />
@@ -474,13 +470,9 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Activity Metrics ──────────────────────────────────────────────── */}
-        <div style={{ marginBottom: "1.5rem" }}>
-          <SectionLabel>مؤشرات النشاط</SectionLabel>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: "0.75rem",
-          }} className="stat-grid">
+        <div className="dash-stat-section">
+          <h2 className="dash-section-title">مؤشرات النشاط</h2>
+          <div className="dash-stat-grid">
             <StatCard title="عدد الطلبات"       value={52}  icon={InboxIcon}     accent="blue"   subtitle="طلب مُستلم" />
             <StatCard title="عدد الرسائل"       value={134} icon={MessageSquare}  accent="green"  subtitle="رسالة" />
             <StatCard title="أرشيف المحادثات"   value={29}  icon={Archive}        accent="purple" subtitle="محادثة مؤرشفة" />
@@ -488,13 +480,9 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Team & Rating ─────────────────────────────────────────────────── */}
-        <div style={{ marginBottom: "1.5rem" }}>
-          <SectionLabel>الفريق والتقييم</SectionLabel>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: "0.75rem",
-          }} className="stat-grid">
+        <div className="dash-stat-section">
+          <h2 className="dash-section-title">الفريق والتقييم</h2>
+          <div className="dash-stat-grid">
             <StatCard title="عدد الوكلاء"  value={6}    icon={Users} accent="blue"  subtitle="وكيل نشط" />
             <StatCard title="التقييم"       value="4.8"  icon={Star}  accent="orange" subtitle="بناءً على 93 مراجعة" />
           </div>
