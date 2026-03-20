@@ -26,10 +26,12 @@ public class PublicBlogController : BaseController
         [FromQuery] string? categorySlug = null,
         [FromQuery] bool? isFeatured = null,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10,
+        [FromQuery] int? pageSize = null,
+        [FromQuery] int? limit = null,
         CancellationToken ct = default)
     {
-        var result = await _blog.PublicGetPostsAsync(categorySlug, isFeatured, page, pageSize, ct);
+        var effectivePageSize = pageSize ?? limit ?? 10;
+        var result = await _blog.PublicGetPostsAsync(categorySlug, isFeatured, page, effectivePageSize, ct);
         return Ok(result);
     }
 
