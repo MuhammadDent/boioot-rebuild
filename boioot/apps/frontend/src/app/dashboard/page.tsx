@@ -157,6 +157,30 @@ export default function DashboardPage() {
       {/* ══ Body ═════════════════════════════════════════════════════════════ */}
       <div style={{ maxWidth: 700, margin: "0 auto", padding: "1.5rem 1rem 3rem" }}>
 
+        {/* ── Page Title ───────────────────────────────────────────────────── */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <h1 style={{
+            margin: 0,
+            fontSize: "1.75rem",
+            fontWeight: 800,
+            letterSpacing: "-0.02em",
+            background: "linear-gradient(120deg, var(--color-primary) 0%, #0f9058 60%, #16a34a 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            lineHeight: 1.2,
+          }}>
+            لوحة التحكم
+          </h1>
+          <div style={{
+            marginTop: "0.4rem",
+            width: "2.5rem",
+            height: "3px",
+            borderRadius: 99,
+            background: "linear-gradient(90deg, var(--color-primary), #86efac)",
+          }} />
+        </div>
+
         {/* ── Profile card ─────────────────────────────────────────────────── */}
         <div style={{
           backgroundColor: "#fff",
