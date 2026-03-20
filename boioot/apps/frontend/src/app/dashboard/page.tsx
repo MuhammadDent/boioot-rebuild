@@ -161,23 +161,22 @@ export default function DashboardPage() {
         <div style={{ marginBottom: "1.5rem" }}>
           <h1 style={{
             margin: 0,
-            fontSize: "1.75rem",
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-            background: "linear-gradient(120deg, var(--color-primary) 0%, #0f9058 60%, #16a34a 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            lineHeight: 1.2,
+            fontSize: "1.9rem",
+            fontWeight: 900,
+            letterSpacing: "-0.03em",
+            color: "var(--color-primary)",
+            lineHeight: 1.15,
+            fontFamily: "system-ui, -apple-system, sans-serif",
           }}>
             لوحة التحكم
           </h1>
           <div style={{
-            marginTop: "0.4rem",
-            width: "2.5rem",
-            height: "3px",
+            marginTop: "0.45rem",
+            width: "3rem",
+            height: "4px",
             borderRadius: 99,
-            background: "linear-gradient(90deg, var(--color-primary), #86efac)",
+            backgroundColor: "var(--color-primary)",
+            opacity: 0.35,
           }} />
         </div>
 
