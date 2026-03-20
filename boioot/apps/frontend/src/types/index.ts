@@ -471,6 +471,45 @@ export interface DashboardSummary {
   hasAnalyticsDashboard: boolean;
 }
 
+// ── Dashboard Analytics ────────────────────────────────────────────────────────
+
+export interface MonthlyDataPoint {
+  label: string;
+  count: number;
+}
+
+export interface TopListingItem {
+  id: string;
+  title: string;
+  views: number;
+  requestCount: number;
+  status: string;
+  city: string;
+}
+
+export interface AttentionListingItem {
+  id: string;
+  title: string;
+  issue: string;
+}
+
+export interface DashboardAnalytics {
+  totalListings: number;
+  activeListings: number;
+  inactiveListings: number;
+  soldListings: number;
+  rentedListings: number;
+  totalProjects: number;
+  totalAgents: number;
+  totalRequests: number;
+  newRequests: number;
+  totalViews: number;
+  monthlyListings: MonthlyDataPoint[];
+  monthlyRequests: MonthlyDataPoint[];
+  topListings: TopListingItem[];
+  attentionListings: AttentionListingItem[];
+}
+
 // ── Admin Plans ────────────────────────────────────────────────────────────────
 
 export interface PlanLimitItem {

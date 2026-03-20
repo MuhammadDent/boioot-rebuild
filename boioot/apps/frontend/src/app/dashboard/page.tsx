@@ -2,11 +2,6 @@
 
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import Link from "next/link";
-import {
-  Handshake, Building2, Megaphone, ListTodo,
-  InboxIcon, MessageSquare, Archive,
-  Users, Star,
-} from "lucide-react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { dashboardSummaryApi } from "@/features/dashboard/summary/api";
@@ -17,8 +12,7 @@ import { ROLE_LABELS } from "@/features/admin/constants";
 import { normalizeError } from "@/lib/api";
 import { hasPermission } from "@/lib/permissions";
 import { formatPrice, LISTING_TYPE_LABELS, PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
-import type { DashboardSummary, FavoriteResponse } from "@/types";
-import StatCard from "@/components/dashboard/StatCard";
+import type { DashboardSummary, DashboardAnalytics, FavoriteResponse } from "@/types";
 
 const SUMMARY_ROLES = ["Admin", "CompanyOwner", "Broker", "Agent"] as const;
 type SummaryRole = (typeof SUMMARY_ROLES)[number];
@@ -30,8 +24,10 @@ export default function DashboardPage() {
   const { user, isLoading } = useProtectedRoute();
   const { setUser } = useAuth();
 
-  const [summary, setSummary]           = useState<DashboardSummary | null>(null);
+  const [summary, setSummary]             = useState<DashboardSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  const [analytics, setAnalytics]         = useState<DashboardAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
 
   const [favorites, setFavorites]       = useState<FavoriteResponse[]>([]);
   const [favLoading, setFavLoading]     = useState(true);
@@ -61,11 +57,28 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const loadAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    try {
+      const data = await dashboardSummaryApi.getAnalytics();
+      setAnalytics(data);
+    } catch {
+      /* silent */
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) return;
-    if (canSeeSummary(user.role)) loadSummary();
-    else setSummaryLoading(false);
-  }, [user, loadSummary]);
+    if (canSeeSummary(user.role)) {
+      loadSummary();
+      loadAnalytics();
+    } else {
+      setSummaryLoading(false);
+      setAnalyticsLoading(false);
+    }
+  }, [user, loadSummary, loadAnalytics]);
 
   useEffect(() => {
     if (!user) return;
@@ -481,71 +494,266 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* ── Business Metrics ─────────────────────────────────────────────── */}
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">مؤشرات الأعمال</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            <StatCard title="عدد الصفقات"         value={24}  icon={<Handshake size={20} />} accent="green"  subtitle="صفقة مكتملة" />
-            <StatCard title="عدد العقارات"         value={38}  icon={<Building2  size={20} />} accent="blue"   subtitle="عقار مُدار" />
-            <StatCard title="عدد الإعلانات"        value={17}  icon={<Megaphone  size={20} />} accent="purple" subtitle="إعلان منشور" />
-            <StatCard title="الإعلانات المتبقية"   value={13}  icon={<ListTodo   size={20} />} accent="orange" subtitle="من أصل 30 في الباقة" />
-          </div>
-        </div>
-
-        {/* ── Activity Metrics ──────────────────────────────────────────────── */}
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">مؤشرات النشاط</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            <StatCard title="عدد الطلبات"       value={52}  icon={<InboxIcon     size={20} />} accent="blue"   subtitle="طلب مُستلم" />
-            <StatCard title="عدد الرسائل"       value={134} icon={<MessageSquare  size={20} />} accent="green"  subtitle="رسالة" />
-            <StatCard title="أرشيف المحادثات"   value={29}  icon={<Archive        size={20} />} accent="purple" subtitle="محادثة مؤرشفة" />
-          </div>
-        </div>
-
-        {/* ── Team & Rating ─────────────────────────────────────────────────── */}
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">الفريق والتقييم</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            <StatCard title="عدد الوكلاء"  value={6}    icon={<Users size={20} />} accent="blue"  subtitle="وكيل نشط" />
-            <StatCard title="التقييم"       value="4.8"  icon={<Star  size={20} />} accent="orange" subtitle="بناءً على 93 مراجعة" />
-          </div>
-        </div>
-
-        {/* ── Stats (management roles) ─────────────────────────────────────── */}
+        {/* ════════════════════════════════════════════════════════════
+            مؤشرات الأداء الرئيسية KPIs  (management roles only)
+            ════════════════════════════════════════════════════════════ */}
         {isManagementRole && (
-          <div style={{ marginBottom: "1.25rem" }}>
-            <SectionLabel>الإحصائيات</SectionLabel>
-            {summaryLoading ? (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                {[0, 1, 2, 3].map(i => (
+          <div style={{ marginBottom: "1.75rem" }}>
+            <SectionLabel>مؤشرات الأداء</SectionLabel>
+
+            {analyticsLoading ? (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
+                {[0,1,2,3,4,5].map(i => (
                   <div key={i} style={{
-                    backgroundColor: "#fff", borderRadius: 12, height: 88,
+                    height: 78, borderRadius: 12,
                     background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",
                     backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite",
                   }} />
                 ))}
               </div>
-            ) : summary ? (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                <StatCard href="/dashboard/listings" label="الإعلانات" value={summary.totalProperties}
-                  icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>}
-                />
-                <StatCard
-                  href={isCompanyOrAdmin ? "/dashboard/projects" : undefined}
-                  label="المشاريع" value={summary.totalProjects}
-                  icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>}
-                />
-                <StatCard href="/dashboard/requests" label="الطلبات" value={summary.totalRequests}
-                  badge={summary.newRequests > 0 ? { count: summary.newRequests, label: "جديد" } : undefined}
-                  icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
-                />
-                <StatCard href="/dashboard/messages" label="المحادثات" value={summary.totalConversations}
-                  badge={summary.unreadMessages > 0 ? { count: summary.unreadMessages, label: "غير مقروء" } : undefined}
-                  icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>}
-                />
-              </div>
+            ) : analytics ? (
+              <>
+                {/* ── Row 1: Listings KPIs ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem", marginBottom: "0.65rem" }}>
+                  <KpiCard
+                    label="إجمالي الإعلانات"
+                    value={analytics.totalListings}
+                    color="#1e293b"
+                    accent="#e2e8f0"
+                    href="/dashboard/listings"
+                    icon={<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>}
+                  />
+                  <KpiCard
+                    label="الإعلانات النشطة"
+                    value={analytics.activeListings}
+                    color="#059669"
+                    accent="#d1fae5"
+                    href="/dashboard/listings"
+                    icon={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>}
+                  />
+                  <KpiCard
+                    label="غير نشطة"
+                    value={analytics.inactiveListings}
+                    color="#d97706"
+                    accent="#fef3c7"
+                    icon={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>}
+                  />
+                  <KpiCard
+                    label="المشاهدات"
+                    value={analytics.totalViews}
+                    color="#2563eb"
+                    accent="#dbeafe"
+                    icon={<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
+                  />
+                </div>
+
+                {/* ── Row 2: Business + Engagement KPIs ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.65rem", marginBottom: "0.65rem" }}>
+                  <KpiCard
+                    label="المشاريع"
+                    value={analytics.totalProjects}
+                    color="#7c3aed"
+                    accent="#f5f3ff"
+                    href={isCompanyOrAdmin ? "/dashboard/projects" : undefined}
+                    icon={<><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></>}
+                    small
+                  />
+                  <KpiCard
+                    label="الوكلاء"
+                    value={analytics.totalAgents}
+                    color="#0891b2"
+                    accent="#cffafe"
+                    href={canManageAgents ? "/dashboard/agents" : undefined}
+                    icon={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></>}
+                    small
+                  />
+                  <KpiCard
+                    label="الطلبات الجديدة"
+                    value={analytics.newRequests}
+                    color="#dc2626"
+                    accent="#fee2e2"
+                    href="/dashboard/requests"
+                    icon={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>}
+                    small
+                    highlight={analytics.newRequests > 0}
+                  />
+                </div>
+
+                {/* ── إجمالي الطلبات + المحادثات ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
+                  <KpiCard
+                    label="إجمالي الطلبات"
+                    value={analytics.totalRequests}
+                    color="#374151"
+                    accent="#f3f4f6"
+                    href="/dashboard/requests"
+                    icon={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>}
+                  />
+                  {summary && (
+                    <KpiCard
+                      label="المحادثات"
+                      value={summary.totalConversations}
+                      color="#374151"
+                      accent="#f3f4f6"
+                      href="/dashboard/messages"
+                      badge={summary.unreadMessages > 0 ? `${summary.unreadMessages} غير مقروء` : undefined}
+                      icon={<path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>}
+                    />
+                  )}
+                </div>
+              </>
             ) : null}
           </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            الرسوم البيانية — Charts
+            ════════════════════════════════════════════════════════════ */}
+        {isManagementRole && analytics && (
+          <div style={{ marginBottom: "1.75rem" }}>
+            <SectionLabel>تحليلات الأداء</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+
+              {/* Listings trend */}
+              <div style={{
+                backgroundColor: "#fff", borderRadius: 12,
+                padding: "1rem 1.1rem",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              }}>
+                <p style={{ margin: "0 0 0.75rem", fontSize: "0.78rem", fontWeight: 700, color: "#64748b" }}>
+                  الإعلانات — آخر 6 أشهر
+                </p>
+                <MiniBarChart data={analytics.monthlyListings} color="var(--color-primary)" />
+              </div>
+
+              {/* Requests trend */}
+              <div style={{
+                backgroundColor: "#fff", borderRadius: 12,
+                padding: "1rem 1.1rem",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              }}>
+                <p style={{ margin: "0 0 0.75rem", fontSize: "0.78rem", fontWeight: 700, color: "#64748b" }}>
+                  الطلبات — آخر 6 أشهر
+                </p>
+                <MiniBarChart data={analytics.monthlyRequests} color="#2563eb" />
+              </div>
+
+              {/* Listings by status */}
+              <div style={{
+                backgroundColor: "#fff", borderRadius: 12,
+                padding: "1rem 1.1rem",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                gridColumn: "1 / -1",
+              }}>
+                <p style={{ margin: "0 0 0.85rem", fontSize: "0.78rem", fontWeight: 700, color: "#64748b" }}>
+                  توزيع الإعلانات حسب الحالة
+                </p>
+                <StatusDistribution
+                  total={analytics.totalListings}
+                  active={analytics.activeListings}
+                  inactive={analytics.inactiveListings}
+                  sold={analytics.soldListings}
+                  rented={analytics.rentedListings}
+                />
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            رؤى وتوصيات — Insights
+            ════════════════════════════════════════════════════════════ */}
+        {isManagementRole && analytics && (
+          <>
+            {/* Top listings */}
+            {analytics.topListings.length > 0 && (
+              <div style={{ marginBottom: "1.75rem" }}>
+                <SectionLabel>الإعلانات الأكثر مشاهدةً</SectionLabel>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {analytics.topListings.map((listing, idx) => (
+                    <Link
+                      key={listing.id}
+                      href={`/dashboard/properties/${listing.id}/edit`}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "0.75rem",
+                        backgroundColor: "#fff", borderRadius: 10, padding: "0.75rem 1rem",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.06)", textDecoration: "none", color: "inherit",
+                      }}
+                    >
+                      <span style={{
+                        width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
+                        backgroundColor: idx === 0 ? "#fef3c7" : "#f1f5f9",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "0.7rem", fontWeight: 800,
+                        color: idx === 0 ? "#92400e" : "#64748b",
+                      }}>
+                        {idx + 1}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 600, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {listing.title}
+                        </p>
+                        <p style={{ margin: "0.1rem 0 0", fontSize: "0.75rem", color: "#64748b" }}>
+                          📍 {listing.city}
+                        </p>
+                      </div>
+                      <div style={{ textAlign: "left", flexShrink: 0 }}>
+                        <p style={{ margin: 0, fontSize: "0.8rem", fontWeight: 700, color: "#1e293b" }}>
+                          {listing.views.toLocaleString("en")}
+                        </p>
+                        <p style={{ margin: 0, fontSize: "0.68rem", color: "#94a3b8" }}>مشاهدة</p>
+                      </div>
+                      {listing.requestCount > 0 && (
+                        <span style={{
+                          backgroundColor: "#d1fae5", color: "#065f46",
+                          fontSize: "0.68rem", fontWeight: 700,
+                          padding: "0.15rem 0.5rem", borderRadius: 20, flexShrink: 0,
+                        }}>
+                          {listing.requestCount} طلب
+                        </span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Attention listings */}
+            {analytics.attentionListings.length > 0 && (
+              <div style={{ marginBottom: "1.75rem" }}>
+                <SectionLabel>تحتاج إلى اهتمام</SectionLabel>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {analytics.attentionListings.map(listing => (
+                    <Link
+                      key={listing.id}
+                      href={`/dashboard/properties/${listing.id}/edit`}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "0.75rem",
+                        backgroundColor: "#fff", borderRadius: 10, padding: "0.75rem 1rem",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.06)", textDecoration: "none", color: "inherit",
+                        borderRight: "3px solid #f59e0b",
+                      }}
+                    >
+                      <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>⚠️</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 600, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {listing.title}
+                        </p>
+                        <p style={{ margin: "0.1rem 0 0", fontSize: "0.75rem", color: "#d97706", fontWeight: 500 }}>
+                          {listing.issue}
+                        </p>
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* ── Admin Section — visible to Admin role or users with roles.manage ── */}
@@ -924,6 +1132,151 @@ function NavCard({
         <polyline points="9 18 15 12 9 6" />
       </svg>
     </Link>
+  );
+}
+
+// ─── KPI Card ──────────────────────────────────────────────────────────────────
+function KpiCard({
+  href, label, value, badge, color, accent, icon, small, highlight,
+}: {
+  href?: string;
+  label: string;
+  value: number;
+  badge?: string;
+  color: string;
+  accent: string;
+  icon: React.ReactNode;
+  small?: boolean;
+  highlight?: boolean;
+}) {
+  const inner = (
+    <div style={{
+      backgroundColor: "#fff",
+      borderRadius: 12,
+      padding: small ? "0.8rem 0.9rem" : "1rem 1.1rem",
+      boxShadow: highlight
+        ? `0 0 0 2px ${color}40, 0 1px 3px rgba(0,0,0,0.06)`
+        : "0 1px 3px rgba(0,0,0,0.06)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "0.25rem",
+      textDecoration: "none",
+      color: "inherit",
+      transition: "box-shadow 0.15s",
+      cursor: href ? "pointer" : "default",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{
+          width: small ? 30 : 34, height: small ? 30 : 34, borderRadius: 8,
+          backgroundColor: accent,
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <svg width={small ? 15 : 17} height={small ? 15 : 17} viewBox="0 0 24 24" fill="none"
+            stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {icon}
+          </svg>
+        </div>
+        {badge && (
+          <span style={{
+            backgroundColor: "#fee2e2", color: "#dc2626",
+            fontSize: "0.6rem", fontWeight: 700,
+            padding: "0.1rem 0.45rem", borderRadius: 20,
+          }}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <p style={{
+        margin: "0.3rem 0 0",
+        fontSize: small ? "1.45rem" : "1.75rem",
+        fontWeight: 800,
+        color: "#1e293b",
+        lineHeight: 1,
+        direction: "ltr",
+        textAlign: "right",
+      }}>
+        {value.toLocaleString("en")}
+      </p>
+      <p style={{ margin: 0, fontSize: small ? "0.72rem" : "0.78rem", color: "#64748b", fontWeight: 500 }}>
+        {label}
+      </p>
+    </div>
+  );
+
+  if (href) return <Link href={href} style={{ textDecoration: "none", color: "inherit" }}>{inner}</Link>;
+  return inner;
+}
+
+// ─── Mini Bar Chart ────────────────────────────────────────────────────────────
+function MiniBarChart({ data, color = "var(--color-primary)" }: {
+  data: { label: string; count: number }[];
+  color?: string;
+}) {
+  const max = Math.max(...data.map(d => d.count), 1);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: "0.3rem", height: 72 }}>
+      {data.map((d, i) => (
+        <div key={i} style={{
+          flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem",
+        }}>
+          <div style={{
+            width: "100%",
+            height: `${Math.max((d.count / max) * 52, d.count === 0 ? 0 : 3)}px`,
+            backgroundColor: color,
+            borderRadius: "3px 3px 0 0",
+            opacity: d.count === 0 ? 0.2 : 1,
+          }} />
+          <span style={{ fontSize: "0.6rem", color: "#94a3b8", whiteSpace: "nowrap" }}>
+            {d.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Status Distribution ────────────────────────────────────────────────────────
+function StatusDistribution({ total, active, inactive, sold, rented }: {
+  total: number;
+  active: number;
+  inactive: number;
+  sold: number;
+  rented: number;
+}) {
+  if (total === 0) {
+    return <p style={{ margin: 0, fontSize: "0.82rem", color: "#94a3b8" }}>لا توجد إعلانات بعد</p>;
+  }
+  const items = [
+    { label: "نشط", value: active,   color: "#059669" },
+    { label: "غير نشط", value: inactive, color: "#d97706" },
+    { label: "مُباع", value: sold,    color: "#7c3aed" },
+    { label: "مُؤجَّر", value: rented,  color: "#2563eb" },
+  ].filter(i => i.value > 0);
+
+  return (
+    <div>
+      {/* Bar */}
+      <div style={{ display: "flex", borderRadius: 6, overflow: "hidden", height: 10, marginBottom: "0.65rem", backgroundColor: "#f1f5f9" }}>
+        {items.map((item, i) => (
+          <div key={i} style={{
+            width: `${(item.value / total) * 100}%`,
+            backgroundColor: item.color,
+            transition: "width 0.4s ease",
+          }} />
+        ))}
+      </div>
+      {/* Legend */}
+      <div style={{ display: "flex", gap: "0.9rem", flexWrap: "wrap" }}>
+        {items.map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: item.color, flexShrink: 0 }} />
+            <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+              {item.label}: <strong style={{ color: "#1e293b" }}>{item.value}</strong>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

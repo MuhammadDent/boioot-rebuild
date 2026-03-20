@@ -106,6 +106,143 @@ public class DashboardService : IDashboardService
         };
     }
 
+    public async Task<DashboardAnalyticsResponse> GetAnalyticsAsync(
+        Guid userId, string userRole, CancellationToken ct = default)
+    {
+        var scope = await ResolveScopeAsync(userId, userRole, ct);
+
+        var propQuery = GetScopedPropertyQuery(scope).Where(p => !p.IsDeleted);
+        var reqQuery  = GetScopedRequestQuery(scope);
+
+        // ── KPI: listings by status ────────────────────────────────────────
+        var byStatus = await propQuery
+            .GroupBy(p => p.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        int total    = byStatus.Sum(x => x.Count);
+        int active   = byStatus.FirstOrDefault(x => x.Status == PropertyStatus.Available)?.Count ?? 0;
+        int inactive = byStatus.FirstOrDefault(x => x.Status == PropertyStatus.Inactive)?.Count ?? 0;
+        int sold     = byStatus.FirstOrDefault(x => x.Status == PropertyStatus.Sold)?.Count ?? 0;
+        int rented   = byStatus.FirstOrDefault(x => x.Status == PropertyStatus.Rented)?.Count ?? 0;
+
+        // ── KPI: projects & agents ─────────────────────────────────────────
+        var projQuery   = GetScopedProjectQuery(scope).Where(p => !p.IsDeleted);
+        int totalProjects = await projQuery.CountAsync(ct);
+
+        int totalAgents = scope.CompanyId.HasValue
+            ? await _context.Agents.CountAsync(a => a.CompanyId == scope.CompanyId.Value, ct)
+            : 0;
+
+        // ── KPI: requests & views ──────────────────────────────────────────
+        int  totalRequests = await reqQuery.CountAsync(ct);
+        int  newRequests   = await reqQuery.CountAsync(r => r.Status == RequestStatus.New, ct);
+        long totalViews    = await propQuery.SumAsync(p => (long)p.ViewCount, ct);
+
+        // ── Monthly trends (last 6 months) ────────────────────────────────
+        var startOf6Months = new DateTime(
+            DateTime.UtcNow.AddMonths(-5).Year,
+            DateTime.UtcNow.AddMonths(-5).Month,
+            1, 0, 0, 0, DateTimeKind.Utc);
+
+        var rawMonthlyListings = await propQuery
+            .Where(p => p.CreatedAt >= startOf6Months)
+            .GroupBy(p => new { p.CreatedAt.Year, p.CreatedAt.Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var rawMonthlyRequests = await reqQuery
+            .Where(r => r.CreatedAt >= startOf6Months)
+            .GroupBy(r => new { r.CreatedAt.Year, r.CreatedAt.Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
+            .ToListAsync(ct);
+
+        string[] arabicMonths = ["يناير","فبراير","مارس","أبريل","مايو","يونيو",
+                                  "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+
+        var sixMonths = Enumerable.Range(0, 6)
+            .Select(i => DateTime.UtcNow.AddMonths(-5 + i))
+            .Select(d => (d.Year, d.Month))
+            .ToList();
+
+        var monthlyListings = sixMonths.Select(m => new MonthlyDataPoint(
+            Label: arabicMonths[m.Month - 1],
+            Count: rawMonthlyListings.FirstOrDefault(x => x.Year == m.Year && x.Month == m.Month)?.Count ?? 0
+        )).ToList();
+
+        var monthlyRequests = sixMonths.Select(m => new MonthlyDataPoint(
+            Label: arabicMonths[m.Month - 1],
+            Count: rawMonthlyRequests.FirstOrDefault(x => x.Year == m.Year && x.Month == m.Month)?.Count ?? 0
+        )).ToList();
+
+        // ── Top listings by views ──────────────────────────────────────────
+        var topRaw = await propQuery
+            .OrderByDescending(p => p.ViewCount)
+            .Take(5)
+            .Select(p => new { p.Id, p.Title, p.ViewCount, p.Status, p.City })
+            .ToListAsync(ct);
+
+        var topIds = topRaw.Select(p => p.Id).ToList();
+        var reqCounts = await _context.Requests
+            .Where(r => r.PropertyId.HasValue && topIds.Contains(r.PropertyId.Value))
+            .GroupBy(r => r.PropertyId!.Value)
+            .Select(g => new { PropertyId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.PropertyId, x => x.Count, ct);
+
+        var topListings = topRaw.Select(p => new TopListingItem(
+            p.Id, p.Title, p.ViewCount,
+            reqCounts.GetValueOrDefault(p.Id, 0),
+            StatusToArabic(p.Status),
+            p.City
+        )).ToList();
+
+        // ── Attention: listings missing images or price ────────────────────
+        var attentionRaw = await propQuery
+            .Where(p => p.Status == PropertyStatus.Available || p.Status == PropertyStatus.Inactive)
+            .Where(p => !_context.PropertyImages.Any(i => i.PropertyId == p.Id) || p.Price == 0)
+            .OrderByDescending(p => p.CreatedAt)
+            .Take(5)
+            .Select(p => new
+            {
+                p.Id, p.Title,
+                HasImages = _context.PropertyImages.Any(i => i.PropertyId == p.Id),
+                p.Price
+            })
+            .ToListAsync(ct);
+
+        var attentionListings = attentionRaw.Select(p => new AttentionListingItem(
+            p.Id, p.Title,
+            !p.HasImages ? "لا توجد صور للإعلان" : "السعر غير محدد"
+        )).ToList();
+
+        return new DashboardAnalyticsResponse
+        {
+            TotalListings    = total,
+            ActiveListings   = active,
+            InactiveListings = inactive,
+            SoldListings     = sold,
+            RentedListings   = rented,
+            TotalProjects    = totalProjects,
+            TotalAgents      = totalAgents,
+            TotalRequests    = totalRequests,
+            NewRequests      = newRequests,
+            TotalViews       = totalViews,
+            MonthlyListings  = monthlyListings,
+            MonthlyRequests  = monthlyRequests,
+            TopListings      = topListings,
+            AttentionListings = attentionListings,
+        };
+    }
+
+    private static string StatusToArabic(PropertyStatus status) => status switch
+    {
+        PropertyStatus.Available => "نشط",
+        PropertyStatus.Inactive  => "غير نشط",
+        PropertyStatus.Sold      => "مباع",
+        PropertyStatus.Rented    => "مؤجر",
+        _                        => status.ToString()
+    };
+
     public async Task<PagedResult<DashboardPropertyItem>> GetPropertiesAsync(
         Guid userId, string userRole, int page, int pageSize, CancellationToken ct = default)
     {

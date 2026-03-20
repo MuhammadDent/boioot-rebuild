@@ -36,6 +36,13 @@ public class DashboardController : BaseController
         return Ok(result);
     }
 
+    [HttpGet("analytics")]
+    public async Task<IActionResult> GetAnalytics(CancellationToken ct)
+    {
+        var result = await _dashboardService.GetAnalyticsAsync(GetUserId(), GetUserRole(), ct);
+        return Ok(result);
+    }
+
     [HttpGet("properties")]
     public async Task<IActionResult> GetProperties(
         [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
