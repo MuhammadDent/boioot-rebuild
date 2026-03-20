@@ -46,6 +46,7 @@ I prefer simple language. I want iterative development. Ask before making major 
 - `ISoftDeletable` interface is used for logical deletion across several key entities.
 - Query filters are applied at the EF Core level for `IsDeleted` and role-based access.
 - GUID fragmentation is noted for potential future optimization with `Guid.CreateVersion7()`.
+- **SQLite Guid storage:** EF Core 6+ / Microsoft.Data.Sqlite sends `Guid` parameters as BLOB (16 bytes) in LINQ queries. The raw-SQL seeder inserts them as TEXT (36-char lowercase UUID strings). Any entity whose IDs are seeded via raw SQL and then queried by PK via LINQ must use `HasConversion<string>()` in its entity configuration (see `OwnershipTypeConfiguration.cs`). This applies to `OwnershipTypeConfig`; other entities use EF Core migrations so their IDs are stored as BLOB and are consistent.
 - The dashboard is integrated within the same Next.js app, not a separate application.
 
 ## External Dependencies
