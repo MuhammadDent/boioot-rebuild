@@ -91,6 +91,66 @@ public class LocationsController : BaseController
         return Ok(neighborhoods);
     }
 
+    // ─── Property Location Options (derived from actual property data) ──────────
+
+    /// <summary>
+    /// Returns distinct province / city / neighborhood values that appear in
+    /// the Properties table.  Used to drive the public filter dropdowns so that
+    /// only locations with real listings are shown.
+    /// Optional query params: province (filters cities & neighborhoods)
+    ///                        city     (filters neighborhoods only)
+    /// </summary>
+    [HttpGet("property-options")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPropertyOptions(
+        [FromQuery] string? province,
+        [FromQuery] string? city,
+        CancellationToken ct = default)
+    {
+        var baseQuery = _db.Properties
+            .IgnoreQueryFilters()
+            .Where(p => !p.IsDeleted);
+
+        // Provinces — distinct non-null values from Properties.Province
+        var provinces = await baseQuery
+            .Where(p => !string.IsNullOrEmpty(p.Province))
+            .Select(p => p.Province!)
+            .Distinct()
+            .OrderBy(p => p)
+            .ToListAsync(ct);
+
+        // Cities — distinct non-null, optionally filtered by province
+        var cityQuery = baseQuery.Where(p => !string.IsNullOrEmpty(p.City));
+        if (!string.IsNullOrWhiteSpace(province))
+            cityQuery = cityQuery.Where(p => p.Province == province);
+
+        var cities = await cityQuery
+            .Select(p => new { p.City, p.Province })
+            .Distinct()
+            .OrderBy(x => x.City)
+            .ToListAsync(ct);
+
+        // Neighborhoods — distinct non-null, optionally filtered by city
+        var nbrQuery = baseQuery.Where(p => !string.IsNullOrEmpty(p.Neighborhood));
+        if (!string.IsNullOrWhiteSpace(city))
+            nbrQuery = nbrQuery.Where(p => p.City == city);
+        else if (!string.IsNullOrWhiteSpace(province))
+            nbrQuery = nbrQuery.Where(p => p.Province == province);
+
+        var neighborhoods = await nbrQuery
+            .Select(p => new { p.Neighborhood, p.City, p.Province })
+            .Distinct()
+            .OrderBy(x => x.Neighborhood)
+            .ToListAsync(ct);
+
+        return Ok(new
+        {
+            provinces,
+            cities    = cities.Select(x => new { name = x.City, province = x.Province }),
+            neighborhoods = neighborhoods.Select(x => new { name = x.Neighborhood, city = x.City, province = x.Province }),
+        });
+    }
+
     [HttpPost("neighborhoods")]
     [Authorize]
     public async Task<IActionResult> AddNeighborhood([FromBody] AddNeighborhoodRequest req, CancellationToken ct = default)

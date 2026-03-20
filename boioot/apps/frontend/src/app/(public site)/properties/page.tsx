@@ -9,21 +9,23 @@ import {
   PROPERTY_TYPE_LABELS,
   LISTING_TYPE_LABELS,
 } from "@/features/properties/constants";
-import { useCities } from "@/hooks/useCities";
+import { usePropertyLocations } from "@/hooks/usePropertyLocations";
 import type { PropertyResponse } from "@/types";
 
 // ─── Filter form shape ────────────────────────────────────────────────────────
 
 interface FilterForm {
-  city: string;
-  type: string;
+  province:    string;
+  city:        string;
+  neighborhood: string;
+  type:        string;
   listingType: string;
-  minPrice: string;
-  maxPrice: string;
+  minPrice:    string;
+  maxPrice:    string;
 }
 
 const EMPTY_FILTERS: FilterForm = {
-  city: "", type: "", listingType: "", minPrice: "", maxPrice: "",
+  province: "", city: "", neighborhood: "", type: "", listingType: "", minPrice: "", maxPrice: "",
 };
 
 // ─── Inner component (needs Suspense because it uses useSearchParams) ─────────
@@ -32,24 +34,33 @@ function PropertiesContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const pathname     = usePathname();
-  const { cities }   = useCities();
 
   // Applied filter values — derived from URL, used for fetching
-  const cityParam        = searchParams.get("city")        || "";
-  const typeParam        = searchParams.get("type")        || "";
-  const listingTypeParam = searchParams.get("listingType") || "";
-  const minPriceParam    = searchParams.get("minPrice")    || "";
-  const maxPriceParam    = searchParams.get("maxPrice")    || "";
-  const pageParam        = Number(searchParams.get("page") || "1");
+  const provinceParam      = searchParams.get("province")      || "";
+  const cityParam          = searchParams.get("city")          || "";
+  const neighborhoodParam  = searchParams.get("neighborhood")  || "";
+  const typeParam          = searchParams.get("type")          || "";
+  const listingTypeParam   = searchParams.get("listingType")   || "";
+  const minPriceParam      = searchParams.get("minPrice")      || "";
+  const maxPriceParam      = searchParams.get("maxPrice")      || "";
+  const pageParam          = Number(searchParams.get("page")   || "1");
 
   // Draft filter state — local form values before the user submits
   const [form, setForm] = useState<FilterForm>({
-    city:        cityParam,
-    type:        typeParam,
-    listingType: listingTypeParam,
-    minPrice:    minPriceParam,
-    maxPrice:    maxPriceParam,
+    province:     provinceParam,
+    city:         cityParam,
+    neighborhood: neighborhoodParam,
+    type:         typeParam,
+    listingType:  listingTypeParam,
+    minPrice:     minPriceParam,
+    maxPrice:     maxPriceParam,
   });
+
+  // Location options from the actual property dataset
+  const { provinces, cities, neighborhoods } = usePropertyLocations(
+    form.province || undefined,
+    form.city     || undefined,
+  );
 
   const [properties, setProperties]   = useState<PropertyResponse[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -62,13 +73,15 @@ function PropertiesContent() {
   // Sync draft form when URL changes externally (browser back/forward)
   useEffect(() => {
     setForm({
-      city:        cityParam,
-      type:        typeParam,
-      listingType: listingTypeParam,
-      minPrice:    minPriceParam,
-      maxPrice:    maxPriceParam,
+      province:     provinceParam,
+      city:         cityParam,
+      neighborhood: neighborhoodParam,
+      type:         typeParam,
+      listingType:  listingTypeParam,
+      minPrice:     minPriceParam,
+      maxPrice:     maxPriceParam,
     });
-  }, [cityParam, typeParam, listingTypeParam, minPriceParam, maxPriceParam]);
+  }, [provinceParam, cityParam, neighborhoodParam, typeParam, listingTypeParam, minPriceParam, maxPriceParam]);
 
   // Fetch data whenever the applied URL params change
   useEffect(() => {
@@ -77,13 +90,15 @@ function PropertiesContent() {
 
     propertiesApi
       .getList({
-        page:        pageParam,
-        pageSize:    PROPERTIES_PAGE_SIZE,
-        city:        cityParam        || undefined,
-        type:        typeParam        || undefined,
-        listingType: listingTypeParam || undefined,
-        minPrice:    minPriceParam    ? Number(minPriceParam) : undefined,
-        maxPrice:    maxPriceParam    ? Number(maxPriceParam) : undefined,
+        page:         pageParam,
+        pageSize:     PROPERTIES_PAGE_SIZE,
+        province:     provinceParam     || undefined,
+        city:         cityParam         || undefined,
+        neighborhood: neighborhoodParam || undefined,
+        type:         typeParam         || undefined,
+        listingType:  listingTypeParam  || undefined,
+        minPrice:     minPriceParam     ? Number(minPriceParam)  : undefined,
+        maxPrice:     maxPriceParam     ? Number(maxPriceParam)  : undefined,
       })
       .then((res) => {
         setProperties(res.items);
@@ -93,18 +108,20 @@ function PropertiesContent() {
       })
       .catch(() => setError("تعذّر تحميل العقارات. يرجى المحاولة مجدداً."))
       .finally(() => setLoading(false));
-  }, [cityParam, typeParam, listingTypeParam, minPriceParam, maxPriceParam, pageParam]);
+  }, [provinceParam, cityParam, neighborhoodParam, typeParam, listingTypeParam, minPriceParam, maxPriceParam, pageParam]);
 
   // ── URL helpers ─────────────────────────────────────────────────────────────
 
   function buildParams(f: FilterForm, page: number): URLSearchParams {
     const p = new URLSearchParams();
-    if (f.city)        p.set("city",        f.city);
-    if (f.type)        p.set("type",        f.type);
-    if (f.listingType) p.set("listingType", f.listingType);
-    if (f.minPrice)    p.set("minPrice",    f.minPrice);
-    if (f.maxPrice)    p.set("maxPrice",    f.maxPrice);
-    if (page > 1)      p.set("page",        String(page));
+    if (f.province)     p.set("province",     f.province);
+    if (f.city)         p.set("city",         f.city);
+    if (f.neighborhood) p.set("neighborhood", f.neighborhood);
+    if (f.type)         p.set("type",         f.type);
+    if (f.listingType)  p.set("listingType",  f.listingType);
+    if (f.minPrice)     p.set("minPrice",     f.minPrice);
+    if (f.maxPrice)     p.set("maxPrice",     f.maxPrice);
+    if (page > 1)       p.set("page",         String(page));
     return p;
   }
 
@@ -112,7 +129,6 @@ function PropertiesContent() {
     e.preventDefault();
     setFilterError("");
 
-    // Client-side validation: min must not exceed max
     if (
       form.minPrice &&
       form.maxPrice &&
@@ -122,7 +138,6 @@ function PropertiesContent() {
       return;
     }
 
-    // Reset to page 1 whenever filters are reapplied
     const qs = buildParams(form, 1).toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
@@ -135,14 +150,29 @@ function PropertiesContent() {
 
   function goToPage(p: number) {
     const currentFilters: FilterForm = {
-      city: cityParam, type: typeParam, listingType: listingTypeParam,
-      minPrice: minPriceParam, maxPrice: maxPriceParam,
+      province:     provinceParam,
+      city:         cityParam,
+      neighborhood: neighborhoodParam,
+      type:         typeParam,
+      listingType:  listingTypeParam,
+      minPrice:     minPriceParam,
+      maxPrice:     maxPriceParam,
     };
     const qs = buildParams(currentFilters, p).toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
   }
 
-  const hasActiveFilters = !!(cityParam || typeParam || listingTypeParam || minPriceParam || maxPriceParam);
+  // When province changes → reset city and neighborhood
+  function handleProvinceChange(value: string) {
+    setForm((prev) => ({ ...prev, province: value, city: "", neighborhood: "" }));
+  }
+
+  // When city changes → reset neighborhood
+  function handleCityChange(value: string) {
+    setForm((prev) => ({ ...prev, city: value, neighborhood: "" }));
+  }
+
+  const hasActiveFilters = !!(provinceParam || cityParam || neighborhoodParam || typeParam || listingTypeParam || minPriceParam || maxPriceParam);
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -168,13 +198,10 @@ function PropertiesContent() {
           {/* Content — first in DOM = RIGHT side in RTL (main reading area) */}
           <div className="properties-content">
 
-            {/* Loading */}
             {loading && <Spinner />}
 
-            {/* Error */}
             {!loading && error && <div className="error-banner">{error}</div>}
 
-            {/* Empty state */}
             {!loading && !error && properties.length === 0 && (
               <div className="empty-state">
                 <div className="empty-state__icon">🏘️</div>
@@ -194,7 +221,6 @@ function PropertiesContent() {
               </div>
             )}
 
-            {/* Results grid */}
             {!loading && !error && properties.length > 0 && (
               <>
                 <div className="grid-cards">
@@ -221,13 +247,52 @@ function PropertiesContent() {
           <form className="filter-sidebar" onSubmit={handleApply}>
             <p className="filter-sidebar__title">فلتر بحث</p>
 
+            {/* Province / Governorate */}
+            <div className="form-group">
+              <label className="form-label" htmlFor="f-province">المحافظة</label>
+              <select
+                id="f-province"
+                className="form-input"
+                value={form.province}
+                onChange={(e) => handleProvinceChange(e.target.value)}
+              >
+                <option value="">الكل</option>
+                {provinces.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
             {/* City */}
             <div className="form-group">
               <label className="form-label" htmlFor="f-city">المدينة</label>
-              <select id="f-city" className="form-input" value={form.city}
-                onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}>
+              <select
+                id="f-city"
+                className="form-input"
+                value={form.city}
+                onChange={(e) => handleCityChange(e.target.value)}
+              >
                 <option value="">الكل</option>
-                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                {cities.map((c) => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Neighborhood / District */}
+            <div className="form-group">
+              <label className="form-label" htmlFor="f-neighborhood">الحي / المنطقة</label>
+              <select
+                id="f-neighborhood"
+                className="form-input"
+                value={form.neighborhood}
+                onChange={(e) => setForm((prev) => ({ ...prev, neighborhood: e.target.value }))}
+                disabled={neighborhoods.length === 0}
+              >
+                <option value="">الكل</option>
+                {neighborhoods.map((n) => (
+                  <option key={n.name} value={n.name}>{n.name}</option>
+                ))}
               </select>
             </div>
 
