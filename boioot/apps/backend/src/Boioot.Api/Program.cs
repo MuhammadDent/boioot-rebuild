@@ -1094,6 +1094,30 @@ using (var scope = app.Services.CreateScope())
                 PRIMARY KEY (BlogPostId, BlogCategoryId)
             )");
 
+        // ── Property Amenities catalog + junction table ───────────────────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS PropertyAmenities (
+                Id        TEXT NOT NULL PRIMARY KEY,
+                Key       TEXT NOT NULL,
+                Label     TEXT NOT NULL,
+                GroupAr   TEXT NOT NULL DEFAULT '',
+                ""Order"" INTEGER NOT NULL DEFAULT 0,
+                IsActive  INTEGER NOT NULL DEFAULT 1,
+                CreatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+                UpdatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+            )");
+        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_PropertyAmenities_Key ON PropertyAmenities(Key)"); }
+        catch { /* index already exists */ }
+
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS PropertyAmenitySelections (
+                PropertyId TEXT NOT NULL REFERENCES Properties(Id) ON DELETE CASCADE,
+                AmenityId  TEXT NOT NULL REFERENCES PropertyAmenities(Id) ON DELETE CASCADE,
+                PRIMARY KEY (PropertyId, AmenityId)
+            )");
+        try { await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_PropertyAmenitySelections_PropertyId ON PropertyAmenitySelections(PropertyId)"); }
+        catch { /* index already exists */ }
+
         await seeder.SeedAsync();
 
         // DIAGNOSTIC: verify OgDescription via raw ADO.NET (bypasses EF Core)

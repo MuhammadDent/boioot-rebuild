@@ -66,6 +66,7 @@ public class PropertyService : IPropertyService
         var property = await _context.Properties
             .Include(p => p.Company)
             .Include(p => p.Images)
+            .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstOrDefaultAsync(p => p.Id == id && p.Status != PropertyStatus.Inactive, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
 
@@ -106,6 +107,7 @@ public class PropertyService : IPropertyService
         var property = await _context.Properties
             .Include(p => p.Company)
             .Include(p => p.Images)
+            .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstOrDefaultAsync(p => p.Id == propertyId, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
 
@@ -139,9 +141,29 @@ public class PropertyService : IPropertyService
             var ownedCompanyId = await _ownership.GetCompanyIdForUserAsync(userId, ct);
 
             if (!ownedCompanyId.HasValue)
-                throw new BoiootException("لا توجد شركة مرتبطة بحسابك — يرجى إنشاء شركة أولاً أو تحديد معرف الشركة", 400);
-
-            companyId = ownedCompanyId.Value;
+            {
+                if (userRole is RoleNames.CompanyOwner or RoleNames.Broker)
+                {
+                    var user = await _context.Users.FirstAsync(u => u.Id == userId, ct);
+                    var autoCompany = new Company { Name = user.FullName, Email = user.Email };
+                    _context.Companies.Add(autoCompany);
+                    var autoAgent = new Agent { UserId = userId, CompanyId = autoCompany.Id };
+                    _context.Agents.Add(autoAgent);
+                    await _context.SaveChangesAsync(ct);
+                    companyId = autoCompany.Id;
+                    _logger.LogInformation(
+                        "Auto-created Company '{Name}' and Agent for {UserId} ({Role}) during property creation",
+                        autoCompany.Name, userId, userRole);
+                }
+                else
+                {
+                    throw new BoiootException("لا توجد شركة مرتبطة بحسابك — يرجى إنشاء شركة أولاً أو تحديد معرف الشركة", 400);
+                }
+            }
+            else
+            {
+                companyId = ownedCompanyId.Value;
+            }
         }
 
         // ── فحص حد الإعلانات في خطة الاشتراك ───────────────────────────
@@ -193,6 +215,8 @@ public class PropertyService : IPropertyService
 
         _context.Properties.Add(property);
         await _context.SaveChangesAsync(ct);
+
+        await SaveAmenitySelectionsAsync(property.Id, request.Features, ct);
 
         _logger.LogInformation(
             "Property created: {PropertyId} | Company: {CompanyId} | By: {UserId}",
@@ -268,6 +292,8 @@ public class PropertyService : IPropertyService
         }
 
         await _context.SaveChangesAsync(ct);
+
+        await ReplaceAmenitySelectionsAsync(propertyId, request.Features, ct);
 
         _logger.LogInformation(
             "Property updated: {PropertyId} | By: {UserId}",
@@ -436,6 +462,8 @@ public class PropertyService : IPropertyService
             }
             await _context.SaveChangesAsync(ct);
         }
+
+        await SaveAmenitySelectionsAsync(property.Id, request.Features, ct);
 
         _logger.LogInformation(
             "User listing created: {PropertyId} | By: {UserId}",
@@ -640,11 +668,64 @@ public class PropertyService : IPropertyService
         throw new BoiootException("غير مصرح لك بتنفيذ هذا الإجراء", 403);
     }
 
+    // ── Amenity selection helpers ────────────────────────────────────────────
+
+    private async Task SaveAmenitySelectionsAsync(Guid propertyId, List<string>? featureKeys, CancellationToken ct)
+    {
+        if (featureKeys is null || featureKeys.Count == 0) return;
+
+        var amenityIds = await _context.PropertyAmenities
+            .Where(a => featureKeys.Contains(a.Key) && a.IsActive)
+            .Select(a => a.Id)
+            .ToListAsync(ct);
+
+        foreach (var amenityId in amenityIds)
+        {
+            _context.PropertyAmenitySelections.Add(new PropertyAmenitySelection
+            {
+                PropertyId = propertyId,
+                AmenityId  = amenityId,
+            });
+        }
+
+        if (amenityIds.Count > 0)
+            await _context.SaveChangesAsync(ct);
+    }
+
+    private async Task ReplaceAmenitySelectionsAsync(Guid propertyId, List<string>? featureKeys, CancellationToken ct)
+    {
+        var existing = await _context.PropertyAmenitySelections
+            .Where(s => s.PropertyId == propertyId)
+            .ToListAsync(ct);
+
+        _context.PropertyAmenitySelections.RemoveRange(existing);
+
+        if (featureKeys is { Count: > 0 })
+        {
+            var amenityIds = await _context.PropertyAmenities
+                .Where(a => featureKeys.Contains(a.Key) && a.IsActive)
+                .Select(a => a.Id)
+                .ToListAsync(ct);
+
+            foreach (var amenityId in amenityIds)
+            {
+                _context.PropertyAmenitySelections.Add(new PropertyAmenitySelection
+                {
+                    PropertyId = propertyId,
+                    AmenityId  = amenityId,
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync(ct);
+    }
+
     private async Task<PropertyResponse> LoadAndMapAsync(Guid propertyId, CancellationToken ct)
     {
         var property = await _context.Properties
             .Include(p => p.Company)
             .Include(p => p.Images)
+            .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstAsync(p => p.Id == propertyId, ct);
 
         return MapToResponse(property);
@@ -685,9 +766,11 @@ public class PropertyService : IPropertyService
         OwnershipType = p.OwnershipType,
         Floor = p.Floor,
         PropertyAge = p.PropertyAge,
-        Features = string.IsNullOrWhiteSpace(p.Features)
-            ? []
-            : System.Text.Json.JsonSerializer.Deserialize<List<string>>(p.Features) ?? [],
+        Features = p.AmenitySelections.Count > 0
+            ? p.AmenitySelections.Select(s => s.Amenity.Key).OrderBy(k => k).ToList()
+            : (string.IsNullOrWhiteSpace(p.Features)
+                ? []
+                : System.Text.Json.JsonSerializer.Deserialize<List<string>>(p.Features) ?? []),
         VideoUrl = p.VideoUrl,
         Images = p.Images
             .OrderBy(i => i.Order)

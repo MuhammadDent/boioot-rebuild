@@ -40,6 +40,9 @@ public class BoiootDbContext : DbContext
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<PaymentProof> PaymentProofs => Set<PaymentProof>();
 
+    public DbSet<PropertyAmenity> PropertyAmenities => Set<PropertyAmenity>();
+    public DbSet<PropertyAmenitySelection> PropertyAmenitySelections => Set<PropertyAmenitySelection>();
+
     public DbSet<BlogCategory> BlogCategories => Set<BlogCategory>();
     public DbSet<BlogPost> BlogPosts => Set<BlogPost>();
     public DbSet<BlogPostCategory> BlogPostCategories => Set<BlogPostCategory>();

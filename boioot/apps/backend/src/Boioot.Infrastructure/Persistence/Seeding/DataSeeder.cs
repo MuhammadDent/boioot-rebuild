@@ -29,6 +29,44 @@ public class DataSeeder
         await SeedRbacAsync();
         await SeedAdminUserRoleAsync();
         await SeedSamplePropertiesAsync();
+        await SeedPropertyAmenitiesAsync();
+    }
+
+    private async Task SeedPropertyAmenitiesAsync()
+    {
+        if (await _context.PropertyAmenities.AnyAsync()) return;
+
+        var amenities = new List<PropertyAmenity>
+        {
+            // ── داخلية ──
+            new() { Key = "Balcony",         Label = "شرفة",           GroupAr = "داخلية", Order = 1  },
+            new() { Key = "Elevator",        Label = "مصعد",           GroupAr = "داخلية", Order = 2  },
+            new() { Key = "CentralAC",       Label = "تكييف مركزي",    GroupAr = "داخلية", Order = 3  },
+            new() { Key = "Furnished",       Label = "مفروش",          GroupAr = "داخلية", Order = 4  },
+            new() { Key = "SmartHome",       Label = "منزل ذكي",       GroupAr = "داخلية", Order = 5  },
+            new() { Key = "MaidRoom",        Label = "غرفة خادمة",     GroupAr = "داخلية", Order = 6  },
+            new() { Key = "DriverRoom",      Label = "غرفة سائق",      GroupAr = "داخلية", Order = 7  },
+            new() { Key = "Storage",         Label = "غرفة تخزين",     GroupAr = "داخلية", Order = 8  },
+            new() { Key = "CornerUnit",      Label = "شقة كونر",       GroupAr = "داخلية", Order = 9  },
+            new() { Key = "PrivateEntrance", Label = "مدخل خاص",       GroupAr = "داخلية", Order = 10 },
+            new() { Key = "Basement",        Label = "قبو",            GroupAr = "داخلية", Order = 11 },
+            new() { Key = "Roof",            Label = "روف / سطح",      GroupAr = "داخلية", Order = 12 },
+            new() { Key = "Duplex",          Label = "دوبلكس",         GroupAr = "داخلية", Order = 13 },
+            // ── خارجية ──
+            new() { Key = "Parking",         Label = "موقف سيارة",     GroupAr = "خارجية", Order = 1  },
+            new() { Key = "Security",        Label = "حراسة أمنية",    GroupAr = "خارجية", Order = 2  },
+            new() { Key = "Garden",          Label = "حديقة",          GroupAr = "خارجية", Order = 3  },
+            new() { Key = "Pool",            Label = "مسبح",           GroupAr = "خارجية", Order = 4  },
+            new() { Key = "Gym",             Label = "صالة رياضية",    GroupAr = "خارجية", Order = 5  },
+            // ── موقع ──
+            new() { Key = "SeaView",         Label = "إطلالة بحرية",   GroupAr = "موقع",   Order = 1  },
+            new() { Key = "NearMosque",      Label = "قرب مسجد",       GroupAr = "موقع",   Order = 2  },
+            new() { Key = "NearSchool",      Label = "قرب مدرسة",      GroupAr = "موقع",   Order = 3  },
+        };
+
+        _context.PropertyAmenities.AddRange(amenities);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Seeded {Count} property amenities", amenities.Count);
     }
 
     // ── Admin user ────────────────────────────────────────────────────────────

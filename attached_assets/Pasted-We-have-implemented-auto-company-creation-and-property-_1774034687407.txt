@@ -1,0 +1,126 @@
+We have implemented auto company creation and property features in Boioot.
+
+However, the UX is still incomplete and not production-ready.
+
+We need to improve the Add Property flow so that it becomes a fully usable SaaS feature.
+
+==================================================
+CURRENT ISSUES
+==================================================
+
+1. Property features exist in backend but are not visible or usable properly in the UI
+2. Features are stored as JSON string, which is not scalable long-term
+3. Add property form is missing a proper features section
+4. UX does not guide the user clearly
+5. Company auto-creation works, but we must ensure stability and consistency
+
+==================================================
+GOALS
+==================================================
+
+1. Make property features fully usable in UI
+2. Improve UX of add-property page
+3. Prepare system for future scalability (SaaS-ready)
+4. Ensure proper data structure for features
+5. Keep everything RTL-friendly and clean
+
+==================================================
+REQUIRED IMPROVEMENTS
+==================================================
+
+A) FEATURES UI (CRITICAL)
+
+Add a dedicated section in the Add Property form:
+
+- Section title: "المميزات والخدمات"
+- Display features as selectable pills or checkboxes
+- Support multi-select
+- Show selected state clearly
+- Group features if possible (e.g.:
+  - داخلية
+  - خارجية
+  - موقع
+)
+
+UX:
+- clean spacing
+- responsive
+- RTL aligned
+- visually consistent with the rest of the design
+
+B) DATA STRUCTURE IMPROVEMENT
+
+Current:
+- features stored as JSON string in Property.Features
+
+Improve it:
+
+Option 1 (recommended SaaS approach):
+- Create PropertyFeature table
+- Create PropertyFeatureMap (PropertyId + FeatureId)
+
+Option 2 (temporary):
+- keep JSON but structure it properly as array of IDs
+
+IMPORTANT:
+- Do not hardcode feature names in frontend
+- features should come from backend (configurable later)
+
+C) LOAD + EDIT SUPPORT
+
+- When editing a property:
+  - load selected features correctly
+  - pre-select them in UI
+- When saving:
+  - persist correctly
+  - no data loss
+
+D) VALIDATION
+
+- ensure no crash if features empty
+- ensure API accepts empty list
+- ensure compatibility with old data
+
+E) COMPANY FLOW VALIDATION
+
+Ensure:
+
+- every business user has:
+  - companyId
+  - agent profile (if needed)
+- property creation always works
+- no "no company linked" error ever appears again
+
+F) CLEAN ARCHITECTURE
+
+- backend is source of truth
+- frontend reads from API
+- no duplication of logic
+- reusable components for features
+
+==================================================
+DELIVERABLES
+==================================================
+
+Return:
+
+1. What was improved in UI
+2. What backend structure was chosen (JSON vs relational)
+3. What files were changed
+4. How features are now stored
+5. How features are loaded in edit mode
+6. Any migration or fallback logic
+7. Any edge cases handled
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT implement a quick fix.
+
+This must be a clean, scalable SaaS-ready implementation
+that can support:
+
+- filtering by features
+- search
+- analytics later

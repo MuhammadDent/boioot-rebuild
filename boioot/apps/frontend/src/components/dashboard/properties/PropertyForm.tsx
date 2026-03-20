@@ -17,31 +17,15 @@ import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/das
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { api } from "@/lib/api";
 
-// ─── Property features / amenities ───────────────────────────────────────────
+// ─── Property amenity types (from API) ───────────────────────────────────────
 
-const FEATURES: { key: string; label: string }[] = [
-  { key: "Balcony",        label: "شرفة" },
-  { key: "Parking",        label: "موقف سيارة" },
-  { key: "Elevator",       label: "مصعد" },
-  { key: "MaidRoom",       label: "غرفة خادمة" },
-  { key: "Storage",        label: "غرفة تخزين" },
-  { key: "CentralAC",      label: "تكييف مركزي" },
-  { key: "Furnished",      label: "مفروش" },
-  { key: "Security",       label: "حراسة أمنية" },
-  { key: "Garden",         label: "حديقة" },
-  { key: "Pool",           label: "مسبح" },
-  { key: "Gym",            label: "صالة رياضية" },
-  { key: "DriverRoom",     label: "غرفة سائق" },
-  { key: "SmartHome",      label: "منزل ذكي" },
-  { key: "SeaView",        label: "إطلالة بحرية" },
-  { key: "CornerUnit",     label: "شقة كونر" },
-  { key: "PrivateEntrance",label: "مدخل خاص" },
-  { key: "Basement",       label: "قبو" },
-  { key: "Roof",           label: "روف / سطح" },
-  { key: "Duplex",         label: "دوبلكس" },
-  { key: "NearMosque",     label: "قرب مسجد" },
-  { key: "NearSchool",     label: "قرب مدرسة" },
-];
+interface AmenityItem {
+  id: string;
+  key: string;
+  label: string;
+  groupAr: string;
+  order: number;
+}
 
 // ─── Image utility ────────────────────────────────────────────────────────────
 
@@ -207,6 +191,7 @@ export default function PropertyForm({
   );
   const [errors, setErrors] = useState<FormErrors>({});
   const [listingTypes, setListingTypes] = useState<ListingTypeConfig[]>([]);
+  const [amenities, setAmenities] = useState<AmenityItem[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
     initialData?.features ?? []
   );
@@ -237,6 +222,10 @@ export default function PropertyForm({
     api
       .get<ListingTypeConfig[]>("/listing-types")
       .then((data) => setListingTypes(data))
+      .catch(() => {});
+    api
+      .get<AmenityItem[]>("/property-amenities")
+      .then((data) => setAmenities(data))
       .catch(() => {});
   }, []);
 
@@ -663,38 +652,63 @@ export default function PropertyForm({
       </Section>
 
       {/* ── Section: features / amenities ── */}
-      <Section label="المميزات والمرافق (اختياري)">
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-          {FEATURES.map((feat) => {
-            const active = selectedFeatures.includes(feat.key);
+      <Section label="المميزات والخدمات (اختياري)">
+        {amenities.length === 0 ? (
+          <p style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>جارٍ التحميل...</p>
+        ) : (
+          (() => {
+            const groups = Array.from(new Set(amenities.map((a) => a.groupAr)));
             return (
-              <button
-                key={feat.key}
-                type="button"
-                disabled={disabled}
-                onClick={() => toggleFeature(feat.key)}
-                style={{
-                  padding: "0.35rem 0.85rem",
-                  borderRadius: 999,
-                  border: `1.5px solid ${active ? "var(--color-primary)" : "#e0e7e0"}`,
-                  background: active ? "var(--color-primary)" : "#f5f7f5",
-                  color: active ? "#fff" : "var(--color-text-secondary)",
-                  fontFamily: "var(--font-arabic)",
-                  fontSize: "0.83rem",
-                  fontWeight: active ? 700 : 500,
-                  cursor: disabled ? "default" : "pointer",
-                  transition: "all 0.15s",
-                  userSelect: "none",
-                }}
-              >
-                {feat.label}
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {groups.map((group) => (
+                  <div key={group}>
+                    <p style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "#4a6741",
+                      marginBottom: "0.5rem",
+                      letterSpacing: "0.02em",
+                    }}>
+                      {group}
+                    </p>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem" }}>
+                      {amenities.filter((a) => a.groupAr === group).map((feat) => {
+                        const active = selectedFeatures.includes(feat.key);
+                        return (
+                          <button
+                            key={feat.key}
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => toggleFeature(feat.key)}
+                            style={{
+                              padding: "0.32rem 0.82rem",
+                              borderRadius: 999,
+                              border: `1.5px solid ${active ? "var(--color-primary)" : "#dde8dd"}`,
+                              background: active ? "var(--color-primary)" : "#f4f8f4",
+                              color: active ? "#fff" : "#4a6741",
+                              fontFamily: "var(--font-arabic)",
+                              fontSize: "0.82rem",
+                              fontWeight: active ? 700 : 500,
+                              cursor: disabled ? "default" : "pointer",
+                              transition: "all 0.14s",
+                              userSelect: "none",
+                              boxShadow: active ? "0 1px 4px rgba(46,125,50,0.18)" : "none",
+                            }}
+                          >
+                            {feat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             );
-          })}
-        </div>
+          })()
+        )}
         {selectedFeatures.length > 0 && (
-          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginTop: "0.5rem" }}>
-            تم اختيار {selectedFeatures.length} {selectedFeatures.length === 1 ? "ميزة" : "مميزات"}
+          <p style={{ fontSize: "0.75rem", color: "#4a6741", marginTop: "0.75rem", fontWeight: 500 }}>
+            ✓ تم اختيار {selectedFeatures.length} {selectedFeatures.length === 1 ? "ميزة" : "مميزات"}
           </p>
         )}
       </Section>

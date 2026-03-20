@@ -56,4 +56,5 @@ public class Property : BaseEntity, ISoftDeletable
     public Agent? Agent { get; set; }
     public ICollection<PropertyImage> Images { get; set; } = [];
     public ICollection<Request> Requests { get; set; } = [];
+    public ICollection<PropertyAmenitySelection> AmenitySelections { get; set; } = [];
 }
