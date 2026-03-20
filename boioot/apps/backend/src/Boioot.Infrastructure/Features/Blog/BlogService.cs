@@ -302,7 +302,8 @@ public class BlogService : IBlogService
         query.Page     = Math.Max(1, query.Page);
         query.PageSize = Math.Clamp(query.PageSize, 1, 100);
 
-        var q = PostsWithIncludes(ignoreFilters: true).AsNoTracking();
+        var q = PostsWithIncludes(ignoreFilters: true).AsNoTracking()
+            .Where(p => !p.IsDeleted);
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {

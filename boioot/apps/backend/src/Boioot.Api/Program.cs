@@ -1036,11 +1036,6 @@ using (var scope = app.Services.CreateScope())
             )");
 
         // ── Blog module ────────────────────────────────────────────────────────
-        // Drop and recreate: schema changed significantly (many-to-many, renamed fields, soft delete)
-        await db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS BlogPostCategories");
-        await db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS BlogPosts");
-        await db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS BlogCategories");
-
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS BlogCategories (
                 Id          TEXT NOT NULL PRIMARY KEY,
