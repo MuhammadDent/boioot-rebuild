@@ -1391,17 +1391,17 @@
 
 /* ── Design tokens ── */
 :root {
-  /* Layered dark greens — each layer slightly darker */
-  --f2-cta-bg:      #1a3d24;
-  --f2-cta-border:  rgba(255,255,255,0.06);
-  --f2-body-bg:     #0f1d11;
-  --f2-trust-bg:    rgba(0,0,0,0.2);
-  --f2-bottom-bg:   #091209;
+  /* Refined palette — lighter, layered, premium forest tones */
+  --f2-cta-bg:      #1d4a2c;          /* medium forest — lighter than before */
+  --f2-cta-border:  rgba(255,255,255,0.08);
+  --f2-body-bg:     #1a2e1d;          /* KEY CHANGE: was #0f1d11 — much lighter */
+  --f2-trust-bg:    rgba(255,255,255,0.03); /* subtle light wash */
+  --f2-bottom-bg:   #111e13;          /* slightly darker than body — clean separation */
 
-  /* Text */
-  --f2-text:        rgba(255,255,255,0.78);
-  --f2-muted:       rgba(255,255,255,0.38);
-  --f2-link:        rgba(255,255,255,0.65);
+  /* Text — higher contrast for readability */
+  --f2-text:        rgba(255,255,255,0.85);
+  --f2-muted:       rgba(255,255,255,0.50); /* was 0.38 — more visible */
+  --f2-link:        rgba(255,255,255,0.72); /* was 0.65 */
   --f2-link-hover:  #ffffff;
 
   /* Accent */
@@ -1409,10 +1409,10 @@
   --f2-accent-dark:   #2e9047;
   --f2-accent-hover:  #50d470;
 
-  /* Dividers */
-  --f2-divider:    rgba(255,255,255,0.07);
-  --f2-icon-bg:    rgba(255,255,255,0.07);
-  --f2-icon-hover: rgba(255,255,255,0.14);
+  /* Dividers — slightly more visible */
+  --f2-divider:    rgba(255,255,255,0.10);
+  --f2-icon-bg:    rgba(255,255,255,0.09);
+  --f2-icon-hover: rgba(255,255,255,0.17);
 }
 
 /* ── Shell ── */
@@ -1435,9 +1435,9 @@
 ══════════════════════════════════════════════════════════════ */
 
 .footer2__cta-strip {
-  background: var(--f2-cta-bg);
+  background: linear-gradient(135deg, #235730 0%, var(--f2-cta-bg) 60%, #1a4226 100%);
   border-bottom: 1px solid var(--f2-cta-border);
-  padding: 4rem 0;
+  padding: 4.5rem 0;
 }
 
 .footer2__cta-inner {
@@ -1530,7 +1530,7 @@
 ══════════════════════════════════════════════════════════════ */
 
 .footer2__body {
-  padding: 4rem 0 3rem;
+  padding: 4.5rem 0 3.5rem;
   border-bottom: 1px solid var(--f2-divider);
 }
 
@@ -1551,16 +1551,17 @@
 
 .footer2__wordmark {
   display: inline-block;
-  font-size: 1.6rem;
+  font-size: 2rem;
   font-weight: 900;
-  letter-spacing: -0.03em;
-  color: #fff;
+  letter-spacing: -0.04em;
+  color: #ffffff;
   text-decoration: none;
   line-height: 1;
   font-family: var(--font-latin, 'Segoe UI', sans-serif);
   transition: opacity 0.2s;
+  text-shadow: 0 2px 24px rgba(61,184,90,0.18);
 }
-.footer2__wordmark:hover { opacity: 0.82; }
+.footer2__wordmark:hover { opacity: 0.85; }
 
 .footer2__about-desc {
   font-size: 0.875rem;
@@ -1605,18 +1606,18 @@
 .footer2__nav-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 2rem;
+  gap: 2.5rem;
 }
 
 /* Column heading — label-like, NOT link-like */
 .footer2__col-heading {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--f2-muted);
-  margin: 0 0 1rem;
-  padding-bottom: 0.65rem;
+  color: rgba(255,255,255,0.55);
+  margin: 0 0 1.1rem;
+  padding-bottom: 0.7rem;
   border-bottom: 1px solid var(--f2-divider);
 }
 
@@ -1658,8 +1659,9 @@
 
 .footer2__trust-strip {
   background: var(--f2-trust-bg);
+  border-top: 1px solid var(--f2-divider);
   border-bottom: 1px solid var(--f2-divider);
-  padding: 1.5rem 0;
+  padding: 1.75rem 0;
 }
 
 .footer2__trust-inner {
