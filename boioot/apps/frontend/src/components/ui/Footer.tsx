@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FooterCTASection from "@/components/sections/FooterCTASection";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (inline SVG — no external dependency)
@@ -166,32 +167,8 @@ export default function Footer() {
   return (
     <footer className="footer2" role="contentinfo" aria-label="تذييل الصفحة">
 
-      {/* ══ LAYER 1: CTA STRIP ═══════════════════════════════════════════════ */}
-      <section className="footer2__cta-strip" aria-label="ابدأ الآن">
-        <div className="footer2__wrap footer2__cta-inner">
-          <div className="footer2__cta-text">
-            <p className="footer2__cta-overline">منصة عقارية سورية</p>
-            <h2 className="footer2__cta-heading">
-              ابدأ الآن في عرض عقارك أو طلبك
-            </h2>
-            <p className="footer2__cta-sub">
-              سواء كنت صاحب عقار أو تبحث عن فرصة — بيوت يربطك بالشريك الصحيح
-            </p>
-          </div>
-          <div className="footer2__cta-buttons">
-            <Link href="/post-ad" className="footer2__btn footer2__btn--primary">
-              أضف إعلانك
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </Link>
-            <Link href="/requests" className="footer2__btn footer2__btn--ghost">
-              أضف طلبك
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* ══ LAYER 1: CTA STRIP — managed via Page Sections System ══════════ */}
+      <FooterCTASection />
 
       {/* ══ LAYER 2: MAIN NAV GRID ═══════════════════════════════════════════ */}
       <div className="footer2__body">

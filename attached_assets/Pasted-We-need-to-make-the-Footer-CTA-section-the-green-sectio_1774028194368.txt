@@ -1,0 +1,96 @@
+We need to make the Footer CTA section (the green section with "ابدأ الآن في عرض عقارك أو طلبك") fully configurable and manageable from the admin dashboard.
+
+IMPORTANT:
+- Do NOT keep it hardcoded in the page
+- This must be dynamic and controllable
+- Keep the current UI design, only change the architecture
+
+==================================================
+GOAL
+==================================================
+
+Convert the Footer CTA section into a dynamic, admin-controlled section.
+
+The admin should be able to:
+- edit content
+- show/hide the section
+- control buttons
+- update texts without touching code
+
+==================================================
+REQUIRED IMPLEMENTATION
+==================================================
+
+1) CREATE CONFIG MODEL
+
+Create a configuration model like:
+
+FooterCTAConfig:
+- isEnabled (boolean)
+- title (string)
+- subtitle (string)
+- primaryButtonText
+- primaryButtonLink
+- secondaryButtonText
+- secondaryButtonLink
+
+--------------------------------------------------
+
+2) DATA SOURCE
+
+For now:
+- store config in a local mock config file or JSON
+- prepare structure for future API / DB integration
+
+--------------------------------------------------
+
+3) UI COMPONENT
+
+Refactor the current Footer CTA into a reusable component:
+
+<FooterCTA config={...} />
+
+- If isEnabled = false → do not render the section
+- If true → render with dynamic content
+
+--------------------------------------------------
+
+4) ADMIN CONTROL PANEL
+
+In admin dashboard:
+Create a simple management UI:
+
+"Footer CTA Settings"
+
+Fields:
+- toggle (enable/disable)
+- title input
+- subtitle input
+- primary button text + link
+- secondary button text + link
+
+Save changes to config (mock or local state for now)
+
+--------------------------------------------------
+
+5) SAFETY
+
+- If config is missing → fallback to current default content
+- No page should break
+
+--------------------------------------------------
+
+6) FUTURE READY
+
+Structure code so that:
+- later we can replace config with API call
+- no major refactor needed
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+- Footer CTA is no longer hardcoded
+- Admin can fully control it
+- Section can be hidden completely
+- Content can be updated without developer
