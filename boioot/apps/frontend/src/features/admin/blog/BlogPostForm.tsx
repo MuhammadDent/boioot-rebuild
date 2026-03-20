@@ -506,10 +506,21 @@ export function BlogPostForm({
 
   // ── Publish validation ────────────────────────────────────────────────────
 
+  // Strip HTML tags to get plain text (Tiptap returns "<p></p>" for empty content)
+  function hasRealContent(html: string): boolean {
+    return html.replace(/<[^>]*>/g, "").trim().length > 0;
+  }
+
   function validateForPublish(): boolean {
+    const errors: string[] = [];
+    if (!title.trim()) errors.push("العنوان مطلوب");
+    if (!hasRealContent(content)) errors.push("المحتوى مطلوب");
     if (selectedCatIds.length === 0) {
       setCatRequired(true);
-      setError("يجب اختيار تصنيف واحد على الأقل قبل نشر المقال.");
+      errors.push("يجب اختيار تصنيف واحد على الأقل");
+    }
+    if (errors.length > 0) {
+      setError(errors.join(" · "));
       window.scrollTo({ top: 0, behavior: "smooth" });
       return false;
     }
@@ -767,7 +778,7 @@ export function BlogPostForm({
                     </p>
                     {[
                       { label: "العنوان",            ok: title.trim().length > 0 },
-                      { label: "المحتوى",            ok: content.trim().length > 0 },
+                      { label: "المحتوى",            ok: hasRealContent(content) },
                       { label: "تصنيف واحد على الأقل", ok: selectedCatIds.length > 0 },
                     ].map(({ label, ok }) => (
                       <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginBottom: "0.15rem" }}>
