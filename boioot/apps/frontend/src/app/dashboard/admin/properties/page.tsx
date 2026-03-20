@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, type CSSProperties } from "react";
-import { useCities } from "@/hooks/useCities";
 import { adminApi } from "@/features/admin/api";
 import { normalizeError } from "@/lib/api";
 import { PROPERTY_STATUS_BADGE } from "@/features/admin/constants";
@@ -180,6 +179,7 @@ export default function AdminPropertiesPage() {
   const [filtersOpen,    setFiltersOpen]    = useState(true);
   const [search,         setSearch]         = useState("");
   const [statusFilter,   setStatusFilter]   = useState("");
+  const [provinceFilter, setProvinceFilter] = useState("");
   const [cityFilter,     setCityFilter]     = useState("");
   const [neighborFilter, setNeighborFilter] = useState("");
   const [typeFilter,     setTypeFilter]     = useState("");
@@ -208,8 +208,31 @@ export default function AdminPropertiesPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // ── Cities from DB ─────────────────────────────────────────────────────────
-  const { cities: citiesInData } = useCities();
+  // ── Location options — built from full raw dataset ─────────────────────────
+  const provinceOptions = useMemo(() => {
+    const seen = new Set<string>();
+    allProperties.forEach(p => { if (p.province) seen.add(p.province); });
+    return [...seen].sort((a, b) => a.localeCompare(b, "ar"));
+  }, [allProperties]);
+
+  const cityOptions = useMemo(() => {
+    const seen = new Set<string>();
+    allProperties.forEach(p => {
+      if (!provinceFilter || p.province === provinceFilter) seen.add(p.city);
+    });
+    return [...seen].sort((a, b) => a.localeCompare(b, "ar"));
+  }, [allProperties, provinceFilter]);
+
+  const neighborhoodOptions = useMemo(() => {
+    const seen = new Set<string>();
+    allProperties.forEach(p => {
+      if (!p.neighborhood) return;
+      if (cityFilter && p.city !== cityFilter) return;
+      if (!cityFilter && provinceFilter && p.province !== provinceFilter) return;
+      seen.add(p.neighborhood);
+    });
+    return [...seen].sort((a, b) => a.localeCompare(b, "ar"));
+  }, [allProperties, provinceFilter, cityFilter]);
 
   // ── Filter + Sort ──────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -224,19 +247,17 @@ export default function AdminPropertiesPage() {
         (p.description  ?? "").toLowerCase().includes(q),
       );
     }
-    if (statusFilter)          list = list.filter(p => p.status === statusFilter);
-    if (cityFilter)            list = list.filter(p => p.city === cityFilter);
-    if (neighborFilter.trim()) {
-      const n = neighborFilter.toLowerCase();
-      list = list.filter(p => (p.neighborhood ?? "").toLowerCase().includes(n));
-    }
-    if (typeFilter)    list = list.filter(p => p.type === typeFilter);
-    if (listingFilter) list = list.filter(p => p.listingType === listingFilter);
-    if (minPrice)      list = list.filter(p => p.price >= Number(minPrice));
-    if (maxPrice)      list = list.filter(p => p.price <= Number(maxPrice));
-    if (minBedrooms)   list = list.filter(p => (p.bedrooms ?? 0) >= Number(minBedrooms));
+    if (statusFilter)   list = list.filter(p => p.status === statusFilter);
+    if (provinceFilter) list = list.filter(p => p.province === provinceFilter);
+    if (cityFilter)     list = list.filter(p => p.city === cityFilter);
+    if (neighborFilter) list = list.filter(p => p.neighborhood === neighborFilter);
+    if (typeFilter)     list = list.filter(p => p.type === typeFilter);
+    if (listingFilter)  list = list.filter(p => p.listingType === listingFilter);
+    if (minPrice)       list = list.filter(p => p.price >= Number(minPrice));
+    if (maxPrice)       list = list.filter(p => p.price <= Number(maxPrice));
+    if (minBedrooms)    list = list.filter(p => (p.bedrooms ?? 0) >= Number(minBedrooms));
     return list;
-  }, [allProperties, search, statusFilter, cityFilter, neighborFilter, typeFilter, listingFilter, minPrice, maxPrice, minBedrooms]);
+  }, [allProperties, search, statusFilter, provinceFilter, cityFilter, neighborFilter, typeFilter, listingFilter, minPrice, maxPrice, minBedrooms]);
 
   const sorted = useMemo(() => {
     const list = [...filtered];
@@ -252,14 +273,27 @@ export default function AdminPropertiesPage() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / DISPLAY_PAGE_SIZE));
   const paginated  = sorted.slice((page - 1) * DISPLAY_PAGE_SIZE, page * DISPLAY_PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [search, statusFilter, cityFilter, neighborFilter, typeFilter, listingFilter, minPrice, maxPrice, minBedrooms, sortBy]);
+  useEffect(() => { setPage(1); }, [search, statusFilter, provinceFilter, cityFilter, neighborFilter, typeFilter, listingFilter, minPrice, maxPrice, minBedrooms, sortBy]);
 
   // ── Active filter count ────────────────────────────────────────────────────
-  const activeCount = [search, statusFilter, cityFilter, neighborFilter, typeFilter, listingFilter, minPrice, maxPrice, minBedrooms].filter(Boolean).length;
+  const activeCount = [search, statusFilter, provinceFilter, cityFilter, neighborFilter, typeFilter, listingFilter, minPrice, maxPrice, minBedrooms].filter(Boolean).length;
 
   function clearAll() {
-    setSearch(""); setStatusFilter(""); setCityFilter(""); setNeighborFilter("");
+    setSearch(""); setStatusFilter(""); setProvinceFilter(""); setCityFilter(""); setNeighborFilter("");
     setTypeFilter(""); setListingFilter(""); setMinPrice(""); setMaxPrice(""); setMinBedrooms("");
+  }
+
+  // Province change → reset city and neighborhood
+  function handleProvinceChange(v: string) {
+    setProvinceFilter(v);
+    setCityFilter("");
+    setNeighborFilter("");
+  }
+
+  // City change → reset neighborhood
+  function handleCityChange(v: string) {
+    setCityFilter(v);
+    setNeighborFilter("");
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -390,14 +424,26 @@ export default function AdminPropertiesPage() {
               </Sel>
             </div>
 
+            <div><FL>المحافظة</FL>
+              <Sel value={provinceFilter} onChange={handleProvinceChange} placeholder="كل المحافظات">
+                {provinceOptions.map(p => <option key={p} value={p}>{p}</option>)}
+              </Sel>
+            </div>
+
             <div><FL>المدينة</FL>
-              <Sel value={cityFilter} onChange={setCityFilter} placeholder="كل المدن">
-                {citiesInData.map(c => <option key={c} value={c}>{c}</option>)}
+              <Sel value={cityFilter} onChange={handleCityChange} placeholder="كل المدن">
+                {cityOptions.map(c => <option key={c} value={c}>{c}</option>)}
               </Sel>
             </div>
 
             <div><FL>الحي / المنطقة</FL>
-              <Inp value={neighborFilter} onChange={setNeighborFilter} placeholder="اسم الحي..." />
+              <Sel
+                value={neighborFilter}
+                onChange={setNeighborFilter}
+                placeholder="كل الأحياء"
+              >
+                {neighborhoodOptions.map(n => <option key={n} value={n}>{n}</option>)}
+              </Sel>
             </div>
 
             <div><FL>نوع العقار</FL>
