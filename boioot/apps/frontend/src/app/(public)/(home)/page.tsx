@@ -344,26 +344,10 @@ export default function HomePage() {
       {/* ── LISTING TYPE BAR ─────────────────────────────────────────────────── */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e8ede8", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-
-          {/* RIGHT arrow — visually on the right in RTL — scrolls back toward start (الكل) */}
-          <button
-            style={arrowBtnStyle}
-            onClick={() => scrollTabs("prev")}
-            aria-label="السابق"
-          >→</button>
-
-          {/* Scrollable pills — starts from الكل on the right, overflows to the left */}
+          <button style={arrowBtnStyle} onClick={() => scrollTabs("prev")} aria-label="السابق">→</button>
           <div
             ref={tabsScrollRef}
-            style={{
-              display: "flex",
-              gap: "0.45rem",
-              overflowX: "auto",
-              padding: "0.75rem 0.25rem",
-              flex: 1,
-              scrollbarWidth: "none",
-              msOverflowStyle: "none" as React.CSSProperties["msOverflowStyle"],
-            }}
+            style={{ display: "flex", gap: "0.45rem", overflowX: "auto", padding: "0.75rem 0.25rem", flex: 1, scrollbarWidth: "none" }}
           >
             {LISTING_TABS.map((tab, i) => (
               <button
@@ -388,14 +372,7 @@ export default function HomePage() {
               </button>
             ))}
           </div>
-
-          {/* LEFT arrow — visually on the left in RTL — scrolls forward to next hidden tabs */}
-          <button
-            style={arrowBtnStyle}
-            onClick={() => scrollTabs("next")}
-            aria-label="التالي"
-          >←</button>
-
+          <button style={arrowBtnStyle} onClick={() => scrollTabs("next")} aria-label="التالي">←</button>
         </div>
       </div>
 
