@@ -412,6 +412,16 @@ export function BlogPostForm({
   const [addCatError,     setAddCatError]     = useState("");
   const [catRequired,     setCatRequired]     = useState(false);
 
+  // Sync localCategories when parent updates the categories prop (async load)
+  useEffect(() => {
+    setLocalCategories(prev => {
+      // Keep any newly-added categories not yet in the prop list
+      const propIds = new Set(categories.map(c => c.id));
+      const newlyAdded = prev.filter(c => !propIds.has(c.id));
+      return [...categories, ...newlyAdded];
+    });
+  }, [categories]);
+
   const [seoMode,  setSeoMode]  = useState<SeoMode>(initialData?.seoMode ?? "Auto");
   const [ogTitle,  setOgTitle]  = useState(initialData?.ogTitle  ?? "");
   const [ogDescription, setOgDescription] = useState(initialData?.ogDescription ?? "");
