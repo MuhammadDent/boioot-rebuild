@@ -101,7 +101,8 @@ export default function MyListingsPage() {
     );
   }
 
-  const limitReached = stats !== null && stats.used >= stats.limit;
+  const isUnlimited  = stats !== null && stats.limit >= 999;
+  const limitReached = stats !== null && !isUnlimited && stats.used >= stats.limit;
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
@@ -115,7 +116,7 @@ export default function MyListingsPage() {
               إعلاناتي العقارية
             </h1>
             <Link
-              href="/post-ad"
+              href="/dashboard/properties/new"
               style={{
                 padding: "0.55rem 1.3rem", borderRadius: 9,
                 background: limitReached ? "#9ca3af" : "var(--color-primary)",
@@ -136,8 +137,8 @@ export default function MyListingsPage() {
           </div>
         )}
 
-        {/* ── Monthly stats ── */}
-        {stats !== null && (
+        {/* ── Monthly stats (only for limited plans) ── */}
+        {stats !== null && !isUnlimited && (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem",
             background: limitReached ? "#fff1f2" : "#f8fafc",
@@ -179,7 +180,7 @@ export default function MyListingsPage() {
             <p style={{ margin: "0 0 0.5rem", fontSize: "1rem", color: "#374151", fontWeight: 600 }}>لا توجد إعلانات بعد</p>
             <p style={{ margin: "0 0 1.5rem", fontSize: "0.85rem", color: "#94a3b8" }}>أضف إعلانك الأول الآن وابدأ في التواصل مع المشترين</p>
             <Link
-              href="/post-ad"
+              href="/dashboard/properties/new"
               style={{ padding: "0.65rem 1.5rem", borderRadius: 9, background: "var(--color-primary)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem" }}
             >
               + أضف إعلانك الأول

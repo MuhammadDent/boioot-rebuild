@@ -208,6 +208,7 @@ public class PropertyService : IPropertyService
             Longitude = request.Longitude,
             CompanyId = companyId,
             AgentId = request.AgentId,
+            OwnerId = userId.ToString(),
             Features = request.Features is { Count: > 0 }
                 ? System.Text.Json.JsonSerializer.Serialize(request.Features)
                 : null,
@@ -374,8 +375,16 @@ public class PropertyService : IPropertyService
         var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var ownerIdStr = userId.ToString();
 
+        var userCompanyIds = await _context.Agents
+            .Where(a => a.UserId == userId && a.CompanyId != null)
+            .Select(a => a.CompanyId!.Value)
+            .ToListAsync(ct);
+
         var used = await _context.Properties
-            .CountAsync(p => p.OwnerId == ownerIdStr && p.CreatedAt >= startOfMonth && !p.IsDeleted, ct);
+            .CountAsync(p => !p.IsDeleted && p.CreatedAt >= startOfMonth && (
+                p.OwnerId == ownerIdStr ||
+                userCompanyIds.Contains(p.CompanyId)
+            ), ct);
 
         return (used, GetMonthlyLimit(userRole));
     }
@@ -480,10 +489,24 @@ public class PropertyService : IPropertyService
 
         var ownerIdStr = userId.ToString();
 
+        var userAgentIds    = await _context.Agents
+            .Where(a => a.UserId == userId)
+            .Select(a => a.Id)
+            .ToListAsync(ct);
+
+        var userCompanyIds  = await _context.Agents
+            .Where(a => a.UserId == userId && a.CompanyId != null)
+            .Select(a => a.CompanyId!.Value)
+            .ToListAsync(ct);
+
         var query = _context.Properties
             .Include(p => p.Company)
             .Include(p => p.Images.Where(i => i.IsPrimary))
-            .Where(p => p.OwnerId == ownerIdStr && !p.IsDeleted);
+            .Where(p => !p.IsDeleted && (
+                p.OwnerId == ownerIdStr ||
+                (p.AgentId != null && userAgentIds.Contains(p.AgentId.Value)) ||
+                userCompanyIds.Contains(p.CompanyId)
+            ));
 
         var total = await query.CountAsync(ct);
 
@@ -503,8 +526,22 @@ public class PropertyService : IPropertyService
     {
         var ownerIdStr = userId.ToString();
 
+        var userAgentIds   = await _context.Agents
+            .Where(a => a.UserId == userId)
+            .Select(a => a.Id)
+            .ToListAsync(ct);
+
+        var userCompanyIds = await _context.Agents
+            .Where(a => a.UserId == userId && a.CompanyId != null)
+            .Select(a => a.CompanyId!.Value)
+            .ToListAsync(ct);
+
         var property = await _context.Properties
-            .FirstOrDefaultAsync(p => p.Id == propertyId && p.OwnerId == ownerIdStr && !p.IsDeleted, ct)
+            .FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted && (
+                p.OwnerId == ownerIdStr ||
+                (p.AgentId != null && userAgentIds.Contains(p.AgentId.Value)) ||
+                userCompanyIds.Contains(p.CompanyId)
+            ), ct)
             ?? throw new BoiootException("الإعلان غير موجود أو لا تملك صلاحية حذفه", 404);
 
         property.IsDeleted = true;
