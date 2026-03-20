@@ -123,6 +123,9 @@ export default function HomePage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Tab bar scroll
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+
   // Listing tabs
   const [activeTab, setActiveTab] = useState(0);
 
@@ -166,6 +169,16 @@ export default function HomePage() {
   }, [startTimer]);
 
   function goSlide(idx: number) { setSlideIndex(idx); startTimer(); }
+
+  // Scroll the listing-type tab bar.
+  // In RTL the visible start is the right side, so:
+  //   "prev" → scrolls right (back toward start / الكل)
+  //   "next" → scrolls left  (forward to reveal hidden tabs)
+  function scrollTabs(dir: "prev" | "next") {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === "next" ? -220 : 220, behavior: "smooth" });
+  }
 
   // ── Load neighborhoods when city changes ────────────────────────────────────
 
@@ -329,29 +342,60 @@ export default function HomePage() {
       </nav>
 
       {/* ── LISTING TYPE BAR ─────────────────────────────────────────────────── */}
-      <div style={{ background: "#fff", borderBottom: "1px solid var(--color-border)" }}>
-        <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <button style={arrowBtnStyle}>→</button>
-          <div style={{ display: "flex", gap: "0.4rem", overflowX: "auto", padding: "0.6rem 0", flex: 1, scrollbarWidth: "none" }}>
+      <div style={{ background: "#fff", borderBottom: "1px solid #e8ede8", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+        <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+
+          {/* RIGHT arrow — visually on the right in RTL — scrolls back toward start (الكل) */}
+          <button
+            style={arrowBtnStyle}
+            onClick={() => scrollTabs("prev")}
+            aria-label="السابق"
+          >→</button>
+
+          {/* Scrollable pills — starts from الكل on the right, overflows to the left */}
+          <div
+            ref={tabsScrollRef}
+            style={{
+              display: "flex",
+              gap: "0.45rem",
+              overflowX: "auto",
+              padding: "0.75rem 0.25rem",
+              flex: 1,
+              scrollbarWidth: "none",
+              msOverflowStyle: "none" as React.CSSProperties["msOverflowStyle"],
+            }}
+          >
             {LISTING_TABS.map((tab, i) => (
-              <button key={i} onClick={() => setActiveTab(i)} style={{
-                padding: "0.35rem 1rem",
-                borderRadius: 999,
-                border: i === activeTab ? "none" : "1px solid var(--color-border)",
-                background: i === activeTab ? "var(--color-primary)" : "#fff",
-                color: i === activeTab ? "#fff" : "var(--color-text-secondary)",
-                fontFamily: "var(--font-arabic)",
-                fontSize: "0.88rem",
-                fontWeight: i === activeTab ? 700 : 400,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s",
-              }}>
+              <button
+                key={i}
+                onClick={() => setActiveTab(i)}
+                style={{
+                  padding: "0.38rem 1.1rem",
+                  borderRadius: 999,
+                  border: i === activeTab ? "none" : "1px solid #e0e7e0",
+                  background: i === activeTab ? "var(--color-primary)" : "#f5f7f5",
+                  color: i === activeTab ? "#fff" : "var(--color-text-secondary)",
+                  fontFamily: "var(--font-arabic)",
+                  fontSize: "0.875rem",
+                  fontWeight: i === activeTab ? 700 : 500,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  transition: "all 0.15s",
+                }}
+              >
                 {tab.label}
               </button>
             ))}
           </div>
-          <button style={arrowBtnStyle}>←</button>
+
+          {/* LEFT arrow — visually on the left in RTL — scrolls forward to next hidden tabs */}
+          <button
+            style={arrowBtnStyle}
+            onClick={() => scrollTabs("next")}
+            aria-label="التالي"
+          >←</button>
+
         </div>
       </div>
 
@@ -640,10 +684,12 @@ const iconBtnStyle: React.CSSProperties = {
 };
 
 const arrowBtnStyle: React.CSSProperties = {
-  width: 32, height: 32, borderRadius: "50%",
-  border: "1px solid var(--color-border)", background: "#fff",
-  color: "var(--color-text)", cursor: "pointer", fontSize: "1rem",
-  display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+  width: 34, height: 34, borderRadius: "50%",
+  border: "1px solid #e0e7e0", background: "#fff",
+  color: "#4a6741", cursor: "pointer", fontSize: "1rem",
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
+  transition: "box-shadow 0.15s, background 0.15s",
 };
 
 const selectStyle: React.CSSProperties = {
