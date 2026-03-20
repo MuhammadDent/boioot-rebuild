@@ -185,7 +185,10 @@ public class PropertyService : IPropertyService
             Latitude = request.Latitude,
             Longitude = request.Longitude,
             CompanyId = companyId,
-            AgentId = request.AgentId
+            AgentId = request.AgentId,
+            Features = request.Features is { Count: > 0 }
+                ? System.Text.Json.JsonSerializer.Serialize(request.Features)
+                : null,
         };
 
         _context.Properties.Add(property);
@@ -234,6 +237,11 @@ public class PropertyService : IPropertyService
         property.Latitude = request.Latitude;
         property.Longitude = request.Longitude;
         property.AgentId = request.AgentId;
+
+        // Update Features — always overwrite with the latest selection
+        property.Features = request.Features is { Count: > 0 }
+            ? System.Text.Json.JsonSerializer.Serialize(request.Features)
+            : null;
 
         // Update VideoUrl if provided (null = unchanged, empty string = clear)
         if (request.VideoUrl is not null)

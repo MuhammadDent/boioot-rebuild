@@ -17,6 +17,32 @@ import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/das
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { api } from "@/lib/api";
 
+// ─── Property features / amenities ───────────────────────────────────────────
+
+const FEATURES: { key: string; label: string }[] = [
+  { key: "Balcony",        label: "شرفة" },
+  { key: "Parking",        label: "موقف سيارة" },
+  { key: "Elevator",       label: "مصعد" },
+  { key: "MaidRoom",       label: "غرفة خادمة" },
+  { key: "Storage",        label: "غرفة تخزين" },
+  { key: "CentralAC",      label: "تكييف مركزي" },
+  { key: "Furnished",      label: "مفروش" },
+  { key: "Security",       label: "حراسة أمنية" },
+  { key: "Garden",         label: "حديقة" },
+  { key: "Pool",           label: "مسبح" },
+  { key: "Gym",            label: "صالة رياضية" },
+  { key: "DriverRoom",     label: "غرفة سائق" },
+  { key: "SmartHome",      label: "منزل ذكي" },
+  { key: "SeaView",        label: "إطلالة بحرية" },
+  { key: "CornerUnit",     label: "شقة كونر" },
+  { key: "PrivateEntrance",label: "مدخل خاص" },
+  { key: "Basement",       label: "قبو" },
+  { key: "Roof",           label: "روف / سطح" },
+  { key: "Duplex",         label: "دوبلكس" },
+  { key: "NearMosque",     label: "قرب مسجد" },
+  { key: "NearSchool",     label: "قرب مدرسة" },
+];
+
 // ─── Image utility ────────────────────────────────────────────────────────────
 
 async function resizeImage(file: File, maxPx = 1200): Promise<string> {
@@ -181,6 +207,15 @@ export default function PropertyForm({
   );
   const [errors, setErrors] = useState<FormErrors>({});
   const [listingTypes, setListingTypes] = useState<ListingTypeConfig[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
+    initialData?.features ?? []
+  );
+
+  function toggleFeature(key: string) {
+    setSelectedFeatures((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }
 
   // Location coordinates state
   const [lat, setLat] = useState<number | null>(initialData?.latitude ?? null);
@@ -300,6 +335,7 @@ export default function PropertyForm({
       await onSubmit({
         ...base,
         companyId: cid || undefined,
+        features: selectedFeatures.length > 0 ? selectedFeatures : undefined,
         images: images.length > 0 ? images : undefined,
         videoUrl: videoUrl.trim() || undefined,
       } as CreatePropertyRequest);
@@ -307,6 +343,7 @@ export default function PropertyForm({
       await onSubmit({
         ...base,
         status: fields.status,
+        features: selectedFeatures.length > 0 ? selectedFeatures : undefined,
         images,
         videoUrl: videoUrl.trim() || "",
       } as UpdatePropertyRequest);
@@ -623,6 +660,43 @@ export default function PropertyForm({
             <p className="form-error">{errors.description}</p>
           )}
         </div>
+      </Section>
+
+      {/* ── Section: features / amenities ── */}
+      <Section label="المميزات والمرافق (اختياري)">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          {FEATURES.map((feat) => {
+            const active = selectedFeatures.includes(feat.key);
+            return (
+              <button
+                key={feat.key}
+                type="button"
+                disabled={disabled}
+                onClick={() => toggleFeature(feat.key)}
+                style={{
+                  padding: "0.35rem 0.85rem",
+                  borderRadius: 999,
+                  border: `1.5px solid ${active ? "var(--color-primary)" : "#e0e7e0"}`,
+                  background: active ? "var(--color-primary)" : "#f5f7f5",
+                  color: active ? "#fff" : "var(--color-text-secondary)",
+                  fontFamily: "var(--font-arabic)",
+                  fontSize: "0.83rem",
+                  fontWeight: active ? 700 : 500,
+                  cursor: disabled ? "default" : "pointer",
+                  transition: "all 0.15s",
+                  userSelect: "none",
+                }}
+              >
+                {feat.label}
+              </button>
+            );
+          })}
+        </div>
+        {selectedFeatures.length > 0 && (
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginTop: "0.5rem" }}>
+            تم اختيار {selectedFeatures.length} {selectedFeatures.length === 1 ? "ميزة" : "مميزات"}
+          </p>
+        )}
       </Section>
 
       {/* ── Section: company (create only, optional) ── */}

@@ -12,6 +12,7 @@ export interface RegisterPayload {
   password: string;
   phone?: string;
   role: "User" | "Owner" | "Broker" | "CompanyOwner";
+  companyName?: string;
 }
 
 export interface UpdateProfilePayload {

@@ -268,6 +268,7 @@ export interface UpdatePropertyRequest {
   latitude?: number;
   longitude?: number;
   agentId?: string;
+  features?: string[];
   images?: string[];
   videoUrl?: string;
 }

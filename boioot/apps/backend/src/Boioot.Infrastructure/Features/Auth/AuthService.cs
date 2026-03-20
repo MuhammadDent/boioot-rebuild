@@ -64,6 +64,39 @@ public class AuthService : IAuthService
         };
 
         _context.Users.Add(user);
+
+        // ── Auto-create Company + Agent for business accounts ─────────────────
+        // CompanyOwner = شركة تطوير  |  Broker = مكتب عقاري
+        // Everything is added to the EF change tracker before SaveChanges so
+        // all three records (User, Company, Agent) are written atomically.
+        if (role is UserRole.CompanyOwner or UserRole.Broker)
+        {
+            var companyName = string.IsNullOrWhiteSpace(request.CompanyName)
+                ? request.FullName.Trim()
+                : request.CompanyName.Trim();
+
+            var company = new Company
+            {
+                Name  = companyName,
+                Email = emailLower,
+                Phone = request.Phone?.Trim(),
+            };
+
+            _context.Companies.Add(company);
+
+            var agent = new Agent
+            {
+                User    = user,
+                Company = company,
+            };
+
+            _context.Agents.Add(agent);
+
+            _logger.LogInformation(
+                "Auto-created Company '{CompanyName}' and Agent for {Email} ({Role})",
+                companyName, emailLower, role);
+        }
+
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation("New user registered: {Email} | Role: {Role}", emailLower, user.Role);

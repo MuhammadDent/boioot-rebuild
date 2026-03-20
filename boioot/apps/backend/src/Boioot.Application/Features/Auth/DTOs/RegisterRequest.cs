@@ -31,4 +31,11 @@ public class RegisterRequest
     [RegularExpression("^(User|Owner|Broker|CompanyOwner)$",
         ErrorMessage = "نوع الحساب غير صالح")]
     public string Role { get; set; } = "User";
+
+    /// <summary>
+    /// اسم الشركة أو المكتب — مطلوب فقط للحسابات التجارية (CompanyOwner | Broker).
+    /// إذا لم يُقدَّم، يُستخدم FullName تلقائياً.
+    /// </summary>
+    [MaxLength(200, ErrorMessage = "اسم الشركة يجب أن لا يتجاوز 200 حرف")]
+    public string? CompanyName { get; set; }
 }

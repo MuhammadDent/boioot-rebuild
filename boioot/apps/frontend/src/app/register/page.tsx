@@ -72,12 +72,15 @@ const ROLES: RoleOption[] = [
 
 interface FormState {
   fullName: string;
+  companyName: string;
   email: string;
   password: string;
   confirmPassword: string;
 }
 
-const INITIAL_FORM: FormState = { fullName: "", email: "", password: "", confirmPassword: "" };
+const INITIAL_FORM: FormState = { fullName: "", companyName: "", email: "", password: "", confirmPassword: "" };
+
+const BUSINESS_ROLES: RoleValue[] = ["CompanyOwner", "Broker"];
 
 export default function RegisterPage() {
   const { login, isAuthenticated, isLoading } = useAuth();
@@ -129,6 +132,9 @@ export default function RegisterPage() {
     return Object.keys(errors).length === 0;
   }
 
+  const selectedRole = selectedRoleIndex !== null ? ROLES[selectedRoleIndex].value : null;
+  const isBusinessRole = selectedRole !== null && BUSINESS_ROLES.includes(selectedRole);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -141,6 +147,7 @@ export default function RegisterPage() {
         password: form.password,
         phone: phone || undefined,
         role: ROLES[selectedRoleIndex!].value,
+        companyName: isBusinessRole && form.companyName.trim() ? form.companyName.trim() : undefined,
       });
       login(res.token, res.user, res.expiresAt);
       router.push("/dashboard");
@@ -266,6 +273,24 @@ export default function RegisterPage() {
                 />
                 {fieldErrors.fullName && <span className="form-error">{fieldErrors.fullName}</span>}
               </div>
+
+              {isBusinessRole && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="companyName">
+                    {selectedRole === "CompanyOwner" ? "اسم الشركة" : "اسم المكتب العقاري"}{" "}
+                    <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
+                  </label>
+                  <input
+                    id="companyName" name="companyName" type="text" className="form-input"
+                    value={form.companyName} onChange={handleChange}
+                    autoComplete="organization"
+                    placeholder={selectedRole === "CompanyOwner" ? "مثال: شركة الأمل للتطوير العقاري" : "مثال: مكتب النجاح العقاري"}
+                  />
+                  <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "0.25rem 0 0" }}>
+                    إذا تركته فارغاً سيُستخدم اسمك الكامل تلقائياً
+                  </p>
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="form-label" htmlFor="email">
