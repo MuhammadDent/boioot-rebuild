@@ -379,10 +379,28 @@ public class BlogService : IBlogService
         };
 
         _db.Set<BlogPost>().Add(post);
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var detail = ex.InnerException?.Message ?? ex.Message;
+            _logger.LogError(ex, "FK/constraint error creating blog post for user {UserId}", createdByUserId);
+            throw new BoiootException($"خطأ في حفظ المقال: {detail}", 500);
+        }
 
         await SyncCategoriesAsync(post, request.CategoryIds, ct);
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var detail = ex.InnerException?.Message ?? ex.Message;
+            _logger.LogError(ex, "FK/constraint error syncing categories for post {PostId}", post.Id);
+            throw new BoiootException($"خطأ في حفظ تصنيفات المقال: {detail}", 500);
+        }
 
         return await AdminGetPostByIdAsync(post.Id, ct);
     }
@@ -431,7 +449,16 @@ public class BlogService : IBlogService
         if (request.CategoryIds != null)
             await SyncCategoriesAsync(post, request.CategoryIds, ct);
 
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var detail = ex.InnerException?.Message ?? ex.Message;
+            _logger.LogError(ex, "FK/constraint error updating blog post {PostId}", id);
+            throw new BoiootException($"خطأ في تحديث المقال: {detail}", 500);
+        }
 
         return await AdminGetPostByIdAsync(post.Id, ct);
     }
@@ -463,7 +490,16 @@ public class BlogService : IBlogService
         post.PublishedAt     ??= DateTime.UtcNow;
         post.PublishedByUserId = publishedByUserId;
 
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var detail = ex.InnerException?.Message ?? ex.Message;
+            _logger.LogError(ex, "FK/constraint error publishing post {PostId} by user {UserId}", id, publishedByUserId);
+            throw new BoiootException($"خطأ في نشر المقال: {detail}", 500);
+        }
 
         return await AdminGetPostByIdAsync(post.Id, ct);
     }

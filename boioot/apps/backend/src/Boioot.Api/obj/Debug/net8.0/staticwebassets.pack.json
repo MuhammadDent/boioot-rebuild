@@ -1,6 +1,10 @@
 {
   "Files": [
     {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/00273696-87e2-4932-ac5f-5c8605af955f.webp",
+      "PackagePath": "staticwebassets/uploads/00273696-87e2-4932-ac5f-5c8605af955f.webp"
+    },
+    {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/26839264-46dd-44eb-b8c5-24240e7be6da.jpg",
       "PackagePath": "staticwebassets/uploads/26839264-46dd-44eb-b8c5-24240e7be6da.jpg"
     },
@@ -9,8 +13,20 @@
       "PackagePath": "staticwebassets/uploads/28541845-5d12-4e5d-a1e5-7d034ca77f33.jpg"
     },
     {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/2a622d6d-c208-447c-8db8-90eaa3d274c1.webp",
+      "PackagePath": "staticwebassets/uploads/2a622d6d-c208-447c-8db8-90eaa3d274c1.webp"
+    },
+    {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/38993e88-bcc5-4d80-87a3-d47f45dfcdda.jpg",
       "PackagePath": "staticwebassets/uploads/38993e88-bcc5-4d80-87a3-d47f45dfcdda.jpg"
+    },
+    {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/3972ec0d-7fe7-4b9e-8ad4-f0834dc547f0.webp",
+      "PackagePath": "staticwebassets/uploads/3972ec0d-7fe7-4b9e-8ad4-f0834dc547f0.webp"
+    },
+    {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/4121bccb-84d5-4b4f-99a2-7a895486dbd9.webp",
+      "PackagePath": "staticwebassets/uploads/4121bccb-84d5-4b4f-99a2-7a895486dbd9.webp"
     },
     {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/5287f71f-2e9b-48a0-8949-bf09dd4fae57.jpg",
@@ -19,6 +35,10 @@
     {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/52f58158-1f63-4868-a835-d141e9d044f9.jpg",
       "PackagePath": "staticwebassets/uploads/52f58158-1f63-4868-a835-d141e9d044f9.jpg"
+    },
+    {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/6ee64003-1a84-41ec-80e3-6e086a9c7a13.jpg",
+      "PackagePath": "staticwebassets/uploads/6ee64003-1a84-41ec-80e3-6e086a9c7a13.jpg"
     },
     {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/b18ce154-732d-4252-85e7-786e114aea54.jpg",
