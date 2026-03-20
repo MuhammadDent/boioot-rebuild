@@ -570,12 +570,13 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Management section (CompanyOwner / Broker / Agent) ─────────────── */}
-        {isManagementRole && user.role !== "Admin" && !hasPermission(user, "roles.manage") && (
-          <div style={{ marginBottom: "1.25rem" }}>
+        {/* ════════════════════════════════════════════════════════════
+            القسم 1 — إدارة الإعلانات  (الإجراءات الأساسية — الأولوية القصوى)
+            ════════════════════════════════════════════════════════════ */}
+        {user.role !== "Admin" && !hasPermission(user, "roles.manage") && (
+          <div style={{ marginBottom: "1.75rem" }}>
             <SectionLabel>إدارة الإعلانات</SectionLabel>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              {/* "properties.create" → CompanyOwner, Admin (Broker excluded — Broker manages agents, not listings) */}
               {hasPermission(user, "properties.create") && (
                 <QuickActionCard
                   href="/dashboard/properties/new"
@@ -586,6 +587,23 @@ export default function DashboardPage() {
                   primary
                 />
               )}
+              <NavCard
+                href="/dashboard/listings"
+                label="إعلاناتي"
+                description="عرض جميع إعلاناتك العقارية وتعديلها وحذفها"
+                icon={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            القسم 2 — إدارة الأعمال  (الشركات والوكلاء فقط)
+            ════════════════════════════════════════════════════════════ */}
+        {(isCompanyOrAdmin || canManageAgents) && user.role !== "Admin" && !hasPermission(user, "roles.manage") && (
+          <div style={{ marginBottom: "1.75rem" }}>
+            <SectionLabel>إدارة الأعمال</SectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
               {isCompanyOrAdmin && (
                 <>
                   <QuickActionCard
@@ -596,56 +614,57 @@ export default function DashboardPage() {
                     icon={<path d="M12 5v14M5 12h14"/>}
                     primary={false}
                   />
-                  <NavCard href="/dashboard/projects" label="إدارة المشاريع" description="عرض وتعديل وحذف مشاريعك العقارية"
+                  <NavCard
+                    href="/dashboard/projects"
+                    label="إدارة المشاريع"
+                    description="عرض وتعديل وحذف مشاريعك العقارية"
                     icon={<><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></>}
                   />
                 </>
               )}
               {canManageAgents && (
-                <NavCard href="/dashboard/agents" label="إدارة الوكلاء" description="إنشاء وإدارة الوكلاء التابعين للمكتب أو الشركة"
+                <NavCard
+                  href="/dashboard/agents"
+                  label="إدارة الوكلاء"
+                  description="إنشاء وإدارة الوكلاء التابعين للمكتب أو الشركة"
                   icon={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>}
                 />
               )}
-              <NavCard href="/dashboard/requests" label="الطلبات والاستفسارات" description="عرض وإدارة استفسارات العملاء"
-                icon={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>}
-              />
             </div>
           </div>
         )}
 
-        {/* ── My Listings (all roles) ────────────────────────────────────────── */}
-        <div style={{ marginBottom: "1.25rem" }}>
-          <SectionLabel>إعلاناتي</SectionLabel>
-          <NavCard
-            href="/dashboard/listings"
-            label="إعلاناتي"
-            description="عرض جميع إعلاناتك العقارية وتعديلها وحذفها"
-            icon={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>}
-          />
-        </div>
-
-        {/* ── My Requests (all roles) ────────────────────────────────────────── */}
-        <div style={{ marginBottom: "1.25rem" }}>
-          <SectionLabel>طلباتي</SectionLabel>
-          <NavCard
-            href="/dashboard/my-requests"
-            label="طلباتي"
-            description="الطلبات والاستفسارات التي أرسلتها عن العقارات"
-            icon={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>}
-          />
-        </div>
-
-        {/* ── Messages (all roles) ───────────────────────────────────────────── */}
-        <div style={{ marginBottom: "1.25rem" }}>
-          <SectionLabel>التواصل</SectionLabel>
-          <NavCard
-            href="/dashboard/messages"
-            label="المحادثات والرسائل"
-            description="تواصل مع المستخدمين الآخرين مباشرةً"
-            badge={unreadMessages}
-            icon={<path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>}
-          />
-        </div>
+        {/* ════════════════════════════════════════════════════════════
+            القسم 3 — التواصل والعملاء  (جميع الأدوار)
+            ════════════════════════════════════════════════════════════ */}
+        {user.role !== "Admin" && !hasPermission(user, "roles.manage") && (
+          <div style={{ marginBottom: "1.75rem" }}>
+            <SectionLabel>التواصل والعملاء</SectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              {isManagementRole && (
+                <NavCard
+                  href="/dashboard/requests"
+                  label="الطلبات والاستفسارات"
+                  description="عرض وإدارة استفسارات العملاء الواردة"
+                  icon={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>}
+                />
+              )}
+              <NavCard
+                href="/dashboard/my-requests"
+                label="طلباتي"
+                description="الطلبات والاستفسارات التي أرسلتها عن العقارات"
+                icon={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>}
+              />
+              <NavCard
+                href="/dashboard/messages"
+                label="المحادثات والرسائل"
+                description="تواصل مع المستخدمين الآخرين مباشرةً"
+                badge={unreadMessages}
+                icon={<path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>}
+              />
+            </div>
+          </div>
+        )}
 
         {/* ── Favorites (all roles) ──────────────────────────────────────────── */}
         <div style={{ marginBottom: "1.25rem" }}>
