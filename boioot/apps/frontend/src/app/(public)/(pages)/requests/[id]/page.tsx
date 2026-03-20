@@ -195,7 +195,7 @@ export default function RequestDetailPage() {
 
   if (reqLoading) {
     return (
-      <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div dir="rtl" style={{ backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Spinner />
       </div>
     );
@@ -203,7 +203,7 @@ export default function RequestDetailPage() {
 
   if (reqError || !request) {
     return (
-      <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", padding: "2rem 1.25rem", textAlign: "center" }}>
+      <div dir="rtl" style={{ backgroundColor: "#f8fafc", padding: "2rem 1.25rem", textAlign: "center" }}>
         <p style={{ color: "#dc2626", fontWeight: 600 }}>{reqError || "الطلب غير موجود"}</p>
         <Link href="/requests" style={{ color: "var(--color-primary)", fontWeight: 700 }}>← العودة للطلبات</Link>
       </div>
@@ -213,7 +213,7 @@ export default function RequestDetailPage() {
   const colors = PROPERTY_TYPE_COLORS[request.propertyType] ?? PROPERTY_TYPE_COLORS.Building;
 
   return (
-    <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", paddingBottom: "3rem" }}>
+    <div dir="rtl" style={{ backgroundColor: "#f8fafc", paddingBottom: "3rem" }}>
 
       {/* ── Header bar ───────────────────────────────────────────────────────── */}
       <div style={{

@@ -153,7 +153,7 @@ export default function PropertyDetailPage() {
 
   if (error) {
     return (
-      <div style={{ minHeight: "100vh", background: "var(--color-background)", padding: "2rem 0" }}>
+      <div style={{ background: "var(--color-background)", padding: "2rem 0" }}>
         <div className="container" style={{ paddingTop: "3rem" }}>
           <div className="error-banner">{error}</div>
           <Link href="/" className="btn btn-outline" style={{ marginTop: "1rem", display: "inline-block" }}>
@@ -173,7 +173,7 @@ export default function PropertyDetailPage() {
   const isOwn = user && (user.id === property.ownerId || user.id === property.agentId?.toString());
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-background)", padding: "2rem 0" }}>
+    <div style={{ background: "var(--color-background)", padding: "2rem 0" }}>
       <div className="container">
 
         {/* Back link */}

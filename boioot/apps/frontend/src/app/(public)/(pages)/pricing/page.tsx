@@ -147,7 +147,7 @@ export default function PricingPage() {
   };
 
   return (
-    <main style={{ background: "var(--color-background)", minHeight: "100vh" }}>
+    <main style={{ background: "var(--color-background)" }}>
 
       {/* ── Hero ── */}
       <section style={{

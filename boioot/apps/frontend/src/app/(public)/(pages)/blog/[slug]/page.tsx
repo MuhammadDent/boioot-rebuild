@@ -70,7 +70,7 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post) notFound();
 
   return (
-    <div style={{ background: "var(--color-background)", minHeight: "100vh", padding: "2rem 0 4rem" }}>
+    <div style={{ background: "var(--color-background)", padding: "2rem 0 4rem" }}>
       <article style={{ maxWidth: 780, margin: "0 auto", padding: "0 1.25rem" }}>
 
         {/* ── Breadcrumb ── */}

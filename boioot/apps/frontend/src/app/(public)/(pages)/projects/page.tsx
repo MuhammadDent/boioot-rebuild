@@ -103,7 +103,7 @@ function ProjectsContent() {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-background)" }}>
+    <div style={{ background: "var(--color-background)" }}>
       <div className="container" style={{ padding: "2.5rem 1.5rem" }}>
 
         {/* Page Header */}

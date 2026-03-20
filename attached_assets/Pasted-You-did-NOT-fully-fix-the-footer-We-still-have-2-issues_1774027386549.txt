@@ -1,0 +1,92 @@
+You did NOT fully fix the footer.
+
+We still have 2 issues:
+
+==================================================
+ISSUE 1 — FOOTER NOT SHOWING ON HOMEPAGE
+==================================================
+
+The homepage still does NOT show the footer.
+
+From your structure:
+(public)/(home)/layout.tsx is a passthrough layout.
+
+This layout is overriding the main public layout
+and NOT rendering the Footer.
+
+FIX THIS:
+
+Option A (preferred):
+- Remove (public)/(home)/layout.tsx completely
+- Let homepage inherit from (public)/layout.tsx
+
+Option B:
+- Add Footer manually inside (public)/(home)/layout.tsx
+
+Final requirement:
+The homepage MUST render the same Footer as all other public pages.
+
+==================================================
+ISSUE 2 — FOOTER STILL TOO DARK
+==================================================
+
+The footer is still visually too dark and heavy.
+
+I do NOT want a dark heavy green block.
+
+Fix the visual direction:
+
+- lighten the main footer background
+- reduce visual heaviness
+- improve contrast with text
+- make sections feel breathable
+- avoid near-black green
+
+Use:
+- softer green tones
+- subtle layering (not dark stacking)
+- cleaner separation between sections
+
+==================================================
+ISSUE 3 — LOGO VISIBILITY
+==================================================
+
+The logo is still not strong enough.
+
+Fix:
+- increase contrast
+- improve visibility
+- give it more space
+- make it feel like a brand anchor
+
+==================================================
+STRICT REQUIREMENTS
+==================================================
+
+- Homepage MUST show footer
+- Same footer on ALL public pages
+- No duplicated footer
+- No page-specific footer
+- Lighter, cleaner design (NOT dark)
+- Better logo visibility
+
+==================================================
+VERIFY BEFORE FINISHING
+==================================================
+
+Check manually:
+
+- / (homepage) → footer visible
+- /requests → footer visible
+- /daily-rentals → footer visible
+- all pages use SAME footer
+
+==================================================
+DO NOT DO THIS
+==================================================
+
+- do NOT tweak small colors only
+- do NOT keep homepage without footer
+- do NOT keep dark green heavy design
+
+Fix structure FIRST, then refine design.

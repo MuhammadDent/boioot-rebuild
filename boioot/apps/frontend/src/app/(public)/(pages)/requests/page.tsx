@@ -124,7 +124,7 @@ function RequestsContent() {
   const hasActiveFilters = !!(typeParam || cityParam);
 
   return (
-    <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", paddingBottom: "3rem" }}>
+    <div dir="rtl" style={{ backgroundColor: "#f8fafc", paddingBottom: "3rem" }}>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <div style={{
@@ -455,7 +455,7 @@ function RequestsContent() {
 export default function RequestsPage() {
   return (
     <Suspense fallback={
-      <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div dir="rtl" style={{ backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Spinner />
       </div>
     }>

@@ -1391,39 +1391,40 @@
 
 /* ── Design tokens ── */
 :root {
-  /* ── PREMIUM FOREST palette — lighter, vibrant, clean ── */
-  /* CTA strip: rich vibrant green — clearly the most lively layer   */
-  --f2-cta-bg:      #17652f;
-  --f2-cta-border:  rgba(255,255,255,0.10);
+  /* ── AIRY SAGE palette — light, breathable, clean ── */
 
-  /* Body: medium forest green — NOT blackish, clearly readable hue  */
-  --f2-body-bg:     #1e3d26;
+  /* CTA strip: vibrant brand green (punchy accent layer) */
+  --f2-cta-bg:      #1b7a3c;
+  --f2-cta-border:  rgba(255,255,255,0.12);
 
-  /* Trust strip: barely-there lighter wash                          */
-  --f2-trust-bg:    rgba(255,255,255,0.04);
+  /* Body: near-white with a faint sage warmth */
+  --f2-body-bg:     #f4faf6;
 
-  /* Bottom bar: one step deeper for clean closure                   */
-  --f2-bottom-bg:   #162f1e;
+  /* Trust strip: barely-there green tint */
+  --f2-trust-bg:    #ebf5ef;
 
-  /* Text — strong, clean contrast */
-  --f2-text:        rgba(255,255,255,0.90);
-  --f2-muted:       rgba(255,255,255,0.55);
-  --f2-link:        rgba(255,255,255,0.78);
-  --f2-link-hover:  #ffffff;
+  /* Bottom bar: soft sage close */
+  --f2-bottom-bg:   #e2efe8;
+
+  /* Text — dark green on light bg */
+  --f2-text:        #1c3825;
+  --f2-muted:       #5a7d6a;
+  --f2-link:        #2a5c38;
+  --f2-link-hover:  #1b7a3c;
 
   /* Accent — brand green */
-  --f2-accent:        #3db85a;
-  --f2-accent-dark:   #2e9047;
-  --f2-accent-hover:  #58d97a;
+  --f2-accent:        #1b7a3c;
+  --f2-accent-dark:   #166432;
+  --f2-accent-hover:  #22a050;
 
   /* Dividers */
-  --f2-divider:    rgba(255,255,255,0.12);
-  --f2-icon-bg:    rgba(255,255,255,0.10);
-  --f2-icon-hover: rgba(255,255,255,0.20);
+  --f2-divider:    rgba(27,122,60,0.14);
+  --f2-icon-bg:    rgba(27,122,60,0.10);
+  --f2-icon-hover: rgba(27,122,60,0.18);
 
-  /* Logo card */
-  --f2-brand-card-bg:     rgba(61,184,90,0.08);
-  --f2-brand-card-border: rgba(61,184,90,0.18);
+  /* Logo card — strong green fill to anchor the brand */
+  --f2-brand-card-bg:     #1b7a3c;
+  --f2-brand-card-border: #166432;
 }
 
 /* ── Shell ── */
@@ -1431,6 +1432,7 @@
   direction: rtl;
   background: var(--f2-body-bg);
   color: var(--f2-text);
+  border-top: 1px solid rgba(27,122,60,0.15);
 }
 
 /* ── Shared container ── */
@@ -1446,7 +1448,7 @@
 ══════════════════════════════════════════════════════════════ */
 
 .footer2__cta-strip {
-  background: linear-gradient(135deg, #1e7a38 0%, var(--f2-cta-bg) 55%, #135428 100%);
+  background: linear-gradient(135deg, #22a050 0%, var(--f2-cta-bg) 50%, #14612e 100%);
   border-bottom: 1px solid var(--f2-cta-border);
   padding: 4.5rem 0;
 }
@@ -1536,6 +1538,18 @@
   background: rgba(255,255,255,0.05);
 }
 
+/* CTA strip overrides: white primary button on green bg */
+.footer2__cta-strip .footer2__btn--primary {
+  background: #ffffff;
+  color: var(--f2-cta-bg);
+  border-color: #ffffff;
+}
+.footer2__cta-strip .footer2__btn--primary:hover {
+  background: rgba(255,255,255,0.90);
+  border-color: rgba(255,255,255,0.90);
+  transform: translateY(-1px);
+}
+
 /* ══════════════════════════════════════════════════════════════
    LAYER 2: MAIN NAV GRID
 ══════════════════════════════════════════════════════════════ */
@@ -1564,20 +1578,23 @@
   display: inline-flex;
   align-items: center;
   background: var(--f2-brand-card-bg);
-  border: 1px solid var(--f2-brand-card-border);
-  border-radius: 10px;
-  padding: 0.55rem 1rem;
-  font-size: 2.2rem;
+  border: 2px solid var(--f2-brand-card-border);
+  border-radius: 12px;
+  padding: 0.6rem 1.25rem;
+  font-size: 2.4rem;
   font-weight: 900;
   letter-spacing: -0.04em;
   color: #ffffff;
   text-decoration: none;
   line-height: 1;
   font-family: var(--font-latin, 'Segoe UI', sans-serif);
-  transition: background 0.2s;
+  box-shadow: 0 2px 12px rgba(27,122,60,0.25);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
 }
 .footer2__wordmark:hover {
-  background: rgba(61,184,90,0.15);
+  background: var(--f2-accent-hover);
+  box-shadow: 0 4px 18px rgba(27,122,60,0.35);
+  transform: translateY(-1px);
 }
 
 .footer2__about-desc {
@@ -1632,7 +1649,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.55);
+  color: #1c3825;
   margin: 0 0 1.1rem;
   padding-bottom: 0.7rem;
   border-bottom: 1px solid var(--f2-divider);
@@ -1773,15 +1790,15 @@
   height: 34px;
   border-radius: 7px;
   background: var(--f2-icon-bg);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.45);
+  border: 1px solid rgba(27,122,60,0.18);
+  color: #2a5c38;
   text-decoration: none;
   transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
 }
 .footer2__social-btn:hover {
   background: var(--f2-icon-hover);
-  border-color: rgba(255,255,255,0.2);
-  color: #fff;
+  border-color: rgba(27,122,60,0.35);
+  color: #1b7a3c;
   transform: translateY(-2px);
 }
 

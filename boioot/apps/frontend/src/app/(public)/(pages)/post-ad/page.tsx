@@ -114,7 +114,7 @@ export default function PostAdPage() {
   const limitReached = stats !== null && stats.used >= stats.limit;
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
+    <div style={{ backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
       <div style={{ maxWidth: 700, margin: "0 auto" }}>
 
         {/* ── Header ── */}

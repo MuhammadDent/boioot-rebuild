@@ -40,7 +40,7 @@ export default function ProjectDetailPage() {
 
   if (error) {
     return (
-      <div style={{ minHeight: "100vh", background: "var(--color-background)", padding: "2rem 0" }}>
+      <div style={{ background: "var(--color-background)", padding: "2rem 0" }}>
         <div className="container" style={{ paddingTop: "3rem" }}>
           <div className="error-banner">{error}</div>
           <Link
@@ -63,7 +63,7 @@ export default function ProjectDetailPage() {
   const statusBadge  = PROJECT_STATUS_BADGE[project.status]  ?? "badge-gray";
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-background)", padding: "2rem 0" }}>
+    <div style={{ background: "var(--color-background)", padding: "2rem 0" }}>
       <div className="container">
 
         {/* Back link */}

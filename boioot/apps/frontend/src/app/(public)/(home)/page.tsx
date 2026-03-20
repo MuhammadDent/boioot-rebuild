@@ -262,7 +262,7 @@ export default function HomePage() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ direction: "rtl", fontFamily: "var(--font-arabic)", minHeight: "100vh", background: "var(--color-background)" }}>
+    <div style={{ direction: "rtl", fontFamily: "var(--font-arabic)", background: "var(--color-background)" }}>
 
       {/* ── TOP HEADER ──────────────────────────────────────────────────────── */}
       <header className="home-hdr">
