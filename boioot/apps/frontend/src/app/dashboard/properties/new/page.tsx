@@ -23,7 +23,7 @@ export default function NewPropertyPage() {
     setServerError("");
     try {
       await dashboardPropertiesApi.create(data as CreatePropertyRequest);
-      router.push("/dashboard/properties");
+      router.push("/dashboard/listings?success=1");
     } catch (e) {
       setServerError(normalizeError(e));
     } finally {
@@ -45,7 +45,7 @@ export default function NewPropertyPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
-          <DashboardBackLink href="/dashboard/properties" label="← العقارات" />
+          <DashboardBackLink href="/dashboard/listings" label="← إعلاناتي" />
           <h1
             style={{
               fontSize: "1.4rem",
@@ -54,7 +54,7 @@ export default function NewPropertyPage() {
               color: "var(--color-text-primary)",
             }}
           >
-            إضافة عقار جديد
+            إضافة إعلان جديد
           </h1>
         </div>
 

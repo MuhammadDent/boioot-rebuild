@@ -51,7 +51,7 @@ export default function EditPropertyPage() {
     setServerError("");
     try {
       await dashboardPropertiesApi.update(id, data as UpdatePropertyRequest);
-      router.push("/dashboard/properties");
+      router.push("/dashboard/listings?success=1");
     } catch (e) {
       setServerError(normalizeError(e));
     } finally {
@@ -73,7 +73,7 @@ export default function EditPropertyPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
-          <DashboardBackLink href="/dashboard/properties" label="← العقارات" />
+          <DashboardBackLink href="/dashboard/listings" label="← إعلاناتي" />
           <h1
             style={{
               fontSize: "1.4rem",
@@ -82,7 +82,7 @@ export default function EditPropertyPage() {
               color: "var(--color-text-primary)",
             }}
           >
-            تعديل العقار
+            تعديل الإعلان
           </h1>
         </div>
 

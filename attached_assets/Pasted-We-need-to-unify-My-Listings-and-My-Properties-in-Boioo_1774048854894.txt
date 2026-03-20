@@ -1,0 +1,102 @@
+We need to unify "My Listings" and "My Properties" in Boioot.
+
+Currently, there is a confusing separation between:
+- "إعلاناتي"
+- "عقاراتي"
+
+This creates UX confusion because in our system a property IS the listing.
+
+==================================================
+GOAL
+==================================================
+
+Unify both into a single concept:
+"Listings" (العقارات / الإعلانات)
+
+==================================================
+REQUIRED CHANGES
+==================================================
+
+1. REMOVE DUPLICATION
+
+- Remove the separation between:
+  - My Listings
+  - My Properties
+
+- Keep only ONE section:
+  → "إعلاناتي" (or "عقاراتي")
+
+2. SINGLE SOURCE OF TRUTH
+
+- The listing should represent the property itself
+- No separate concept of "draft property vs listing" for now
+
+3. DASHBOARD UPDATE
+
+Update dashboard cards:
+
+Current:
+- إضافة عقار
+- إعلاناتي
+- إدارة العقارات
+
+Replace with:
+
+- إضافة إعلان جديد
+- إدارة إعلاناتي
+
+4. ROUTES
+
+Unify routes:
+
+Remove:
+- /dashboard/properties
+
+Keep:
+- /dashboard/listings
+
+All CRUD operations should go through listings
+
+5. UI TEXT (Arabic)
+
+Replace:
+
+- "إضافة عقار جديد" → "إضافة إعلان جديد"
+- "عقاراتي" → "إعلاناتي"
+- "إدارة العقارات" → "إدارة الإعلانات"
+
+6. BACKEND
+
+- Ensure no duplicate logic between property and listing
+- Use one model (Property = Listing)
+- Remove any unused endpoints if redundant
+
+7. FUTURE READY
+
+Design should allow later:
+
+- Draft vs Published status
+- Moderation
+- Boosted listings
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT break existing data.
+
+If both systems exist:
+- map properties to listings
+- ensure backward compatibility
+
+==================================================
+DELIVERABLE
+==================================================
+
+Return:
+
+1. What was removed
+2. What was unified
+3. Updated routes
+4. Updated UI labels
+5. Any backend changes

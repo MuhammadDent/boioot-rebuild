@@ -95,7 +95,7 @@ export default function PostAdPage() {
       };
 
       await api.post("/properties/post", payload);
-      router.push("/dashboard/my-listings?success=1");
+      router.push("/dashboard/listings?success=1");
     } catch (e) {
       setServerError(normalizeError(e));
     } finally {
@@ -180,7 +180,7 @@ export default function PostAdPage() {
             </p>
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
               <Link
-                href="/dashboard/my-listings"
+                href="/dashboard/listings"
                 style={{ padding: "0.65rem 1.5rem", borderRadius: 9, border: "1.5px solid #e2e8f0", color: "#374151", textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}
               >
                 إعلاناتي

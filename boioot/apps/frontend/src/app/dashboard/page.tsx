@@ -504,7 +504,7 @@ export default function DashboardPage() {
               </div>
             ) : summary ? (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                <StatCard href="/dashboard/properties" label="العقارات" value={summary.totalProperties}
+                <StatCard href="/dashboard/listings" label="الإعلانات" value={summary.totalProperties}
                   icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>}
                 />
                 <StatCard
@@ -579,14 +579,14 @@ export default function DashboardPage() {
               {hasPermission(user, "properties.create") && (
                 <QuickActionCard
                   href="/dashboard/properties/new"
-                  label="إضافة عقار جديد"
+                  label="إضافة إعلان جديد"
                   description="نشر إعلان عقاري جديد على المنصة"
                   color="var(--color-primary)"
                   icon={<path d="M12 5v14M5 12h14"/>}
                   primary
                 />
               )}
-              <NavCard href="/dashboard/my-listings" label="إعلاناتي" description="عرض جميع إعلاناتك العقارية وتعديلها وحذفها"
+              <NavCard href="/dashboard/listings" label="إعلاناتي" description="عرض جميع إعلاناتك العقارية وتعديلها وحذفها"
                 icon={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>}
               />
               {isCompanyOrAdmin && (
@@ -620,7 +620,7 @@ export default function DashboardPage() {
         <div style={{ marginBottom: "1.25rem" }}>
           <SectionLabel>إعلاناتي</SectionLabel>
           <NavCard
-            href="/dashboard/my-listings"
+            href="/dashboard/listings"
             label="إعلاناتي"
             description="عرض جميع إعلاناتك العقارية وتعديلها وحذفها"
             icon={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>}
