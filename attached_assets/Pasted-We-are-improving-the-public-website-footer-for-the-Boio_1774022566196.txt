@@ -1,0 +1,124 @@
+We are improving the public website footer for the Boioot real estate platform.
+
+GOAL
+Build a new professional, modern, premium footer that is clearly better than the old Boioot footer.
+It should feel trustworthy, clean, corporate, Arabic-first, and suitable for a serious real estate marketplace.
+The footer must look polished on desktop and mobile.
+
+IMPORTANT
+- Keep the design consistent with the Boioot brand
+- Arabic RTL must be fully correct
+- The footer should NOT look crowded or outdated
+- Improve hierarchy, spacing, typography, alignment, and usability
+- Do not just copy the old footer; create a stronger, more premium version
+- Keep it production-ready, reusable, and maintainable
+
+DESIGN DIRECTION
+The new footer should include:
+1. Strong brand area
+   - Boioot logo
+   - short professional platform description
+   - trust-oriented wording
+   - optional small “download app later” placeholder area if architecture allows
+
+2. Better structured link groups
+   Suggested groups:
+   - الرئيسية / الأقسام الرئيسية
+   - العقارات / الاستكشاف
+   - الخدمات / الطلبات
+   - الشركة / عن بيوت
+   - الدعم / المساعدة
+   - سياسات وقوانين
+
+3. Clear quick actions
+   - أضف إعلانك
+   - أضف طلبك
+   - تواصل معنا
+   - طلب تسويق عقار
+   These should be visually emphasized more than normal links
+
+4. Contact and social area
+   - social icons with better styling
+   - optional contact methods if available in config/settings
+   - no fake data unless clearly marked as placeholder
+
+5. Bottom bar
+   - copyright
+   - optional secondary links like privacy / terms
+   - neat separator and proper spacing
+
+UX / UI REQUIREMENTS
+- Use modern spacing and grid layout
+- Proper RTL alignment
+- Better typography scale
+- Better visual hierarchy between headings and links
+- Elegant hover states
+- Soft separators, subtle borders, refined background
+- Premium but not flashy
+- Accessible color contrast
+- Works beautifully on mobile, tablet, desktop
+- No clutter, no oversized empty areas, no broken alignment
+
+TECHNICAL REQUIREMENTS
+- Use the current project design system and existing UI patterns where possible
+- Build as reusable footer component
+- Keep code clean and modular
+- Avoid hardcoded duplicated markup
+- If there is existing footer code, refactor it instead of stacking messy patches
+- Ensure responsive behavior is intentional, not accidental
+- Make sure RTL + Arabic content is handled correctly
+- Preserve SEO-friendly internal links
+- Do not break existing routes
+
+CONTENT STRUCTURE TO IMPLEMENT
+Please propose and implement a better footer structure with sections such as:
+- Brand / platform intro
+- الرئيسية
+- العقارات
+- الطلبات والخدمات
+- الدعم
+- السياسات
+- social links
+- bottom copyright row
+
+SUGGESTED LINK EXAMPLES
+You may use existing valid routes only:
+- الرئيسية
+- العقارات
+- المشاريع
+- الطلبات
+- المدونة
+- أضف إعلان
+- أضف طلب
+- طلب تسويق عقار
+- اتصل بنا
+- الأسئلة الشائعة
+- سياسة الخصوصية
+- الشروط والأحكام
+
+IF SOME ROUTES DO NOT EXIST
+- do not invent broken links
+- use only real routes already in the project
+- if a route is missing, leave a TODO comment or adapt gracefully
+
+DELIVERABLES
+1. Implement the new footer UI
+2. Improve visual design significantly
+3. Ensure full RTL responsiveness
+4. Keep it cleaner and more premium than the old footer
+5. Show me:
+   - what file(s) you changed
+   - what structural improvements you made
+   - what UX improvements you made
+   - what responsive improvements you made
+
+SUCCESS CRITERIA
+The new footer must feel:
+- more premium
+- more organized
+- more useful
+- more trustworthy
+- more modern
+than the old Boioot footer.
+
+Do not stop at a basic footer. I want a polished SaaS-grade marketplace footer.
