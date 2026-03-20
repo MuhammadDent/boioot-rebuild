@@ -753,6 +753,7 @@ public class AdminService : IAdminService
             Type = p.Type.ToString(),
             ListingType = p.ListingType,
             Status = p.Status.ToString(),
+            Province = p.Province,
             City = p.City,
             Neighborhood = p.Neighborhood,
             Address = p.Address,
