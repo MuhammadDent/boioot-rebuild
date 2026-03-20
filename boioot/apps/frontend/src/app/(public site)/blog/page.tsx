@@ -128,12 +128,22 @@ export default function BlogPage() {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
     setLoading(true); setError("");
     publicBlogApi
       .getPosts({ page, pageSize: PAGE_SIZE, categorySlug: activeSlug ?? undefined })
-      .then(r => { setPosts(r.items); setTotalPages(r.totalPages); setTotalCount(r.totalCount); })
-      .catch(e => setError(normalizeError(e)))
-      .finally(() => setLoading(false));
+      .then(r => {
+        if (controller.signal.aborted) return;
+        setPosts(r.items); setTotalPages(r.totalPages); setTotalCount(r.totalCount);
+      })
+      .catch(e => {
+        if (controller.signal.aborted) return;
+        setError(normalizeError(e));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [page, activeSlug]);
 
   function selectCategory(slug: string | null) {
