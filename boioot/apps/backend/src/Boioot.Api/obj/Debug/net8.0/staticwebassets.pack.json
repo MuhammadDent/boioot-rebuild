@@ -9,6 +9,14 @@
       "PackagePath": "staticwebassets/uploads/079a1e09-5cd4-42cb-8759-96cbb2a7132f.jpg"
     },
     {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/097ca39f-18ca-42fd-bc2f-ea02eac81235.jpg",
+      "PackagePath": "staticwebassets/uploads/097ca39f-18ca-42fd-bc2f-ea02eac81235.jpg"
+    },
+    {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/0d79a473-f61f-42ee-b3a5-4f590e8ac903.webp",
+      "PackagePath": "staticwebassets/uploads/0d79a473-f61f-42ee-b3a5-4f590e8ac903.webp"
+    },
+    {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/26839264-46dd-44eb-b8c5-24240e7be6da.jpg",
       "PackagePath": "staticwebassets/uploads/26839264-46dd-44eb-b8c5-24240e7be6da.jpg"
     },
@@ -81,8 +89,16 @@
       "PackagePath": "staticwebassets/uploads/c5f2b7dc-64ed-41fd-bc25-cccf01ed4192.png"
     },
     {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/c9017ce9-ed75-48b5-bba8-6b0dde174f3b.jpg",
+      "PackagePath": "staticwebassets/uploads/c9017ce9-ed75-48b5-bba8-6b0dde174f3b.jpg"
+    },
+    {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/d13a98fd-0791-455a-aba4-53d9401d7eb4.webp",
       "PackagePath": "staticwebassets/uploads/d13a98fd-0791-455a-aba4-53d9401d7eb4.webp"
+    },
+    {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/dee81411-dfd5-4b3b-837a-5d81fa27161c.jpg",
+      "PackagePath": "staticwebassets/uploads/dee81411-dfd5-4b3b-837a-5d81fa27161c.jpg"
     },
     {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/eb8e0467-aff7-46ad-bac1-407f7d3f62ea.webp",

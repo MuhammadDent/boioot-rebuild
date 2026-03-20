@@ -331,7 +331,7 @@ export default function HomePage() {
       {/* ── LISTING TYPE BAR ─────────────────────────────────────────────────── */}
       <div style={{ background: "#fff", borderBottom: "1px solid var(--color-border)" }}>
         <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <button style={arrowBtnStyle}>&#8594;</button>
+          <button style={arrowBtnStyle}>→</button>
           <div style={{ display: "flex", gap: "0.4rem", overflowX: "auto", padding: "0.6rem 0", flex: 1, scrollbarWidth: "none" }}>
             {LISTING_TABS.map((tab, i) => (
               <button key={i} onClick={() => setActiveTab(i)} style={{
@@ -351,7 +351,7 @@ export default function HomePage() {
               </button>
             ))}
           </div>
-          <button style={arrowBtnStyle}>&#8592;</button>
+          <button style={arrowBtnStyle}>←</button>
         </div>
       </div>
 
@@ -389,8 +389,8 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-        <button onClick={() => goSlide((slideIndex - 1 + SLIDES.length) % SLIDES.length)} style={sliderArrowStyle("right")} aria-label="السابق">&#8594;</button>
-        <button onClick={() => goSlide((slideIndex + 1) % SLIDES.length)} style={sliderArrowStyle("left")} aria-label="التالي">&#8592;</button>
+        <button onClick={() => goSlide((slideIndex - 1 + SLIDES.length) % SLIDES.length)} style={sliderArrowStyle("right")} aria-label="السابق">→</button>
+        <button onClick={() => goSlide((slideIndex + 1) % SLIDES.length)} style={sliderArrowStyle("left")} aria-label="التالي">←</button>
         <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8 }}>
           {SLIDES.map((_, i) => (
             <button key={i} onClick={() => goSlide(i)} style={{ width: i === slideIndex ? 24 : 10, height: 10, borderRadius: 999, border: "none", background: i === slideIndex ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} aria-label={`الشريحة ${i + 1}`} />
