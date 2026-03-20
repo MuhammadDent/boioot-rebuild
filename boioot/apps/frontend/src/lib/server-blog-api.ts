@@ -1,4 +1,4 @@
-import type { PublicBlogPostDetail, BlogSeoSettingsDto } from "@/types";
+import type { PublicBlogPostDetail, BlogSeoSettingsDto, PublicBlogCategory } from "@/types";
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:5233";
 
@@ -12,6 +12,17 @@ export async function serverGetBlogPost(
     return (await res.json()) as PublicBlogPostDetail;
   } catch {
     return null;
+  }
+}
+
+export async function serverGetBlogCategories(): Promise<PublicBlogCategory[]> {
+  try {
+    const url = new URL("/api/blog/categories", BACKEND);
+    const res = await fetch(url.toString(), { next: { revalidate: 300 } });
+    if (!res.ok) return [];
+    return (await res.json()) as PublicBlogCategory[];
+  } catch {
+    return [];
   }
 }
 

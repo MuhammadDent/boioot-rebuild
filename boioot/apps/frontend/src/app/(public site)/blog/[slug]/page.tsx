@@ -28,15 +28,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { metaTitle, metaDescription, ogTitle, ogDescription } =
     resolveBlogSeo(post, seoSettings);
 
+  const images = post.coverImageUrl
+    ? [{ url: post.coverImageUrl, alt: post.coverImageAlt ?? post.title }]
+    : [];
+
   return {
     title: metaTitle,
     description: metaDescription,
     openGraph: {
       title: ogTitle,
       description: ogDescription,
-      ...(post.coverImageUrl
-        ? { images: [{ url: post.coverImageUrl, alt: post.coverImageAlt ?? post.title }] }
-        : {}),
+      type: "article",
+      url: `/blog/${post.slug}`,
+      publishedTime: post.publishedAt ?? undefined,
+      ...(images.length > 0 ? { images } : {}),
+    },
+    twitter: {
+      card: images.length > 0 ? "summary_large_image" : "summary",
+      title: ogTitle,
+      description: ogDescription,
+      ...(images.length > 0 ? { images: [post.coverImageUrl!] } : {}),
     },
   };
 }

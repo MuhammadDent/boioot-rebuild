@@ -10,9 +10,25 @@ const cairo = Cairo({
   variable: "--font-cairo",
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.REPLIT_DEV_DOMAIN
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "بيوت — منصة العقارات السورية",
   description: "ابحث عن شقتك أو منزلك المثالي في سوريا",
+  openGraph: {
+    siteName: "بيوت",
+    locale: "ar_SY",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@boioot_sy",
+  },
 };
 
 export default function RootLayout({
