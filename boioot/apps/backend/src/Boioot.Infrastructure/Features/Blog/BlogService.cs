@@ -350,6 +350,11 @@ public class BlogService : IBlogService
     {
         BlogPostValidation.EnsureCreateValid(request);
 
+        var userExists = await _db.Users.AnyAsync(u => u.Id == createdByUserId, ct);
+        if (!userExists)
+            throw new BoiootException(
+                "انتهت صلاحية جلستك أو حسابك غير موجود. يرجى تسجيل الخروج والدخول من جديد.", 401);
+
         var slug = await _slugService.UniquePostSlugAsync(
             string.IsNullOrWhiteSpace(request.Slug) ? request.Title : request.Slug,
             excludeId: null, ct);
@@ -409,6 +414,11 @@ public class BlogService : IBlogService
         Guid id, Guid updatedByUserId, UpdateBlogPostRequest request, CancellationToken ct = default)
     {
         BlogPostValidation.EnsureUpdateValid(request);
+
+        var userExists = await _db.Users.AnyAsync(u => u.Id == updatedByUserId, ct);
+        if (!userExists)
+            throw new BoiootException(
+                "انتهت صلاحية جلستك أو حسابك غير موجود. يرجى تسجيل الخروج والدخول من جديد.", 401);
 
         var post = await _db.Set<BlogPost>()
             .IgnoreQueryFilters()
