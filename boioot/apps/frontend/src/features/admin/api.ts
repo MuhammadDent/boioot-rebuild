@@ -120,6 +120,16 @@ export const adminApi = {
     return api.get(`/admin/properties?${qs}`);
   },
 
+  /** DELETE /api/properties/{id} — AdminOrCompanyOwner policy */
+  deleteProperty(id: string): Promise<void> {
+    return api.delete(`/properties/${id}`);
+  },
+
+  /** PATCH /api/admin/properties/{id}/status */
+  updatePropertyStatus(id: string, status: string): Promise<void> {
+    return api.patch(`/admin/properties/${id}/status`, { status });
+  },
+
   getProjects(
     page: number,
     pageSize: number,

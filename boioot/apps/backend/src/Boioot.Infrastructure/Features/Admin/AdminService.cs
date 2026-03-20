@@ -721,7 +721,7 @@ public class AdminService : IAdminService
         int page, int pageSize, PropertyStatus? status, string? city, CancellationToken ct = default)
     {
         page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, 1, 50);
+        pageSize = Math.Clamp(pageSize, 1, 500);
 
         var query = _context.Properties
             .AsNoTracking()
@@ -1381,6 +1381,16 @@ public class AdminService : IAdminService
             .FirstOrDefaultAsync(t => t.Id == id, ct)
             ?? throw new BoiootException("نوع الملكية غير موجود", 404);
         _context.OwnershipTypeConfigs.Remove(entity);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdatePropertyStatusAsync(Guid propertyId, PropertyStatus status, CancellationToken ct = default)
+    {
+        var property = await _context.Properties
+            .FirstOrDefaultAsync(p => p.Id == propertyId, ct)
+            ?? throw new BoiootException("العقار غير موجود", 404);
+        property.Status    = status;
+        property.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
     }
 }

@@ -88,4 +88,7 @@ public interface IAdminService
     Task<OwnershipTypeResponse> CreateOwnershipTypeAsync(UpsertOwnershipTypeRequest request, CancellationToken ct = default);
     Task<OwnershipTypeResponse> UpdateOwnershipTypeAsync(Guid id, UpsertOwnershipTypeRequest request, CancellationToken ct = default);
     Task DeleteOwnershipTypeAsync(Guid id, CancellationToken ct = default);
+
+    // Property status management
+    Task UpdatePropertyStatusAsync(Guid propertyId, PropertyStatus status, CancellationToken ct = default);
 }

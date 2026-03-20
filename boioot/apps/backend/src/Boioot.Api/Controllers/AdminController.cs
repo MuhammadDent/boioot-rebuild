@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Boioot.Api.Controllers;
 
+public record AdminUpdatePropertyStatusRequest(PropertyStatus Status);
+
 [Route("api/admin")]
 [Authorize]   // base: must be authenticated; per-method [RequirePermission] enforces RBAC
 public class AdminController : BaseController
@@ -254,6 +256,15 @@ public class AdminController : BaseController
     {
         var result = await _admin.GetPropertiesAsync(page, pageSize, status, city, ct);
         return Ok(result);
+    }
+
+    [HttpPatch("properties/{id:guid}/status")]
+    [RequirePermission(Permissions.PropertiesEdit)]
+    public async Task<IActionResult> UpdatePropertyStatus(
+        Guid id, [FromBody] AdminUpdatePropertyStatusRequest request, CancellationToken ct = default)
+    {
+        await _admin.UpdatePropertyStatusAsync(id, request.Status, ct);
+        return NoContent();
     }
 
     // ── Projects ──────────────────────────────────────────────────────────────
