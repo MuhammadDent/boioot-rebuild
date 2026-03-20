@@ -1,157 +1,303 @@
 "use client";
 
-import { useMemo } from "react";
-import type { RequestResponse } from "@/types";
-import { REQUEST_STATUS_LABELS } from "@/features/dashboard/requests/constants";
+import type {
+  EnrichedRequest, IsolationState, DistributionEntry,
+} from "./_types";
+import { GROUP_BY_OPTIONS, GROUP_KEY_LABELS } from "./_types";
+import { computeDistribution } from "./_helpers";
 
-// ─── Text extraction helpers ───────────────────────────────────────────────────
-const PROP_TYPES = ["شقة", "فيلا", "مكتب", "أرض", "محل", "استوديو", "دوبلكس", "منزل", "مخزن", "عمارة", "مشروع"];
+// ─── Palette for distribution bars ────────────────────────────────────────────
+const GROUP_COLORS: Record<string, string> = {
+  status:   "#3b82f6",
+  city:     "#0ea5e9",
+  district: "#8b5cf6",
+  propType: "#f59e0b",
+  rooms:    "#10b981",
+  company:  "#f97316",
+};
 
-function extractCity(title: string): string {
-  const m = title.match(/[—-]\s*([^—-]+)$/);
-  return m ? m[1].trim() : "غير محدد";
-}
-
-function extractPropertyType(title: string): string {
-  for (const t of PROP_TYPES) {
-    if (title.startsWith(t)) return t;
-  }
-  return "أخرى";
-}
-
-function extractRooms(title: string): string {
-  const m = title.match(/(\d+)\s+غرف/);
-  if (m) return `${m[1]} غرفة`;
-  if (/غرفة واحدة|1\s*غرفة/.test(title)) return "1 غرفة";
-  return "بدون تحديد";
-}
-
-function tally(items: string[]): [string, number][] {
-  const c: Record<string, number> = {};
-  for (const i of items) c[i] = (c[i] || 0) + 1;
-  return Object.entries(c).sort((a, b) => b[1] - a[1]);
-}
-
-// ─── Distribution bar ──────────────────────────────────────────────────────────
-function DistributionRow({
-  label, count, total, color = "#3b82f6",
+// ─── GroupBy selector ─────────────────────────────────────────────────────────
+function GroupBySelector({
+  groupBy, onChange,
 }: {
-  label: string; count: number; total: number; color?: string;
+  groupBy: string;
+  onChange: (key: string) => void;
 }) {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
-    <div style={{ marginBottom: "0.6rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
-        <span style={{ fontSize: "0.79rem", color: "#334155", fontWeight: 600 }}>{label}</span>
-        <span style={{ fontSize: "0.75rem", color: "#64748b" }}>
-          <strong style={{ color: "#0f172a" }}>{count}</strong> · {pct}%
-        </span>
+    <div style={{ marginBottom: "0.85rem" }}>
+      <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#64748b", marginBottom: "0.45rem" }}>
+        عرض التحليل حسب
       </div>
-      <div style={{ height: 7, backgroundColor: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
-        <div style={{
-          height: "100%", width: `${pct}%`,
-          backgroundColor: color, borderRadius: 4,
-          transition: "width 0.5s ease",
-          minWidth: count > 0 ? 4 : 0,
-        }} />
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+        {GROUP_BY_OPTIONS.map(opt => {
+          const active = groupBy === opt.key;
+          return (
+            <button
+              key={opt.key}
+              onClick={() => onChange(opt.key)}
+              style={{
+                padding: "0.35rem 0.85rem", borderRadius: 20,
+                fontSize: "0.78rem", fontWeight: 600,
+                border: `1.5px solid ${active ? GROUP_COLORS[opt.key] : "#e2e8f0"}`,
+                backgroundColor: active ? GROUP_COLORS[opt.key] : "#f8fafc",
+                color: active ? "#fff" : "#64748b",
+                cursor: "pointer", fontFamily: "inherit",
+                transition: "all 0.15s",
+              }}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ─── Analytics card ────────────────────────────────────────────────────────────
-function AnalyticsCard({
-  icon, title, items, total, color,
+// ─── Isolation chips ──────────────────────────────────────────────────────────
+function IsolationChips({
+  isolation, onRemove, onClearAll,
 }: {
-  icon: string; title: string;
-  items: [string, number][];
-  total: number; color?: string;
+  isolation: IsolationState;
+  onRemove: (key: string) => void;
+  onClearAll: () => void;
 }) {
-  const shown = items.slice(0, 6);
+  const entries = Object.entries(isolation);
+  if (entries.length === 0) return null;
+
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: "0.4rem",
+      alignItems: "center", marginBottom: "0.85rem",
+      padding: "0.7rem 0.85rem",
+      backgroundColor: "#eff6ff", borderRadius: 10,
+      border: "1px solid #bfdbfe",
+    }}>
+      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1d4ed8" }}>التصفية التحليلية:</span>
+      {entries.map(([key, value]) => (
+        <span
+          key={key}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "0.25rem",
+            backgroundColor: "#1d4ed8", color: "#fff",
+            borderRadius: 20, padding: "0.2rem 0.5rem 0.2rem 0.75rem",
+            fontSize: "0.76rem", fontWeight: 600,
+          }}
+        >
+          {GROUP_KEY_LABELS[key]}: {value}
+          <button
+            onClick={() => onRemove(key)}
+            style={{
+              background: "none", border: "none",
+              color: "rgba(255,255,255,0.8)", cursor: "pointer",
+              fontSize: "0.95rem", lineHeight: 1, padding: "0 0.1rem",
+              fontFamily: "inherit",
+            }}
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      <button
+        onClick={onClearAll}
+        style={{
+          marginRight: "auto",
+          background: "none", border: "1px solid #93c5fd",
+          color: "#1d4ed8", borderRadius: 8,
+          padding: "0.2rem 0.6rem", fontSize: "0.74rem",
+          fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+        }}
+      >
+        مسح التصفية التحليلية
+      </button>
+    </div>
+  );
+}
+
+// ─── Single distribution bar row ──────────────────────────────────────────────
+function DistributionRow({
+  entry, total, color, isActive, onClick,
+}: {
+  entry: DistributionEntry;
+  total: number;
+  color: string;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const pct = total > 0 ? Math.round((entry.count / total) * 100) : 0;
+
+  return (
+    <div
+      onClick={onClick}
+      title={isActive ? `إلغاء عزل "${entry.displayLabel}"` : `عزل "${entry.displayLabel}"`}
+      style={{
+        display: "flex", alignItems: "center", gap: "0.75rem",
+        padding: "0.55rem 0.65rem", borderRadius: 8,
+        marginBottom: "0.3rem",
+        backgroundColor: isActive ? `${color}14` : "transparent",
+        border: `1px solid ${isActive ? color : "transparent"}`,
+        cursor: "pointer", transition: "all 0.15s",
+      }}
+      onMouseEnter={e => {
+        if (!isActive) (e.currentTarget as HTMLDivElement).style.backgroundColor = "#f8fafc";
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLDivElement).style.backgroundColor = isActive ? `${color}14` : "transparent";
+      }}
+    >
+      {/* Active indicator */}
+      <div style={{
+        width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
+        backgroundColor: isActive ? color : "transparent",
+        border: `2px solid ${isActive ? color : "#e2e8f0"}`,
+        transition: "all 0.15s",
+      }} />
+
+      {/* Label */}
+      <span style={{
+        fontSize: "0.82rem", fontWeight: isActive ? 700 : 500,
+        color: isActive ? "#0f172a" : "#334155",
+        minWidth: 90, maxWidth: 120,
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}>
+        {entry.displayLabel}
+      </span>
+
+      {/* Bar */}
+      <div style={{ flex: 1, height: 8, backgroundColor: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
+        <div style={{
+          height: "100%", width: `${pct}%`,
+          backgroundColor: isActive ? color : `${color}99`,
+          borderRadius: 4, transition: "width 0.4s ease, background-color 0.15s",
+          minWidth: entry.count > 0 ? 4 : 0,
+        }} />
+      </div>
+
+      {/* Stats */}
+      <span style={{
+        fontSize: "0.75rem", color: "#64748b",
+        whiteSpace: "nowrap", flexShrink: 0, minWidth: 60, textAlign: "left",
+      }}>
+        <strong style={{ color: "#0f172a" }}>{entry.count}</strong> · {pct}%
+      </span>
+    </div>
+  );
+}
+
+// ─── Distribution widget ───────────────────────────────────────────────────────
+function DistributionWidget({
+  entries, total, color, isolation, groupBy, onRowClick,
+}: {
+  entries: DistributionEntry[];
+  total: number;
+  color: string;
+  isolation: IsolationState;
+  groupBy: string;
+  onRowClick: (rawValue: string) => void;
+}) {
+  if (entries.length === 0) {
+    return (
+      <div style={{ padding: "1.5rem", textAlign: "center", color: "#94a3b8", fontSize: "0.85rem" }}>
+        لا توجد بيانات كافية للتحليل
+      </div>
+    );
+  }
+
+  const activeValue = isolation[groupBy];
+
+  return (
+    <div>
+      {entries.map(entry => (
+        <DistributionRow
+          key={entry.rawValue}
+          entry={entry}
+          total={total}
+          color={color}
+          isActive={activeValue === entry.rawValue}
+          onClick={() => onRowClick(entry.rawValue)}
+        />
+      ))}
+      <p style={{
+        margin: "0.75rem 0 0", fontSize: "0.73rem", color: "#94a3b8",
+        textAlign: "center", fontStyle: "italic",
+      }}>
+        اضغط على أي صف للتعمق في بياناته — اضغط مرة أخرى لإلغاء العزل
+      </p>
+    </div>
+  );
+}
+
+// ─── Main AnalyticsSection export ────────────────────────────────────────────
+export function AnalyticsSection({
+  fullyFiltered,
+  baseFilteredCount,
+  groupBy,
+  isolation,
+  onGroupByChange,
+  onIsolationRemove,
+  onIsolationClearAll,
+  onSegmentClick,
+}: {
+  fullyFiltered:       EnrichedRequest[];
+  baseFilteredCount:   number;
+  groupBy:             string;
+  isolation:           IsolationState;
+  onGroupByChange:     (key: string) => void;
+  onIsolationRemove:   (key: string) => void;
+  onIsolationClearAll: () => void;
+  onSegmentClick:      (rawValue: string) => void;
+}) {
+  const entries = computeDistribution(fullyFiltered, groupBy);
+  const color   = GROUP_COLORS[groupBy] ?? "#3b82f6";
+  const hasIsolation = Object.keys(isolation).length > 0;
+
   return (
     <div style={{
       backgroundColor: "#fff", borderRadius: 14,
-      border: "1px solid #e2e8f0", padding: "1.1rem 1.25rem",
+      border: "1px solid #e2e8f0",
+      padding: "1.25rem",
+      marginBottom: "1.5rem",
       boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", marginBottom: "1rem" }}>
-        <span style={{ fontSize: "1rem" }}>{icon}</span>
-        <h3 style={{ margin: 0, fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>{title}</h3>
+
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "1rem" }}>📊</span>
+        <h3 style={{ margin: 0, fontSize: "0.92rem", fontWeight: 800, color: "#0f172a" }}>
+          التحليلات التفاعلية
+        </h3>
         <span style={{
           marginRight: "auto",
-          backgroundColor: "#f1f5f9", color: "#64748b",
-          borderRadius: 10, padding: "0.1rem 0.5rem",
-          fontSize: "0.72rem", fontWeight: 700,
+          fontSize: "0.75rem", color: "#64748b",
+          backgroundColor: hasIsolation ? "#eff6ff" : "#f1f5f9",
+          color: hasIsolation ? "#1d4ed8" : "#64748b",
+          borderRadius: 10, padding: "0.15rem 0.6rem",
+          fontWeight: 600,
         }}>
-          {total}
+          {hasIsolation
+            ? `${fullyFiltered.length} من ${baseFilteredCount} طلب (معزول)`
+            : `${fullyFiltered.length} طلب`}
         </span>
       </div>
-      {shown.length === 0 ? (
-        <p style={{ margin: 0, fontSize: "0.8rem", color: "#94a3b8", textAlign: "center" }}>لا توجد بيانات</p>
-      ) : (
-        shown.map(([label, count]) => (
-          <DistributionRow key={label} label={label} count={count} total={total} color={color} />
-        ))
-      )}
-    </div>
-  );
-}
 
-// ─── Analytics Section ─────────────────────────────────────────────────────────
-export function AnalyticsSection({ allRequests }: { allRequests: RequestResponse[] }) {
-  const data = useMemo(() => {
-    const propReqs  = allRequests.filter(r => !!r.propertyTitle);
-    const total     = allRequests.length;
-    const propTotal = propReqs.length;
+      {/* ── GroupBy selector ── */}
+      <GroupBySelector groupBy={groupBy} onChange={onGroupByChange} />
 
-    const byStatus   = tally(allRequests.map(r => REQUEST_STATUS_LABELS[r.status] ?? r.status));
-    const byType     = tally(allRequests.map(r => r.propertyId ? "عقار" : r.projectId ? "مشروع" : "عام"));
-    const byCity     = tally(propReqs.map(r => extractCity(r.propertyTitle!)));
-    const byPropType = tally(propReqs.map(r => extractPropertyType(r.propertyTitle!)));
-    const byRooms    = tally(propReqs.map(r => extractRooms(r.propertyTitle!)));
-    const byCompany  = tally(
-      allRequests.filter(r => !!r.companyName).map(r => r.companyName!)
-    );
+      {/* ── Isolation chips ── */}
+      <IsolationChips
+        isolation={isolation}
+        onRemove={onIsolationRemove}
+        onClearAll={onIsolationClearAll}
+      />
 
-    return { total, propTotal, byStatus, byType, byCity, byPropType, byRooms, byCompany };
-  }, [allRequests]);
-
-  return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-      gap: "0.85rem",
-      marginBottom: "1.5rem",
-    }}>
-      <AnalyticsCard
-        icon="🔵" title="توزيع الحالات"
-        items={data.byStatus} total={data.total}
-        color="#3b82f6"
-      />
-      <AnalyticsCard
-        icon="📁" title="نوع الطلب"
-        items={data.byType} total={data.total}
-        color="#8b5cf6"
-      />
-      <AnalyticsCard
-        icon="🏙️" title="حسب المدينة"
-        items={data.byCity} total={data.propTotal}
-        color="#0ea5e9"
-      />
-      <AnalyticsCard
-        icon="🏠" title="نوع العقار"
-        items={data.byPropType} total={data.propTotal}
-        color="#f59e0b"
-      />
-      <AnalyticsCard
-        icon="🛏️" title="عدد الغرف"
-        items={data.byRooms} total={data.propTotal}
-        color="#10b981"
-      />
-      <AnalyticsCard
-        icon="🏢" title="حسب الشركة"
-        items={data.byCompany} total={data.total}
-        color="#f97316"
+      {/* ── Distribution ── */}
+      <DistributionWidget
+        entries={entries}
+        total={fullyFiltered.length}
+        color={color}
+        isolation={isolation}
+        groupBy={groupBy}
+        onRowClick={onSegmentClick}
       />
     </div>
   );

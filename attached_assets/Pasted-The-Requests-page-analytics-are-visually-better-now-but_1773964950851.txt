@@ -1,0 +1,164 @@
+The Requests page analytics are visually better now, but they still do NOT meet the actual product requirement.
+
+Current issue:
+- Analytics are displayed as static distributions/charts
+- But they are not properly separated from filtering logic
+- I cannot isolate groups clearly
+- I cannot drill down into one segment and analyze it separately
+- The analytics feel decorative, not operational
+
+We need to refactor the Requests analytics experience.
+
+IMPORTANT:
+- Do NOT break the current page
+- Build on top of the current implementation
+- Keep current data source and existing filters working
+- Focus on making analytics actually useful for segmentation and isolation
+
+==================================================
+GOAL
+==================================================
+
+Make Requests analytics truly filterable, segmentable, and isolatable.
+
+The user should be able to:
+- filter the whole dataset
+- choose how analytics are grouped
+- isolate one segment
+- drill down into a subset
+- clear isolation and return to full dataset
+
+==================================================
+REQUIRED STRUCTURE
+==================================================
+
+1) GLOBAL FILTERS PANEL
+This should control the entire dataset shown on the page:
+- city
+- district
+- property type
+- rooms
+- budget range
+- status
+- company
+- date range
+- search
+
+These filters must affect:
+- KPI cards
+- analytics section
+- requests list
+
+2) ANALYTICS GROUPING CONTROLS
+Add a separate control above analytics:
+"عرض التحليل حسب"
+
+Options:
+- الحالة
+- المدينة
+- الحي
+- نوع العقار
+- عدد الغرف
+- الميزانية
+- الشركة
+
+This should change how analytics are grouped.
+
+Example:
+If user selects "المدينة"
+Analytics should show grouped distribution by city.
+If user selects "عدد الغرف"
+Analytics should show grouped distribution by rooms.
+
+3) SEGMENT ISOLATION / DRILL-DOWN
+When the user clicks any analytics segment/card/bar
+(for example: دمشق or شقة or 3 غرف or جديد)
+
+Do NOT just highlight it visually.
+
+Instead:
+- isolate that segment as an active analytics filter
+- add it as an active chip
+- recompute KPI + analytics + list for that isolated subset
+
+Example:
+User clicks "دمشق"
+Now the page is analyzing Damascus requests only.
+
+Then user clicks "شقة"
+Now the page is analyzing Damascus apartment requests only.
+
+Then user clicks "3 غرف"
+Now the page is analyzing Damascus apartment 3-room requests only.
+
+4) ACTIVE ANALYTICS CHIPS
+Show active segmentation chips clearly, separate from base filters.
+
+Example:
+- المدينة: دمشق
+- النوع: شقة
+- الغرف: 3
+
+Allow removing each chip individually.
+Also add:
+- clear analytics isolation button
+
+5) SEPARATION OF CONCERNS
+Implement clear separation between:
+- base/global filters
+- analytics grouping mode
+- analytics isolation filters
+
+Do not mix them in one ambiguous state.
+
+6) OPTIONAL UI IMPROVEMENT
+Add two tabs or sections:
+- النتائج
+- التحليلات
+
+Or keep both on same page, but analytics should clearly explain:
+"هذه الإحصائيات مبنية على الطلبات المفلترة الحالية"
+
+==================================================
+BEHAVIOR RULES
+==================================================
+
+- Global filters affect the dataset first
+- Analytics grouping determines how that filtered dataset is visualized
+- Clicking a group inside analytics adds an isolation filter
+- Isolation updates the whole page
+- User can clear isolation without clearing base filters
+
+==================================================
+EXAMPLE USER FLOW
+==================================================
+
+1. Filter by city = دمشق
+2. Analytics grouped by = نوع العقار
+3. Click "شقة"
+4. Analytics grouped by = عدد الغرف
+5. Click "3 غرف"
+6. Now show requests and KPIs for Damascus + Apartment + 3 Rooms only
+
+==================================================
+COMPONENTS SUGGESTION
+==================================================
+
+Refactor into reusable components such as:
+- RequestsGlobalFilters
+- RequestsAnalyticsToolbar
+- RequestsAnalyticsGroupSelector
+- RequestsAnalyticsChips
+- RequestsDistributionWidget
+- RequestsKpiSection
+- RequestsResultsSection
+
+==================================================
+IMPORTANT
+==================================================
+
+This is not just a visual change.
+It is an analytics behavior refactor.
+
+We need the Requests page to behave like a real CRM / SaaS demand analysis tool,
+not just a page with static charts.
