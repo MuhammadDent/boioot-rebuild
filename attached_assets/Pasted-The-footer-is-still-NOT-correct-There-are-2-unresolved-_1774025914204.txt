@@ -1,0 +1,173 @@
+The footer is still NOT correct.
+
+There are 2 unresolved problems:
+
+==================================================
+PROBLEM 1 — FOOTER VISIBILITY / ARCHITECTURE
+==================================================
+
+The footer still appears only on some pages such as:
+- daily rentals
+- requests
+
+But it does NOT appear on the homepage.
+
+This is unacceptable.
+
+That means the footer is still being rendered at the page level
+or inside a route-specific layout,
+instead of being rendered globally in the correct public layout.
+
+==================================================
+PROBLEM 2 — VISUAL DESIGN / COLORS
+==================================================
+
+The footer colors are still not what I want.
+
+The current footer is still:
+- too dark
+- too heavy
+- too green-dark
+- not elegant enough
+- not clean enough
+
+Also, the logo in the footer is still not visually strong enough.
+
+==================================================
+YOUR TASK
+==================================================
+
+Fix BOTH the architecture and the design.
+
+==================================================
+PART A — MAKE FOOTER GLOBAL
+==================================================
+
+1. Find where the footer is currently rendered.
+2. Remove footer rendering from individual pages like:
+   - daily-rentals
+   - requests
+   - or any page-level implementation
+
+3. Put the footer in the correct shared PUBLIC layout.
+
+Important:
+- If this project uses route groups like (public), (dashboard), (admin),
+  then the footer should be placed in the PUBLIC layout only.
+- It should NOT appear in admin/dashboard unless intentionally required.
+
+Correct structure should be something like:
+
+<PublicLayout>
+  <Header />
+  <main>{children}</main>
+  <Footer />
+</PublicLayout>
+
+4. Verify that the footer appears on:
+- homepage
+- requests
+- daily rentals
+- projects
+- blog
+- all public pages
+
+5. Verify there is no duplicated footer anywhere.
+
+==================================================
+PART B — REDESIGN FOOTER COLORS
+==================================================
+
+Completely refine the footer palette.
+
+I do NOT want a very dark footer.
+I want it lighter, cleaner, and more premium.
+
+Required visual direction:
+- elegant dark-to-soft green palette
+- lighter than current version
+- better contrast
+- softer background
+- more refined section separation
+- less visual heaviness
+
+Avoid:
+- near-black green blocks
+- muddy dark green
+- overly saturated dark sections
+- harsh contrast that feels heavy
+
+Preferred direction:
+- main footer background: medium-deep green, not blackish
+- columns area: slightly lighter and cleaner
+- trust strip: subtle separation, not another dark slab
+- bottom bar: clean but only slightly deeper than main footer
+
+==================================================
+PART C — LOGO VISIBILITY
+==================================================
+
+The Boioot logo / brand mark in the footer must be clearly visible.
+
+Do the following:
+- make the logo area more prominent
+- ensure strong contrast with background
+- increase clarity, spacing, and visual presence
+- do NOT let the logo blend into the footer
+- the brand block should feel intentional and premium
+
+If needed:
+- use a lighter local background tone behind the logo area
+- or refine the brand block styling for better emphasis
+
+==================================================
+PART D — KEEP THE GOOD STRUCTURE
+==================================================
+
+Keep the good structural idea:
+- CTA area
+- brand/trust block
+- links columns
+- bottom bar
+
+But refine the visuals to be cleaner and lighter.
+
+==================================================
+STRICT REQUIREMENTS
+==================================================
+
+- Do NOT leave footer page-specific
+- Do NOT keep old footer versions
+- Do NOT keep the current dark palette
+- Do NOT give me small tweaks only
+- Refactor properly
+- One footer component only
+- One correct public layout integration only
+
+==================================================
+DELIVERABLES
+==================================================
+
+After fixing, explain clearly:
+
+1. Where the footer was incorrectly rendered before
+2. Where you moved it now
+3. Which layout is responsible for all public pages
+4. Which files you changed
+5. What color values / palette direction you changed
+6. How you improved logo visibility
+7. Confirmation that homepage now shows the same footer
+
+==================================================
+FINAL VERIFICATION
+==================================================
+
+Before finishing, manually verify:
+
+- Homepage shows footer
+- Requests page shows footer
+- Daily rentals page shows footer
+- Footer is identical across all public pages
+- No double footer exists
+- Footer is lighter and visually cleaner than before
+- Logo is clearly visible
