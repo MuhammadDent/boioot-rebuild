@@ -1,0 +1,87 @@
+I want to make sure the fix is permanent and the blog system is truly stable.
+
+Do not just say "it works".
+I need a real stability verification and regression check.
+
+==================================================
+GOAL
+==================================================
+
+Verify that the blog module is now stable after the fixes, and that the issue is solved at the root cause level, not just patched.
+
+==================================================
+REQUIRED VERIFICATION
+==================================================
+
+Please perform and confirm all of the following:
+
+1. Save draft works
+2. Publish works
+3. Post appears in its category tab
+4. Post appears in "All" tab
+5. Switching categories quickly does not show stale/outdated posts
+6. Refreshing the page does not break state
+7. Restarting the app does not lose blog data unexpectedly
+8. No foreign key errors remain
+9. No race condition remains in category switching
+10. No console errors
+11. No failed network requests related to blog
+12. Editing an existing post still works
+13. Category selection still works
+14. Validation still works correctly for:
+   - title
+   - content
+   - selected categories
+
+==================================================
+ROOT CAUSE CONFIRMATION
+==================================================
+
+I want you to confirm for each previous issue:
+
+- what the root cause was
+- what exact file was changed
+- why the new fix is structurally correct
+- why the issue should not return under normal usage
+
+==================================================
+ANTI-PATCH CHECK
+==================================================
+
+Also verify that the solution is NOT just:
+- suppressing errors
+- hiding warnings
+- adding fake delays
+- relying on temporary local state only
+- ignoring failed requests
+
+==================================================
+RESTART / PERSISTENCE CHECK
+==================================================
+
+Please restart the relevant workflow/app and verify:
+- blog categories still exist
+- blog posts still exist
+- published posts still render correctly
+- no setup step is required after restart
+
+==================================================
+OUTPUT FORMAT
+==================================================
+
+Report back in this exact structure:
+
+1. Stability verdict:
+   - Stable / Not yet stable
+
+2. Verified scenarios:
+   - [list each scenario tested]
+
+3. Root causes fixed:
+   - [issue] → [root cause] → [file changed]
+
+4. Remaining risks:
+   - [if any]
+
+5. Final recommendation:
+   - Is the blog module production-ready for current scope?
