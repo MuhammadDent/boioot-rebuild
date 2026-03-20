@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, type CSSProperties } from "react";
+import { useCities } from "@/hooks/useCities";
 import { adminApi } from "@/features/admin/api";
 import { normalizeError } from "@/lib/api";
 import { PROPERTY_STATUS_BADGE } from "@/features/admin/constants";
@@ -207,11 +208,8 @@ export default function AdminPropertiesPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // ── Cities from data ───────────────────────────────────────────────────────
-  const citiesInData = useMemo(() =>
-    Array.from(new Set(allProperties.map(p => p.city).filter(Boolean))).sort(),
-    [allProperties],
-  );
+  // ── Cities from DB ─────────────────────────────────────────────────────────
+  const { cities: citiesInData } = useCities();
 
   // ── Filter + Sort ──────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
