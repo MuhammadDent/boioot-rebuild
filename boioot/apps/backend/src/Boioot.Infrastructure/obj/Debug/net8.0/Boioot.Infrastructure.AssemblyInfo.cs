@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Boioot.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2750d49f3be05e9c3cb45acd3bfd80c44456495a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fb012941cbdde507afdd6c930355e62a926d40ec")]
 [assembly: System.Reflection.AssemblyProductAttribute("Boioot.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Boioot.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

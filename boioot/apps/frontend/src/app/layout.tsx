@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl" className={cairo.variable}>
+    <html lang="ar" dir="rtl" className={cairo.variable} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <AuthProvider>{children}</AuthProvider>
       </body>
