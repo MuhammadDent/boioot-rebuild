@@ -404,6 +404,14 @@ export function BlogPostForm({
     initialData?.categories.map(c => c.id) ?? []
   );
 
+  // ── Local categories (can grow when user adds new ones) ───────────────────
+  const [localCategories, setLocalCategories] = useState<BlogCategoryResponse[]>(categories);
+  const [showAddCatForm,  setShowAddCatForm]  = useState(false);
+  const [newCatName,      setNewCatName]      = useState("");
+  const [addingCat,       setAddingCat]       = useState(false);
+  const [addCatError,     setAddCatError]     = useState("");
+  const [catRequired,     setCatRequired]     = useState(false);
+
   const [seoMode,  setSeoMode]  = useState<SeoMode>(initialData?.seoMode ?? "Auto");
   const [ogTitle,  setOgTitle]  = useState(initialData?.ogTitle  ?? "");
   const [ogDescription, setOgDescription] = useState(initialData?.ogDescription ?? "");
@@ -460,6 +468,42 @@ export function BlogPostForm({
     setSelectedCatIds(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
+    setCatRequired(false);
+  }
+
+  // ── Add new category inline ───────────────────────────────────────────────
+
+  async function handleAddCategory() {
+    if (!newCatName.trim()) return;
+    setAddingCat(true); setAddCatError("");
+    try {
+      const created = await blogAdminApi.createCategory({
+        name: newCatName.trim(),
+        isActive: true,
+        sortOrder: localCategories.length,
+      });
+      setLocalCategories(prev => [...prev, created]);
+      setSelectedCatIds(prev => [...prev, created.id]);
+      setNewCatName("");
+      setShowAddCatForm(false);
+      setCatRequired(false);
+    } catch (e) {
+      setAddCatError(normalizeError(e));
+    } finally {
+      setAddingCat(false);
+    }
+  }
+
+  // ── Publish validation ────────────────────────────────────────────────────
+
+  function validateForPublish(): boolean {
+    if (selectedCatIds.length === 0) {
+      setCatRequired(true);
+      setError("يجب اختيار تصنيف واحد على الأقل قبل نشر المقال.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return false;
+    }
+    return true;
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -491,6 +535,7 @@ export function BlogPostForm({
 
   async function handlePublish() {
     if (!currentPost?.id) return;
+    if (!validateForPublish()) return;
     setActioning("publish"); setError(""); setSuccess("");
     try {
       const updated = await blogAdminApi.updatePost(currentPost.id, buildPayload());
@@ -505,6 +550,7 @@ export function BlogPostForm({
   }
 
   async function handleSaveAndPublish() {
+    if (!validateForPublish()) return;
     setActioning("publish"); setError(""); setSuccess("");
     try {
       let post: BlogPostDetailResponse;
@@ -649,7 +695,14 @@ export function BlogPostForm({
 
           {/* Excerpt */}
           <div style={cardStyle}>
-            <label style={labelStyle}>الملخص (Excerpt)</label>
+            <label style={labelStyle}>
+              الملخص (Excerpt)
+              <span style={{
+                fontSize: "0.7rem", fontWeight: 500, padding: "0.1rem 0.4rem",
+                borderRadius: 4, background: "#fff3e0", color: "#e65100",
+                marginRight: "0.4rem", verticalAlign: "middle",
+              }}>موصى به للنشر</span>
+            </label>
             <textarea
               value={excerpt}
               onChange={e => setExcerpt(e.target.value)}
@@ -691,15 +744,40 @@ export function BlogPostForm({
 
               {/* Publish — show for new posts AND draft edits */}
               {currentStatus !== "Published" && currentStatus !== "Archived" && (
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleSaveAndPublish}
-                  disabled={busy}
-                  style={{ width: "100%", background: "#2e7d32", borderColor: "#2e7d32", color: "#fff", fontWeight: 600 }}
-                >
-                  {actioning === "publish" ? "جاري النشر..." : "نشر المقال ▶"}
-                </button>
+                <>
+                  {/* Publish requirements mini-checklist */}
+                  <div style={{
+                    fontSize: "0.75rem", padding: "0.5rem 0.6rem",
+                    background: "var(--color-bg-muted, #f9fafb)",
+                    border: "1px solid var(--color-border, #e5e7eb)",
+                    borderRadius: 7, color: "var(--color-text-secondary)",
+                  }}>
+                    <p style={{ margin: "0 0 0.3rem", fontWeight: 600, color: "var(--color-text-primary)", fontSize: "0.76rem" }}>
+                      متطلبات النشر:
+                    </p>
+                    {[
+                      { label: "العنوان",            ok: title.trim().length > 0 },
+                      { label: "المحتوى",            ok: content.trim().length > 0 },
+                      { label: "تصنيف واحد على الأقل", ok: selectedCatIds.length > 0 },
+                    ].map(({ label, ok }) => (
+                      <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginBottom: "0.15rem" }}>
+                        <span style={{ color: ok ? "#22c55e" : "#ef4444", fontWeight: 700, fontSize: "0.8rem" }}>
+                          {ok ? "✓" : "✗"}
+                        </span>
+                        <span style={{ color: ok ? "var(--color-text-primary)" : "#ef4444" }}>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleSaveAndPublish}
+                    disabled={busy}
+                    style={{ width: "100%", background: "#2e7d32", borderColor: "#2e7d32", color: "#fff", fontWeight: 600 }}
+                  >
+                    {actioning === "publish" ? "جاري النشر..." : "نشر المقال ▶"}
+                  </button>
+                </>
               )}
 
               {currentStatus === "Published" && (
@@ -730,16 +808,87 @@ export function BlogPostForm({
           </div>
 
           {/* Categories */}
-          <div style={cardStyle}>
-            <p style={{ margin: "0 0 0.75rem", fontWeight: 700, fontSize: "0.92rem" }}>التصنيفات</p>
-            {categories.length === 0 ? (
+          <div style={{
+            ...cardStyle,
+            border: catRequired
+              ? "1.5px solid #ef4444"
+              : "1px solid var(--color-border, #e5e7eb)",
+          }}>
+            {/* Header row */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: "0.92rem" }}>
+                التصنيفات
+                <span style={{ color: "#ef4444", marginRight: "0.2rem" }}>*</span>
+                <span style={{ fontSize: "0.72rem", fontWeight: 400, color: "var(--color-text-secondary)", marginRight: "0.35rem" }}>
+                  (مطلوب للنشر)
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() => { setShowAddCatForm(v => !v); setAddCatError(""); setNewCatName(""); }}
+                disabled={busy}
+                style={{
+                  fontSize: "0.75rem", padding: "0.2rem 0.6rem", borderRadius: 6,
+                  border: "1px solid var(--color-primary)", color: "var(--color-primary)",
+                  background: "transparent", cursor: busy ? "not-allowed" : "pointer",
+                  fontWeight: 600, whiteSpace: "nowrap",
+                }}
+              >
+                {showAddCatForm ? "إلغاء" : "+ تصنيف جديد"}
+              </button>
+            </div>
+
+            {/* Inline add form */}
+            {showAddCatForm && (
+              <div
+                style={{
+                  marginBottom: "0.75rem", padding: "0.6rem 0.75rem",
+                  background: "var(--color-bg-muted, #f9fafb)",
+                  borderRadius: 8, border: "1px solid var(--color-border, #e5e7eb)",
+                }}
+              >
+                <label style={{ ...labelStyle, marginBottom: "0.3rem" }}>اسم التصنيف الجديد</label>
+                <div style={{ display: "flex", gap: "0.4rem" }}>
+                  <input
+                    autoFocus
+                    value={newCatName}
+                    onChange={e => { setNewCatName(e.target.value); setAddCatError(""); }}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); void handleAddCategory(); } }}
+                    placeholder="مثال: نصائح عقارية"
+                    disabled={addingCat}
+                    style={{ ...inputStyle, fontSize: "0.88rem", flex: 1 }}
+                    dir="rtl"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleAddCategory()}
+                    disabled={addingCat || !newCatName.trim()}
+                    style={{
+                      padding: "0.4rem 0.9rem", borderRadius: 7, border: "none",
+                      background: "var(--color-primary)", color: "#fff",
+                      fontWeight: 600, fontSize: "0.85rem",
+                      cursor: (addingCat || !newCatName.trim()) ? "not-allowed" : "pointer",
+                      opacity: (addingCat || !newCatName.trim()) ? 0.6 : 1,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {addingCat ? "..." : "إضافة"}
+                  </button>
+                </div>
+                {addCatError && (
+                  <p style={{ margin: "0.3rem 0 0", fontSize: "0.78rem", color: "#ef4444" }}>{addCatError}</p>
+                )}
+              </div>
+            )}
+
+            {/* Category list */}
+            {localCategories.length === 0 && !showAddCatForm ? (
               <p style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)", margin: 0 }}>
-                لا توجد تصنيفات.{" "}
-                <a href="/dashboard/admin/blog/categories" style={{ color: "var(--color-primary)" }}>أضف تصنيفات</a>
+                لا توجد تصنيفات — أضف تصنيفاً من الزر أعلاه.
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                {categories.map(cat => (
+                {localCategories.map(cat => (
                   <label key={cat.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", cursor: "pointer", opacity: !cat.isActive ? 0.5 : 1 }}>
                     <input
                       type="checkbox"
@@ -752,6 +901,13 @@ export function BlogPostForm({
                   </label>
                 ))}
               </div>
+            )}
+
+            {/* Required validation message */}
+            {catRequired && (
+              <p style={{ margin: "0.5rem 0 0", fontSize: "0.8rem", color: "#ef4444", fontWeight: 500 }}>
+                ⚠ يجب اختيار تصنيف واحد على الأقل
+              </p>
             )}
           </div>
 
@@ -788,6 +944,16 @@ export function BlogPostForm({
               />
             </div>
 
+            <div style={{ marginBottom: "0.3rem" }}>
+              <label style={labelStyle}>
+                صورة الغلاف
+                <span style={{
+                  fontSize: "0.7rem", fontWeight: 500, padding: "0.1rem 0.4rem",
+                  borderRadius: 4, background: "#fff3e0", color: "#e65100",
+                  marginRight: "0.4rem", verticalAlign: "middle",
+                }}>موصى به للنشر</span>
+              </label>
+            </div>
             <CoverImageField
               url={coverImageUrl}
               onUrlChange={setCoverImageUrl}
