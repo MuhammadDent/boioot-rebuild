@@ -366,24 +366,28 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => guardHref("/post-ad")}
-              style={{
-                ...btnStyle("green"),
-                border: "none",
-                cursor: "pointer",
-              }}
+              className="home-cta-primary"
             >
+              <span
+                className="home-cta-primary__icon"
+                aria-hidden="true"
+              >
+                +
+              </span>
               أضف إعلانك
             </button>
 
             <button
               type="button"
               onClick={() => guardHref("/dashboard/my-requests/new")}
-              style={{
-                ...btnStyle("dark"),
-                border: "none",
-                cursor: "pointer",
-              }}
+              className="home-cta-secondary"
             >
+              <span
+                className="home-cta-secondary__icon"
+                aria-hidden="true"
+              >
+                +
+              </span>
               أضف طلب
             </button>
 
