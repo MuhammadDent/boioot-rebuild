@@ -668,45 +668,45 @@ function ProfileBasicInfoForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
-      {banner && <Banner type={banner.type} msg={banner.msg} />}
+    <>
+      <form onSubmit={handleSubmit} noValidate>
+        {banner && <Banner type={banner.type} msg={banner.msg} />}
 
-      <div style={{ display: "grid", gap: "1.1rem" }}>
+        <div style={{ display: "grid", gap: "1.1rem" }}>
 
-        {/* Editable: full name */}
-        <div>
-          <FieldLabel>الاسم الكامل *</FieldLabel>
-          <Input
-            value={fullName}
-            onChange={(e) => handleNameChange(e.target.value)}
-            maxLength={150}
-            placeholder="أدخل اسمك الكامل"
-            style={nameError ? { borderColor: "#f87171" } : {}}
-          />
-          {nameError && (
-            <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#dc2626" }}>
-              {nameError}
-            </p>
-          )}
-        </div>
-
-        {/* Email — read-only display + secure change section */}
-        <div>
-          <FieldLabel>البريد الإلكتروني</FieldLabel>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          {/* Editable: full name */}
+          <div>
+            <FieldLabel>الاسم الكامل *</FieldLabel>
             <Input
-              value={profile.email}
-              readOnly
-              style={{ flex: 1 }}
+              value={fullName}
+              onChange={(e) => handleNameChange(e.target.value)}
+              maxLength={150}
+              placeholder="أدخل اسمك الكامل"
+              style={nameError ? { borderColor: "#f87171" } : {}}
             />
-            {!showEmailChange && (
+            {nameError && (
+              <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#dc2626" }}>
+                {nameError}
+              </p>
+            )}
+          </div>
+
+          {/* Email — read-only display + toggle button (EmailChangeSection is OUTSIDE this form) */}
+          <div>
+            <FieldLabel>البريد الإلكتروني</FieldLabel>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <Input
+                value={profile.email}
+                readOnly
+                style={{ flex: 1 }}
+              />
               <button
                 type="button"
-                onClick={() => setShowEmailChange(true)}
+                onClick={() => setShowEmailChange((v) => !v)}
                 style={{
                   flexShrink: 0,
                   padding: "0.45rem 0.9rem",
-                  background: "transparent",
+                  background: showEmailChange ? "#fef3c7" : "transparent",
                   color: "#d97706",
                   border: "1.5px solid #fbbf24",
                   borderRadius: 7,
@@ -718,23 +718,12 @@ function ProfileBasicInfoForm({
                   transition: "background 0.15s",
                 }}
               >
-                تغيير البريد
+                {showEmailChange ? "إخفاء" : "تغيير البريد"}
               </button>
-            )}
+            </div>
           </div>
-          {showEmailChange && (
-            <EmailChangeSection
-              currentEmail={profile.email}
-              onSuccess={(updated) => {
-                onUpdate(updated);
-                setShowEmailChange(false);
-              }}
-              onClose={() => setShowEmailChange(false)}
-            />
-          )}
-        </div>
 
-        {/* Editable: phone */}
+          {/* Editable: phone */}
         <div>
           <FieldLabel>رقم الهاتف</FieldLabel>
           <Input
@@ -835,7 +824,20 @@ function ProfileBasicInfoForm({
           </button>
         )}
       </div>
-    </form>
+      </form>
+
+      {/* EmailChangeSection renders OUTSIDE the form — prevents nested <form> crash */}
+      {showEmailChange && (
+        <EmailChangeSection
+          currentEmail={profile.email}
+          onSuccess={(updated) => {
+            onUpdate(updated);
+            setShowEmailChange(false);
+          }}
+          onClose={() => setShowEmailChange(false)}
+        />
+      )}
+    </>
   );
 }
 

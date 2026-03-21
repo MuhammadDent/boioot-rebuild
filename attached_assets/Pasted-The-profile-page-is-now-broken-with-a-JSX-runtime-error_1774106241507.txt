@@ -1,0 +1,63 @@
+The profile page is now broken with a JSX/runtime error around EmailChangeSection in:
+
+src/app/dashboard/profile/page.tsx
+
+The error points near:
+<form onSubmit={handleSubmit} noValidate>
+
+We need you to DEBUG AND FIX the JSX structure cleanly.
+
+GOAL:
+Fix the broken profile page and make the email change section render correctly without crashing the route.
+
+TASKS
+
+1) DEBUG THE JSX STRUCTURE
+Carefully inspect the EmailChangeSection component and the surrounding JSX in page.tsx.
+
+Check for:
+- unclosed tags before the form
+- mismatched parentheses/braces
+- nested <form> inside another <form>
+- invalid conditional rendering
+- fragments opened/closed incorrectly
+- invalid placement of form inside another component tree
+
+2) NESTED FORM PROTECTION
+If the profile page already has a parent form for basic profile editing, DO NOT place another <form> inside it.
+
+Instead:
+- either convert EmailChangeSection to a separate standalone section outside the main profile form
+- or make it use div/container and handle submission with a button click handler
+- or split the profile page into separate independent cards/components, each with its own safe form boundary
+
+IMPORTANT:
+No nested forms.
+
+3) REFACTOR CLEANLY
+Separate the page into:
+- ProfileBasicInfoSection
+- EmailChangeSection
+- SecuritySection
+- AvatarSection
+
+Each section should be isolated and safe.
+If EmailChangeSection needs a form, place it in its own section outside any parent form.
+
+4) KEEP THE PAGE WORKING
+After the fix:
+- /dashboard/profile must load normally
+- profile editing must still work
+- email change section must render without crashing
+- no JSX/runtime errors
+- no hydration issues
+
+5) VALIDATE BUILD
+Run a full compile/build check and fix all related issues in this file before finishing.
+
+6) REPORT BACK
+Please tell me:
+- what exactly caused the crash
+- whether there was a nested form or broken JSX
+- what files/lines were changed
+- how you restructured the profile page safely
