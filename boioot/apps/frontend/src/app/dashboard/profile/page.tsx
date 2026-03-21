@@ -282,6 +282,21 @@ function ProfileRoleSection({ profile }: { profile: NormalizedProfile }) {
 
 // ─── Tab 1: ProfileBasicInfoForm ──────────────────────────────────────────────
 
+function validateName(v: string): string | null {
+  if (!v.trim())           return "الاسم الكامل مطلوب";
+  if (v.trim().length < 2) return "الاسم يجب أن لا يقل عن حرفين";
+  return null;
+}
+
+function validatePhone(v: string): string | null {
+  if (!v.trim()) return null; // optional field
+  const cleaned = v.replace(/[\s\-().+]/g, "");
+  if (!/^(963|00963|0)?[0-9]{7,12}$/.test(cleaned)) {
+    return "صيغة رقم الهاتف غير صحيحة";
+  }
+  return null;
+}
+
 function ProfileBasicInfoForm({
   raw,
   onUpdate,
@@ -290,46 +305,109 @@ function ProfileBasicInfoForm({
   onUpdate: (u: UserProfileResponse) => void;
 }) {
   const profile = normalizeProfile(raw);
-  const [fullName, setFullName] = useState(raw.fullName);
-  const [phone, setPhone] = useState(raw.phone ?? "");
-  const [loading, setLoading] = useState(false);
-  const [banner, setBanner] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
+  // ── Saved values (what is currently in DB) ────────────────────────────────
+  const savedName  = raw.fullName;
+  const savedPhone = raw.phone ?? "";
+
+  // ── Editable state ────────────────────────────────────────────────────────
+  const [fullName,   setFullName]   = useState(savedName);
+  const [phone,      setPhone]      = useState(savedPhone);
+  const [nameError,  setNameError]  = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [loading,    setLoading]    = useState(false);
+  const [banner,     setBanner]     = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  // ── Dirty detection: true when any editable field differs from saved value ─
+  const isDirty =
+    fullName.trim() !== savedName.trim() ||
+    phone.trim()    !== savedPhone.trim();
+
+  // ── Field handlers — clear inline error on each keystroke ─────────────────
+  function handleNameChange(v: string) {
+    setFullName(v);
+    if (nameError)  setNameError(null);
+    if (banner)     setBanner(null);
+  }
+
+  function handlePhoneChange(v: string) {
+    setPhone(v);
+    if (phoneError) setPhoneError(null);
+    if (banner)     setBanner(null);
+  }
+
+  // ── Cancel: reset to last saved values ───────────────────────────────────
+  function handleCancel() {
+    setFullName(savedName);
+    setPhone(savedPhone);
+    setNameError(null);
+    setPhoneError(null);
+    setBanner(null);
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    const nameErr  = validateName(fullName);
+    const phoneErr = validatePhone(phone);
+    setNameError(nameErr);
+    setPhoneError(phoneErr);
+    if (nameErr || phoneErr) return;
+
     setBanner(null);
     setLoading(true);
     try {
       const updated = await api.put<UserProfileResponse>("/auth/profile", {
         fullName: fullName.trim(),
-        phone: phone.trim() || undefined,
+        phone:    phone.trim() || undefined,
       } as UpdateProfilePayload);
       onUpdate(updated);
-      setBanner({ type: "success", msg: "تم تحديث بياناتك بنجاح." });
+      setBanner({ type: "success", msg: "تم حفظ التغييرات بنجاح." });
     } catch (err: unknown) {
-      setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ." });
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[ProfileBasicInfoForm] save failed:", err);
+      }
+      if (err instanceof ApiError) {
+        if (err.status === 401) {
+          setBanner({ type: "error", msg: "انتهت جلستك. أعد تسجيل الدخول." });
+        } else {
+          setBanner({ type: "error", msg: err.message || "حدث خطأ أثناء الحفظ." });
+        }
+      } else if (err instanceof NetworkError) {
+        setBanner({ type: "error", msg: "تعذّر الاتصال بالخادم. تحقق من اتصالك." });
+      } else {
+        setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ غير متوقع." });
+      }
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       {banner && <Banner type={banner.type} msg={banner.msg} />}
 
       <div style={{ display: "grid", gap: "1.1rem" }}>
+
+        {/* Editable: full name */}
         <div>
           <FieldLabel>الاسم الكامل *</FieldLabel>
           <Input
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-            minLength={2}
+            onChange={(e) => handleNameChange(e.target.value)}
             maxLength={150}
             placeholder="أدخل اسمك الكامل"
+            style={nameError ? { borderColor: "#f87171" } : {}}
           />
+          {nameError && (
+            <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#dc2626" }}>
+              {nameError}
+            </p>
+          )}
         </div>
 
+        {/* Read-only: email */}
         <div>
           <FieldLabel>البريد الإلكتروني (للقراءة فقط)</FieldLabel>
           <Input
@@ -338,17 +416,25 @@ function ProfileBasicInfoForm({
           />
         </div>
 
+        {/* Editable: phone */}
         <div>
           <FieldLabel>رقم الهاتف</FieldLabel>
           <Input
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => handlePhoneChange(e.target.value)}
             maxLength={30}
-            placeholder="مثال: 09xx xxx xxx"
+            placeholder="مثال: 0912 345 678"
             type="tel"
+            style={phoneError ? { borderColor: "#f87171" } : {}}
           />
+          {phoneError && (
+            <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#dc2626" }}>
+              {phoneError}
+            </p>
+          )}
         </div>
 
+        {/* Read-only: role label */}
         <div>
           <FieldLabel>نوع الحساب</FieldLabel>
           <Input
@@ -357,6 +443,7 @@ function ProfileBasicInfoForm({
           />
         </div>
 
+        {/* Read-only: user code */}
         <div>
           <FieldLabel>رمز المستخدم</FieldLabel>
           <Input
@@ -365,6 +452,7 @@ function ProfileBasicInfoForm({
           />
         </div>
 
+        {/* Read-only: created at */}
         <div>
           <FieldLabel>تاريخ الإنشاء</FieldLabel>
           <Input
@@ -376,10 +464,58 @@ function ProfileBasicInfoForm({
             readOnly
           />
         </div>
+
       </div>
 
-      <div style={{ marginTop: "1.5rem" }}>
-        <SaveBtn loading={loading} />
+      {/* ── Action buttons ────────────────────────────────────────────────── */}
+      <div
+        style={{
+          marginTop: "1.5rem",
+          display: "flex",
+          gap: "0.75rem",
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          type="submit"
+          disabled={loading || !isDirty}
+          style={{
+            padding: "0.6rem 1.75rem",
+            background: loading || !isDirty ? "#a7c4a0" : "var(--color-primary)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontFamily: "var(--font-arabic)",
+            fontWeight: 700,
+            fontSize: "0.95rem",
+            cursor: loading || !isDirty ? "not-allowed" : "pointer",
+            transition: "background 0.15s",
+          }}
+        >
+          {loading ? "جارٍ الحفظ…" : "حفظ التغييرات"}
+        </button>
+
+        {isDirty && !loading && (
+          <button
+            type="button"
+            onClick={handleCancel}
+            style={{
+              padding: "0.6rem 1.25rem",
+              background: "transparent",
+              color: "var(--color-text-secondary)",
+              border: "1.5px solid var(--color-border)",
+              borderRadius: 8,
+              fontFamily: "var(--font-arabic)",
+              fontWeight: 600,
+              fontSize: "0.95rem",
+              cursor: "pointer",
+              transition: "border-color 0.15s, color 0.15s",
+            }}
+          >
+            إلغاء
+          </button>
+        )}
       </div>
     </form>
   );
