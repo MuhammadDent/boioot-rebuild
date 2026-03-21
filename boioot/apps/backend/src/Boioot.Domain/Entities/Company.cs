@@ -11,6 +11,11 @@ public class Company : BaseEntity, ISoftDeletable
     public string? Email { get; set; }
     public string? Address { get; set; }
     public string? City { get; set; }
+    public string? Neighborhood { get; set; }
+    public string? WhatsApp { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public bool IsProfileComplete { get; set; } = false;
     public bool IsVerified { get; set; } = false;
     public bool IsDeleted { get; set; } = false;
 

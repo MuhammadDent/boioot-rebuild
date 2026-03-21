@@ -227,6 +227,18 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Agents ADD COLUMN BrokerId TEXT"); }
         catch { /* column already exists */ }
 
+        // ── Company business-profile fields (onboarding) ──────────────────────
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN Neighborhood TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN WhatsApp TEXT"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN Latitude REAL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN Longitude REAL"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN IsProfileComplete INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Messages ADD COLUMN AttachmentData TEXT"); }
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Messages ADD COLUMN AttachmentName TEXT"); }

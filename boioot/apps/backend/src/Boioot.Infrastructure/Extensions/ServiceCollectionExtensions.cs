@@ -5,6 +5,7 @@ using Boioot.Application.Features.Admin.Interfaces;
 using Boioot.Application.Features.AgentManagement.Interfaces;
 using Boioot.Application.Features.Auth.Interfaces;
 using Boioot.Application.Features.Blog.Interfaces;
+using Boioot.Application.Features.Onboarding.Interfaces;
 using Boioot.Application.Features.BuyerRequests.Interfaces;
 using Boioot.Application.Features.Dashboard.Interfaces;
 using Boioot.Application.Features.Favorites.Interfaces;
@@ -19,6 +20,7 @@ using Boioot.Infrastructure.Common;
 using Boioot.Infrastructure.Features.Admin;
 using Boioot.Infrastructure.Features.AgentManagement;
 using Boioot.Infrastructure.Features.Auth;
+using Boioot.Infrastructure.Features.Onboarding;
 using Boioot.Infrastructure.Features.Rbac;
 using Boioot.Infrastructure.Features.Billing;
 using Boioot.Infrastructure.Features.Blog;
@@ -51,6 +53,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICompanyOwnershipService, CompanyOwnershipService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IOnboardingService, OnboardingService>();
         services.AddScoped<IPropertyService, PropertyService>();
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<IRequestService, RequestService>();

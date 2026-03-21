@@ -151,6 +151,13 @@ export default function RegisterPage() {
         companyName: isBusinessRole && form.companyName.trim() ? form.companyName.trim() : undefined,
       });
       login(res.token, res.user, res.expiresAt);
+      // Business accounts go to onboarding to complete their profile first.
+      const role = ROLES[selectedRoleIndex!].value;
+      const needsOnboarding = role === "Broker" || role === "CompanyOwner";
+      if (needsOnboarding) {
+        router.push("/onboarding");
+        return;
+      }
       // Resume the originating listing page if the user came from a protected action.
       const returnUrl = sessionStorage.getItem(AUTH_INTENT_KEY);
       sessionStorage.removeItem(AUTH_INTENT_KEY);

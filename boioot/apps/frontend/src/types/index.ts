@@ -1,3 +1,19 @@
+export interface BusinessProfileResponse {
+  companyId: string;
+  displayName: string;
+  city?: string;
+  neighborhood?: string;
+  address?: string;
+  phone?: string;
+  whatsApp?: string;
+  description?: string;
+  logoUrl?: string;
+  latitude?: number;
+  longitude?: number;
+  isProfileComplete: boolean;
+  isVerified: boolean;
+}
+
 export interface UserProfileResponse {
   id: string;
   userCode: string;
