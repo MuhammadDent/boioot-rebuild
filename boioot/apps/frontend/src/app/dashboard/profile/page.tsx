@@ -26,6 +26,11 @@ interface ChangePasswordPayload {
   newPassword: string;
 }
 
+interface ChangeEmailPayload {
+  newEmail: string;
+  currentPassword: string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function initials(name: string): string {
@@ -280,6 +285,283 @@ function ProfileRoleSection({ profile }: { profile: NormalizedProfile }) {
   );
 }
 
+// ─── Email change section (inline, secure flow) ───────────────────────────────
+
+function validateEmailFormat(v: string): string | null {
+  if (!v.trim()) return "البريد الإلكتروني مطلوب";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return "صيغة البريد الإلكتروني غير صحيحة";
+  return null;
+}
+
+function EmailChangeSection({
+  currentEmail,
+  onSuccess,
+  onClose,
+}: {
+  currentEmail: string;
+  onSuccess: (updated: UserProfileResponse) => void;
+  onClose: () => void;
+}) {
+  const [newEmail,      setNewEmail]      = useState("");
+  const [confirmEmail,  setConfirmEmail]  = useState("");
+  const [password,      setPassword]      = useState("");
+  const [showPwd,       setShowPwd]       = useState(false);
+  const [newEmailErr,   setNewEmailErr]   = useState<string | null>(null);
+  const [confirmErr,    setConfirmErr]    = useState<string | null>(null);
+  const [passwordErr,   setPasswordErr]   = useState<string | null>(null);
+  const [loading,       setLoading]       = useState(false);
+  const [banner,        setBanner]        = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  function clearErrors() {
+    setNewEmailErr(null);
+    setConfirmErr(null);
+    setPasswordErr(null);
+  }
+
+  function handleClose() {
+    setNewEmail("");
+    setConfirmEmail("");
+    setPassword("");
+    clearErrors();
+    setBanner(null);
+    onClose();
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    clearErrors();
+    setBanner(null);
+
+    let hasError = false;
+
+    const newEmailFmtErr = validateEmailFormat(newEmail);
+    if (newEmailFmtErr) { setNewEmailErr(newEmailFmtErr); hasError = true; }
+
+    if (!newEmailFmtErr && newEmail.trim().toLowerCase() === currentEmail.toLowerCase()) {
+      setNewEmailErr("البريد الجديد مطابق للبريد الحالي"); hasError = true;
+    }
+
+    if (!confirmEmail.trim()) {
+      setConfirmErr("تأكيد البريد مطلوب"); hasError = true;
+    } else if (newEmail.trim().toLowerCase() !== confirmEmail.trim().toLowerCase()) {
+      setConfirmErr("البريدان غير متطابقَين"); hasError = true;
+    }
+
+    if (!password) {
+      setPasswordErr("كلمة المرور مطلوبة للتحقق من هويتك"); hasError = true;
+    }
+
+    if (hasError) return;
+
+    setLoading(true);
+    try {
+      const updated = await api.post<UserProfileResponse>("/auth/change-email", {
+        newEmail:        newEmail.trim(),
+        currentPassword: password,
+      } as ChangeEmailPayload);
+
+      onSuccess(updated);
+      setBanner({ type: "success", msg: "تم تغيير البريد الإلكتروني بنجاح." });
+      setTimeout(() => handleClose(), 1800);
+    } catch (err: unknown) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[EmailChangeSection] change-email failed:", err);
+      }
+      if (err instanceof ApiError) {
+        if (err.status === 400 || err.status === 409) {
+          setBanner({ type: "error", msg: err.message });
+        } else if (err.status === 401) {
+          setBanner({ type: "error", msg: "انتهت جلستك. أعد تسجيل الدخول." });
+        } else {
+          setBanner({ type: "error", msg: err.message || "حدث خطأ أثناء تغيير البريد." });
+        }
+      } else if (err instanceof NetworkError) {
+        setBanner({ type: "error", msg: "تعذّر الاتصال بالخادم. تحقق من اتصالك." });
+      } else {
+        setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ غير متوقع." });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: "0.75rem",
+        padding: "1.1rem 1.25rem",
+        border: "1.5px solid #fbbf24",
+        borderRadius: 10,
+        background: "#fffbeb",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "0.9rem",
+        }}
+      >
+        <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#92400e" }}>
+          تغيير البريد الإلكتروني — إجراء حساس
+        </span>
+        <button
+          type="button"
+          onClick={handleClose}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "1.1rem",
+            color: "#92400e",
+            lineHeight: 1,
+          }}
+          aria-label="إغلاق"
+        >
+          ✕
+        </button>
+      </div>
+
+      {banner && <Banner type={banner.type} msg={banner.msg} />}
+
+      <form onSubmit={handleSubmit} noValidate>
+        <div style={{ display: "grid", gap: "0.85rem" }}>
+
+          {/* New email */}
+          <div>
+            <FieldLabel>البريد الإلكتروني الجديد *</FieldLabel>
+            <Input
+              type="email"
+              value={newEmail}
+              onChange={(e) => { setNewEmail(e.target.value); if (newEmailErr) setNewEmailErr(null); }}
+              placeholder="example@domain.com"
+              maxLength={200}
+              style={newEmailErr ? { borderColor: "#f87171" } : {}}
+            />
+            {newEmailErr && (
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: "#dc2626" }}>
+                {newEmailErr}
+              </p>
+            )}
+          </div>
+
+          {/* Confirm email */}
+          <div>
+            <FieldLabel>تأكيد البريد الإلكتروني الجديد *</FieldLabel>
+            <Input
+              type="email"
+              value={confirmEmail}
+              onChange={(e) => { setConfirmEmail(e.target.value); if (confirmErr) setConfirmErr(null); }}
+              placeholder="أعد إدخال البريد الجديد"
+              maxLength={200}
+              style={confirmErr ? { borderColor: "#f87171" } : {}}
+            />
+            {confirmErr && (
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: "#dc2626" }}>
+                {confirmErr}
+              </p>
+            )}
+          </div>
+
+          {/* Current password */}
+          <div>
+            <FieldLabel>كلمة المرور الحالية (للتحقق من هويتك) *</FieldLabel>
+            <div style={{ position: "relative" }}>
+              <Input
+                type={showPwd ? "text" : "password"}
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); if (passwordErr) setPasswordErr(null); }}
+                placeholder="أدخل كلمة مرورك الحالية"
+                style={{
+                  paddingLeft: "2.5rem",
+                  ...(passwordErr ? { borderColor: "#f87171" } : {}),
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd((v) => !v)}
+                style={{
+                  position: "absolute",
+                  left: "0.6rem",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  color: "#6b7280",
+                }}
+                aria-label={showPwd ? "إخفاء" : "إظهار"}
+              >
+                {showPwd
+                  ? <EyeOff size={16} />
+                  : <Eye size={16} />
+                }
+              </button>
+            </div>
+            {passwordErr && (
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: "#dc2626" }}>
+                {passwordErr}
+              </p>
+            )}
+          </div>
+
+        </div>
+
+        {/* Action buttons */}
+        <div
+          style={{
+            marginTop: "1rem",
+            display: "flex",
+            gap: "0.65rem",
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              padding: "0.55rem 1.5rem",
+              background: loading ? "#fcd34d" : "#d97706",
+              color: "#fff",
+              border: "none",
+              borderRadius: 7,
+              fontFamily: "var(--font-arabic)",
+              fontWeight: 700,
+              fontSize: "0.9rem",
+              cursor: loading ? "not-allowed" : "pointer",
+              transition: "background 0.15s",
+            }}
+          >
+            {loading ? "جارٍ التغيير…" : "تأكيد تغيير البريد"}
+          </button>
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={loading}
+            style={{
+              padding: "0.55rem 1.1rem",
+              background: "transparent",
+              color: "#92400e",
+              border: "1.5px solid #fbbf24",
+              borderRadius: 7,
+              fontFamily: "var(--font-arabic)",
+              fontWeight: 600,
+              fontSize: "0.9rem",
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+          >
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // ─── Tab 1: ProfileBasicInfoForm ──────────────────────────────────────────────
 
 function validateName(v: string): string | null {
@@ -311,12 +593,13 @@ function ProfileBasicInfoForm({
   const savedPhone = raw.phone ?? "";
 
   // ── Editable state ────────────────────────────────────────────────────────
-  const [fullName,   setFullName]   = useState(savedName);
-  const [phone,      setPhone]      = useState(savedPhone);
-  const [nameError,  setNameError]  = useState<string | null>(null);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [loading,    setLoading]    = useState(false);
-  const [banner,     setBanner]     = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [fullName,        setFullName]        = useState(savedName);
+  const [phone,           setPhone]           = useState(savedPhone);
+  const [nameError,       setNameError]       = useState<string | null>(null);
+  const [phoneError,      setPhoneError]      = useState<string | null>(null);
+  const [loading,         setLoading]         = useState(false);
+  const [banner,          setBanner]          = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [showEmailChange, setShowEmailChange] = useState(false);
 
   // ── Dirty detection: true when any editable field differs from saved value ─
   const isDirty =
@@ -407,13 +690,48 @@ function ProfileBasicInfoForm({
           )}
         </div>
 
-        {/* Read-only: email */}
+        {/* Email — read-only display + secure change section */}
         <div>
-          <FieldLabel>البريد الإلكتروني (للقراءة فقط)</FieldLabel>
-          <Input
-            value={profile.email}
-            readOnly
-          />
+          <FieldLabel>البريد الإلكتروني</FieldLabel>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <Input
+              value={profile.email}
+              readOnly
+              style={{ flex: 1 }}
+            />
+            {!showEmailChange && (
+              <button
+                type="button"
+                onClick={() => setShowEmailChange(true)}
+                style={{
+                  flexShrink: 0,
+                  padding: "0.45rem 0.9rem",
+                  background: "transparent",
+                  color: "#d97706",
+                  border: "1.5px solid #fbbf24",
+                  borderRadius: 7,
+                  fontFamily: "var(--font-arabic)",
+                  fontWeight: 600,
+                  fontSize: "0.8rem",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  transition: "background 0.15s",
+                }}
+              >
+                تغيير البريد
+              </button>
+            )}
+          </div>
+          {showEmailChange && (
+            <EmailChangeSection
+              currentEmail={profile.email}
+              onSuccess={(updated) => {
+                onUpdate(updated);
+                setShowEmailChange(false);
+              }}
+              onClose={() => setShowEmailChange(false)}
+            />
+          )}
         </div>
 
         {/* Editable: phone */}

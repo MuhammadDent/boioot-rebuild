@@ -188,6 +188,42 @@ public class AuthService : IAuthService
         return MapToProfileResponse(user, permissions);
     }
 
+    // ── Change email (secure: password confirmation + uniqueness) ─────────────
+
+    public async Task<UserProfileResponse> ChangeEmailAsync(Guid userId, ChangeEmailRequest request, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new BoiootException("المستخدم غير موجود", 404);
+
+        if (!user.IsActive)
+            throw new BoiootException("الحساب غير مفعّل", 403);
+
+        // ── Password verification (required for email change) ─────────────────
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            throw new BoiootException("كلمة المرور الحالية غير صحيحة", 400);
+
+        var normalizedEmail = request.NewEmail.Trim().ToLowerInvariant();
+
+        // ── Reject if same as current ─────────────────────────────────────────
+        if (normalizedEmail.Equals(user.Email, StringComparison.OrdinalIgnoreCase))
+            throw new BoiootException("البريد الإلكتروني الجديد مطابق للبريد الحالي", 400);
+
+        // ── Uniqueness check ──────────────────────────────────────────────────
+        var emailTaken = await _context.Users
+            .AnyAsync(u => u.Email == normalizedEmail && u.Id != userId, ct);
+        if (emailTaken)
+            throw new BoiootException("البريد الإلكتروني مستخدم من قِبل حساب آخر", 409);
+
+        user.Email = normalizedEmail;
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Email changed (secure flow) for user: {UserId}", userId);
+
+        var permissions = await ResolvePermissionsAsync(user, ct);
+        return MapToProfileResponse(user, permissions);
+    }
+
     // ── Permission resolution — Phase 3 (Selective DB Mode) ──────────────────
     //
     // Admin + CompanyOwner → DB ONLY. No fallback to legacy. Source of truth = DB rows.

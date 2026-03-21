@@ -56,4 +56,17 @@ public class AuthController : ControllerBase
         var profile = await _authService.UpdateProfileAsync(userId, request, ct);
         return Ok(profile);
     }
+
+    [Authorize]
+    [HttpPost("change-email")]
+    public async Task<IActionResult> ChangeEmail([FromBody] ChangeEmailRequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var profile = await _authService.ChangeEmailAsync(userId, request, ct);
+        return Ok(profile);
+    }
 }
