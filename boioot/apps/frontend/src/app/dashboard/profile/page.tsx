@@ -227,45 +227,47 @@ function ProfileInfoTab({
   );
 }
 
-// ─── Password field with show/hide toggle ─────────────────────────────────────
+// ─── Password field — visibility controlled by parent ─────────────────────────
 
-function PasswordField({
+function PwdField({
+  id,
   label,
   value,
   onChange,
   placeholder,
   error,
-  id,
+  show,
+  onToggleShow,
 }: {
+  id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   error?: string;
-  id: string;
+  show: boolean;
+  onToggleShow: () => void;
 }) {
-  const [visible, setVisible] = useState(false);
-
   return (
     <div>
       <FieldLabel>{label}</FieldLabel>
       <div style={{ position: "relative" }}>
         <input
           id={id}
-          type={visible ? "text" : "password"}
+          type={show ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder ?? "••••••••"}
-          autoComplete="off"
+          autoComplete="new-password"
           style={{
             width: "100%",
-            padding: "0.6rem 2.8rem 0.6rem 0.85rem",
-            border: `1px solid ${error ? "#f87171" : "var(--color-border)"}`,
+            padding: "0.65rem 0.85rem 0.65rem 2.6rem",
+            border: `1.5px solid ${error ? "#f87171" : "#d1d5db"}`,
             borderRadius: 8,
             fontSize: "0.95rem",
             fontFamily: "var(--font-arabic)",
             background: "#fff",
-            color: "var(--color-text)",
+            color: "#111",
             outline: "none",
             boxSizing: "border-box",
             transition: "border-color 0.15s",
@@ -273,23 +275,25 @@ function PasswordField({
         />
         <button
           type="button"
-          onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+          onClick={onToggleShow}
+          tabIndex={-1}
+          aria-label={show ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
           style={{
             position: "absolute",
-            left: "0.6rem",
+            left: "0.65rem",
             top: "50%",
             transform: "translateY(-50%)",
             background: "none",
             border: "none",
             cursor: "pointer",
-            padding: "0.2rem",
-            color: "var(--color-text-secondary)",
+            padding: "0.15rem",
+            color: "#6b7280",
             display: "flex",
             alignItems: "center",
+            lineHeight: 1,
           }}
         >
-          {visible ? <EyeOff size={17} /> : <Eye size={17} />}
+          {show ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
       {error && (
@@ -304,19 +308,24 @@ function PasswordField({
 // ─── Tab 2: Security ──────────────────────────────────────────────────────────
 
 function SecurityTab({ user }: { user: UserProfileResponse }) {
+  // ── Field values ──
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
+
+  // ── Visibility toggles — one per field ──
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
-  // Per-field validation errors
   const [errors, setErrors] = useState<{
     current?: string;
     next?: string;
     confirm?: string;
   }>({});
 
-  // Top-level feedback banner
   const [banner, setBanner] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   function validate(): boolean {
@@ -354,9 +363,11 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
       setNext("");
       setConfirm("");
       setErrors({});
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
     } catch (err: unknown) {
       const msg = (err as Error).message;
-      // Surface common API error messages in plain Arabic
       const arabic =
         msg?.includes("incorrect") || msg?.includes("wrong") || msg?.includes("invalid")
           ? "كلمة المرور الحالية غير صحيحة"
@@ -413,29 +424,35 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
 
       {/* ── Fields ── */}
       <div style={{ display: "grid", gap: "1.25rem", maxWidth: 480 }}>
-        <PasswordField
+        <PwdField
           id="pwd-current"
           label="كلمة المرور الحالية *"
           value={current}
           onChange={(v) => { setCurrent(v); setErrors((p) => ({ ...p, current: undefined })); }}
+          show={showCurrentPassword}
+          onToggleShow={() => setShowCurrentPassword((s) => !s)}
           error={errors.current}
         />
 
-        <PasswordField
+        <PwdField
           id="pwd-new"
           label="كلمة المرور الجديدة *"
           value={next}
           onChange={(v) => { setNext(v); setErrors((p) => ({ ...p, next: undefined })); }}
           placeholder="8 أحرف على الأقل"
+          show={showNewPassword}
+          onToggleShow={() => setShowNewPassword((s) => !s)}
           error={errors.next}
         />
 
-        <PasswordField
+        <PwdField
           id="pwd-confirm"
           label="تأكيد كلمة المرور الجديدة *"
           value={confirm}
           onChange={(v) => { setConfirm(v); setErrors((p) => ({ ...p, confirm: undefined })); }}
           placeholder="أعد إدخال كلمة المرور"
+          show={showConfirmPassword}
+          onToggleShow={() => setShowConfirmPassword((s) => !s)}
           error={errors.confirm}
         />
       </div>
