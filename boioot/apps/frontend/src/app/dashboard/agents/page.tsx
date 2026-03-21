@@ -67,7 +67,7 @@ export default function AgentsPage() {
     try {
       setFetching(true);
       setFetchError("");
-      const data = await api.get<AgentSummary[]>("/api/agents/my-agents");
+      const data = await api.get<AgentSummary[]>("/agents/my-agents");
       setAgents(data);
     } catch {
       setFetchError("تعذّر تحميل قائمة الوكلاء");
@@ -91,7 +91,7 @@ export default function AgentsPage() {
 
     try {
       setSubmitting(true);
-      const newAgent = await api.post<AgentSummary>("/api/agents", {
+      const newAgent = await api.post<AgentSummary>("/agents", {
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,

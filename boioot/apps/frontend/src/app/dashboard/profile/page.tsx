@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { api } from "@/lib/api";
+import { api, ApiError, NetworkError } from "@/lib/api";
 import type { UserProfileResponse } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -151,7 +152,7 @@ function ProfileInfoTab({
     setBanner(null);
     setLoading(true);
     try {
-      const updated = await api.put<UserProfileResponse>("/api/auth/profile", {
+      const updated = await api.put<UserProfileResponse>("/auth/profile", {
         fullName: fullName.trim(),
         phone: phone.trim() || undefined,
       } as UpdateProfilePayload);
@@ -352,7 +353,7 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
 
     setLoading(true);
     try {
-      await api.put<UserProfileResponse>("/api/auth/profile", {
+      await api.put<UserProfileResponse>("/auth/profile", {
         fullName: user.fullName,
         currentPassword: current,
         newPassword: next,
@@ -540,7 +541,7 @@ function MediaTab({
     setBanner(null);
     setLoading(true);
     try {
-      const updated = await api.put<UserProfileResponse>("/api/auth/profile", {
+      const updated = await api.put<UserProfileResponse>("/auth/profile", {
         fullName: user.fullName,
         phone: user.phone,
         profileImageUrl: preview ?? "",
@@ -690,21 +691,45 @@ const TABS = [
 ];
 
 export default function ProfilePage() {
-  const { user: ctxUser, setUser, token } = useAuth();
+  const router = useRouter();
+  const { user: ctxUser, setUser, token, isLoading: authLoading } = useAuth();
   const [user, setLocal] = useState<UserProfileResponse | null>(ctxUser);
   const [activeTab, setActiveTab] = useState("info");
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (authLoading) return;
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
     api
-      .get<UserProfileResponse>("/api/auth/me")
+      .get<UserProfileResponse>("/auth/me")
       .then((u) => {
         setLocal(u);
         setUser(u);
       })
-      .catch((err: Error) => setFetchError(err.message));
-  }, [token, setUser]);
+      .catch((err: unknown) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[ProfilePage] /auth/me failed:", err);
+        }
+        if (err instanceof NetworkError) {
+          setFetchError("تعذّر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.");
+        } else if (err instanceof ApiError) {
+          if (err.status === 401) {
+            setFetchError("انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.");
+          } else if (err.status === 403) {
+            setFetchError("ليس لديك صلاحية للوصول إلى هذه الصفحة.");
+          } else if (err.status >= 500) {
+            setFetchError("حدث خطأ في الخادم. يرجى المحاولة لاحقاً.");
+          } else {
+            setFetchError(err.message || "حدث خطأ أثناء تحميل بياناتك.");
+          }
+        } else {
+          setFetchError("حدث خطأ غير متوقع أثناء تحميل بياناتك.");
+        }
+      });
+  }, [token, authLoading, router, setUser]);
 
   function handleUpdate(updated: UserProfileResponse) {
     setLocal(updated);
@@ -714,7 +739,7 @@ export default function ProfilePage() {
   if (fetchError) {
     return (
       <div style={{ maxWidth: 640, margin: "3rem auto", padding: "0 1rem" }}>
-        <Banner type="error" msg={`تعذّر تحميل بياناتك: ${fetchError}`} />
+        <Banner type="error" msg={fetchError} />
       </div>
     );
   }

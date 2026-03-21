@@ -1,0 +1,136 @@
+We need to fix the Profile page because it is currently broken.
+
+==================================================
+CURRENT PROBLEM
+==================================================
+
+The profile page opens at:
+
+/dashboard/profile
+
+But instead of loading the user data, it shows this error:
+
+"تعذر تحميل بياناتك: حدث خطأ غير متوقع"
+
+So the page exists, but profile data fetching / binding is failing.
+
+==================================================
+GOAL
+==================================================
+
+Make the profile page fully functional again.
+
+It must:
+- load current user profile data correctly
+- display the data in the profile tabs/forms
+- allow editing if already supported
+- handle loading / error states properly
+
+==================================================
+DEBUG TASK
+==================================================
+
+Please debug this end-to-end, not only the UI.
+
+Check all of the following:
+
+1. Frontend data fetching
+- what API endpoint is being called?
+- is it correct?
+- is the request being sent with auth token/cookies correctly?
+- is the request failing due to 401 / 403 / 404 / 500?
+
+2. Backend/API
+- does the profile endpoint exist and work?
+- is it returning the expected user/profile payload?
+- is the current logged-in user resolved correctly?
+- is the DTO shape compatible with the frontend?
+
+3. Auth/session
+- is /dashboard/profile using the correct authenticated session?
+- does the page lose auth context after the header/layout refactor?
+- are cookies / bearer token / auth context still available?
+
+4. Frontend mapping
+- are field names mismatched?
+- is the frontend expecting properties that are null/missing?
+- is any JSON parsing or destructuring throwing an exception?
+
+5. Error handling
+- replace generic "unexpected error" with real actionable handling
+- distinguish between:
+  - unauthorized
+  - network error
+  - empty profile
+  - backend validation issue
+  - server exception
+
+==================================================
+REQUIRED FIX
+==================================================
+
+Fix the profile page so it can successfully:
+
+- fetch current user profile
+- show name
+- show email
+- show phone
+- show company/profile related data if available
+- show avatar/profile image if available
+
+If some fields are missing, the page should still render safely instead of crashing.
+
+==================================================
+FRONTEND REQUIREMENTS
+==================================================
+
+1. Add proper loading state while profile data is being fetched
+2. Add safe null handling / optional chaining
+3. Show user-friendly error messages
+4. Log the exact failing API error in development
+5. Do not let one missing field break the entire page
+
+==================================================
+BACKEND REQUIREMENTS
+==================================================
+
+Verify and fix the endpoint used by the profile page.
+
+Possible endpoints to inspect:
+- /api/auth/me
+- /api/profile
+- /api/account/profile
+- whatever the page is currently calling
+
+Ensure the response includes the fields the page actually needs.
+
+==================================================
+IMPORTANT
+==================================================
+
+Do not only say "the endpoint failed".
+Actually trace the failing request and fix the real cause.
+
+I want the profile page to work in practice for the currently logged-in user.
+
+==================================================
+TESTING
+==================================================
+
+After fixing, verify all of this:
+
+1. /dashboard/profile loads without the red error banner
+2. user data appears in the profile page
+3. avatar/profile image displays if available
+4. missing optional fields do not crash the page
+5. edit/save flow still works if implemented
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+1. the exact root cause
+2. what endpoint / auth / mapping issue was fixed
+3. the files changed
+4. confirmation that /dashboard/profile now loads correctly
