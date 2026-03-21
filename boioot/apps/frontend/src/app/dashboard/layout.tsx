@@ -1,53 +1,15 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
-import MainHeader from "@/components/layout/MainHeader";
-
-// ─── Dashboard secondary nav links ────────────────────────────────────────────
-
-const DASH_LINKS = [
-  { href: "/",                  label: "الرئيسية",      exact: true  },
-  { href: "/daily-rentals",     label: "الإيجار اليومي", exact: false },
-  { href: "/projects",          label: "المشاريع",        exact: false },
-  { href: "/requests",          label: "الطلبات",         exact: false },
-  { href: "/dashboard/profile", label: "الملف الشخصي",   exact: true  },
-];
-
-function DashboardSecNav() {
-  const pathname = usePathname();
-
-  function isActive(href: string, exact: boolean) {
-    return exact ? pathname === href : pathname.startsWith(href);
-  }
-
-  return (
-    <div className="dash-sec-nav">
-      <div className="dash-sec-nav__inner">
-        {DASH_LINKS.map(({ href, label, exact }) => (
-          <Link
-            key={href}
-            href={href}
-            className={[
-              "dash-sec-nav__link",
-              isActive(href, exact) ? "dash-sec-nav__link--active" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 
 // ─── DashboardLayout ──────────────────────────────────────────────────────────
 //
-// Admin routes (/dashboard/admin/*) have their own full-screen layout with a
-// sidebar — they must NOT render MainHeader or DashboardSecNav here.
-// All other dashboard routes use MainHeader (shared) + DashboardSecNav.
+// Admin routes (/dashboard/admin/*) have their own full-screen layout —
+// they receive children pass-through only.
+// All other dashboard routes use the new header + sidebar shell.
 
 export default function DashboardLayout({
   children,
@@ -57,15 +19,24 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/dashboard/admin");
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   if (isAdminRoute) {
     return <>{children}</>;
   }
 
   return (
-    <>
-      <MainHeader />
-      <DashboardSecNav />
-      {children}
-    </>
+    <div className="dash-shell">
+      <DashboardHeader onMenuToggle={() => setSidebarOpen((o) => !o)} />
+      <div className="dash-shell__body">
+        <DashboardSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+        <main className="dash-shell__content">
+          {children}
+        </main>
+      </div>
+    </div>
   );
 }

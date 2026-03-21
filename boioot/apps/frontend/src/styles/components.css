@@ -1199,6 +1199,275 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
+   DASHBOARD SHELL — header + sidebar + content
+══════════════════════════════════════════════════════════════ */
+
+/* ── Shell wrapper ── */
+.dash-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f4f6f4;
+}
+.dash-shell__body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.dash-shell__content {
+  flex: 1;
+  min-width: 0;
+  padding: 1.75rem;
+  overflow-y: auto;
+}
+
+/* ── Dashboard Header ── */
+.dash-hdr {
+  height: 60px;
+  background: #fff;
+  border-bottom: 1px solid #e4ede4;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 0.6rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+.dash-hdr__menu-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: #f4f6f4;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.dash-hdr__menu-btn:hover {
+  background: #e4ede4;
+  color: var(--color-primary);
+}
+.dash-hdr__logo {
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-decoration: none;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.dash-hdr__logo-word  { color: #1a2e1a; }
+.dash-hdr__logo-accent { color: var(--color-primary); }
+.dash-hdr__spacer { flex: 1; }
+.dash-hdr__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.dash-hdr__icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f4f6f4;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
+}
+.dash-hdr__icon-btn:hover {
+  background: #e4ede4;
+  color: var(--color-primary);
+}
+.dash-hdr__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  overflow: hidden;
+  border: 2px solid #e4ede4;
+  transition: border-color 0.15s;
+  flex-shrink: 0;
+}
+.dash-hdr__avatar:hover {
+  border-color: var(--color-primary);
+}
+.dash-hdr__avatar-initial {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── Dashboard Sidebar ── */
+.dash-sbar {
+  width: 230px;
+  background: #fff;
+  border-inline-end: 1px solid #e4ede4;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+.dash-sbar__nav {
+  flex: 1;
+  padding: 0.75rem 0;
+  overflow-y: auto;
+}
+.dash-sbar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1.25rem;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
+}
+.dash-sbar__link:hover {
+  background: #f0f7f0;
+  color: #15803d;
+}
+.dash-sbar__link--active {
+  background: #f0f7f0;
+  color: #15803d;
+  font-weight: 600;
+}
+.dash-sbar__link--active::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  background: var(--color-primary);
+  border-radius: 3px 0 0 3px;
+}
+.dash-sbar__badge {
+  margin-inline-start: auto;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 99px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dash-sbar__footer {
+  padding: 0.875rem 1.25rem;
+  border-top: 1px solid #e4ede4;
+}
+.dash-sbar__user {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.75rem;
+}
+.dash-sbar__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.dash-sbar__user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dash-sbar__user-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-sbar__user-role {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+.dash-sbar__logout {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dash-sbar__logout:hover {
+  background: #fee2e2;
+}
+
+/* Overlay — conditionally rendered via JSX when sidebar is open */
+.dash-overlay {
+  position: fixed;
+  inset: 0;
+  top: 60px;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 99;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .dash-hdr__menu-btn {
+    display: flex;
+  }
+  .dash-sbar {
+    position: fixed;
+    top: 60px;
+    right: 0;
+    height: calc(100vh - 60px);
+    z-index: 100;
+    transform: translateX(100%);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  }
+  .dash-sbar--open {
+    transform: translateX(0);
+  }
+  .dash-shell__content {
+    padding: 1rem;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
    FOOTER — redesigned (premium dark green, .ft prefix)
 ══════════════════════════════════════════════════════════════ */
 
