@@ -1,0 +1,142 @@
+We need to add professional contact options on the property details page so users can communicate with the advertiser directly.
+
+==================================================
+GOAL
+==================================================
+
+On each property details page, add 2 communication options for contacting the advertiser:
+
+1. WhatsApp contact
+2. Internal site messaging / chat
+
+==================================================
+REQUIRED FEATURE
+==================================================
+
+In the advertiser / property sidebar card, add clear CTA buttons:
+
+- تواصل عبر واتساب
+- مراسلة داخل الموقع
+
+These should appear prominently near the advertiser info.
+
+==================================================
+WHATSAPP FLOW
+==================================================
+
+Add a WhatsApp button that:
+
+- opens WhatsApp chat with the advertiser's phone number
+- formats the link properly using wa.me or the correct WhatsApp URL
+- optionally prefill a message such as:
+
+"مرحبًا، أنا مهتم بهذا الإعلان: [عنوان العقار]"
+
+Requirements:
+- sanitize and normalize phone number
+- support Saudi/international formatting if possible
+- open in a new tab
+- show button only if advertiser phone exists
+
+Arabic button text:
+- تواصل عبر واتساب
+
+==================================================
+INTERNAL CHAT FLOW
+==================================================
+
+Add a site messaging button that:
+
+- opens the internal messaging flow
+- if the user is logged in:
+  - start or open a conversation with the advertiser
+  - pass property context (property id, title)
+- if the user is NOT logged in:
+  - show the auth modal
+  - allow login/register inline
+  - then resume the messaging action after auth
+
+Arabic button text:
+- مراسلة داخل الموقع
+
+==================================================
+CHAT SYSTEM REQUIREMENTS
+==================================================
+
+The internal chat should support:
+
+- conversation between interested user and advertiser
+- property context attached to the conversation
+- display property title / reference in the chat
+- message history
+- unread state if available
+- scalable structure for later dashboard inbox
+
+If a full chat system already exists, integrate with it.
+If not, prepare the flow and structure cleanly for future extension.
+
+==================================================
+PROPERTY CONTEXT
+==================================================
+
+When starting a message, include context such as:
+- property id
+- listing title
+- advertiser id
+- advertiser company/user name
+
+Optional default first message:
+"مرحبًا، أنا مهتم بهذا العقار وأرغب في معرفة المزيد."
+
+==================================================
+UI / UX REQUIREMENTS
+==================================================
+
+- Add both buttons in the advertiser card or contact section
+- Keep Arabic RTL layout
+- Make buttons visually distinct:
+  - WhatsApp = success/green style
+  - Internal chat = secondary/professional style
+- Responsive on mobile and desktop
+- Clear icons if available
+
+==================================================
+AUTH RULES
+==================================================
+
+- WhatsApp can be public or protected based on platform policy
+- Internal chat must require authentication
+- If guest clicks internal chat:
+  - open auth-required modal
+  - after successful auth, continue directly to the chat action
+
+==================================================
+OPTIONAL POLICY RECOMMENDATION
+==================================================
+
+Recommended behavior:
+- allow WhatsApp click publicly
+- require login for internal site chat
+
+This keeps conversion easy while still encouraging account creation for deeper engagement.
+
+==================================================
+TECHNICAL REQUIREMENTS
+==================================================
+
+Implement clean reusable logic:
+- get advertiser contact data from listing owner/company
+- build WhatsApp URL safely
+- create/open conversation with property context
+- reuse the existing auth-required modal for guest users
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+1. updated property details contact UI
+2. WhatsApp button logic
+3. internal chat action flow
+4. how guest users are handled
+5. what data is passed into the conversation
