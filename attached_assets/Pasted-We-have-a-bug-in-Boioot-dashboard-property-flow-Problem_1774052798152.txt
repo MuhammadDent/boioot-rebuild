@@ -1,0 +1,132 @@
+We have a bug in Boioot dashboard/property flow.
+
+Problem:
+When I open one of my ads from "My Ads", the property images do NOT appear in the ad details page.
+Also, when I click "Edit Ad", the existing property images do NOT appear in the edit form.
+
+Important:
+- The ad record exists
+- Other property data appears correctly
+- The issue seems specific to loading/rendering existing images
+- This affects both:
+  1) ad details page
+  2) edit ad page
+
+Your task:
+Do a full root-cause investigation and fix the issue properly end-to-end.
+
+==================================================
+GOALS
+==================================================
+
+1. Ensure property details API returns all property images correctly
+2. Ensure dashboard ad details page renders the existing images/gallery
+3. Ensure edit ad page preloads existing images correctly
+4. Ensure image URLs are normalized and valid
+5. Ensure no data loss happens when editing an ad with existing images
+6. If no new images are uploaded during edit, old images must remain
+7. If new images are added, merge/update them safely according to the current logic
+8. Add clear fallback UI when there are no images
+
+==================================================
+INVESTIGATION CHECKLIST
+==================================================
+
+Please inspect all of the following:
+
+A) Backend / API
+- Property details endpoint used by:
+  - ad details page
+  - edit page
+- Verify response contains images array
+- Check property DTO / response model
+- Check mapping from DB entity to API DTO
+- Check if image records are stored in separate table
+- Check if Include() / joins are missing
+- Check if images are omitted accidentally in dashboard endpoints
+- Check if relative image paths need conversion to full URLs
+
+B) Frontend data mapping
+- Inspect the pages/components for:
+  - dashboard property details
+  - dashboard edit property page
+- Verify which field name is expected in UI:
+  - images
+  - imageUrls
+  - media
+  - gallery
+  - coverImage
+- Fix mismatch between API response and UI model
+- Ensure edit form default values include current images
+
+C) Edit form behavior
+- Existing uploaded images should display as current images
+- User should see preview of already saved images
+- Existing images should not disappear unless explicitly removed
+- If there is image deletion logic, make it explicit and controlled
+
+D) UI rendering
+- Add image gallery/slider in details page
+- Add current-images section in edit page
+- Add placeholder only when truly no images exist
+
+==================================================
+EXPECTED IMPLEMENTATION
+==================================================
+
+Please implement the following robust behavior:
+
+1. Property DTO standardization
+Use a single consistent shape for images across frontend and backend, for example:
+
+images: [
+  {
+    id: string | number,
+    url: string,
+    isCover?: boolean,
+    sortOrder?: number
+  }
+]
+
+2. Details page
+- Render all images from property.images
+- If one image exists, show it clearly
+- If multiple images exist, show gallery/slider
+- If none exist, show a proper placeholder
+
+3. Edit page
+- Load property by id
+- Pre-fill all form data
+- Show existing saved images in a dedicated section
+- Keep existing images unless removed by user
+- Support adding new images without wiping old ones unintentionally
+
+4. Save/update logic
+- If user edits text fields only, existing images must remain untouched
+- If user uploads new images, handle them safely
+- If image removal is supported, removal must be explicit
+
+==================================================
+DEBUGGING REQUIREMENTS
+==================================================
+
+Please do not apply a superficial fix.
+Trace the issue end-to-end and tell me exactly:
+1. Root cause
+2. What files were changed
+3. What was fixed in backend
+4. What was fixed in frontend
+5. How existing images are preserved during edit
+
+==================================================
+DELIVERABLES
+==================================================
+
+I want:
+- the actual fix implemented
+- concise summary of root cause
+- list of modified files
+- confirmation that:
+  - ad details now shows property images
+  - edit ad page now shows existing images
+  - editing without uploading new images does not delete old images
