@@ -293,15 +293,17 @@ a {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(37, 99, 235, 0.18);
+  color: #2563eb;
   font-size: 1.05rem;
   font-weight: 800;
   line-height: 1;
   flex-shrink: 0;
-  transition: background 0.18s;
+  transition: background 0.18s, transform 0.18s;
 }
 .home-cta-primary:hover .home-cta-primary__icon {
-  background: rgba(255, 255, 255, 0.30);
+  background: rgba(37, 99, 235, 0.28);
+  transform: scale(1.18);
 }
 
 /* Secondary: أضف طلب */
@@ -346,16 +348,17 @@ a {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(46, 125, 50, 0.13);
-  color: var(--color-primary);
+  background: rgba(37, 99, 235, 0.10);
+  color: #2563eb;
   font-size: 1.05rem;
   font-weight: 800;
   line-height: 1;
   flex-shrink: 0;
-  transition: background 0.18s;
+  transition: background 0.18s, transform 0.18s;
 }
 .home-cta-secondary:hover .home-cta-secondary__icon {
-  background: rgba(46, 125, 50, 0.22);
+  background: rgba(37, 99, 235, 0.20);
+  transform: scale(1.18);
 }
 
 /* ── MessagesIconBtn animations ───────────────────────────────────────────── */
