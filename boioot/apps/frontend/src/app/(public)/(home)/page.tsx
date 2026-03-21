@@ -52,16 +52,6 @@ const LISTING_TABS = [
   { label: "فلل للبيع",     type: "Villa",     listingType: "Sale" },
 ];
 
-// ─── Section nav links ────────────────────────────────────────────────────────
-
-const SECTION_LINKS = [
-  { label: "الرئيسية",       href: "/" },
-  { label: "الإيجار اليومي", href: "/daily-rentals" },
-  { label: "المشاريع",       href: "/projects" },
-  { label: "الطلبات",        href: "/requests" },
-  { label: "المدونة",        href: "/blog" },
-];
-
 // ─── Pill options ─────────────────────────────────────────────────────────────
 
 const ROOM_OPTIONS = [
@@ -305,25 +295,6 @@ export default function HomePage() {
 
       {/* ══ MAIN HEADER ══════════════════════════════════════════════════════════ */}
       <MainHeader />
-
-      {/* ── SECTION NAV ─────────────────────────────────────────────────────── */}
-      <nav style={{ background: "#f1f8f1", borderBottom: "1px solid #c8e6c9" }}>
-        <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1.25rem", display: "flex", overflowX: "auto" }}>
-          {SECTION_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} style={{
-              padding: "0.75rem 1.25rem",
-              fontSize: "0.95rem",
-              fontWeight: link.href === "/" ? 700 : 500,
-              color: link.href === "/" ? "var(--color-primary)" : "var(--color-text-secondary)",
-              borderBottom: link.href === "/" ? "3px solid var(--color-primary)" : "3px solid transparent",
-              whiteSpace: "nowrap",
-              textDecoration: "none",
-            }}>
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      </nav>
 
       {/* ── LISTING TYPE BAR ─────────────────────────────────────────────────── */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e8ede8", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
