@@ -59,7 +59,7 @@ function RequestsContent() {
   const { openAuthModal }   = useAuthGate();
 
   function guardNewRequest() {
-    if (isAuthenticated) { router.push("/dashboard/my-requests/new"); } else { openAuthModal(); }
+    if (isAuthenticated) { router.push("/dashboard/my-requests/new"); } else { openAuthModal(() => router.push("/dashboard/my-requests/new")); }
   }
 
   const typeParam = searchParams.get("type") || "";

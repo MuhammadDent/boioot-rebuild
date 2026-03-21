@@ -33,7 +33,7 @@ export default function PostAdPage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      openAuthModal();
+      openAuthModal(() => router.push("/post-ad"));
       router.replace("/");
     }
   }, [user, authLoading, router, openAuthModal]);

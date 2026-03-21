@@ -25,25 +25,20 @@ export default function PropertyCard({ property, initialIsFavorited = false }: P
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
   const [toggling, setToggling] = useState(false);
 
-  async function handleFavorite(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!isAuthenticated) {
-      openAuthModal();
-      return;
-    }
-
+  async function doToggle() {
     if (toggling) return;
     setToggling(true);
     try {
       const { added } = await favoritesApi.toggle(property.id);
       setIsFavorited(added);
-    } catch {
-      /* silent */
-    } finally {
-      setToggling(false);
-    }
+    } catch { /* silent */ } finally { setToggling(false); }
+  }
+
+  function handleFavorite(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) { openAuthModal(() => { void doToggle(); }); return; }
+    void doToggle();
   }
 
   return (

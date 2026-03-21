@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Spinner from "@/components/ui/Spinner";
@@ -123,33 +123,45 @@ export default function PropertyDetailPage() {
       .catch(() => {});
   }, [user, id]);
 
-  const toggleFav = useCallback(async () => {
-    if (!user) { openAuthModal(); return; }
+  const doToggleFav = useCallback(async () => {
     setFavLoading(true);
     try {
       const { added } = await favoritesApi.toggle(id);
       setIsFav(added);
     } catch { /* silent */ } finally { setFavLoading(false); }
-  }, [user, id, openAuthModal]);
+  }, [id]);
 
-  const openChat = useCallback(async () => {
-    if (!user) { openAuthModal(); return; }
-    if (!property) return;
-    const recipientId = property.ownerId ?? property.agentId?.toString();
+  const toggleFav = useCallback(() => {
+    if (!user) { openAuthModal(() => { void doToggleFav(); }); return; }
+    void doToggleFav();
+  }, [user, openAuthModal, doToggleFav]);
+
+  const propertyRef = useRef(property);
+  propertyRef.current = property;
+  const userRef = useRef(user);
+  userRef.current = user;
+
+  const doOpenChat = useCallback(async () => {
+    const prop = propertyRef.current;
+    const usr  = userRef.current;
+    if (!prop || !usr) return;
+    const recipientId = prop.ownerId ?? prop.agentId?.toString();
     if (!recipientId) return;
-    if (recipientId === user.id) return; // can't message yourself
+    if (recipientId === usr.id) return; // can't message yourself
     setMsgLoading(true);
     setMsgError("");
     try {
-      const conv = await messagingApi.getOrCreateConversation({
-        recipientId,
-        propertyId: id,
-      });
+      const conv = await messagingApi.getOrCreateConversation({ recipientId, propertyId: id });
       router.push(`/dashboard/messages/${conv.id}`);
     } catch {
       setMsgError("تعذّر فتح المحادثة، حاول مجدداً.");
     } finally { setMsgLoading(false); }
-  }, [user, property, id, router, openAuthModal]);
+  }, [id, router]);
+
+  const openChat = useCallback(() => {
+    if (!user) { openAuthModal(() => { void doOpenChat(); }); return; }
+    void doOpenChat();
+  }, [user, openAuthModal, doOpenChat]);
 
   if (loading) return <Spinner />;
 

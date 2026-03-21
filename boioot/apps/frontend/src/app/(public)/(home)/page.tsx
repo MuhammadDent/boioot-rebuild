@@ -116,7 +116,7 @@ export default function HomePage() {
   const { openAuthModal } = useAuthGate();
 
   function guardHref(href: string) {
-    if (isAuthenticated) { router.push(href); } else { openAuthModal(); }
+    if (isAuthenticated) { router.push(href); } else { openAuthModal(() => router.push(href)); }
   }
   const { cities } = useCities();
 
