@@ -324,8 +324,28 @@ export default function HomePage() {
           </Link>
           <div className="home-hdr__mid">
             <Link href="/projects" className="home-hdr__projects-hide" style={btnStyle("outline")}>المشاريع العقارية</Link>
-            <button type="button" onClick={() => guardHref("/post-ad")} style={{ ...btnStyle("green"), border: "none", cursor: "pointer" }}>أضف إعلانك</button>
-            <button type="button" onClick={() => guardHref("/dashboard/my-requests/new")} style={{ ...btnStyle("dark"), border: "none", cursor: "pointer" }}>أضف طلب</button>
+            <button
+              type="button"
+              onClick={() => guardHref("/post-ad")}
+              style={{
+                ...btnStyle("green"),
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              أضف إعلانك
+            </button>
+            <button
+              type="button"
+              onClick={() => guardHref("/dashboard/my-requests/new")}
+              style={{
+                ...btnStyle("dark"),
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              أضف طلب
+            </button>
           </div>
           <div className="home-hdr__auth">
             {!isLoading && (isAuthenticated ? (
