@@ -224,20 +224,6 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* ══ LAYER 3: TRUST STRIP ═════════════════════════════════════════════ */}
-      <div className="footer2__trust-strip" role="list" aria-label="نقاط الثقة">
-        <div className="footer2__wrap footer2__trust-inner">
-          {TRUST_POINTS.map(({ Icon, text }) => (
-            <div key={text} className="footer2__trust-item" role="listitem">
-              <span className="footer2__trust-icon" aria-hidden="true">
-                <Icon />
-              </span>
-              <span className="footer2__trust-text">{text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* ══ LAYER 4: BOTTOM BAR ══════════════════════════════════════════════ */}
       <div className="footer2__bottom">
         <div className="footer2__wrap footer2__bottom-inner">
