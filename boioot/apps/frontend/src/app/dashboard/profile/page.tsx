@@ -5,9 +5,14 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError, NetworkError } from "@/lib/api";
+import {
+  normalizeProfile,
+  ROLE_GROUP_COLORS,
+  type NormalizedProfile,
+} from "@/lib/profile-model";
 import type { UserProfileResponse } from "@/types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Payload types (API shape — unchanged) ────────────────────────────────────
 
 interface UpdateProfilePayload {
   fullName: string;
@@ -33,22 +38,11 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-function roleName(role: string): string {
-  const map: Record<string, string> = {
-    Admin: "مدير النظام",
-    Owner: "مالك عقار",
-    User: "مستخدم",
-    Agent: "وكيل",
-    Company: "شركة",
-  };
-  return map[role] ?? role;
-}
-
 // ─── Shared UI atoms ──────────────────────────────────────────────────────────
 
 function Banner({ type, msg }: { type: "success" | "error"; msg: string }) {
-  const bg = type === "success" ? "#d1fae5" : "#fee2e2";
-  const color = type === "success" ? "#065f46" : "#991b1b";
+  const bg     = type === "success" ? "#d1fae5" : "#fee2e2";
+  const color  = type === "success" ? "#065f46" : "#991b1b";
   const border = type === "success" ? "#6ee7b7" : "#fca5a5";
   return (
     <div
@@ -133,17 +127,171 @@ function SaveBtn({
   );
 }
 
-// ─── Tab 1: Profile Info ───────────────────────────────────────────────────────
+// ─── ProfileRoleBadge ─────────────────────────────────────────────────────────
 
-function ProfileInfoTab({
-  user,
+function ProfileRoleBadge({ profile }: { profile: NormalizedProfile }) {
+  const colors = ROLE_GROUP_COLORS[profile.roleGroup];
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "0.2rem 0.75rem",
+        borderRadius: 999,
+        fontSize: "0.78rem",
+        fontWeight: 700,
+        background: colors.bg,
+        color: colors.text,
+        border: `1px solid ${colors.border}`,
+        letterSpacing: "0.01em",
+      }}
+    >
+      {profile.roleLabel}
+    </span>
+  );
+}
+
+// ─── ProfileHeaderCard ────────────────────────────────────────────────────────
+
+function ProfileHeaderCard({ profile }: { profile: NormalizedProfile }) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 14,
+        border: "1px solid var(--color-border)",
+        padding: "1.5rem",
+        display: "flex",
+        alignItems: "center",
+        gap: "1.25rem",
+        marginBottom: "1.5rem",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+        flexWrap: "wrap",
+      }}
+    >
+      {/* Avatar */}
+      <div
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: "50%",
+          overflow: "hidden",
+          background: profile.avatarUrl ? "transparent" : "var(--color-primary)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          border: "2px solid var(--color-border)",
+        }}
+      >
+        {profile.avatarUrl ? (
+          <img
+            src={profile.avatarUrl}
+            alt={profile.fullName}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          <span style={{ color: "#fff", fontSize: "1.5rem", fontWeight: 700 }}>
+            {initials(profile.fullName)}
+          </span>
+        )}
+      </div>
+
+      {/* Identity */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: "1.15rem", color: "var(--color-text)" }}>
+          {profile.fullName}
+        </div>
+        <div style={{ fontSize: "0.88rem", color: "var(--color-text-secondary)", marginTop: "0.2rem" }}>
+          {profile.email}
+        </div>
+        <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+          <ProfileRoleBadge profile={profile} />
+          <span style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+            #{profile.userCode}
+          </span>
+        </div>
+      </div>
+
+      {/* Timestamps */}
+      <div
+        style={{
+          fontSize: "0.8rem",
+          color: "var(--color-text-secondary)",
+          textAlign: "start",
+          flexShrink: 0,
+        }}
+      >
+        <div>
+          عضو منذ:{" "}
+          {new Date(profile.createdAt).toLocaleDateString("ar-SY", {
+            year: "numeric",
+            month: "long",
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ProfileRoleSection — optional role-specific context block ────────────────
+
+function ProfileRoleSection({ profile }: { profile: NormalizedProfile }) {
+  const { roleGroup, roleLabel, companyName, officeName, agentTitle } = profile;
+
+  if (roleGroup === "individual") return null;
+
+  const colors = ROLE_GROUP_COLORS[roleGroup];
+
+  return (
+    <div
+      style={{
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        borderRadius: 10,
+        padding: "0.85rem 1.1rem",
+        marginBottom: "1.5rem",
+        fontSize: "0.88rem",
+        color: colors.text,
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.3rem",
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: "0.2rem" }}>
+        {roleGroup === "admin"    && "حساب إداري — صلاحيات كاملة على لوحة التحكم"}
+        {roleGroup === "business" && `حساب تجاري — ${roleLabel}`}
+        {roleGroup === "agent"    && `حساب وكيل — ${roleLabel}`}
+      </div>
+      {companyName && (
+        <div>اسم الشركة: <strong>{companyName}</strong></div>
+      )}
+      {officeName && (
+        <div>اسم المكتب: <strong>{officeName}</strong></div>
+      )}
+      {agentTitle && (
+        <div>المسمى الوظيفي: <strong>{agentTitle}</strong></div>
+      )}
+      {roleGroup === "admin" && (
+        <div style={{ fontSize: "0.8rem", opacity: 0.85 }}>
+          الصلاحيات النشطة: {profile.permissions.length} صلاحية
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab 1: ProfileBasicInfoForm ──────────────────────────────────────────────
+
+function ProfileBasicInfoForm({
+  raw,
   onUpdate,
 }: {
-  user: UserProfileResponse;
+  raw: UserProfileResponse;
   onUpdate: (u: UserProfileResponse) => void;
 }) {
-  const [fullName, setFullName] = useState(user.fullName);
-  const [phone, setPhone] = useState(user.phone ?? "");
+  const profile = normalizeProfile(raw);
+  const [fullName, setFullName] = useState(raw.fullName);
+  const [phone, setPhone] = useState(raw.phone ?? "");
   const [loading, setLoading] = useState(false);
   const [banner, setBanner] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
@@ -184,7 +332,10 @@ function ProfileInfoTab({
 
         <div>
           <FieldLabel>البريد الإلكتروني (للقراءة فقط)</FieldLabel>
-          <Input value={user.email} readOnly />
+          <Input
+            value={profile.email}
+            readOnly
+          />
         </div>
 
         <div>
@@ -199,19 +350,25 @@ function ProfileInfoTab({
         </div>
 
         <div>
-          <FieldLabel>الدور في المنصة</FieldLabel>
-          <Input value={roleName(user.role)} readOnly />
+          <FieldLabel>نوع الحساب</FieldLabel>
+          <Input
+            value={profile.roleLabel}
+            readOnly
+          />
         </div>
 
         <div>
           <FieldLabel>رمز المستخدم</FieldLabel>
-          <Input value={user.userCode} readOnly />
+          <Input
+            value={profile.userCode}
+            readOnly
+          />
         </div>
 
         <div>
           <FieldLabel>تاريخ الإنشاء</FieldLabel>
           <Input
-            value={new Date(user.createdAt).toLocaleDateString("ar-SY", {
+            value={new Date(profile.createdAt).toLocaleDateString("ar-SY", {
               year: "numeric",
               month: "long",
               day: "numeric",
@@ -228,7 +385,7 @@ function ProfileInfoTab({
   );
 }
 
-// ─── Password field — visibility controlled by parent ─────────────────────────
+// ─── Password field ───────────────────────────────────────────────────────────
 
 function PwdField({
   id,
@@ -306,28 +463,20 @@ function PwdField({
   );
 }
 
-// ─── Tab 2: Security ──────────────────────────────────────────────────────────
+// ─── Tab 2: ProfileSecurityTab ────────────────────────────────────────────────
 
-function SecurityTab({ user }: { user: UserProfileResponse }) {
-  // ── Field values ──
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
+function ProfileSecurityTab({ raw }: { raw: UserProfileResponse }) {
+  const [current, setCurrent]   = useState("");
+  const [next, setNext]         = useState("");
+  const [confirm, setConfirm]   = useState("");
 
-  // ── Visibility toggles — one per field ──
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showNewPassword,     setShowNewPassword]     = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
-
-  const [errors, setErrors] = useState<{
-    current?: string;
-    next?: string;
-    confirm?: string;
-  }>({});
-
-  const [banner, setBanner] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [errors, setErrors]   = useState<{ current?: string; next?: string; confirm?: string }>({});
+  const [banner, setBanner]   = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   function validate(): boolean {
     const e: typeof errors = {};
@@ -350,15 +499,13 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
     e.preventDefault();
     setBanner(null);
     if (!validate()) return;
-
     setLoading(true);
     try {
       await api.put<UserProfileResponse>("/auth/profile", {
-        fullName: user.fullName,
+        fullName: raw.fullName,
         currentPassword: current,
         newPassword: next,
       } as ChangePasswordPayload);
-
       setBanner({ type: "success", msg: "تم تغيير كلمة المرور بنجاح." });
       setCurrent("");
       setNext("");
@@ -370,7 +517,8 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
     } catch (err: unknown) {
       const msg = (err as Error).message;
       const arabic =
-        msg?.includes("incorrect") || msg?.includes("wrong") || msg?.includes("invalid")
+        msg?.includes("incorrect") || msg?.includes("wrong") || msg?.includes("invalid") ||
+        msg?.includes("غير صحيحة")
           ? "كلمة المرور الحالية غير صحيحة"
           : msg || "حدث خطأ غير متوقع، حاول مرة أخرى";
       setBanner({ type: "error", msg: arabic });
@@ -381,8 +529,6 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-
-      {/* ── Top feedback banner ── */}
       {banner && (
         <div
           role={banner.type === "error" ? "alert" : "status"}
@@ -407,7 +553,6 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
         </div>
       )}
 
-      {/* ── Tip card ── */}
       <div
         style={{
           background: "#f0fdf4",
@@ -423,7 +568,6 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
         اختر كلمة مرور قوية لا تقل عن 8 أحرف، وتحتوي على أرقام وحروف.
       </div>
 
-      {/* ── Fields ── */}
       <div style={{ display: "grid", gap: "1.25rem", maxWidth: 480 }}>
         <PwdField
           id="pwd-current"
@@ -434,7 +578,6 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
           onToggleShow={() => setShowCurrentPassword((s) => !s)}
           error={errors.current}
         />
-
         <PwdField
           id="pwd-new"
           label="كلمة المرور الجديدة *"
@@ -445,7 +588,6 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
           onToggleShow={() => setShowNewPassword((s) => !s)}
           error={errors.next}
         />
-
         <PwdField
           id="pwd-confirm"
           label="تأكيد كلمة المرور الجديدة *"
@@ -458,7 +600,6 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
         />
       </div>
 
-      {/* ── Submit ── */}
       <div style={{ marginTop: "1.75rem", display: "flex", alignItems: "center", gap: "1rem" }}>
         <button
           type="submit"
@@ -479,46 +620,29 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
             transition: "background 0.15s",
           }}
         >
-          {loading && (
-            <span
-              style={{
-                width: 15,
-                height: 15,
-                border: "2px solid rgba(255,255,255,0.4)",
-                borderTopColor: "#fff",
-                borderRadius: "50%",
-                display: "inline-block",
-                animation: "spin 0.7s linear infinite",
-              }}
-            />
-          )}
           {loading ? "جارٍ الحفظ…" : "حفظ التغييرات"}
         </button>
-
-        {/* Inline spinner keyframes injected once */}
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </form>
   );
 }
 
-// ─── Tab 3: Media (Avatar) ────────────────────────────────────────────────────
+// ─── Tab 3: ProfileAvatarTab ──────────────────────────────────────────────────
 
-function MediaTab({
-  user,
+function ProfileAvatarTab({
+  raw,
   onUpdate,
 }: {
-  user: UserProfileResponse;
+  raw: UserProfileResponse;
   onUpdate: (u: UserProfileResponse) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(user.profileImageUrl ?? null);
-  const [loading, setLoading] = useState(false);
-  const [banner, setBanner] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const profile  = normalizeProfile(raw);
+  const fileRef  = useRef<HTMLInputElement>(null);
+  const [preview, setPreview]   = useState<string | null>(profile.avatarUrl);
+  const [loading, setLoading]   = useState(false);
+  const [banner,  setBanner]    = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  function pickFile() {
-    fileRef.current?.click();
-  }
+  function pickFile() { fileRef.current?.click(); }
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -542,8 +666,8 @@ function MediaTab({
     setLoading(true);
     try {
       const updated = await api.put<UserProfileResponse>("/auth/profile", {
-        fullName: user.fullName,
-        phone: user.phone,
+        fullName: raw.fullName,
+        phone: raw.phone,
         profileImageUrl: preview ?? "",
       });
       onUpdate(updated);
@@ -587,7 +711,7 @@ function MediaTab({
             />
           ) : (
             <span style={{ color: "#fff", fontSize: "2rem", fontWeight: 700 }}>
-              {initials(user.fullName)}
+              {initials(profile.fullName)}
             </span>
           )}
         </div>
@@ -663,37 +787,111 @@ function MediaTab({
   );
 }
 
-// ─── Tab 4: Settings ──────────────────────────────────────────────────────────
+// ─── Tab 4: ProfileSettingsTab ────────────────────────────────────────────────
 
-function SettingsTab() {
+function ProfileSettingsTab({ profile }: { profile: NormalizedProfile }) {
   return (
     <div style={{ color: "var(--color-text-secondary)", fontSize: "0.95rem", lineHeight: 1.7 }}>
-      <p style={{ marginBottom: "0.75rem" }}>
-        ستُضاف إعدادات إضافية هنا قريباً، مثل:
-      </p>
+      <p style={{ marginBottom: "0.75rem" }}>ستُضاف إعدادات إضافية هنا قريباً، مثل:</p>
       <ul style={{ paddingRight: "1.25rem", listStyle: "disc" }}>
         <li>إعدادات الإشعارات</li>
         <li>اللغة والمنطقة الزمنية</li>
         <li>الاشتراكات والفواتير</li>
         <li>الخصوصية وإدارة البيانات</li>
+        {profile.roleGroup === "admin" && <li>إدارة الصلاحيات والأدوار</li>}
+        {profile.roleGroup === "business" && <li>إعدادات الشركة والمكتب</li>}
+        {profile.roleGroup === "agent" && <li>إعدادات الوكالة العقارية</li>}
       </ul>
+    </div>
+  );
+}
+
+// ─── ProfileTabs ──────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: "info",     label: "الملف الشخصي"  },
+  { id: "security", label: "الأمان"         },
+  { id: "media",    label: "الصورة الشخصية" },
+  { id: "settings", label: "الإعدادات"      },
+];
+
+function ProfileTabs({
+  raw,
+  profile,
+  activeTab,
+  setActiveTab,
+  onUpdate,
+}: {
+  raw:          UserProfileResponse;
+  profile:      NormalizedProfile;
+  activeTab:    string;
+  setActiveTab: (id: string) => void;
+  onUpdate:     (u: UserProfileResponse) => void;
+}) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 14,
+        border: "1px solid var(--color-border)",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Tab bar */}
+      <div
+        style={{
+          display: "flex",
+          borderBottom: "1px solid var(--color-border)",
+          overflowX: "auto",
+        }}
+      >
+        {TABS.map((tab) => {
+          const active = tab.id === activeTab;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: "0.85rem 1.35rem",
+                fontFamily: "var(--font-arabic)",
+                fontWeight: active ? 700 : 500,
+                fontSize: "0.9rem",
+                color: active ? "var(--color-primary)" : "var(--color-text-secondary)",
+                background: "none",
+                border: "none",
+                borderBottom: active ? "2px solid var(--color-primary)" : "2px solid transparent",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "color 0.15s, border-color 0.15s",
+                marginBottom: -1,
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab content */}
+      <div style={{ padding: "1.75rem" }}>
+        {activeTab === "info"     && <ProfileBasicInfoForm raw={raw} onUpdate={onUpdate} />}
+        {activeTab === "security" && <ProfileSecurityTab raw={raw} />}
+        {activeTab === "media"    && <ProfileAvatarTab raw={raw} onUpdate={onUpdate} />}
+        {activeTab === "settings" && <ProfileSettingsTab profile={profile} />}
+      </div>
     </div>
   );
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-const TABS = [
-  { id: "info",     label: "الملف الشخصي" },
-  { id: "security", label: "الأمان"        },
-  { id: "media",    label: "الصورة الشخصية" },
-  { id: "settings", label: "الإعدادات"     },
-];
-
 export default function ProfilePage() {
   const router = useRouter();
   const { user: ctxUser, setUser, token, isLoading: authLoading } = useAuth();
-  const [user, setLocal] = useState<UserProfileResponse | null>(ctxUser);
+
+  const [raw,       setRaw]       = useState<UserProfileResponse | null>(ctxUser);
   const [activeTab, setActiveTab] = useState("info");
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -706,7 +904,7 @@ export default function ProfilePage() {
     api
       .get<UserProfileResponse>("/auth/me")
       .then((u) => {
-        setLocal(u);
+        setRaw(u);
         setUser(u);
       })
       .catch((err: unknown) => {
@@ -732,7 +930,7 @@ export default function ProfilePage() {
   }, [token, authLoading, router, setUser]);
 
   function handleUpdate(updated: UserProfileResponse) {
-    setLocal(updated);
+    setRaw(updated);
     setUser(updated);
   }
 
@@ -744,13 +942,15 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) {
+  if (!raw) {
     return (
       <div style={{ textAlign: "center", padding: "4rem", color: "var(--color-text-secondary)" }}>
         جارٍ التحميل…
       </div>
     );
   }
+
+  const profile = normalizeProfile(raw);
 
   return (
     <div
@@ -761,148 +961,27 @@ export default function ProfilePage() {
         fontFamily: "var(--font-arabic)",
       }}
     >
-      {/* ── Breadcrumb ── */}
+      {/* Breadcrumb */}
       <nav style={{ fontSize: "0.85rem", color: "var(--color-text-secondary)", marginBottom: "1.25rem" }}>
         <span>لوحة التحكم</span>
         <span style={{ margin: "0 0.4rem" }}>›</span>
         <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>الملف الشخصي</span>
       </nav>
 
-      {/* ── Header card ── */}
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 14,
-          border: "1px solid var(--color-border)",
-          padding: "1.5rem",
-          display: "flex",
-          alignItems: "center",
-          gap: "1.25rem",
-          marginBottom: "1.5rem",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-        }}
-      >
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: "50%",
-            overflow: "hidden",
-            background: user.profileImageUrl ? "transparent" : "var(--color-primary)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            border: "2px solid var(--color-border)",
-          }}
-        >
-          {user.profileImageUrl ? (
-            <img
-              src={user.profileImageUrl}
-              alt={user.fullName}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          ) : (
-            <span style={{ color: "#fff", fontSize: "1.5rem", fontWeight: 700 }}>
-              {initials(user.fullName)}
-            </span>
-          )}
-        </div>
+      {/* Header card — unified for all roles */}
+      <ProfileHeaderCard profile={profile} />
 
-        <div>
-          <div style={{ fontWeight: 700, fontSize: "1.15rem", color: "var(--color-text)" }}>
-            {user.fullName}
-          </div>
-          <div style={{ fontSize: "0.88rem", color: "var(--color-text-secondary)", marginTop: "0.25rem" }}>
-            {user.email}
-          </div>
-          <div
-            style={{
-              display: "inline-block",
-              marginTop: "0.4rem",
-              padding: "0.15rem 0.65rem",
-              borderRadius: 999,
-              background: "var(--color-primary-light, #e8f5e9)",
-              color: "var(--color-primary)",
-              fontSize: "0.8rem",
-              fontWeight: 600,
-            }}
-          >
-            {roleName(user.role)}
-          </div>
-        </div>
+      {/* Optional role-specific context block */}
+      <ProfileRoleSection profile={profile} />
 
-        <div style={{ marginRight: "auto", textAlign: "left", fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>
-          <div>آخر تحديث</div>
-          <div style={{ fontWeight: 600 }}>
-            {new Date(user.createdAt).toLocaleDateString("ar-SY", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Tabs ── */}
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 14,
-          border: "1px solid var(--color-border)",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-          overflow: "hidden",
-        }}
-      >
-        {/* Tab bar */}
-        <div
-          style={{
-            display: "flex",
-            borderBottom: "1px solid var(--color-border)",
-            overflowX: "auto",
-            scrollbarWidth: "none",
-          }}
-        >
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: "0.85rem 1.4rem",
-                border: "none",
-                background: "transparent",
-                fontFamily: "var(--font-arabic)",
-                fontSize: "0.9rem",
-                fontWeight: activeTab === tab.id ? 700 : 500,
-                color: activeTab === tab.id ? "var(--color-primary)" : "var(--color-text-secondary)",
-                borderBottom: activeTab === tab.id ? "2.5px solid var(--color-primary)" : "2.5px solid transparent",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                transition: "color 0.15s",
-                marginBottom: "-1px",
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content */}
-        <div style={{ padding: "1.75rem 1.5rem" }}>
-          {activeTab === "info" && (
-            <ProfileInfoTab user={user} onUpdate={handleUpdate} />
-          )}
-          {activeTab === "security" && (
-            <SecurityTab user={user} />
-          )}
-          {activeTab === "media" && (
-            <MediaTab user={user} onUpdate={handleUpdate} />
-          )}
-          {activeTab === "settings" && (
-            <SettingsTab />
-          )}
-        </div>
-      </div>
+      {/* Tabs — same structure for every role */}
+      <ProfileTabs
+        raw={raw}
+        profile={profile}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onUpdate={handleUpdate}
+      />
     </div>
   );
 }
