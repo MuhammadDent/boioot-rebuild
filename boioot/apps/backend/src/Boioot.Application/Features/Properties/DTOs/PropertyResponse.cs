@@ -54,6 +54,9 @@ public class PropertyResponse
     public string? OwnerPhone { get; set; }
     public string? OwnerPhoto { get; set; }
 
+    // Resolved chat recipient user ID (OwnerId → Agent.UserId → company agent fallback)
+    public string? RecipientId { get; set; }
+
     // Analytics
     public int ViewCount { get; set; }
 }

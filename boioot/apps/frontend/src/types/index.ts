@@ -126,6 +126,8 @@ export interface PropertyResponse {
   ownerName?: string;
   ownerPhone?: string;
   ownerPhoto?: string;
+  // Resolved chat recipient user ID (backfill: OwnerId → Agent.UserId → company agent)
+  recipientId?: string;
   // Analytics
   viewCount?: number;
 }

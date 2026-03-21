@@ -145,7 +145,8 @@ export default function PropertyDetailPage() {
     const prop = propertyRef.current;
     const usr  = userRef.current;
     if (!prop || !usr) return;
-    const recipientId = prop.ownerId ?? prop.agentId?.toString();
+    // Use the backend-resolved recipientId (backfill: OwnerId → Agent.UserId → company agent)
+    const recipientId = prop.recipientId ?? prop.ownerId ?? prop.agentId?.toString();
     if (!recipientId) return;
     if (recipientId === usr.id) return; // can't message yourself
     setMsgLoading(true);
@@ -183,9 +184,12 @@ export default function PropertyDetailPage() {
   const sortedImages = property.images;
   const activeImage  = sortedImages[selectedImageIdx] ?? sortedImages[0];
   const shares       = shareUrls(pageUrl, property.title);
-  const hasRecipient = !!(property.ownerId ?? property.agentId);
-  const isOwn = user && (user.id === property.ownerId || user.id === property.agentId?.toString());
-  // Image priority: user photo → company logo → null (show placeholder)
+  // recipientId: backend-resolved chat target (OwnerId → Agent.UserId → company agent fallback)
+  const resolvedRecipient = property.recipientId ?? property.ownerId ?? property.agentId?.toString();
+  const hasRecipient = !!resolvedRecipient;
+  const isOwn = !!(user && resolvedRecipient && user.id === resolvedRecipient);
+  const hasContactInfo = !!(property.ownerPhone || (hasRecipient && !isOwn));
+  // Image priority: user/agent photo → company logo → null (show placeholder)
   const advertiserPhoto = property.ownerPhoto ?? property.companyLogoUrl ?? null;
 
   return (
@@ -352,11 +356,12 @@ export default function PropertyDetailPage() {
               </div>
 
               {/* ── Contact CTA section ── */}
-              {(property.ownerPhone || (hasRecipient && !isOwn)) && (
-                <div style={{ marginBottom: "0.75rem" }}>
-                  <p style={{ margin: "0 0 0.6rem", fontSize: "0.82rem", fontWeight: 600, color: "var(--color-text-secondary)", letterSpacing: "0.02em" }}>
-                    التواصل مع المعلن
-                  </p>
+              <div style={{ marginBottom: "0.75rem" }}>
+                <p style={{ margin: "0 0 0.6rem", fontSize: "0.82rem", fontWeight: 600, color: "var(--color-text-secondary)", letterSpacing: "0.02em" }}>
+                  التواصل مع المعلن
+                </p>
+
+                {hasContactInfo ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
 
                     {/* WhatsApp */}
@@ -364,7 +369,7 @@ export default function PropertyDetailPage() {
                       <a
                         href={waLink(
                           property.ownerPhone,
-                          `مرحباً، أنا مهتم بهذا العقار وأرغب في معرفة المزيد: ${property.title}`
+                          `مرحبًا، أنا مهتم بهذا الإعلان: ${property.title}`
                         )}
                         target="_blank"
                         rel="noreferrer"
@@ -410,8 +415,19 @@ export default function PropertyDetailPage() {
                     )}
 
                   </div>
-                </div>
-              )}
+                ) : (
+                  /* Fallback: no contact data available */
+                  <div style={{
+                    background: "#f8fafc", border: "1px solid var(--color-border)",
+                    borderRadius: 8, padding: "0.65rem 0.9rem",
+                    fontSize: "0.83rem", color: "var(--color-text-secondary)",
+                    display: "flex", alignItems: "center", gap: "0.5rem",
+                  }}>
+                    <span>ℹ️</span>
+                    <span>بيانات التواصل لهذا الإعلان غير مكتملة حاليًا</span>
+                  </div>
+                )}
+              </div>
 
               {msgError && (
                 <p style={{ margin: "0 0 0.5rem", color: "#dc2626", fontSize: "0.82rem" }}>
