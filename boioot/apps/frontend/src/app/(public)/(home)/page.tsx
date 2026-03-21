@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import type { PropertyResponse } from "@/types";
 import { PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
 import { useCities } from "@/hooks/useCities";
+import MessagesIconBtn, { MESSAGES_ICON_KEYFRAMES } from "@/components/ui/MessagesIconBtn";
 
 // ─── Slider data ──────────────────────────────────────────────────────────────
 
@@ -123,6 +124,14 @@ export default function HomePage() {
   function handleLogout() {
     logout();
     router.push("/");
+  }
+
+  function handleMessagesClick() {
+    if (isAuthenticated) {
+      router.push("/dashboard/messages");
+    } else {
+      openAuthModal(() => { router.push("/dashboard/messages"); });
+    }
   }
 
   // Slider
@@ -316,14 +325,39 @@ export default function HomePage() {
   return (
     <div style={{ direction: "rtl", fontFamily: "var(--font-arabic)", background: "var(--color-background)" }}>
 
+      {/* Inject animation keyframes for MessagesIconBtn */}
+      <style>{MESSAGES_ICON_KEYFRAMES}</style>
+
       {/* ── TOP HEADER ──────────────────────────────────────────────────────── */}
       <header className="home-hdr">
         <div className="home-hdr__inner">
-          <Link href="/" className="home-hdr__logo" style={{ flexShrink: 0, lineHeight: 0 }}>
-            <Image src="/logo-boioot.png" alt="بيوت" width={200} height={76} style={{ objectFit: "contain", width: 200, height: 76 }} priority />
+
+          {/* Logo */}
+          <Link
+            href="/"
+            className="home-hdr__logo"
+            style={{ flexShrink: 0, lineHeight: 0 }}
+          >
+            <Image
+              src="/logo-boioot.png"
+              alt="بيوت"
+              width={200}
+              height={76}
+              style={{ objectFit: "contain", width: 200, height: 76 }}
+              priority
+            />
           </Link>
+
+          {/* ── Mid actions ────────────────────────────────────────────────── */}
           <div className="home-hdr__mid">
-            <Link href="/projects" className="home-hdr__projects-hide" style={btnStyle("outline")}>المشاريع العقارية</Link>
+            <Link
+              href="/projects"
+              className="home-hdr__projects-hide"
+              style={btnStyle("outline")}
+            >
+              المشاريع العقارية
+            </Link>
+
             <button
               type="button"
               onClick={() => guardHref("/post-ad")}
@@ -335,6 +369,7 @@ export default function HomePage() {
             >
               أضف إعلانك
             </button>
+
             <button
               type="button"
               onClick={() => guardHref("/dashboard/my-requests/new")}
@@ -347,37 +382,146 @@ export default function HomePage() {
               أضف طلب
             </button>
           </div>
+
+          {/* ── Auth / icon strip ───────────────────────────────────────────── */}
           <div className="home-hdr__auth">
-            {!isLoading && (isAuthenticated ? (
-              <>
-                <Link href="/dashboard" title="لوحة التحكم" style={iconBtnStyle}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                </Link>
-                <button className="home-hdr-icon-secondary" style={{ ...iconBtnStyle, color: "#e53935", background: "none", border: "none", cursor: "pointer" }} title="المفضلة">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                </button>
-                <button className="home-hdr-icon-secondary" style={{ ...iconBtnStyle, background: "none", border: "none", cursor: "pointer" }} title="الإشعارات">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                </button>
-                <button
-                  onClick={handleLogout}
-                  title="تسجيل الخروج"
-                  style={{ ...iconBtnStyle, background: "none", border: "none", cursor: "pointer", color: "#e53935" }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                    <polyline points="16 17 21 12 16 7"/>
-                    <line x1="21" y1="12" x2="9" y2="12"/>
-                  </svg>
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/login"    style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", textDecoration: "none" }}>تسجيل الدخول</Link>
-                <Link href="/register" style={btnStyle("green")}>إنشاء حساب</Link>
-              </>
-            ))}
+            {!isLoading && (
+              isAuthenticated ? (
+                <>
+                  {/* Dashboard link */}
+                  <Link
+                    href="/dashboard"
+                    title="لوحة التحكم"
+                    style={iconBtnStyle}
+                  >
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                    </svg>
+                  </Link>
+
+                  {/* Messages icon — with tooltip, badge bounce, ripple */}
+                  <MessagesIconBtn
+                    isActivePage={false}
+                    onClick={handleMessagesClick}
+                    size={38}
+                  />
+
+                  {/* Favorites */}
+                  <button
+                    type="button"
+                    className="home-hdr-icon-secondary"
+                    title="المفضلة"
+                    style={{
+                      ...iconBtnStyle,
+                      color: "#e53935",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                    </svg>
+                  </button>
+
+                  {/* Notifications */}
+                  <button
+                    type="button"
+                    className="home-hdr-icon-secondary"
+                    title="الإشعارات"
+                    style={{
+                      ...iconBtnStyle,
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                  </button>
+
+                  {/* Logout */}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    title="تسجيل الخروج"
+                    style={{
+                      ...iconBtnStyle,
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#e53935",
+                    }}
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Messages icon — guest (opens auth modal) */}
+                  <MessagesIconBtn
+                    isActivePage={false}
+                    onClick={handleMessagesClick}
+                    size={38}
+                  />
+
+                  <Link
+                    href="/login"
+                    style={{
+                      fontSize: "0.9rem",
+                      color: "var(--color-text-secondary)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    تسجيل الدخول
+                  </Link>
+
+                  <Link
+                    href="/register"
+                    style={btnStyle("green")}
+                  >
+                    إنشاء حساب
+                  </Link>
+                </>
+              )
+            )}
           </div>
+
         </div>
       </header>
 
