@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import type { UserProfileResponse } from "@/types";
@@ -226,6 +227,80 @@ function ProfileInfoTab({
   );
 }
 
+// ─── Password field with show/hide toggle ─────────────────────────────────────
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  error,
+  id,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  error?: string;
+  id: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      <div style={{ position: "relative" }}>
+        <input
+          id={id}
+          type={visible ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder ?? "••••••••"}
+          autoComplete="off"
+          style={{
+            width: "100%",
+            padding: "0.6rem 2.8rem 0.6rem 0.85rem",
+            border: `1px solid ${error ? "#f87171" : "var(--color-border)"}`,
+            borderRadius: 8,
+            fontSize: "0.95rem",
+            fontFamily: "var(--font-arabic)",
+            background: "#fff",
+            color: "var(--color-text)",
+            outline: "none",
+            boxSizing: "border-box",
+            transition: "border-color 0.15s",
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+          style={{
+            position: "absolute",
+            left: "0.6rem",
+            top: "50%",
+            transform: "translateY(-50%)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "0.2rem",
+            color: "var(--color-text-secondary)",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          {visible ? <EyeOff size={17} /> : <Eye size={17} />}
+        </button>
+      </div>
+      {error && (
+        <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#dc2626" }}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Tab 2: Security ──────────────────────────────────────────────────────────
 
 function SecurityTab({ user }: { user: UserProfileResponse }) {
@@ -233,20 +308,38 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Per-field validation errors
+  const [errors, setErrors] = useState<{
+    current?: string;
+    next?: string;
+    confirm?: string;
+  }>({});
+
+  // Top-level feedback banner
   const [banner, setBanner] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  function validate(): boolean {
+    const e: typeof errors = {};
+    if (!current.trim()) e.current = "هذا الحقل مطلوب";
+    if (!next.trim()) {
+      e.next = "هذا الحقل مطلوب";
+    } else if (next.length < 8) {
+      e.next = "يجب أن تكون كلمة المرور 8 أحرف على الأقل";
+    }
+    if (!confirm.trim()) {
+      e.confirm = "هذا الحقل مطلوب";
+    } else if (next && confirm && next !== confirm) {
+      e.confirm = "كلمة المرور الجديدة وتأكيدها غير متطابقين";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBanner(null);
-
-    if (next !== confirm) {
-      setBanner({ type: "error", msg: "كلمة المرور الجديدة غير متطابقة." });
-      return;
-    }
-    if (next.length < 8) {
-      setBanner({ type: "error", msg: "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل." });
-      return;
-    }
+    if (!validate()) return;
 
     setLoading(true);
     try {
@@ -255,59 +348,137 @@ function SecurityTab({ user }: { user: UserProfileResponse }) {
         currentPassword: current,
         newPassword: next,
       } as ChangePasswordPayload);
+
       setBanner({ type: "success", msg: "تم تغيير كلمة المرور بنجاح." });
       setCurrent("");
       setNext("");
       setConfirm("");
+      setErrors({});
     } catch (err: unknown) {
-      setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ." });
+      const msg = (err as Error).message;
+      // Surface common API error messages in plain Arabic
+      const arabic =
+        msg?.includes("incorrect") || msg?.includes("wrong") || msg?.includes("invalid")
+          ? "كلمة المرور الحالية غير صحيحة"
+          : msg || "حدث خطأ غير متوقع، حاول مرة أخرى";
+      setBanner({ type: "error", msg: arabic });
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      {banner && <Banner type={banner.type} msg={banner.msg} />}
+    <form onSubmit={handleSubmit} noValidate>
 
-      <div style={{ display: "grid", gap: "1.1rem", maxWidth: 480 }}>
-        <div>
-          <FieldLabel>كلمة المرور الحالية *</FieldLabel>
-          <Input
-            type="password"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-            required
-            placeholder="••••••••"
-          />
+      {/* ── Top feedback banner ── */}
+      {banner && (
+        <div
+          role={banner.type === "error" ? "alert" : "status"}
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "0.6rem",
+            padding: "0.85rem 1rem",
+            borderRadius: 10,
+            marginBottom: "1.5rem",
+            background: banner.type === "success" ? "#d1fae5" : "#fee2e2",
+            border: `1px solid ${banner.type === "success" ? "#6ee7b7" : "#fca5a5"}`,
+            color: banner.type === "success" ? "#065f46" : "#991b1b",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+          }}
+        >
+          <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>
+            {banner.type === "success" ? "✓" : "✕"}
+          </span>
+          {banner.msg}
         </div>
+      )}
 
-        <div>
-          <FieldLabel>كلمة المرور الجديدة *</FieldLabel>
-          <Input
-            type="password"
-            value={next}
-            onChange={(e) => setNext(e.target.value)}
-            required
-            minLength={8}
-            placeholder="8 أحرف على الأقل"
-          />
-        </div>
-
-        <div>
-          <FieldLabel>تأكيد كلمة المرور الجديدة *</FieldLabel>
-          <Input
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            required
-            placeholder="أعد إدخال كلمة المرور"
-          />
-        </div>
+      {/* ── Tip card ── */}
+      <div
+        style={{
+          background: "#f0fdf4",
+          border: "1px solid #bbf7d0",
+          borderRadius: 10,
+          padding: "0.75rem 1rem",
+          fontSize: "0.83rem",
+          color: "#166534",
+          marginBottom: "1.5rem",
+          lineHeight: 1.6,
+        }}
+      >
+        اختر كلمة مرور قوية لا تقل عن 8 أحرف، وتحتوي على أرقام وحروف.
       </div>
 
-      <div style={{ marginTop: "1.5rem" }}>
-        <SaveBtn loading={loading} label="تغيير كلمة المرور" />
+      {/* ── Fields ── */}
+      <div style={{ display: "grid", gap: "1.25rem", maxWidth: 480 }}>
+        <PasswordField
+          id="pwd-current"
+          label="كلمة المرور الحالية *"
+          value={current}
+          onChange={(v) => { setCurrent(v); setErrors((p) => ({ ...p, current: undefined })); }}
+          error={errors.current}
+        />
+
+        <PasswordField
+          id="pwd-new"
+          label="كلمة المرور الجديدة *"
+          value={next}
+          onChange={(v) => { setNext(v); setErrors((p) => ({ ...p, next: undefined })); }}
+          placeholder="8 أحرف على الأقل"
+          error={errors.next}
+        />
+
+        <PasswordField
+          id="pwd-confirm"
+          label="تأكيد كلمة المرور الجديدة *"
+          value={confirm}
+          onChange={(v) => { setConfirm(v); setErrors((p) => ({ ...p, confirm: undefined })); }}
+          placeholder="أعد إدخال كلمة المرور"
+          error={errors.confirm}
+        />
+      </div>
+
+      {/* ── Submit ── */}
+      <div style={{ marginTop: "1.75rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            padding: "0.65rem 1.9rem",
+            background: loading ? "#a7c4a0" : "var(--color-primary)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontFamily: "var(--font-arabic)",
+            fontWeight: 700,
+            fontSize: "0.95rem",
+            cursor: loading ? "not-allowed" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            transition: "background 0.15s",
+          }}
+        >
+          {loading && (
+            <span
+              style={{
+                width: 15,
+                height: 15,
+                border: "2px solid rgba(255,255,255,0.4)",
+                borderTopColor: "#fff",
+                borderRadius: "50%",
+                display: "inline-block",
+                animation: "spin 0.7s linear infinite",
+              }}
+            />
+          )}
+          {loading ? "جارٍ الحفظ…" : "حفظ التغييرات"}
+        </button>
+
+        {/* Inline spinner keyframes injected once */}
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </form>
   );
