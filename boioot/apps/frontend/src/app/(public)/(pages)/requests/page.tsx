@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { api, normalizeError } from "@/lib/api";
 import Spinner from "@/components/ui/Spinner";
+import { useAuth } from "@/context/AuthContext";
+import { useAuthGate } from "@/context/AuthGateContext";
 
 const PAGE_SIZE = 12;
 
@@ -53,6 +55,12 @@ function RequestsContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const pathname     = usePathname();
+  const { isAuthenticated } = useAuth();
+  const { openAuthModal }   = useAuthGate();
+
+  function guardNewRequest() {
+    if (isAuthenticated) { router.push("/dashboard/my-requests/new"); } else { openAuthModal(); }
+  }
 
   const typeParam = searchParams.get("type") || "";
   const cityParam = searchParams.get("city") || "";
@@ -140,13 +148,15 @@ function RequestsContent() {
         </p>
 
         {/* Add request CTA */}
-        <Link
-          href="/dashboard/my-requests/new"
+        <button
+          type="button"
+          onClick={guardNewRequest}
           style={{
             display: "inline-flex", alignItems: "center", gap: "0.4rem",
             backgroundColor: "#fff", color: "#065f46",
             borderRadius: 30, padding: "0.6rem 1.4rem",
-            fontWeight: 700, fontSize: "0.9rem", textDecoration: "none",
+            fontWeight: 700, fontSize: "0.9rem",
+            border: "none", cursor: "pointer",
             boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
           }}
         >
@@ -155,7 +165,7 @@ function RequestsContent() {
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
           أضف طلبك الآن
-        </Link>
+        </button>
       </div>
 
       {/* ── Filters ──────────────────────────────────────────────────────────── */}
@@ -291,17 +301,19 @@ function RequestsContent() {
             <p style={{ margin: "0 0 1.5rem", fontSize: "0.85rem", color: "#64748b" }}>
               {hasActiveFilters ? "جرّب تغيير معايير البحث" : "كن أول من ينشر طلبه"}
             </p>
-            <Link
-              href="/dashboard/my-requests/new"
+            <button
+              type="button"
+              onClick={guardNewRequest}
               style={{
                 display: "inline-block",
                 backgroundColor: "var(--color-primary)", color: "#fff",
                 borderRadius: 10, padding: "0.65rem 1.5rem",
-                fontWeight: 700, fontSize: "0.9rem", textDecoration: "none",
+                fontWeight: 700, fontSize: "0.9rem",
+                border: "none", cursor: "pointer",
               }}
             >
               أضف طلبك الآن
-            </Link>
+            </button>
           </div>
         )}
 

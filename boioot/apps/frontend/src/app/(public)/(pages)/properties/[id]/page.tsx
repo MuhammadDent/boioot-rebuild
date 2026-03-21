@@ -8,6 +8,7 @@ import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthGate } from "@/context/AuthGateContext";
 import {
   PROPERTY_TYPE_LABELS,
   LISTING_TYPE_LABELS,
@@ -81,6 +82,7 @@ export default function PropertyDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { openAuthModal } = useAuthGate();
   const id = params?.id as string;
 
   const [property, setProperty] = useState<PropertyResponse | null>(null);
@@ -122,16 +124,16 @@ export default function PropertyDetailPage() {
   }, [user, id]);
 
   const toggleFav = useCallback(async () => {
-    if (!user) { router.push(`/login?redirect=/properties/${id}`); return; }
+    if (!user) { openAuthModal(); return; }
     setFavLoading(true);
     try {
       const { added } = await favoritesApi.toggle(id);
       setIsFav(added);
     } catch { /* silent */ } finally { setFavLoading(false); }
-  }, [user, id, router]);
+  }, [user, id, openAuthModal]);
 
   const openChat = useCallback(async () => {
-    if (!user) { router.push(`/login?redirect=/properties/${id}`); return; }
+    if (!user) { openAuthModal(); return; }
     if (!property) return;
     const recipientId = property.ownerId ?? property.agentId?.toString();
     if (!recipientId) return;
@@ -147,7 +149,7 @@ export default function PropertyDetailPage() {
     } catch {
       setMsgError("تعذّر فتح المحادثة، حاول مجدداً.");
     } finally { setMsgLoading(false); }
-  }, [user, property, id, router]);
+  }, [user, property, id, router, openAuthModal]);
 
   if (loading) return <Spinner />;
 

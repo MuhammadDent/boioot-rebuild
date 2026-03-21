@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthGate } from "@/context/AuthGateContext";
 import PropertyCard from "@/components/properties/PropertyCard";
 import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
@@ -112,6 +113,11 @@ const EMPTY_FILTERS: FilterState = {
 export default function HomePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, logout } = useAuth();
+  const { openAuthModal } = useAuthGate();
+
+  function guardHref(href: string) {
+    if (isAuthenticated) { router.push(href); } else { openAuthModal(); }
+  }
   const { cities } = useCities();
 
   function handleLogout() {
@@ -318,8 +324,8 @@ export default function HomePage() {
           </Link>
           <div className="home-hdr__mid">
             <Link href="/projects" className="home-hdr__projects-hide" style={btnStyle("outline")}>المشاريع العقارية</Link>
-            <Link href="/post-ad"  style={btnStyle("green")}>أضف إعلانك</Link>
-            <Link href="/dashboard/my-requests/new" style={btnStyle("dark")}>أضف طلب</Link>
+            <button type="button" onClick={() => guardHref("/post-ad")} style={{ ...btnStyle("green"), border: "none", cursor: "pointer" }}>أضف إعلانك</button>
+            <button type="button" onClick={() => guardHref("/dashboard/my-requests/new")} style={{ ...btnStyle("dark"), border: "none", cursor: "pointer" }}>أضف طلب</button>
           </div>
           <div className="home-hdr__auth">
             {!isLoading && (isAuthenticated ? (

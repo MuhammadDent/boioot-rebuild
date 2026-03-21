@@ -1,0 +1,138 @@
+We need to redesign the access flow of the platform to follow a professional marketplace model.
+
+==================================================
+GOAL
+==================================================
+
+The first page shown to any visitor must be the public homepage, not the login page.
+
+Visitors should be able to browse the platform without logging in.
+
+Authentication should only be required when the user tries to perform protected actions.
+
+==================================================
+PUBLIC ACCESS RULES
+==================================================
+
+Unauthenticated visitors MUST be able to:
+
+- open the homepage
+- browse listings / ads
+- open listing details
+- browse projects
+- browse companies
+- browse the public parts of the site
+- use search and filters
+
+Unauthenticated visitors MUST NOT be able to:
+
+- add a listing / ad
+- add a request
+- send a message or contact through protected flows
+- access dashboard pages
+- manage profile
+- save favorites if favorites are protected
+- perform account-only actions
+
+==================================================
+NEW DESIRED FLOW
+==================================================
+
+1. The default landing page must be the public homepage.
+2. Do NOT force login on first visit.
+3. When a guest clicks any protected action, show a modal popup.
+4. The popup must ask the user to:
+   - log in
+   - or create a new account
+5. If the user closes the popup, they remain on the same page.
+
+==================================================
+PROTECTED ACTIONS
+==================================================
+
+Wrap and protect these actions with auth gating:
+
+- "Add Listing" / "Add Ad"
+- "Add Request"
+- "Send Message"
+- "Contact Owner" if this action requires an account
+- "Open Dashboard"
+- "Profile"
+- any user-specific action
+
+==================================================
+MODAL REQUIREMENTS
+==================================================
+
+Create a clean auth-required modal with:
+
+Title:
+- يلزم تسجيل الدخول
+
+Message:
+- يمكنك تصفح الموقع بحرية، ولكن لإضافة إعلان أو إرسال رسالة أو إضافة طلب، يجب تسجيل الدخول أو إنشاء حساب جديد.
+
+Buttons:
+- تسجيل الدخول
+- إنشاء حساب
+- إغلاق
+
+Behavior:
+- clicking "تسجيل الدخول" goes to /login
+- clicking "إنشاء حساب" goes to /register
+- clicking close dismisses the modal
+- keep user on the same page unless they choose auth action
+
+==================================================
+ROUTING REQUIREMENTS
+==================================================
+
+- Homepage must remain public
+- Listing pages must remain public
+- Only dashboard and protected account actions require authentication
+- Remove any current logic that redirects guests automatically to /login on first visit
+
+==================================================
+IMPLEMENTATION STRATEGY
+==================================================
+
+Please implement a reusable auth guard pattern:
+
+Examples:
+- AuthRequiredModal component
+- useRequireAuth() hook
+- ProtectedActionButton wrapper
+
+So we can reuse the same auth-gated behavior across:
+- add listing
+- add request
+- send message
+- favorites
+- dashboard shortcuts
+
+==================================================
+UX REQUIREMENTS
+==================================================
+
+- Keep full Arabic RTL support
+- Modal should be elegant and professional
+- Overlay background
+- Proper close button
+- Keyboard escape support if possible
+- Responsive on mobile and desktop
+
+==================================================
+IMPORTANT
+==================================================
+
+Do not block public browsing.
+Do not redirect the guest to login unless they explicitly choose login/register or try to access a protected route like /dashboard.
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+1. what routing/auth logic was changed
+2. the reusable modal/auth guard components created
+3. the protected actions updated to use the new pattern

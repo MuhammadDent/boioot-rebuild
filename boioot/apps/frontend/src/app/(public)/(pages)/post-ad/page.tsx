@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthGate } from "@/context/AuthGateContext";
 import { api, normalizeError } from "@/lib/api";
 import PostAdWizard from "@/components/post-ad/PostAdWizard";
 import type { CreatePropertyRequest, ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
@@ -19,6 +20,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function PostAdPage() {
   const { user, isLoading: authLoading } = useAuth();
+  const { openAuthModal } = useAuthGate();
   const router = useRouter();
 
   const [stats, setStats]               = useState<{ used: number; limit: number } | null>(null);
@@ -31,9 +33,10 @@ export default function PostAdPage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace("/login?redirect=/post-ad");
+      openAuthModal();
+      router.replace("/");
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, openAuthModal]);
 
   useEffect(() => {
     if (!user) return;
