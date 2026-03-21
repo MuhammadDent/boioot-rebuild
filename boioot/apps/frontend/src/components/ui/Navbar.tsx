@@ -4,6 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthGate } from "@/context/AuthGateContext";
+import { messagingApi } from "@/features/dashboard/messages/api";
+import { useEffect, useState } from "react";
 
 function userInitials(name: string): string {
   return name
@@ -27,6 +30,27 @@ export default function Navbar() {
   const pathname        = usePathname();
   const router          = useRouter();
   const { isAuthenticated, isLoading, logout, user } = useAuth();
+  const { openAuthModal } = useAuthGate();
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Poll unread message count every 30 s when logged in
+  useEffect(() => {
+    if (!isAuthenticated) { setUnreadCount(0); return; }
+
+    const fetchCount = async () => {
+      try {
+        const data = await messagingApi.getUnreadCount();
+        setUnreadCount(data.total ?? 0);
+      } catch {
+        // silently ignore — badge simply stays at last known value
+      }
+    };
+
+    void fetchCount();
+    const id = setInterval(() => { void fetchCount(); }, 30_000);
+    return () => clearInterval(id);
+  }, [isAuthenticated]);
 
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
@@ -37,11 +61,19 @@ export default function Navbar() {
     router.push("/");
   }
 
+  function handleMessagesClick() {
+    if (isAuthenticated) {
+      router.push("/dashboard/messages");
+    } else {
+      openAuthModal(() => { router.push("/dashboard/messages"); });
+    }
+  }
+
   return (
     <nav className="navbar">
       <div className="navbar__inner">
 
-        {/* Logo — bigger to match old platform */}
+        {/* Logo */}
         <Link href="/" className="navbar__logo" style={{ lineHeight: 0, display: "block" }}>
           <Image
             src="/logo-boioot.png"
@@ -89,6 +121,72 @@ export default function Navbar() {
                     لوحة التحكم
                   </Link>
                 )}
+
+                {/* ── Messages icon with unread badge ── */}
+                <button
+                  type="button"
+                  onClick={handleMessagesClick}
+                  title="الرسائل"
+                  style={{
+                    position: "relative",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    border: pathname.startsWith("/dashboard/messages")
+                      ? "2px solid var(--color-primary)"
+                      : "1.5px solid var(--color-border)",
+                    background: pathname.startsWith("/dashboard/messages")
+                      ? "var(--color-primary-light, #e8f5e9)"
+                      : "var(--color-bg-card)",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                    transition: "border-color 0.15s, background 0.15s",
+                  }}
+                >
+                  {/* Chat bubble icon */}
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={pathname.startsWith("/dashboard/messages") ? "var(--color-primary)" : "var(--color-text-secondary)"}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+
+                  {/* Unread badge */}
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: "absolute",
+                      top: -4,
+                      left: -4,
+                      minWidth: 17,
+                      height: 17,
+                      borderRadius: 999,
+                      background: "#dc2626",
+                      color: "#fff",
+                      fontSize: "0.65rem",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "0 3px",
+                      lineHeight: 1,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                      border: "1.5px solid #fff",
+                    }}>
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
                 {/* Avatar — links to profile page */}
                 <Link
                   href="/dashboard/profile"
@@ -120,6 +218,7 @@ export default function Navbar() {
                     </span>
                   )}
                 </Link>
+
                 <button
                   onClick={handleLogout}
                   className="btn btn-sm"
@@ -130,6 +229,40 @@ export default function Navbar() {
               </>
             ) : (
               <>
+                {/* Messages icon for guests — opens auth modal then redirects */}
+                <button
+                  type="button"
+                  onClick={handleMessagesClick}
+                  title="الرسائل"
+                  style={{
+                    position: "relative",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    border: "1.5px solid var(--color-border)",
+                    background: "var(--color-bg-card)",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--color-text-secondary)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </button>
+
                 <Link
                   href="/login"
                   className="btn btn-outline btn-sm"

@@ -1,0 +1,76 @@
+We need to add a Messages (Inbox) icon to the main header/navbar.
+
+==================================================
+GOAL
+==================================================
+
+Add a visible messages icon in the header that allows users to access their conversations.
+
+==================================================
+UI REQUIREMENTS
+==================================================
+
+1. Add a new icon in the header near:
+- notifications icon
+- favorites icon
+- profile/avatar
+
+The new icon should represent:
+- messages / chat (💬 or message icon)
+
+==================================================
+BEHAVIOR
+==================================================
+
+If user is logged in:
+- clicking the icon should navigate to:
+  /dashboard/messages
+
+If user is NOT logged in:
+- clicking the icon should trigger the existing auth modal
+- after login, redirect to /dashboard/messages
+
+==================================================
+BADGE (IMPORTANT)
+==================================================
+
+Add an unread messages badge on the icon:
+- small red circle
+- shows number of unread conversations/messages
+
+If unread count is 0:
+- hide the badge
+
+==================================================
+DATA SOURCE
+==================================================
+
+Unread count should come from:
+- API (if available)
+- or temporary mock until backend is ready
+
+==================================================
+RTL SUPPORT
+==================================================
+
+- Keep Arabic RTL layout
+- ensure spacing and alignment matches other icons
+
+==================================================
+TECH IMPLEMENTATION
+==================================================
+
+- Reuse existing header component
+- Add a MessagesIcon component
+- Add guard logic (similar to guardHref)
+- Do not break existing header structure
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+1. updated header JSX
+2. icon component used
+3. unread badge logic
+4. navigation/auth behavior
