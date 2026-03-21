@@ -1,4 +1,4 @@
-import Navbar from "@/components/ui/Navbar";
+import MainHeader from "@/components/layout/MainHeader";
 
 export default function PagesLayout({
   children,
@@ -7,7 +7,7 @@ export default function PagesLayout({
 }) {
   return (
     <>
-      <Navbar />
+      <MainHeader />
       <main>{children}</main>
     </>
   );
