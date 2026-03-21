@@ -1,0 +1,113 @@
+Important: The dashboard layout must work for ALL user types.
+
+We need a unified dashboard layout (same header + sidebar + structure),
+but the sidebar navigation must be ROLE-AWARE.
+
+GOAL:
+One dashboard system for all users, but with dynamic navigation based on user role.
+
+==================================================
+1) SHARED LAYOUT
+==================================================
+
+All users must use the SAME:
+- DashboardLayout
+- Header
+- Sidebar structure
+- Design system
+
+Do NOT create separate dashboards per role.
+
+==================================================
+2) ROLE-AWARE SIDEBAR
+==================================================
+
+Sidebar items must be dynamically controlled based on user role.
+
+Example:
+
+User:
+- لوحة التحكم
+- الملف الشخصي
+- الطلبات
+
+Owner:
+- لوحة التحكم
+- الملف الشخصي
+- إعلاناتي
+
+Agent:
+- لوحة التحكم
+- الملف الشخصي
+- العملاء
+- الطلبات
+
+Office / Broker:
+- لوحة التحكم
+- الملف الشخصي
+- الفريق
+- الإعلانات
+- الطلبات
+
+Developer:
+- لوحة التحكم
+- الملف الشخصي
+- المشاريع
+- الإعلانات
+
+Admin:
+- لوحة التحكم
+- إدارة المستخدمين
+- الشركات
+- الطلبات
+- النظام
+
+==================================================
+3) PERMISSION-BASED RENDERING
+==================================================
+
+Do NOT hardcode roles in UI.
+
+Instead:
+- use permissions from backend (RBAC system)
+- or a clean role-to-navigation mapping config
+
+Example:
+const sidebarConfig = {
+  user: [...],
+  agent: [...],
+  admin: [...]
+}
+
+==================================================
+4) SAFE FALLBACK
+==================================================
+
+If a role has no specific config:
+- show basic items:
+  - لوحة التحكم
+  - الملف الشخصي
+
+==================================================
+5) ACTIVE STATE
+==================================================
+
+Ensure active state works correctly regardless of role.
+
+==================================================
+6) FUTURE READY
+==================================================
+
+The system must support:
+- adding new roles later
+- enabling/disabling features without UI rewrite
+
+==================================================
+7) REPORT
+==================================================
+
+Show:
+- how roles are detected
+- how sidebar items are controlled
+- how permissions are used
+- how extensible the system is
