@@ -24,66 +24,121 @@ function Ic({ d, size = 18 }: { d: React.ReactNode; size?: number }) {
   );
 }
 
-// ─── Nav item types ───────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type NavItem = {
   href: string;
   label: string;
   icon: React.ReactNode;
   exact?: boolean;
-  roles?: string[];
   badge?: number;
 };
 
-// ─── Nav definitions ──────────────────────────────────────────────────────────
+// ─── Icon paths (reused across roles) ────────────────────────────────────────
 
-const NAV_ITEMS: NavItem[] = [
-  {
-    href: "/dashboard",
-    label: "لوحة التحكم",
-    exact: true,
-    icon: <Ic d={<><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></>} />,
-  },
-  {
-    href: "/dashboard/profile",
-    label: "الملف الشخصي",
-    exact: true,
-    icon: <Ic d={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>} />,
-  },
-  {
-    href: "/dashboard/messages",
-    label: "الرسائل",
-    exact: false,
-    icon: <Ic d={<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></>} />,
-  },
-  {
-    href: "/dashboard/my-requests",
-    label: "طلباتي",
-    exact: false,
-    icon: <Ic d={<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><path d="M9 12h6M9 16h4" /></>} />,
-  },
-  {
-    href: "/dashboard/listings",
-    label: "الطلبات",
-    exact: false,
-    roles: ["Admin", "CompanyOwner", "Broker", "Agent"],
-    icon: <Ic d={<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><path d="M9 12h6M9 16h4" /></>} />,
-  },
-  {
-    href: "/dashboard/my-listings",
-    label: "إعلاناتي",
-    exact: false,
-    roles: ["Admin", "CompanyOwner", "Broker", "Agent", "Owner"],
-    icon: <Ic d={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>} />,
-  },
-  {
-    href: "/dashboard/projects",
-    label: "المشاريع",
-    exact: false,
-    roles: ["Admin", "CompanyOwner"],
-    icon: <Ic d={<><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></>} />,
-  },
+const ICONS = {
+  dashboard: (
+    <Ic d={<><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /></>} />
+  ),
+  profile: (
+    <Ic d={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>} />
+  ),
+  messages: (
+    <Ic d={<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></>} />
+  ),
+  requests: (
+    <Ic d={<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><path d="M9 12h6M9 16h4" /></>} />
+  ),
+  listings: (
+    <Ic d={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>} />
+  ),
+  projects: (
+    <Ic d={<><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></>} />
+  ),
+  clients: (
+    <Ic d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>} />
+  ),
+  team: (
+    <Ic d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>} />
+  ),
+  users: (
+    <Ic d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>} />
+  ),
+  companies: (
+    <Ic d={<><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></>} />
+  ),
+  system: (
+    <Ic d={<><circle cx="12" cy="12" r="3" /><path d="M19.07 4.93a10 10 0 0 1 1.41 13.4M4.93 19.07A10 10 0 0 1 3.52 5.67M19.07 19.07a10 10 0 0 1-13.4 1.41M5.67 3.52A10 10 0 0 1 19.07 4.93" /></>} />
+  ),
+};
+
+// ─── Shared base items (لوحة + ملف + رسائل) ──────────────────────────────────
+
+const BASE: NavItem[] = [
+  { href: "/dashboard",         label: "لوحة التحكم",   exact: true,  icon: ICONS.dashboard },
+  { href: "/dashboard/profile", label: "الملف الشخصي",  exact: true,  icon: ICONS.profile   },
+  { href: "/dashboard/messages",label: "الرسائل",        exact: false, icon: ICONS.messages  },
 ];
+
+// ─── Per-role sidebar configuration ──────────────────────────────────────────
+//
+// Each key matches the `role` string returned by the backend (case-sensitive).
+// To add a new role: add a new key + array here — no other code changes needed.
+
+const SIDEBAR_CONFIG: Record<string, NavItem[]> = {
+
+  // ── Regular user ──────────────────────────────────────────────────────────
+  User: [
+    ...BASE,
+    { href: "/dashboard/my-requests", label: "طلباتي",  exact: false, icon: ICONS.requests },
+  ],
+
+  // ── Property owner ────────────────────────────────────────────────────────
+  Owner: [
+    ...BASE,
+    { href: "/dashboard/my-listings", label: "إعلاناتي", exact: false, icon: ICONS.listings },
+    { href: "/dashboard/my-requests", label: "طلباتي",   exact: false, icon: ICONS.requests },
+  ],
+
+  // ── Real-estate agent ─────────────────────────────────────────────────────
+  Agent: [
+    ...BASE,
+    { href: "/dashboard/clients",     label: "العملاء",  exact: false, icon: ICONS.clients  },
+    { href: "/dashboard/my-listings", label: "إعلاناتي", exact: false, icon: ICONS.listings },
+    { href: "/dashboard/my-requests", label: "طلباتي",   exact: false, icon: ICONS.requests },
+  ],
+
+  // ── Broker / office ───────────────────────────────────────────────────────
+  Broker: [
+    ...BASE,
+    { href: "/dashboard/team",        label: "الفريق",   exact: false, icon: ICONS.team     },
+    { href: "/dashboard/listings",    label: "الإعلانات", exact: false, icon: ICONS.listings },
+    { href: "/dashboard/my-requests", label: "الطلبات",  exact: false, icon: ICONS.requests },
+  ],
+
+  // ── Company owner / developer ─────────────────────────────────────────────
+  CompanyOwner: [
+    ...BASE,
+    { href: "/dashboard/projects",    label: "المشاريع",  exact: false, icon: ICONS.projects },
+    { href: "/dashboard/listings",    label: "الإعلانات", exact: false, icon: ICONS.listings },
+    { href: "/dashboard/my-requests", label: "الطلبات",   exact: false, icon: ICONS.requests },
+  ],
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  // Admin has a separate set — no profile/messages here (they use /dashboard/admin/*)
+  Admin: [
+    { href: "/dashboard",               label: "لوحة التحكم",      exact: true,  icon: ICONS.dashboard },
+    { href: "/dashboard/admin/users",   label: "إدارة المستخدمين", exact: false, icon: ICONS.users     },
+    { href: "/dashboard/admin/companies",label: "الشركات",          exact: false, icon: ICONS.companies },
+    { href: "/dashboard/listings",      label: "الطلبات",           exact: false, icon: ICONS.requests  },
+    { href: "/dashboard/projects",      label: "المشاريع",          exact: false, icon: ICONS.projects  },
+    { href: "/dashboard/admin/system",  label: "النظام",            exact: false, icon: ICONS.system    },
+  ],
+};
+
+// ─── Fallback: shown when role is unknown / null ───────────────────────────
+
+const FALLBACK_ITEMS: NavItem[] = [BASE[0], BASE[1]]; // لوحة التحكم + الملف الشخصي
 
 // ─── DashboardSidebar ─────────────────────────────────────────────────────────
 
@@ -101,11 +156,9 @@ export default function DashboardSidebar({ open, onClose }: Props) {
     return exact ? pathname === href : pathname.startsWith(href);
   }
 
-  function visibleItems() {
+  function visibleItems(): NavItem[] {
     if (!user) return [];
-    return NAV_ITEMS.filter(
-      (item) => !item.roles || item.roles.includes(user.role)
-    );
+    return SIDEBAR_CONFIG[user.role] ?? FALLBACK_ITEMS;
   }
 
   function handleLogout() {
