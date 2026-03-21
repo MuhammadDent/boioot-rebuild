@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
-import MessagesIconBtn, { MESSAGES_ICON_KEYFRAMES } from "./MessagesIconBtn";
+import MessagesIconBtn from "./MessagesIconBtn";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -46,10 +46,7 @@ export default function Navbar() {
   const onMessagesPage = pathname.startsWith("/dashboard/messages");
 
   return (
-    <>
-      <style>{MESSAGES_ICON_KEYFRAMES}</style>
-
-      <nav className="navbar">
+    <nav className="navbar">
         <div className="navbar__inner">
 
           {/* Logo */}
@@ -196,7 +193,6 @@ export default function Navbar() {
           </div>
 
         </div>
-      </nav>
-    </>
+    </nav>
   );
 }

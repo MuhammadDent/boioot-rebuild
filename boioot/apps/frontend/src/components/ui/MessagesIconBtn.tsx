@@ -4,25 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { messagingApi } from "@/features/dashboard/messages/api";
 
-// ─── CSS keyframes (injected once per page) ───────────────────────────────────
-
-export const MESSAGES_ICON_KEYFRAMES = `
-  @keyframes msg-badge-bounce {
-    0%   { transform: scale(1); }
-    25%  { transform: scale(1.55) rotate(-8deg); }
-    55%  { transform: scale(0.88) rotate(4deg); }
-    75%  { transform: scale(1.15); }
-    100% { transform: scale(1); }
-  }
-  @keyframes msg-ripple {
-    0%   { transform: scale(0); opacity: 0.35; }
-    100% { transform: scale(4.5); opacity: 0; }
-  }
-  @keyframes msg-tooltip-in {
-    from { opacity: 0; transform: translateY(-4px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-`;
+// Animations live in globals.css: msg-badge-bounce, msg-ripple, msg-tooltip-in
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 

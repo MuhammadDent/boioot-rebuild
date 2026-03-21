@@ -13,7 +13,7 @@ import { api } from "@/lib/api";
 import type { PropertyResponse } from "@/types";
 import { PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
 import { useCities } from "@/hooks/useCities";
-import MessagesIconBtn, { MESSAGES_ICON_KEYFRAMES } from "@/components/ui/MessagesIconBtn";
+import MessagesIconBtn from "@/components/ui/MessagesIconBtn";
 
 // ─── Slider data ──────────────────────────────────────────────────────────────
 
@@ -324,9 +324,6 @@ export default function HomePage() {
 
   return (
     <div style={{ direction: "rtl", fontFamily: "var(--font-arabic)", background: "var(--color-background)" }}>
-
-      {/* Inject animation keyframes for MessagesIconBtn */}
-      <style>{MESSAGES_ICON_KEYFRAMES}</style>
 
       {/* ══ TOP HEADER ══════════════════════════════════════════════════════════ */}
       <header className="home-hdr">
