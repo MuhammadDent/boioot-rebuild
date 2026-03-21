@@ -89,13 +89,17 @@ public class PropertyService : IPropertyService
             {
                 response.OwnerName  = user.FullName;
                 response.OwnerPhone = user.Phone;
-                response.OwnerPhoto = user.ProfileImageUrl;
+                // User photo first, fall back to company logo
+                response.OwnerPhoto = !string.IsNullOrEmpty(user.ProfileImageUrl)
+                    ? user.ProfileImageUrl
+                    : property.Company?.LogoUrl;
             }
         }
         else
         {
             response.OwnerName  = property.Company?.Name;
             response.OwnerPhone = property.Company?.Phone;
+            response.OwnerPhoto = property.Company?.LogoUrl;
         }
 
         return response;
@@ -837,6 +841,7 @@ public class PropertyService : IPropertyService
         HallsCount = p.HallsCount,
         CompanyId = p.CompanyId,
         CompanyName = p.Company?.Name ?? string.Empty,
+        CompanyLogoUrl = p.Company?.LogoUrl,
         AgentId = p.AgentId,
         OwnerId = p.OwnerId,
         IsPersonalListing = p.OwnerId != null,

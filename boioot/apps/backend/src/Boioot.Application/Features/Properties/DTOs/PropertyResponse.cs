@@ -46,6 +46,9 @@ public class PropertyResponse
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    // Company branding (always populated when company data is loaded)
+    public string? CompanyLogoUrl { get; set; }
+
     // Advertiser info (filled only on public detail view)
     public string? OwnerName { get; set; }
     public string? OwnerPhone { get; set; }

@@ -185,6 +185,8 @@ export default function PropertyDetailPage() {
   const shares       = shareUrls(pageUrl, property.title);
   const hasRecipient = !!(property.ownerId ?? property.agentId);
   const isOwn = user && (user.id === property.ownerId || user.id === property.agentId?.toString());
+  // Image priority: user photo → company logo → null (show placeholder)
+  const advertiserPhoto = property.ownerPhoto ?? property.companyLogoUrl ?? null;
 
   return (
     <div style={{ background: "var(--color-background)", padding: "2rem 0" }}>
@@ -327,9 +329,9 @@ export default function PropertyDetailPage() {
 
               {/* Photo + name row */}
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.85rem" }}>
-                {property.ownerPhoto ? (
+                {advertiserPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={property.ownerPhoto} alt={property.ownerName ?? "المعلن"}
+                  <img src={advertiserPhoto} alt={property.ownerName ?? "المعلن"}
                     style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-border)", flexShrink: 0 }}
                   />
                 ) : (

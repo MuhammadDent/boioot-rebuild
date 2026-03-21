@@ -120,6 +120,8 @@ export interface PropertyResponse {
   images: PropertyImageResponse[];
   createdAt: string;
   updatedAt: string;
+  // Company branding (always set when company data loaded)
+  companyLogoUrl?: string;
   // Advertiser
   ownerName?: string;
   ownerPhone?: string;
