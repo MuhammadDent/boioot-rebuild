@@ -12,6 +12,7 @@ import { normalizeError } from "@/lib/api";
 import { EyeIcon } from "@/components/ui/EyeIcon";
 import Spinner from "@/components/ui/Spinner";
 import type { E164Number } from "libphonenumber-js/core";
+import { AUTH_INTENT_KEY } from "@/context/AuthGateContext";
 
 type RoleValue = "User" | "Owner" | "Broker" | "CompanyOwner";
 
@@ -150,7 +151,16 @@ export default function RegisterPage() {
         companyName: isBusinessRole && form.companyName.trim() ? form.companyName.trim() : undefined,
       });
       login(res.token, res.user, res.expiresAt);
-      router.push("/dashboard");
+      // Resume the originating listing page if the user came from a protected action.
+      const returnUrl = sessionStorage.getItem(AUTH_INTENT_KEY);
+      sessionStorage.removeItem(AUTH_INTENT_KEY);
+      const safeReturn =
+        returnUrl &&
+        !returnUrl.includes("/login") &&
+        !returnUrl.includes("/register")
+          ? returnUrl
+          : null;
+      router.push(safeReturn ?? "/dashboard");
     } catch (err) {
       setError(normalizeError(err));
     } finally {

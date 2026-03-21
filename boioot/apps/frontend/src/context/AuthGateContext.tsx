@@ -481,6 +481,11 @@ function AuthModal({ onClose, onSuccess }: { onClose: () => void; onSuccess?: ()
   );
 }
 
+// ─── Intent storage key ───────────────────────────────────────────────────────
+// Persists the URL where the protected action originated.
+// Consumed by standalone /login and /register pages as a fallback.
+export const AUTH_INTENT_KEY = "boioot_auth_return";
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthGateProvider({ children }: { children: ReactNode }) {
@@ -489,6 +494,10 @@ export function AuthGateProvider({ children }: { children: ReactNode }) {
 
   const openAuthModal = useCallback((onSuccess?: () => void) => {
     callbackRef.current = onSuccess;
+    // Persist the originating URL so standalone login/register can redirect back.
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(AUTH_INTENT_KEY, window.location.href);
+    }
     setOpen(true);
   }, []);
 
@@ -497,13 +506,26 @@ export function AuthGateProvider({ children }: { children: ReactNode }) {
     callbackRef.current = undefined;
   }, []);
 
+  // Capture the callback at render time (before closeAuthModal clears it).
+  // This ensures the form's onSuccess prop holds the real function
+  // even though the form calls onClose() first.
+  const pendingCb = callbackRef.current;
+  const wrappedSuccess = pendingCb
+    ? () => {
+        if (typeof window !== "undefined") sessionStorage.removeItem(AUTH_INTENT_KEY);
+        pendingCb();
+      }
+    : () => {
+        if (typeof window !== "undefined") sessionStorage.removeItem(AUTH_INTENT_KEY);
+      };
+
   return (
     <AuthGateContext.Provider value={{ openAuthModal, closeAuthModal }}>
       {children}
       {open && (
         <AuthModal
           onClose={closeAuthModal}
-          onSuccess={callbackRef.current}
+          onSuccess={wrappedSuccess}
         />
       )}
     </AuthGateContext.Provider>

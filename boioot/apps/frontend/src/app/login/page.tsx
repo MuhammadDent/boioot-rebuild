@@ -9,6 +9,7 @@ import { authApi } from "@/features/auth/api";
 import { normalizeError } from "@/lib/api";
 import { EyeIcon } from "@/components/ui/EyeIcon";
 import Spinner from "@/components/ui/Spinner";
+import { AUTH_INTENT_KEY } from "@/context/AuthGateContext";
 
 export default function LoginPage() {
   const { login, isAuthenticated, isLoading } = useAuth();
@@ -34,10 +35,19 @@ export default function LoginPage() {
     try {
       const res = await authApi.login({ email, password });
       login(res.token, res.user, res.expiresAt);
+      // Resume the originating listing page if the user came from a protected action.
+      const returnUrl = sessionStorage.getItem(AUTH_INTENT_KEY);
+      sessionStorage.removeItem(AUTH_INTENT_KEY);
+      const safeReturn =
+        returnUrl &&
+        !returnUrl.includes("/login") &&
+        !returnUrl.includes("/register")
+          ? returnUrl
+          : null;
       // Redirect staff (any user with admin permissions) to the admin area.
       // Permission-based, not role-based: platform users have permissions[] = [].
       const isStaff = (res.user.permissions?.length ?? 0) > 0;
-      router.push(isStaff ? "/dashboard/admin" : "/dashboard");
+      router.push(safeReturn ?? (isStaff ? "/dashboard/admin" : "/dashboard"));
     } catch (err) {
       setError(normalizeError(err));
     } finally {
