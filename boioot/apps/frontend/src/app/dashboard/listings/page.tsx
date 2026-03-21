@@ -77,7 +77,7 @@ export default function ListingsPage() {
         : (listRes as { items?: PropertyResponse[] })?.items ?? [];
       setListings(items);
     } catch (e) {
-      console.error("[listings] fetch error:", e);
+      console.warn("[listings] fetch error:", e);
       setListingsError(normalizeError(e));
     } finally {
       setListingsLoading(false);
