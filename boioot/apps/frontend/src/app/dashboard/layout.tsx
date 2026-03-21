@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import Navbar from "@/components/ui/Navbar";
 
 const SITE_LINKS = [
-  { href: "/",              label: "🏠 الرئيسية",      exact: true  },
-  { href: "/daily-rentals", label: "📅 الإيجار اليومي", exact: false },
-  { href: "/projects",      label: "🏗️ المشاريع",       exact: false },
-  { href: "/requests",      label: "📋 الطلبات",        exact: false },
+  { href: "/",                  label: "🏠 الرئيسية",      exact: true  },
+  { href: "/daily-rentals",     label: "📅 الإيجار اليومي", exact: false },
+  { href: "/projects",          label: "🏗️ المشاريع",       exact: false },
+  { href: "/requests",          label: "📋 الطلبات",        exact: false },
+  { href: "/dashboard/profile", label: "👤 الملف الشخصي",   exact: true  },
 ];
 
 function DashboardSecNav() {

@@ -1,0 +1,126 @@
+We need to implement a full professional Profile Management system for the SaaS platform.
+
+==================================================
+PROBLEM
+==================================================
+
+Currently, clicking the user avatar redirects to /dashboard.
+There is NO dedicated profile page.
+
+==================================================
+GOAL
+==================================================
+
+Create a complete profile system under:
+
+/dashboard/profile
+
+==================================================
+ROUTING
+==================================================
+
+1. Update avatar click behavior:
+   - Instead of redirecting to /dashboard
+   - Redirect to: /dashboard/profile
+
+2. Add route:
+
+src/app/dashboard/profile/page.tsx
+
+==================================================
+UI STRUCTURE
+==================================================
+
+Build a professional tab-based profile page:
+
+Tabs:
+- Profile Info
+- Company Info
+- Security
+- Media (avatar/logo)
+- Settings
+
+==================================================
+PROFILE INFO SECTION
+==================================================
+
+Fields:
+- Full Name
+- Email (readonly or editable based on policy)
+- Phone number
+
+==================================================
+COMPANY INFO SECTION (IMPORTANT)
+==================================================
+
+Since this is a real estate SaaS:
+
+Fields:
+- Company Name
+- Company Type (Developer / Office / Agent)
+- Description
+- City / Country
+
+==================================================
+SECURITY SECTION
+==================================================
+
+- Change password form:
+  - Current password
+  - New password
+  - Confirm password
+
+==================================================
+MEDIA SECTION
+==================================================
+
+- Upload Avatar
+- Upload Company Logo
+- Preview current images
+- Allow delete & replace
+
+==================================================
+UX REQUIREMENTS
+==================================================
+
+- Clean card-based layout
+- Responsive design
+- Show success/error messages
+- Disable submit while saving
+- Use loading states
+
+==================================================
+BACKEND INTEGRATION
+==================================================
+
+- Fetch current user profile on load
+- Use API endpoints:
+  GET /api/profile
+  PUT /api/profile
+  PUT /api/profile/password
+
+==================================================
+IMPORTANT RULES
+==================================================
+
+- Do NOT mix profile with dashboard homepage
+- Keep profile modular and scalable
+- Prepare structure for future SaaS features (subscriptions, billing)
+
+==================================================
+EXTRA (OPTIONAL BUT PREFERRED)
+==================================================
+
+- Add sidebar link: "Profile"
+- Add breadcrumb navigation
+- Add "Last updated" info
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+- Folder structure
+- page.tsx
+- components (ProfileTabs, forms)
+- API integration example

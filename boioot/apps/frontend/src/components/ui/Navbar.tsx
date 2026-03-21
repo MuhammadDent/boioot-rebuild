@@ -5,6 +5,16 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
+function userInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
 const NAV_LINKS = [
   { href: "/",              label: "الرئيسية",      exact: true  },
   { href: "/daily-rentals", label: "الإيجار اليومي", exact: false, highlight: true },
@@ -16,7 +26,7 @@ const NAV_LINKS = [
 export default function Navbar() {
   const pathname        = usePathname();
   const router          = useRouter();
-  const { isAuthenticated, isLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading, logout, user } = useAuth();
 
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
@@ -79,6 +89,37 @@ export default function Navbar() {
                     لوحة التحكم
                   </Link>
                 )}
+                {/* Avatar — links to profile page */}
+                <Link
+                  href="/dashboard/profile"
+                  title="الملف الشخصي"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    background: user?.profileImageUrl ? "transparent" : "var(--color-primary)",
+                    border: "2px solid var(--color-border)",
+                    flexShrink: 0,
+                    textDecoration: "none",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                  }}
+                >
+                  {user?.profileImageUrl ? (
+                    <img
+                      src={user.profileImageUrl}
+                      alt={user.fullName}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <span style={{ color: "#fff", fontSize: "0.8rem", fontWeight: 700 }}>
+                      {user ? userInitials(user.fullName) : "؟"}
+                    </span>
+                  )}
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="btn btn-sm"
