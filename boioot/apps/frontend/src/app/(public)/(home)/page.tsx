@@ -126,6 +126,13 @@ export default function HomePage() {
   // Tab bar scroll
   const tabsScrollRef = useRef<HTMLDivElement>(null);
 
+  // Arrow button disabled state (RTL-aware)
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  // Hover state for arrow buttons
+  const [hoveredArrow, setHoveredArrow] = useState<"prev" | "next" | null>(null);
+
   // Listing tabs
   const [activeTab, setActiveTab] = useState(0);
 
@@ -170,6 +177,30 @@ export default function HomePage() {
 
   function goSlide(idx: number) { setSlideIndex(idx); startTimer(); }
 
+  // RTL-aware scroll-state checker.
+  // In RTL overflow containers (Chrome/Firefox), scrollLeft is ≤ 0:
+  //   0        → fully scrolled to the right (RTL start / "الكل" visible)
+  //   negative → scrolled toward left (more tabs revealed)
+  // We use Math.round to avoid sub-pixel drift.
+  const updateScrollBtns = useCallback(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const sl = Math.round(el.scrollLeft);       // ≤ 0 in RTL
+    const overflow = el.scrollWidth - el.clientWidth;
+    setCanScrollPrev(sl < 0);                   // content hidden to the right
+    setCanScrollNext(Math.abs(sl) < overflow);  // content hidden to the left
+  }, []);
+
+  // Initialise on mount and whenever the container resizes.
+  useEffect(() => {
+    updateScrollBtns();
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(updateScrollBtns);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [updateScrollBtns]);
+
   // Scroll the listing-type tab bar.
   // In RTL the visible start is the right side, so:
   //   "prev" → scrolls right (back toward start / الكل)
@@ -178,6 +209,8 @@ export default function HomePage() {
     const el = tabsScrollRef.current;
     if (!el) return;
     el.scrollBy({ left: dir === "next" ? -220 : 220, behavior: "smooth" });
+    // Re-evaluate after the smooth animation finishes (~300 ms).
+    setTimeout(updateScrollBtns, 320);
   }
 
   // ── Load neighborhoods when city changes ────────────────────────────────────
@@ -345,19 +378,40 @@ export default function HomePage() {
       <div style={{ background: "#fff", borderBottom: "1px solid #e8ede8", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
           <button
-            style={arrowBtnStyle}
-            onClick={() => scrollTabs("prev")}
-            aria-label="السابق"
+            style={{
+              ...arrowBtnStyle,
+              opacity: canScrollPrev ? 1 : 0.35,
+              cursor: canScrollPrev ? "pointer" : "default",
+              background: hoveredArrow === "prev" && canScrollPrev ? "#e8f5e9" : "#fff",
+              boxShadow: hoveredArrow === "prev" && canScrollPrev
+                ? "0 2px 8px rgba(74,103,65,0.18)"
+                : arrowBtnStyle.boxShadow,
+              transform: hoveredArrow === "prev" && canScrollPrev ? "scale(1.08)" : "scale(1)",
+            }}
+            onClick={() => canScrollPrev && scrollTabs("prev")}
+            onMouseEnter={() => setHoveredArrow("prev")}
+            onMouseLeave={() => setHoveredArrow(null)}
+            disabled={!canScrollPrev}
+            aria-disabled={!canScrollPrev}
+            aria-label="التبويبات السابقة"
+            aria-controls="tabs-scroll-bar"
           >
-            →
+            <span aria-hidden="true">→</span>
           </button>
+
           <div
+            id="tabs-scroll-bar"
             ref={tabsScrollRef}
+            role="tablist"
+            aria-label="تصفية نوع الإعلانات"
+            onScroll={updateScrollBtns}
             style={{ display: "flex", gap: "0.45rem", overflowX: "auto", padding: "0.75rem 0.25rem", flex: 1, scrollbarWidth: "none" }}
           >
             {LISTING_TABS.map((tab, i) => (
               <button
                 key={i}
+                role="tab"
+                aria-selected={i === activeTab}
                 onClick={() => setActiveTab(i)}
                 style={{
                   padding: "0.38rem 1.1rem",
@@ -378,12 +432,27 @@ export default function HomePage() {
               </button>
             ))}
           </div>
+
           <button
-            style={arrowBtnStyle}
-            onClick={() => scrollTabs("next")}
-            aria-label="التالي"
+            style={{
+              ...arrowBtnStyle,
+              opacity: canScrollNext ? 1 : 0.35,
+              cursor: canScrollNext ? "pointer" : "default",
+              background: hoveredArrow === "next" && canScrollNext ? "#e8f5e9" : "#fff",
+              boxShadow: hoveredArrow === "next" && canScrollNext
+                ? "0 2px 8px rgba(74,103,65,0.18)"
+                : arrowBtnStyle.boxShadow,
+              transform: hoveredArrow === "next" && canScrollNext ? "scale(1.08)" : "scale(1)",
+            }}
+            onClick={() => canScrollNext && scrollTabs("next")}
+            onMouseEnter={() => setHoveredArrow("next")}
+            onMouseLeave={() => setHoveredArrow(null)}
+            disabled={!canScrollNext}
+            aria-disabled={!canScrollNext}
+            aria-label="التبويبات التالية"
+            aria-controls="tabs-scroll-bar"
           >
-            ←
+            <span aria-hidden="true">←</span>
           </button>
         </div>
       </div>
@@ -678,7 +747,7 @@ const arrowBtnStyle: React.CSSProperties = {
   color: "#4a6741", cursor: "pointer", fontSize: "1rem",
   display: "inline-flex", alignItems: "center", justifyContent: "center",
   flexShrink: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
-  transition: "box-shadow 0.15s, background 0.15s",
+  transition: "box-shadow 0.18s, background 0.18s, transform 0.18s, opacity 0.18s",
 };
 
 const selectStyle: React.CSSProperties = {
