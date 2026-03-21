@@ -184,12 +184,15 @@ export default function PropertyDetailPage() {
   const sortedImages = property.images;
   const activeImage  = sortedImages[selectedImageIdx] ?? sortedImages[0];
   const shares       = shareUrls(pageUrl, property.title);
-  // recipientId: backend-resolved chat target (OwnerId → Agent.UserId → company agent fallback)
+  // ── Advertiser fallback chain ──────────────────────────────────────
+  // recipientId: backend-resolved chat target (OwnerId → Agent.UserId → company agent)
   const resolvedRecipient = property.recipientId ?? property.ownerId ?? property.agentId?.toString();
-  const hasRecipient = !!resolvedRecipient;
-  const isOwn = !!(user && resolvedRecipient && user.id === resolvedRecipient);
-  const hasContactInfo = !!(property.ownerPhone || (hasRecipient && !isOwn));
-  // Image priority: user/agent photo → company logo → null (show placeholder)
+  const hasRecipient      = !!resolvedRecipient;
+  const isOwn             = !!(user && resolvedRecipient && user.id === resolvedRecipient);
+  const hasContactInfo    = !!(property.ownerPhone || (hasRecipient && !isOwn));
+  // Name:  ownerName (agent/owner name from backend backfill) → companyName → generic
+  const advertiserName  = property.ownerName ?? property.companyName ?? "المعلن";
+  // Photo: ownerPhoto (agent photo) → companyLogoUrl (company logo) → null → placeholder
   const advertiserPhoto = property.ownerPhoto ?? property.companyLogoUrl ?? null;
 
   return (
@@ -335,7 +338,7 @@ export default function PropertyDetailPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.85rem" }}>
                 {advertiserPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={advertiserPhoto} alt={property.ownerName ?? "المعلن"}
+                  <img src={advertiserPhoto} alt={advertiserName}
                     style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-border)", flexShrink: 0 }}
                   />
                 ) : (
@@ -344,9 +347,8 @@ export default function PropertyDetailPage() {
                   </div>
                 )}
                 <div>
-                  {property.ownerName && (
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: "0.95rem" }}>{property.ownerName}</p>
-                  )}
+                  {/* Name: ownerName → companyName → "المعلن" */}
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: "0.95rem" }}>{advertiserName}</p>
                   {property.ownerPhone && (
                     <p style={{ margin: "0.15rem 0 0", color: "var(--color-text-secondary)", fontSize: "0.85rem", direction: "ltr", textAlign: "right" }}>
                       {property.ownerPhone}
