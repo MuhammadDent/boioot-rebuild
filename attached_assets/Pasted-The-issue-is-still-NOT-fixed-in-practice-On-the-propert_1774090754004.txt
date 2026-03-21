@@ -1,0 +1,124 @@
+The issue is still NOT fixed in practice.
+
+On the property details page, I still do not see:
+1. the advertiser image
+2. the WhatsApp button
+3. the internal chat button
+
+From your own debugging notes, the current property record is old and missing:
+- ownerId
+- agentId
+- ownerPhone
+
+This means the problem is not only UI.
+It is also a data consistency / backfill problem.
+
+==================================================
+GOAL
+==================================================
+
+Fix this properly end-to-end so old listings and new listings both work.
+
+==================================================
+REQUIRED SOLUTION
+==================================================
+
+Implement BOTH:
+
+1. DATA FIX
+2. UI FIX
+
+==================================================
+1) DATA FIX
+==================================================
+
+Create a backfill strategy for old property records so they can still resolve advertiser/contact info.
+
+For older listings, try to populate/recover these fields where possible:
+- ownerId
+- agentId
+- ownerPhone
+- ownerPhoto
+- companyLogoUrl
+- advertiser display name
+
+Possible sources:
+- company relation
+- createdBy user
+- owner user
+- agent user
+- company phone
+- company logo
+- user profile image
+
+If a migration is needed, add it.
+If a service-level fallback is better, add it.
+
+The final property details response should return enough advertiser/contact fields even for older records.
+
+==================================================
+2) UI FIX
+==================================================
+
+Even if some contact data is missing, do NOT leave the advertiser card looking broken or incomplete.
+
+The advertiser card must visibly render:
+- advertiser image (or company logo fallback)
+- advertiser name
+- WhatsApp button if phone exists
+- internal chat button if recipient can be resolved
+- clear fallback message if contact data is still incomplete
+
+==================================================
+RENDERING RULES
+==================================================
+
+Image priority:
+1. owner/user profile image
+2. company logo
+3. placeholder avatar
+
+WhatsApp button:
+- render if any valid advertiser/company phone exists
+
+Internal chat button:
+- render if ownerId or agentId or a valid contact recipient can be resolved
+
+If neither WhatsApp nor chat can be resolved:
+- show a clear Arabic fallback notice in the advertiser card, such as:
+  "بيانات التواصل لهذا الإعلان غير مكتملة حاليًا"
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT only explain that the current listing is old.
+Actually make old listings work as much as possible through backfill/fallback logic.
+
+I want the existing property details page to visibly improve, not only a technical explanation.
+
+==================================================
+TESTING REQUIREMENTS
+==================================================
+
+Test on:
+1. an old property record
+2. a newly created property record
+
+Confirm for both:
+- advertiser image rendering
+- WhatsApp button rendering
+- internal chat button rendering
+- fallback message behavior if data is incomplete
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+1. what data backfill/fallback logic was added
+2. what exact fields are now returned by the property details API
+3. what conditions control WhatsApp/chat rendering
+4. proof that the current old property page now shows either:
+   - working buttons
+   - or a clear fallback message
