@@ -272,27 +272,46 @@ public class PropertyService : IPropertyService
         if (request.VideoUrl is not null)
             property.VideoUrl = string.IsNullOrWhiteSpace(request.VideoUrl) ? null : request.VideoUrl.Trim();
 
-        // Replace images if a new list was supplied
-        if (request.Images is not null)
+        // Partial image changes: only act when the caller explicitly passes at least one list.
+        // null on both = text-only edit → images are untouched.
+        if (request.RemovedImageIds is not null || request.NewImages is not null)
         {
-            _context.Set<PropertyImage>().RemoveRange(property.Images);
-            var now = DateTime.UtcNow;
-            for (int i = 0; i < request.Images.Count; i++)
+            // 1. Remove explicitly deleted images
+            if (request.RemovedImageIds is { Count: > 0 })
             {
-                _context.Set<PropertyImage>().Add(new PropertyImage
+                var toRemove = property.Images
+                    .Where(i => request.RemovedImageIds.Contains(i.Id.ToString()))
+                    .ToList();
+                _context.Set<PropertyImage>().RemoveRange(toRemove);
+            }
+
+            // 2. Append new images
+            if (request.NewImages is { Count: > 0 })
+            {
+                var now = DateTime.UtcNow;
+                int nextOrder = property.Images.Count > 0
+                    ? property.Images.Max(i => i.Order) + 1
+                    : 0;
+                for (int i = 0; i < request.NewImages.Count; i++)
                 {
-                    Id        = Guid.NewGuid(),
-                    PropertyId = property.Id,
-                    ImageUrl   = request.Images[i],
-                    IsPrimary  = i == 0,
-                    Order      = i,
-                    CreatedAt  = now,
-                    UpdatedAt  = now,
-                });
+                    _context.Set<PropertyImage>().Add(new PropertyImage
+                    {
+                        Id         = Guid.NewGuid(),
+                        PropertyId = property.Id,
+                        ImageUrl   = request.NewImages[i],
+                        IsPrimary  = false,
+                        Order      = nextOrder + i,
+                        CreatedAt  = now,
+                        UpdatedAt  = now,
+                    });
+                }
             }
         }
 
         await _context.SaveChangesAsync(ct);
+
+        // Ensure exactly one image is marked primary (lowest Order wins).
+        await FixPrimaryImageAsync(property.Id, ct);
 
         await ReplaceAmenitySelectionsAsync(propertyId, request.Features, ct);
 
@@ -766,6 +785,34 @@ public class PropertyService : IPropertyService
             .FirstAsync(p => p.Id == propertyId, ct);
 
         return MapToResponse(property);
+    }
+
+    /// <summary>
+    /// Ensures exactly one PropertyImage for the given property has IsPrimary = true
+    /// (the one with the lowest Order). No-op if there are no images.
+    /// </summary>
+    private async Task FixPrimaryImageAsync(Guid propertyId, CancellationToken ct)
+    {
+        var images = await _context.Set<PropertyImage>()
+            .Where(i => i.PropertyId == propertyId)
+            .OrderBy(i => i.Order)
+            .ToListAsync(ct);
+
+        if (images.Count == 0) return;
+
+        bool changed = false;
+        for (int i = 0; i < images.Count; i++)
+        {
+            bool shouldBePrimary = i == 0;
+            if (images[i].IsPrimary != shouldBePrimary)
+            {
+                images[i].IsPrimary = shouldBePrimary;
+                changed = true;
+            }
+        }
+
+        if (changed)
+            await _context.SaveChangesAsync(ct);
     }
 
     private static PropertyResponse MapToResponse(Property p) => new()

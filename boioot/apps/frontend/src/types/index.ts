@@ -269,7 +269,10 @@ export interface UpdatePropertyRequest {
   longitude?: number;
   agentId?: string;
   features?: string[];
-  images?: string[];
+  /** IDs of existing images to delete. null = don't change images. */
+  removedImageIds?: string[];
+  /** New base64 images to append. null = don't add images. */
+  newImages?: string[];
   videoUrl?: string;
 }
 

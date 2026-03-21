@@ -1,0 +1,108 @@
+We need to improve the property edit image management in Boioot dashboard.
+
+Current requirement:
+When editing an existing ad/property, the already uploaded images must be displayed clearly.
+The user must be able to:
+1. see all existing uploaded images
+2. delete specific existing images
+3. add more new images
+4. keep old images unless explicitly removed
+
+This is for the dashboard property edit flow.
+
+==================================================
+REQUIRED BEHAVIOR
+==================================================
+
+On the Edit Ad / Edit Property page:
+
+1. Existing images section
+- Show all currently saved property images as thumbnails/cards
+- Each image should have:
+  - preview
+  - delete/remove button
+  - optional badge for cover image if applicable
+
+2. Add new images
+- User can upload additional images
+- New images should appear in preview before save
+- New images must not automatically replace all old images
+
+3. Delete existing images
+- User can remove one or more existing images
+- Removal should be explicit from UI
+- Deleted images should be tracked separately before save
+
+4. Save behavior
+When saving the form:
+- Keep all old images that were NOT removed
+- Remove only images explicitly deleted by user
+- Add all newly uploaded images
+- Do NOT wipe the gallery accidentally
+
+==================================================
+IMPLEMENTATION RULES
+==================================================
+
+Please implement this properly end-to-end.
+
+A) Frontend
+- In edit form, preload existing property images
+- Render them in a dedicated "Current Images" section
+- Add remove button on each existing image
+- Add separate "New Images" upload area
+- Show preview for new uploads
+- Maintain separate state for:
+  - existingImages
+  - removedImageIds or removedImageUrls
+  - newImages
+
+B) Backend
+- Update property edit/update endpoint to support partial image changes
+- It must not overwrite all existing images unless intended
+- Support this logic:
+  - existing images remain by default
+  - removed images are deleted
+  - new images are added
+
+C) Data contract
+Use a consistent image model, for example:
+images: [
+  {
+    id: string | number,
+    url: string,
+    isCover?: boolean,
+    sortOrder?: number
+  }
+]
+
+D) UX
+- If there are no existing images, show a friendly empty state
+- If user removes all images, reflect that clearly
+- Show validation for image count/size/type if already supported
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT make a superficial UI-only fix.
+
+You must ensure:
+- edit page loads current images from saved property data
+- deleting image updates the final payload correctly
+- adding new images merges correctly with remaining old images
+- saving text-only edits does not delete images
+
+==================================================
+DELIVERABLES
+==================================================
+
+Please:
+1. implement the fix
+2. explain root cause briefly
+3. list changed files
+4. confirm the following:
+   - existing images are visible in edit page
+   - user can delete selected images
+   - user can add more images
+   - old images remain unless explicitly removed

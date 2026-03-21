@@ -61,7 +61,17 @@ public class UpdatePropertyRequest
 
     public List<string>? Features { get; set; }
 
-    public List<string>? Images { get; set; }
+    /// <summary>
+    /// IDs of existing images the user explicitly removed.
+    /// null = don't change images at all (text-only edit).
+    /// </summary>
+    public List<string>? RemovedImageIds { get; set; }
+
+    /// <summary>
+    /// New images to add (base64 data URLs).
+    /// null = don't add any new images.
+    /// </summary>
+    public List<string>? NewImages { get; set; }
 
     public string? VideoUrl { get; set; }
 }
