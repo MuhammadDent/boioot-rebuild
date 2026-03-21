@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { PropertyResponse } from "@/types";
 import {
   PROPERTY_TYPE_LABELS,
@@ -11,6 +10,7 @@ import {
 } from "@/features/properties/constants";
 import { favoritesApi } from "@/features/favorites/api";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthGate } from "@/context/AuthGateContext";
 
 interface PropertyCardProps {
   property: PropertyResponse;
@@ -19,7 +19,7 @@ interface PropertyCardProps {
 
 export default function PropertyCard({ property, initialIsFavorited = false }: PropertyCardProps) {
   const { isAuthenticated } = useAuth();
-  const router = useRouter();
+  const { openAuthModal } = useAuthGate();
   const mainImage = property.images.find((img) => img.isPrimary) ?? property.images[0];
 
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
@@ -30,7 +30,7 @@ export default function PropertyCard({ property, initialIsFavorited = false }: P
     e.stopPropagation();
 
     if (!isAuthenticated) {
-      router.push("/login");
+      openAuthModal();
       return;
     }
 

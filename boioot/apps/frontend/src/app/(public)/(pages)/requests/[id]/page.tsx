@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api, normalizeError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthGate } from "@/context/AuthGateContext";
 import Spinner from "@/components/ui/Spinner";
 
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
@@ -125,6 +126,7 @@ export default function RequestDetailPage() {
   const router = useRouter();
   const id     = params?.id as string;
   const { user } = useAuth();
+  const { openAuthModal } = useAuthGate();
 
   const [request, setRequest]     = useState<BuyerRequest | null>(null);
   const [reqLoading, setReqLoading] = useState(true);
@@ -427,9 +429,13 @@ export default function RequestDetailPage() {
               marginTop: comments.length > 0 ? "0.5rem" : 0,
               textAlign: "center", fontSize: "0.85rem", color: "#64748b",
             }}>
-              <Link href="/login" style={{ color: "var(--color-primary)", fontWeight: 700 }}>
+              <button
+                type="button"
+                onClick={openAuthModal}
+                style={{ color: "var(--color-primary)", fontWeight: 700, background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "inherit" }}
+              >
                 سجّل دخولك
-              </Link>
+              </button>
               {" "}للرد على هذا الطلب
             </div>
           )}
