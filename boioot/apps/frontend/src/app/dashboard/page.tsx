@@ -61,9 +61,26 @@ export default function DashboardPage() {
     setAnalyticsLoading(true);
     try {
       const data = await dashboardSummaryApi.getAnalytics();
-      setAnalytics(data);
-    } catch {
-      /* silent */
+      console.log("[dashboard] analytics response:", data);
+      setAnalytics({
+        totalListings:    data?.totalListings    ?? 0,
+        activeListings:   data?.activeListings   ?? 0,
+        inactiveListings: data?.inactiveListings  ?? 0,
+        soldListings:     data?.soldListings      ?? 0,
+        rentedListings:   data?.rentedListings    ?? 0,
+        totalProjects:    data?.totalProjects     ?? 0,
+        totalAgents:      data?.totalAgents       ?? 0,
+        totalRequests:    data?.totalRequests     ?? 0,
+        newRequests:      data?.newRequests       ?? 0,
+        totalViews:       data?.totalViews        ?? 0,
+        monthlyListings:  Array.isArray(data?.monthlyListings)  ? data.monthlyListings  : [],
+        monthlyRequests:  Array.isArray(data?.monthlyRequests)  ? data.monthlyRequests  : [],
+        topListings:      Array.isArray(data?.topListings)      ? data.topListings      : [],
+        attentionListings: Array.isArray(data?.attentionListings) ? data.attentionListings : [],
+      });
+    } catch (e) {
+      console.error("[dashboard] analytics error:", e);
+      /* silent — analytics section simply won't render */
     } finally {
       setAnalyticsLoading(false);
     }
@@ -623,7 +640,7 @@ export default function DashboardPage() {
                 <p style={{ margin: "0 0 0.75rem", fontSize: "0.78rem", fontWeight: 700, color: "#64748b" }}>
                   الإعلانات — آخر 6 أشهر
                 </p>
-                <MiniBarChart data={analytics.monthlyListings} color="var(--color-primary)" />
+                <MiniBarChart data={analytics.monthlyListings ?? []} color="var(--color-primary)" />
               </div>
 
               {/* Requests trend */}
@@ -635,7 +652,7 @@ export default function DashboardPage() {
                 <p style={{ margin: "0 0 0.75rem", fontSize: "0.78rem", fontWeight: 700, color: "#64748b" }}>
                   الطلبات — آخر 6 أشهر
                 </p>
-                <MiniBarChart data={analytics.monthlyRequests} color="#2563eb" />
+                <MiniBarChart data={analytics.monthlyRequests ?? []} color="#2563eb" />
               </div>
 
               {/* Listings by status */}
@@ -667,11 +684,11 @@ export default function DashboardPage() {
         {isManagementRole && analytics && (
           <>
             {/* Top listings */}
-            {analytics.topListings.length > 0 && (
+            {(analytics.topListings ?? []).length > 0 && (
               <div style={{ marginBottom: "1.75rem" }}>
                 <SectionLabel>الإعلانات الأكثر مشاهدةً</SectionLabel>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {analytics.topListings.map((listing, idx) => (
+                  {(analytics.topListings ?? []).map((listing, idx) => (
                     <Link
                       key={listing.id}
                       href={`/dashboard/properties/${listing.id}/edit`}
@@ -720,11 +737,11 @@ export default function DashboardPage() {
             )}
 
             {/* Attention listings */}
-            {analytics.attentionListings.length > 0 && (
+            {(analytics.attentionListings ?? []).length > 0 && (
               <div style={{ marginBottom: "1.75rem" }}>
                 <SectionLabel>تحتاج إلى اهتمام</SectionLabel>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {analytics.attentionListings.map(listing => (
+                  {(analytics.attentionListings ?? []).map(listing => (
                     <Link
                       key={listing.id}
                       href={`/dashboard/properties/${listing.id}/edit`}

@@ -59,17 +59,33 @@ export default function ListingsPage() {
     if (!user) return;
     setLoading(true);
     setError("");
+
+    // ── 1. Load listings (critical — controls the main render) ───────────────
     try {
-      const [listRes, statsRes] = await Promise.all([
-        api.get<{ items: PropertyResponse[]; total: number }>("/properties/my-listings"),
-        api.get<{ used: number; limit: number }>("/properties/my-listings/stats"),
-      ]);
-      setListings(listRes.items ?? []);
-      setStats(statsRes);
+      const listRes = await api.get<{ items?: PropertyResponse[]; total?: number } | PropertyResponse[]>(
+        "/properties/my-listings"
+      );
+      console.log("[listings] response:", listRes);
+      // Handle both { items: [...] } and plain array responses defensively
+      const items = Array.isArray(listRes)
+        ? listRes
+        : (listRes as { items?: PropertyResponse[] })?.items ?? [];
+      setListings(items);
     } catch (e) {
+      console.error("[listings] fetch error:", e);
       setError(normalizeError(e));
     } finally {
       setLoading(false);
+    }
+
+    // ── 2. Load stats (non-critical — failure is silent) ─────────────────────
+    try {
+      const statsRes = await api.get<{ used: number; limit: number }>("/properties/my-listings/stats");
+      console.log("[listings] stats:", statsRes);
+      setStats(statsRes ?? null);
+    } catch (e) {
+      console.warn("[listings] stats fetch skipped:", e);
+      // Non-critical: don't block the page if stats fail
     }
   }, [user]);
 
@@ -177,19 +193,34 @@ export default function ListingsPage() {
           </div>
         )}
 
-        {/* ── Error ── */}
-        {error && (
-          <div style={{ background: "#fff1f2", border: "1px solid #fecaca", borderRadius: 10, padding: "0.85rem 1.1rem", marginBottom: "1.2rem", color: "#dc2626", fontSize: "0.9rem" }}>
-            {error}
-          </div>
-        )}
-
         {/* ── Loading ── */}
         {loading ? (
           <div style={{ display: "flex", justifyContent: "center", padding: "3rem 0" }}>
             <Spinner />
           </div>
+        ) : error ? (
+          /* ── API Error state: show error + retry, not a blank page ── */
+          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "3rem 2rem", textAlign: "center" }}>
+            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>⚠️</div>
+            <p style={{ margin: "0 0 0.4rem", fontSize: "1rem", color: "#dc2626", fontWeight: 600 }}>
+              تعذّر تحميل الإعلانات
+            </p>
+            <p style={{ margin: "0 0 1.5rem", fontSize: "0.83rem", color: "#94a3b8" }}>
+              {error}
+            </p>
+            <button
+              onClick={load}
+              style={{
+                padding: "0.6rem 1.4rem", borderRadius: 9, cursor: "pointer",
+                background: "var(--color-primary)", color: "#fff",
+                border: "none", fontWeight: 700, fontSize: "0.9rem",
+              }}
+            >
+              إعادة المحاولة
+            </button>
+          </div>
         ) : listings.length === 0 ? (
+          /* ── True empty state: no error, no listings yet ── */
           <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "3.5rem 2rem", textAlign: "center" }}>
             <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
               style={{ opacity: 0.3, marginBottom: "0.85rem", color: "var(--color-text-secondary)" }}>
