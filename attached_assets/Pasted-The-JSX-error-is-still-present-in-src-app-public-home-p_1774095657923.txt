@@ -1,0 +1,65 @@
+The JSX error is still present in src/app/(public)/(home)/page.tsx around lines 359–364.
+
+The issue is in the header actions block, specifically right after a closing </Link> and before the protected action buttons.
+
+I do NOT want another partial patch.
+
+==================================================
+TASK
+==================================================
+
+Fully replace the entire header actions section with clean, verified, explicit multi-line JSX.
+
+Do not patch individual lines.
+Do not keep any action button on one line.
+Do not leave style props inline-broken.
+
+==================================================
+STRICT REQUIREMENTS
+==================================================
+
+1. Rewrite the entire section after the projects Link and through all action buttons/icons.
+2. Every button must be written like this exact structure:
+
+<button
+  type="button"
+  onClick={...}
+  style={{
+    ...someStyle,
+    border: "none",
+    cursor: "pointer",
+  }}
+>
+  ...
+</button>
+
+3. Every Link must be fully closed before the next element starts.
+4. Do not nest button inside Link unless intentionally required.
+5. Ensure there is no broken style={{ ... }} block.
+6. Ensure every JSX element is closed properly.
+7. Verify the final code compiles before finishing.
+
+==================================================
+REPLACE THE WHOLE BLOCK
+==================================================
+
+I want the whole block rebuilt, including:
+- projects link
+- add listing button
+- add request button
+- messages icon
+- favorites icon
+- notifications icon
+- profile/avatar icon
+- auth/dashboard related actions
+
+==================================================
+IMPORTANT
+==================================================
+
+Return ONLY the final corrected JSX block for that whole header action section.
+Do not return explanation.
+Do not describe what you changed.
+Just provide the final working code block.
+
+Also run a final syntax check to confirm there is no JSX parse error in that file.
