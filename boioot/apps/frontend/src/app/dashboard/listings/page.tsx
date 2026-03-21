@@ -44,48 +44,55 @@ export default function ListingsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [listings, setListings]   = useState<PropertyResponse[]>([]);
-  const [stats, setStats]         = useState<{ used: number; limit: number } | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState("");
+  // ── Listings state (primary / critical) ───────────────────────────────────
+  const [listings, setListings]           = useState<PropertyResponse[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(true);
+  const [listingsError, setListingsError] = useState("");
+
+  // ── Stats state (secondary / non-critical) ─────────────────────────────────
+  const [stats, setStats]               = useState<{ used: number; limit: number } | null>(null);
+  const [statsError, setStatsError]     = useState("");
+
+  const [deletingId, setDeletingId]     = useState<string | null>(null);
+  const [successMsg, setSuccessMsg]     = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading, router]);
 
+  // ── Load listings independently (listings failing ≠ stats failing) ─────────
   const load = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
-    setError("");
 
-    // ── 1. Load listings (critical — controls the main render) ───────────────
+    // ── 1. PRIMARY: listings ─────────────────────────────────────────────────
+    setListingsLoading(true);
+    setListingsError("");
     try {
       const listRes = await api.get<{ items?: PropertyResponse[]; total?: number } | PropertyResponse[]>(
         "/properties/my-listings"
       );
       console.log("[listings] response:", listRes);
-      // Handle both { items: [...] } and plain array responses defensively
       const items = Array.isArray(listRes)
         ? listRes
         : (listRes as { items?: PropertyResponse[] })?.items ?? [];
       setListings(items);
     } catch (e) {
       console.error("[listings] fetch error:", e);
-      setError(normalizeError(e));
+      setListingsError(normalizeError(e));
     } finally {
-      setLoading(false);
+      setListingsLoading(false);
     }
 
-    // ── 2. Load stats (non-critical — failure is silent) ─────────────────────
+    // ── 2. SECONDARY: stats (failure never blocks the page) ──────────────────
+    setStatsError("");
     try {
       const statsRes = await api.get<{ used: number; limit: number }>("/properties/my-listings/stats");
       console.log("[listings] stats:", statsRes);
       setStats(statsRes ?? null);
     } catch (e) {
-      console.warn("[listings] stats fetch skipped:", e);
-      // Non-critical: don't block the page if stats fail
+      console.warn("[listings] stats endpoint failed:", e);
+      setStatsError("تعذّر تحميل الإحصائيات");
+      // Intentionally do NOT block page rendering
     }
   }, [user]);
 
@@ -126,6 +133,7 @@ export default function ListingsPage() {
 
   const isUnlimited  = stats !== null && stats.limit >= 999;
   const limitReached = stats !== null && !isUnlimited && stats.used >= stats.limit;
+  const statsAvailable = stats !== null && !statsError;
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
@@ -167,8 +175,8 @@ export default function ListingsPage() {
           </div>
         )}
 
-        {/* ── Monthly stats (only for limited plans) ── */}
-        {stats !== null && !isUnlimited && (
+        {/* ── Monthly stats widget (secondary — gracefully degrades) ── */}
+        {statsAvailable && !isUnlimited && (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem",
             background: limitReached ? "#fff1f2" : "#f8fafc",
@@ -177,10 +185,10 @@ export default function ListingsPage() {
           }}>
             <div>
               <p style={{ margin: 0, fontWeight: 700, fontSize: "0.9rem", color: limitReached ? "#dc2626" : "#374151" }}>
-                {limitReached ? "وصلت إلى الحد الأقصى هذا الشهر" : `باقٍ لك ${stats.limit - stats.used} إعلان هذا الشهر`}
+                {limitReached ? "وصلت إلى الحد الأقصى هذا الشهر" : `باقٍ لك ${stats!.limit - stats!.used} إعلان هذا الشهر`}
               </p>
               <p style={{ margin: "0.15rem 0 0", fontSize: "0.78rem", color: "#94a3b8" }}>
-                الاستخدام الشهري: {stats.used} / {stats.limit}{limitReached && " · ترقية العضوية تمنحك حداً أعلى"}
+                الاستخدام الشهري: {stats!.used} / {stats!.limit}{limitReached && " · ترقية العضوية تمنحك حداً أعلى"}
               </p>
             </div>
             <div style={{
@@ -188,25 +196,38 @@ export default function ListingsPage() {
               color: "#fff", borderRadius: 99, padding: "0.3rem 0.9rem",
               fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap",
             }}>
-              {stats.used} / {stats.limit}
+              {stats!.used} / {stats!.limit}
             </div>
           </div>
         )}
 
-        {/* ── Loading ── */}
-        {loading ? (
+        {/* ── Subtle stats-error notice (non-blocking) ── */}
+        {statsError && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: "0.5rem",
+            background: "#fffbeb", border: "1px solid #fde68a",
+            borderRadius: 8, padding: "0.55rem 0.9rem", marginBottom: "1rem",
+            fontSize: "0.78rem", color: "#92400e",
+          }}>
+            <span>ℹ️</span>
+            <span>تعذّر تحميل الإحصائيات حاليًا</span>
+          </div>
+        )}
+
+        {/* ── Listings: loading / error / empty / data ── */}
+        {listingsLoading ? (
           <div style={{ display: "flex", justifyContent: "center", padding: "3rem 0" }}>
             <Spinner />
           </div>
-        ) : error ? (
-          /* ── API Error state: show error + retry, not a blank page ── */
+        ) : listingsError ? (
+          /* ── Listings failed: show error + retry ── */
           <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "3rem 2rem", textAlign: "center" }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>⚠️</div>
             <p style={{ margin: "0 0 0.4rem", fontSize: "1rem", color: "#dc2626", fontWeight: 600 }}>
               تعذّر تحميل الإعلانات
             </p>
             <p style={{ margin: "0 0 1.5rem", fontSize: "0.83rem", color: "#94a3b8" }}>
-              {error}
+              {listingsError}
             </p>
             <button
               onClick={load}

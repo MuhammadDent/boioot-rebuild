@@ -1,0 +1,112 @@
+Fix the listings dashboard page so that "My Listings" never fails completely just because dashboard analytics/stats fail.
+
+Current problem:
+The page is using a combined Promise.all flow for listings + stats/analytics.
+If the stats request fails, the whole page shows:
+"تعذر تحميل الإعلانات"
+even when listings data itself is available.
+
+==================================================
+GOAL
+==================================================
+
+Decouple the listings data from analytics/stats data.
+
+The listings page must always prioritize loading and showing listings first.
+Analytics/stats should be secondary and must not break the page.
+
+==================================================
+REQUIRED FIX
+==================================================
+
+1. SEPARATE API REQUESTS
+
+Do not use one blocking Promise.all for:
+- listings
+- stats / analytics
+
+Instead:
+- load listings independently
+- load stats/analytics independently
+
+2. FAILURE ISOLATION
+
+Required behavior:
+- If listings succeed and stats fail:
+  -> show listings normally
+  -> hide stats section or show a small non-blocking warning
+- If listings fail and stats succeed:
+  -> show listings error state only
+- If both fail:
+  -> show proper page-level fallback
+
+3. LISTINGS ARE PRIMARY
+
+On /dashboard/listings:
+- listings are the core content
+- stats are optional enhancements
+
+The page must never display a big blocking error for the whole page just because stats failed.
+
+4. SAFE FRONTEND LOGIC
+
+Use:
+- separate loading states
+- separate error states
+- safe fallbacks
+- optional chaining
+- empty arrays by default
+
+Example desired structure:
+- listingsLoading
+- listingsError
+- analyticsLoading
+- analyticsError
+
+5. BETTER UX
+
+If stats fail:
+- do NOT show red blocking page error
+- either:
+  - hide stats widgets
+  - or show a subtle note like:
+    "تعذر تحميل الإحصائيات حاليًا"
+
+If listings fail:
+- show:
+  "تعذر تحميل الإعلانات"
+  with retry button
+
+6. DEBUG THE REAL API FAILURE
+
+Please inspect which request is actually failing:
+- /stats
+- /analytics
+- any nested endpoint
+
+Return:
+- failing endpoint
+- status code
+- backend reason if found
+
+7. DO NOT BREAK EXISTING DATA FLOW
+
+Keep existing listings rendering and actions working:
+- view listings
+- edit
+- delete
+- empty state
+- retry
+
+==================================================
+DELIVERABLE
+==================================================
+
+Return:
+1. Which endpoint was failing
+2. Why Promise.all caused the whole page to fail
+3. What was changed in frontend
+4. What was changed in backend, if anything
+5. Confirmation that:
+   - listings render even if stats fail
+   - stats failure no longer breaks the page
