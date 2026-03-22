@@ -98,7 +98,11 @@ app.UseExceptionHandler(errorApp =>
         if (error is BoiootException boiootEx)
         {
             context.Response.StatusCode = boiootEx.StatusCode;
-            await context.Response.WriteAsJsonAsync(new { error = boiootEx.Message });
+            await context.Response.WriteAsJsonAsync(new
+            {
+                error = boiootEx.Message,
+                code  = boiootEx.ErrorCode,
+            });
         }
         else
         {

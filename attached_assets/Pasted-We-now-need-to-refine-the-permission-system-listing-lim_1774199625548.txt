@@ -1,0 +1,208 @@
+We now need to refine the permission system, listing limits, and trial behavior on top of the EXISTING implementation.
+
+IMPORTANT CONTEXT
+The system has already been partially updated:
+- CompanyType has been introduced (RealEstateOffice / DeveloperCompany)
+- Registration options are aligned with roles (User, Owner, Broker, CompanyOwner)
+- Basic mapping between registration and roles already exists
+
+DO NOT rebuild anything from scratch.
+DO NOT replace the current system.
+We will EXTEND and REFINE the existing implementation.
+
+==================================================
+CRITICAL RULE (VERY IMPORTANT)
+==================================================
+
+User / Seeker MUST remain a normal user.
+
+We ONLY allow:
+- posting up to 2 listings as a TRIAL EXPERIENCE
+
+IMPORTANT:
+- This does NOT change the role
+- This does NOT convert the user into Owner
+- This does NOT grant Owner permissions
+- This does NOT change RBAC
+
+This must be implemented as:
+→ a listing entitlement / quota rule ONLY
+
+==================================================
+GOAL
+==================================================
+
+Implement:
+
+1) Listing trial rule (2 listings for User)
+2) Permission matrix refinement (based on current roles)
+3) Enforcement logic (backend-first)
+4) Upgrade trigger (after trial limit)
+
+WITHOUT breaking:
+- existing roles
+- existing database
+- existing flows
+
+==================================================
+DO NOT BREAK EXISTING SYSTEM
+==================================================
+
+- Keep current roles (User, Owner, Broker, CompanyOwner, Agent, Admin)
+- Keep current DB schema
+- Extend it ONLY if needed (e.g. counters, flags)
+- Avoid destructive migrations
+
+==================================================
+LISTING ENTITLEMENT RULE
+==================================================
+
+Introduce a new concept:
+
+Listing Entitlement / Quota
+
+Implement logic:
+
+User (Seeker):
+- can create MAX 2 listings total
+- after reaching limit:
+  - block create listing action
+  - return proper API error
+  - trigger upgrade UI
+
+IMPORTANT:
+- count must be stored in backend (DB or derived safely)
+- must not be bypassable
+
+==================================================
+PERMISSION REFINEMENT
+==================================================
+
+Adjust behavior (DO NOT rewrite roles):
+
+User:
+- browse
+- save
+- inquire
+- manage profile
+- create listing (max 2 ONLY via quota rule)
+
+Owner:
+- manage personal listings
+- no team
+
+Broker:
+- full listing control (solo)
+- no agent creation
+
+CompanyOwner (RealEstateOffice / DeveloperCompany):
+- full business capabilities
+- manage listings / projects
+- create/manage agents
+
+Agent:
+- scoped to parent
+- limited permissions
+
+Admin:
+- full access
+
+==================================================
+BACKEND ENFORCEMENT (VERY IMPORTANT)
+==================================================
+
+Enforce rules in backend:
+
+Before creating a listing:
+- check user role
+- if role == User:
+    count existing listings
+    if count >= 2:
+        block request
+
+Return clear error:
+- "TRIAL_LIMIT_REACHED"
+
+==================================================
+UPGRADE FLOW
+==================================================
+
+When limit is reached:
+
+- frontend should:
+  - detect error
+  - show upgrade modal/page
+
+Suggest upgrade options:
+- Owner
+- Broker
+- RealEstateOffice
+- DeveloperCompany
+
+DO NOT:
+- auto-upgrade user
+- change role automatically
+
+==================================================
+DATA MODEL (MINIMAL CHANGES ONLY)
+==================================================
+
+If needed, add:
+
+OPTION A:
+- count listings dynamically (preferred)
+
+OPTION B:
+- add field:
+  User.ListingsCount
+  OR
+  User.TrialListingsUsed
+
+Do NOT redesign DB.
+
+==================================================
+UI BEHAVIOR
+==================================================
+
+Update:
+
+- "Create Listing" button:
+  - visible for User
+  - disabled after 2 listings
+  - shows upgrade hint
+
+- Dashboard:
+  - show usage (e.g. "2 / 2 used")
+
+==================================================
+SECURITY
+==================================================
+
+- Must validate in API (NOT only frontend)
+- Prevent:
+  - direct API calls
+  - request tampering
+
+==================================================
+DELIVERABLES
+==================================================
+
+Please:
+
+1. Extend existing code (not rebuild)
+2. Implement trial listing rule
+3. Update backend validation
+4. Update frontend behavior
+5. Show changed files
+6. Explain what was reused vs added
+
+==================================================
+IMPORTANT
+==================================================
+
+This is a controlled refinement, not a rewrite.
+
+Focus on:
+- minimal changes
+- maximum clarity
+- safe extension of current system

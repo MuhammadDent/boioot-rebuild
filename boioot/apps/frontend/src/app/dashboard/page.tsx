@@ -30,7 +30,9 @@ export default function DashboardPage() {
   const [favLoading, setFavLoading]     = useState(true);
 
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [personalListingCount, setPersonalListingCount] = useState<number | null>(null);
+
+  type TrialStats = { used: number; limit: number; isFreeTrial: boolean };
+  const [trialStats, setTrialStats] = useState<TrialStats | null>(null);
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -103,9 +105,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     if (!canSeeSummary(user.role)) {
-      api.get<{ used: number }>("/properties/my-listings/stats")
-        .then(s => setPersonalListingCount(s.used))
-        .catch(() => setPersonalListingCount(0));
+      api.get<{ used: number; limit: number; isFreeTrial: boolean }>("/properties/my-listings/stats")
+        .then(s => setTrialStats({ used: s.used, limit: s.limit, isFreeTrial: !!s.isFreeTrial }))
+        .catch(() => setTrialStats({ used: 0, limit: 0, isFreeTrial: false }));
     }
   }, [user]);
 
@@ -208,10 +210,18 @@ export default function DashboardPage() {
       {!isManagementRole && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.65rem", marginBottom: "1.75rem" }}>
           <SummaryTile
-            label="إعلاناتي"
-            value={personalListingCount}
-            color="#059669"
-            accent="#d1fae5"
+            label={
+              trialStats?.isFreeTrial
+                ? `إعلاناتي (${trialStats.used}/${trialStats.limit})`
+                : "إعلاناتي"
+            }
+            value={trialStats?.used ?? null}
+            color={trialStats?.isFreeTrial && trialStats.used >= trialStats.limit ? "#dc2626" : "#059669"}
+            accent={trialStats?.isFreeTrial && trialStats.used >= trialStats.limit ? "#fee2e2" : "#d1fae5"}
+            highlight={trialStats?.isFreeTrial && trialStats.used >= trialStats.limit}
+            highlightLabel={
+              trialStats?.isFreeTrial && trialStats.used >= trialStats.limit ? "مكتمل" : undefined
+            }
             icon={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>}
           />
           <SummaryTile
@@ -546,43 +556,57 @@ export default function DashboardPage() {
         {/* ════════════════════════════════════════════════════════════
             ZONE 2 — PRIMARY ACTION  (non-admin roles with create permission)
             ════════════════════════════════════════════════════════════ */}
-        {user.role !== "Admin" && !hasPermission(user, "roles.manage") && hasPermission(user, "properties.create") && (
-          <div style={{ marginBottom: "1.75rem" }}>
-            <Link
-              href={["CompanyOwner"].includes(user.role) ? "/dashboard/properties/new" : "/post-ad"}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "0.65rem",
-                background: "var(--color-primary)",
-                color: "#fff",
-                borderRadius: 14,
-                padding: "1.1rem 1.5rem",
-                textDecoration: "none",
-                fontWeight: 800,
-                fontSize: "1.05rem",
-                boxShadow: "0 4px 14px rgba(0,128,60,0.28)",
-                width: "100%",
-                textAlign: "center",
-              }}
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#fff"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+        {user.role !== "Admin" && !hasPermission(user, "roles.manage") && hasPermission(user, "properties.create") && (() => {
+          const trialLimitReached = trialStats?.isFreeTrial === true && trialStats.used >= trialStats.limit;
+          const href = ["CompanyOwner"].includes(user.role) ? "/dashboard/properties/new" : "/post-ad";
+          return (
+            <div style={{ marginBottom: "1.75rem" }}>
+              <Link
+                href={href}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.65rem",
+                  background: trialLimitReached ? "#dc2626" : "var(--color-primary)",
+                  color: "#fff",
+                  borderRadius: 14,
+                  padding: "1.1rem 1.5rem",
+                  textDecoration: "none",
+                  fontWeight: 800,
+                  fontSize: "1.05rem",
+                  boxShadow: trialLimitReached
+                    ? "0 4px 14px rgba(220,38,38,0.28)"
+                    : "0 4px 14px rgba(0,128,60,0.28)",
+                  width: "100%",
+                  textAlign: "center",
+                }}
               >
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-              إضافة إعلان جديد
-            </Link>
-          </div>
-        )}
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#fff"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {trialLimitReached
+                    ? <><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></>
+                    : <path d="M12 5v14M5 12h14"/>
+                  }
+                </svg>
+                {trialLimitReached ? "انتهت إعلاناتك التجريبية — ترقية الحساب" : "إضافة إعلان جديد"}
+              </Link>
+              {trialLimitReached && (
+                <p style={{ textAlign: "center", fontSize: "0.78rem", color: "#6b7280", margin: "0.4rem 0 0" }}>
+                  استخدمت {trialStats!.used} / {trialStats!.limit} إعلانات تجريبية مجانية
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ════════════════════════════════════════════════════════════
             ZONE 3 — MANAGEMENT NAV  (lightweight navigation — no duplication)

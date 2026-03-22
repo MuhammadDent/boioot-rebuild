@@ -511,7 +511,8 @@ public class PropertyService : IPropertyService
             if (totalPosted >= 2)
                 throw new BoiootException(
                     "انتهت إعلاناتك التجريبية المجانية. يرجى ترقية حسابك إلى مالك أو وسيط للمتابعة.",
-                    403);
+                    403,
+                    "TRIAL_LIMIT_REACHED");
         }
         else
         {

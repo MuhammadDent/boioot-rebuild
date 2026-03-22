@@ -207,35 +207,45 @@ export default function PostAdPage() {
             <p style={{ margin: "0 0 1.5rem", color: "#64748b", lineHeight: 1.7 }}>
               {isFreeTrial
                 ? <>
-                  لقد استخدمت {stats!.used} من {stats!.limit} إعلانات تجريبية مجانية. للمتابعة ونشر المزيد، قم بترقية حسابك إلى <strong>مالك عقار</strong> أو <strong>وسيط عقاري</strong>.
-                </>
+                    لقد استخدمت {stats!.used} من {stats!.limit} إعلانات تجريبية مجانية.
+                    اختر نوع الحساب الذي يناسبك للمتابعة ونشر المزيد.
+                  </>
                 : <>
-                  لقد استخدمت إعلاناتك الشهرية كاملةً. لإضافة المزيد، قم بترقية عضويتك إلى{" "}
-                  <strong>مالك عقار</strong> (5 إعلانات/شهر) أو <strong>وسيط عقاري</strong>.
-                </>}
+                    لقد استخدمت إعلاناتك الشهرية كاملةً. قم بترقية عضويتك للمتابعة.
+                  </>}
             </p>
-            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-              <Link
-                href="/dashboard/listings"
-                style={{ padding: "0.65rem 1.5rem", borderRadius: 9, border: "1.5px solid #e2e8f0", color: "#374151", textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}
-              >
-                إعلاناتي
-              </Link>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", maxWidth: 480, margin: "0 auto 1rem" }}>
               <Link
                 href="/pricing?upgrade=Owner"
-                style={{ padding: "0.65rem 1.5rem", borderRadius: 9, background: "var(--color-primary)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem" }}
+                style={{ padding: "0.75rem 1rem", borderRadius: 10, background: "var(--color-primary)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}
               >
-                ترقية إلى مالك عقار
+                🏠 مالك عقار
               </Link>
-              {isFreeTrial && (
-                <Link
-                  href="/pricing?upgrade=Broker"
-                  style={{ padding: "0.65rem 1.5rem", borderRadius: 9, background: "#0f172a", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem" }}
-                >
-                  ترقية إلى وسيط عقاري
-                </Link>
-              )}
+              <Link
+                href="/pricing?upgrade=Broker"
+                style={{ padding: "0.75rem 1rem", borderRadius: 10, background: "#1e293b", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}
+              >
+                🤝 وسيط / سمسار
+              </Link>
+              <Link
+                href="/pricing?upgrade=RealEstateOffice"
+                style={{ padding: "0.75rem 1rem", borderRadius: 10, background: "#0369a1", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}
+              >
+                🏢 مكتب عقاري
+              </Link>
+              <Link
+                href="/pricing?upgrade=DeveloperCompany"
+                style={{ padding: "0.75rem 1rem", borderRadius: 10, background: "#7c3aed", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}
+              >
+                🏗️ شركة تطوير
+              </Link>
             </div>
+            <Link
+              href="/dashboard/listings"
+              style={{ display: "inline-block", padding: "0.55rem 1.25rem", borderRadius: 9, border: "1.5px solid #e2e8f0", color: "#374151", textDecoration: "none", fontWeight: 600, fontSize: "0.85rem" }}
+            >
+              إعلاناتي الحالية
+            </Link>
           </div>
         ) : (
           <div className="form-card">
