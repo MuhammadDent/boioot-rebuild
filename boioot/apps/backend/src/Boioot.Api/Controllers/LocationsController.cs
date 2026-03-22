@@ -1,4 +1,5 @@
 using Boioot.Domain.Entities;
+using Boioot.Infrastructure.Features.Locations;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -48,30 +49,89 @@ public class LocationsController : BaseController
         return Ok(cities);
     }
 
+    /// <summary>
+    /// Add a city with Arabic normalization and smart duplicate / similarity detection.
+    ///
+    /// Response shape:
+    ///   { status: "created"|"exists"|"similar", item: {...}, suggestion?: {...} }
+    ///
+    /// - "created"  → new city saved; item = the new city
+    /// - "exists"   → strict duplicate found; item = the existing city
+    /// - "similar"  → soft-normalized match found; item = null; suggestion = the similar city
+    /// </summary>
     [HttpPost("cities")]
     [Authorize]
     public async Task<IActionResult> AddCity([FromBody] AddCityRequest req, CancellationToken ct = default)
     {
-        var name = req.Name?.Trim();
+        var rawName  = req.Name?.Trim();
         var province = req.Province?.Trim() ?? string.Empty;
-        if (string.IsNullOrEmpty(name))
+
+        if (string.IsNullOrEmpty(rawName))
             return BadRequest(new { error = "اسم المدينة مطلوب" });
 
-        var exists = await _db.LocationCities.AnyAsync(c => c.Name == name, ct);
-        if (exists)
+        var displayName    = rawName;
+        var normalizedName = ArabicNormalizer.Normalize(rawName);
+
+        // ── 1. Strict duplicate check ────────────────────────────────────────────
+        var strictDup = await _db.LocationCities
+            .Where(c => c.Province == province && c.NormalizedName == normalizedName)
+            .Select(c => new CityDto(c.Id, c.Name, c.Province))
+            .FirstOrDefaultAsync(ct);
+
+        if (strictDup is not null)
+            return Ok(new LocationCreateResult("exists", strictDup, null));
+
+        // ── 2. Soft similarity check (skip if user forced create) ────────────────
+        if (req.ForceCreate != true)
         {
-            var existing = await _db.LocationCities
-                .Where(c => c.Name == name)
-                .Select(c => new { c.Id, c.Name, c.Province })
-                .FirstAsync(ct);
-            return Ok(existing);
+            var softKey = ArabicNormalizer.SoftNormalize(rawName);
+
+            var siblings = await _db.LocationCities
+                .Where(c => c.Province == province)
+                .Select(c => new { c.Id, c.Name, c.Province, c.NormalizedName })
+                .ToListAsync(ct);
+
+            CityDto? suggestion = null;
+            foreach (var sibling in siblings)
+            {
+                var sibSoft = ArabicNormalizer.SoftNormalize(sibling.NormalizedName);
+                if (sibSoft == softKey)
+                {
+                    suggestion = new CityDto(sibling.Id, sibling.Name, sibling.Province);
+                    break;
+                }
+            }
+
+            if (suggestion is not null)
+                return Ok(new LocationCreateResult("similar", null, suggestion));
         }
 
-        var city = new LocationCity { Name = name, Province = province };
+        // ── 3. Create new city ───────────────────────────────────────────────────
+        var city = new LocationCity
+        {
+            Name           = displayName,
+            NormalizedName = normalizedName,
+            Province       = province,
+        };
         _db.LocationCities.Add(city);
-        await _db.SaveChangesAsync(ct);
 
-        return Ok(new { city.Id, city.Name, city.Province });
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Unique index violation — race condition; return the existing one
+            var race = await _db.LocationCities
+                .Where(c => c.Province == province && c.NormalizedName == normalizedName)
+                .Select(c => new CityDto(c.Id, c.Name, c.Province))
+                .FirstOrDefaultAsync(ct);
+            if (race is not null)
+                return Ok(new LocationCreateResult("exists", race, null));
+            throw;
+        }
+
+        return Ok(new LocationCreateResult("created", new CityDto(city.Id, city.Name, city.Province), null));
     }
 
     // ─── Neighborhoods ─────────────────────────────────────────────────────────
@@ -91,15 +151,91 @@ public class LocationsController : BaseController
         return Ok(neighborhoods);
     }
 
+    /// <summary>
+    /// Add a neighborhood with Arabic normalization and smart duplicate / similarity detection.
+    ///
+    /// Response shape:
+    ///   { status: "created"|"exists"|"similar", item: {...}, suggestion?: {...} }
+    /// </summary>
+    [HttpPost("neighborhoods")]
+    [Authorize]
+    public async Task<IActionResult> AddNeighborhood([FromBody] AddNeighborhoodRequest req, CancellationToken ct = default)
+    {
+        var rawName = req.Name?.Trim();
+        var city    = req.City?.Trim();
+
+        if (string.IsNullOrEmpty(rawName))
+            return BadRequest(new { error = "اسم الحي مطلوب" });
+        if (string.IsNullOrEmpty(city))
+            return BadRequest(new { error = "اسم المدينة مطلوب" });
+
+        var displayName    = rawName;
+        var normalizedName = ArabicNormalizer.Normalize(rawName);
+
+        // ── 1. Strict duplicate check ────────────────────────────────────────────
+        var strictDup = await _db.LocationNeighborhoods
+            .Where(n => n.City == city && n.NormalizedName == normalizedName)
+            .Select(n => new NeighborhoodDto(n.Id, n.Name, n.City))
+            .FirstOrDefaultAsync(ct);
+
+        if (strictDup is not null)
+            return Ok(new LocationCreateResult("exists", strictDup, null));
+
+        // ── 2. Soft similarity check (skip if user forced create) ────────────────
+        if (req.ForceCreate != true)
+        {
+            var softKey = ArabicNormalizer.SoftNormalize(rawName);
+
+            var siblings = await _db.LocationNeighborhoods
+                .Where(n => n.City == city)
+                .Select(n => new { n.Id, n.Name, n.City, n.NormalizedName })
+                .ToListAsync(ct);
+
+            NeighborhoodDto? suggestion = null;
+            foreach (var sibling in siblings)
+            {
+                var sibSoft = ArabicNormalizer.SoftNormalize(sibling.NormalizedName);
+                if (sibSoft == softKey)
+                {
+                    suggestion = new NeighborhoodDto(sibling.Id, sibling.Name, sibling.City);
+                    break;
+                }
+            }
+
+            if (suggestion is not null)
+                return Ok(new LocationCreateResult("similar", null, suggestion));
+        }
+
+        // ── 3. Create new neighborhood ───────────────────────────────────────────
+        var neighborhood = new LocationNeighborhood
+        {
+            Name           = displayName,
+            NormalizedName = normalizedName,
+            City           = city,
+        };
+        _db.LocationNeighborhoods.Add(neighborhood);
+
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            var race = await _db.LocationNeighborhoods
+                .Where(n => n.City == city && n.NormalizedName == normalizedName)
+                .Select(n => new NeighborhoodDto(n.Id, n.Name, n.City))
+                .FirstOrDefaultAsync(ct);
+            if (race is not null)
+                return Ok(new LocationCreateResult("exists", race, null));
+            throw;
+        }
+
+        return Ok(new LocationCreateResult("created",
+            new NeighborhoodDto(neighborhood.Id, neighborhood.Name, neighborhood.City), null));
+    }
+
     // ─── Property Location Options (derived from actual property data) ──────────
 
-    /// <summary>
-    /// Returns distinct province / city / neighborhood values that appear in
-    /// the Properties table.  Used to drive the public filter dropdowns so that
-    /// only locations with real listings are shown.
-    /// Optional query params: province (filters cities & neighborhoods)
-    ///                        city     (filters neighborhoods only)
-    /// </summary>
     [HttpGet("property-options")]
     [AllowAnonymous]
     public async Task<IActionResult> GetPropertyOptions(
@@ -111,7 +247,6 @@ public class LocationsController : BaseController
             .IgnoreQueryFilters()
             .Where(p => !p.IsDeleted);
 
-        // Provinces — distinct non-null values from Properties.Province
         var provinces = await baseQuery
             .Where(p => !string.IsNullOrEmpty(p.Province))
             .Select(p => p.Province!)
@@ -119,7 +254,6 @@ public class LocationsController : BaseController
             .OrderBy(p => p)
             .ToListAsync(ct);
 
-        // Cities — distinct non-null, optionally filtered by province
         var cityQuery = baseQuery.Where(p => !string.IsNullOrEmpty(p.City));
         if (!string.IsNullOrWhiteSpace(province))
             cityQuery = cityQuery.Where(p => p.Province == province);
@@ -130,7 +264,6 @@ public class LocationsController : BaseController
             .OrderBy(x => x.City)
             .ToListAsync(ct);
 
-        // Neighborhoods — distinct non-null, optionally filtered by city
         var nbrQuery = baseQuery.Where(p => !string.IsNullOrEmpty(p.Neighborhood));
         if (!string.IsNullOrWhiteSpace(city))
             nbrQuery = nbrQuery.Where(p => p.City == city);
@@ -146,39 +279,25 @@ public class LocationsController : BaseController
         return Ok(new
         {
             provinces,
-            cities    = cities.Select(x => new { name = x.City, province = x.Province }),
+            cities        = cities.Select(x => new { name = x.City, province = x.Province }),
             neighborhoods = neighborhoods.Select(x => new { name = x.Neighborhood, city = x.City, province = x.Province }),
         });
     }
-
-    [HttpPost("neighborhoods")]
-    [Authorize]
-    public async Task<IActionResult> AddNeighborhood([FromBody] AddNeighborhoodRequest req, CancellationToken ct = default)
-    {
-        var name = req.Name?.Trim();
-        var city = req.City?.Trim();
-        if (string.IsNullOrEmpty(name))
-            return BadRequest(new { error = "اسم الحي مطلوب" });
-        if (string.IsNullOrEmpty(city))
-            return BadRequest(new { error = "اسم المدينة مطلوب" });
-
-        var exists = await _db.LocationNeighborhoods.AnyAsync(n => n.Name == name && n.City == city, ct);
-        if (exists)
-        {
-            var existing = await _db.LocationNeighborhoods
-                .Where(n => n.Name == name && n.City == city)
-                .Select(n => new { n.Id, n.Name, n.City })
-                .FirstAsync(ct);
-            return Ok(existing);
-        }
-
-        var neighborhood = new LocationNeighborhood { Name = name, City = city };
-        _db.LocationNeighborhoods.Add(neighborhood);
-        await _db.SaveChangesAsync(ct);
-
-        return Ok(new { neighborhood.Id, neighborhood.Name, neighborhood.City });
-    }
 }
 
-public record AddCityRequest(string? Name, string? Province);
-public record AddNeighborhoodRequest(string? Name, string? City);
+// ─── DTOs and records ──────────────────────────────────────────────────────────
+
+public record AddCityRequest(string? Name, string? Province, bool? ForceCreate);
+public record AddNeighborhoodRequest(string? Name, string? City, bool? ForceCreate);
+
+public record CityDto(Guid Id, string Name, string Province);
+public record NeighborhoodDto(Guid Id, string Name, string City);
+
+/// <summary>
+/// Structured result returned from POST /cities and POST /neighborhoods.
+///
+/// status:     "created" | "exists" | "similar"
+/// item:       the saved or found location (null when status = "similar")
+/// suggestion: a nearby similar entry (only when status = "similar")
+/// </summary>
+public record LocationCreateResult(string Status, object? Item, object? Suggestion);

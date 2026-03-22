@@ -188,6 +188,65 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE LocationCities ADD COLUMN Province TEXT NOT NULL DEFAULT ''"); }
         catch { /* column already exists */ }
 
+        // ── Location NormalizedName columns (Arabic duplicate prevention) ─────────
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE LocationCities ADD COLUMN NormalizedName TEXT NOT NULL DEFAULT ''"); }
+        catch { /* column already exists */ }
+
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE LocationNeighborhoods ADD COLUMN NormalizedName TEXT NOT NULL DEFAULT ''"); }
+        catch { /* column already exists */ }
+
+        // Backfill NormalizedName from Name for existing rows (SQL-level approximation)
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                UPDATE LocationCities SET NormalizedName =
+                    TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                        REPLACE(Name, char(0x0640), ''),
+                        char(0x0623), char(0x0627)),
+                        char(0x0625), char(0x0627)),
+                        char(0x0622), char(0x0627)),
+                        char(0x0649), char(0x064A)),
+                    '  ', ' '))
+                WHERE NormalizedName = '' OR NormalizedName IS NULL");
+        }
+        catch { /* ignore backfill errors */ }
+
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                UPDATE LocationNeighborhoods SET NormalizedName =
+                    TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                        REPLACE(Name, char(0x0640), ''),
+                        char(0x0623), char(0x0627)),
+                        char(0x0625), char(0x0627)),
+                        char(0x0622), char(0x0627)),
+                        char(0x0649), char(0x064A)),
+                    '  ', ' '))
+                WHERE NormalizedName = '' OR NormalizedName IS NULL");
+        }
+        catch { /* ignore backfill errors */ }
+
+        // Transition indexes: drop old exact-name indexes, create normalized-name indexes
+        try { await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS IX_LocationCities_Name"); }
+        catch { /* ignore */ }
+
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationCities_Province_NormalizedName ON LocationCities(Province, NormalizedName) WHERE NormalizedName != ''");
+        }
+        catch { /* already exists */ }
+
+        try { await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS IX_LocationNeighborhoods_Name_City"); }
+        catch { /* ignore */ }
+
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationNeighborhoods_NormalizedName_City ON LocationNeighborhoods(NormalizedName, City) WHERE NormalizedName != ''");
+        }
+        catch { /* already exists */ }
+
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN ProfileImageUrl TEXT"); }
         catch { /* column already exists */ }
 
@@ -980,15 +1039,22 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("Seeded default ownership types");
         }
 
-        // Create LocationCities table
+        // Create LocationCities table (fresh install includes all columns)
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS LocationCities (
                 Id TEXT NOT NULL PRIMARY KEY,
                 Name TEXT NOT NULL,
+                NormalizedName TEXT NOT NULL DEFAULT '',
+                Province TEXT NOT NULL DEFAULT '',
                 CreatedAt TEXT NOT NULL,
                 UpdatedAt TEXT NOT NULL
             )");
-        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationCities_Name ON LocationCities(Name)"); }
+        // Use normalized-name unique index (old Name-only index is dropped above in migrations)
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationCities_Province_NormalizedName ON LocationCities(Province, NormalizedName) WHERE NormalizedName != ''");
+        }
         catch { /* already exists */ }
 
         // Seed Syrian cities if none exist
@@ -996,26 +1062,48 @@ using (var scope = app.Services.CreateScope())
         if (!hasCities)
         {
             var now2 = DateTime.UtcNow.ToString("O");
-            var cities = new[] { "دمشق", "حلب", "حمص", "اللاذقية", "طرطوس", "حماة", "دير الزور", "الرقة", "السويداء", "درعا", "القامشلي", "إدلب", "الحسكة" };
-            foreach (var city in cities)
+            // (city, province, normalizedName)
+            var citySeeds = new (string Name, string Province, string Norm)[]
+            {
+                ("دمشق",       "دمشق",       "دمشق"),
+                ("حلب",        "حلب",        "حلب"),
+                ("حمص",        "حمص",        "حمص"),
+                ("اللاذقية",   "اللاذقية",   "اللاذقية"),
+                ("طرطوس",      "طرطوس",      "طرطوس"),
+                ("حماة",       "حماة",       "حماه"),
+                ("دير الزور",  "دير الزور",  "دير الزور"),
+                ("الرقة",      "الرقة",      "الرقة"),
+                ("السويداء",   "السويداء",   "السويداء"),
+                ("درعا",       "درعا",       "درعا"),
+                ("القامشلي",   "الحسكة",     "القامشلي"),
+                ("إدلب",       "إدلب",       "ادلب"),
+                ("الحسكة",     "الحسكة",     "الحسكة"),
+            };
+            foreach (var (name, province, norm) in citySeeds)
             {
                 await db.Database.ExecuteSqlRawAsync(
-                    "INSERT OR IGNORE INTO LocationCities (Id, Name, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3})",
-                    Guid.NewGuid().ToString(), city, now2, now2);
+                    "INSERT OR IGNORE INTO LocationCities (Id, Name, NormalizedName, Province, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3}, {4}, {5})",
+                    Guid.NewGuid().ToString(), name, norm, province, now2, now2);
             }
-            logger.LogInformation("Seeded Syrian cities");
+            logger.LogInformation("Seeded Syrian cities with NormalizedName");
         }
 
-        // Create LocationNeighborhoods table
+        // Create LocationNeighborhoods table (fresh install includes all columns)
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS LocationNeighborhoods (
                 Id TEXT NOT NULL PRIMARY KEY,
                 Name TEXT NOT NULL,
+                NormalizedName TEXT NOT NULL DEFAULT '',
                 City TEXT NOT NULL,
                 CreatedAt TEXT NOT NULL,
                 UpdatedAt TEXT NOT NULL
             )");
-        try { await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationNeighborhoods_Name_City ON LocationNeighborhoods(Name, City)"); }
+        // Use normalized-name unique index (old Name+City index is dropped above in migrations)
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationNeighborhoods_NormalizedName_City ON LocationNeighborhoods(NormalizedName, City) WHERE NormalizedName != ''");
+        }
         catch { /* already exists */ }
 
         // Create BuyerRequests table

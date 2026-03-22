@@ -10,6 +10,12 @@ interface LocationOption {
   name: string;
 }
 
+interface LocationCreateResult {
+  status: "created" | "exists" | "similar";
+  item?: { id: string; name: string; province?: string; city?: string } | null;
+  suggestion?: { id: string; name: string; province?: string; city?: string } | null;
+}
+
 interface ProvinceSelectProps {
   label: string;
   value: string;
@@ -85,6 +91,42 @@ const cancelBtnStyle: React.CSSProperties = {
   whiteSpace: "nowrap",
 };
 
+const suggestionBoxStyle: React.CSSProperties = {
+  marginTop: "0.5rem",
+  padding: "0.6rem 0.85rem",
+  borderRadius: "8px",
+  background: "#FFF8E1",
+  border: "1px solid #FFD54F",
+  fontSize: "0.88rem",
+  color: "#5D4037",
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "0.5rem",
+  alignItems: "center",
+};
+
+const useSuggBtnStyle: React.CSSProperties = {
+  padding: "0.3rem 0.65rem",
+  borderRadius: "6px",
+  border: "none",
+  background: "#F57F17",
+  color: "#fff",
+  fontWeight: 600,
+  fontSize: "0.8rem",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
+const forceAddBtnStyle: React.CSSProperties = {
+  padding: "0.3rem 0.65rem",
+  borderRadius: "6px",
+  border: "1px solid #bbb",
+  background: "transparent",
+  fontSize: "0.8rem",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
 // ─── ProvinceSelect ───────────────────────────────────────────────────────────
 
 export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSelectProps) {
@@ -93,6 +135,7 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState("");
+  const [suggestion, setSuggestion] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { fetchProvinces(); }, []);
@@ -105,18 +148,32 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
     } catch { /* silent */ }
   }
 
-  async function handleAdd() {
+  function resetAddForm() {
+    setAdding(false);
+    setNewName("");
+    setAddError("");
+    setSuggestion(null);
+  }
+
+  async function handleAdd(forceCreate = false) {
     const name = newName.trim();
     if (!name) { setAddError("اسم المحافظة مطلوب"); return; }
-    setSaving(true); setAddError("");
+    setSaving(true); setAddError(""); setSuggestion(null);
     try {
-      await api.post<{ id: string; name: string; province: string }>(
-        "/locations/cities", { name, province: name }
+      const result = await api.post<LocationCreateResult>(
+        "/locations/cities",
+        { name, province: name, forceCreate }
       );
-      const updated = await api.get<string[]>("/locations/provinces");
-      setProvinces(updated);
-      onChange(name);
-      setAdding(false); setNewName("");
+      if (result.status === "created" || result.status === "exists") {
+        const finalName = result.item?.name ?? name;
+        await fetchProvinces();
+        onChange(finalName);
+        resetAddForm();
+      } else if (result.status === "similar" && result.suggestion) {
+        setSuggestion(result.suggestion.name);
+        setSaving(false);
+        return;
+      }
     } catch {
       setAddError("تعذّر إضافة المحافظة — حاول مجدداً");
     } finally { setSaving(false); }
@@ -124,7 +181,14 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
-    if (e.key === "Escape") { setAdding(false); setNewName(""); setAddError(""); }
+    if (e.key === "Escape") { resetAddForm(); }
+  }
+
+  async function handleUseSuggestion() {
+    if (!suggestion) return;
+    await fetchProvinces();
+    onChange(suggestion);
+    resetAddForm();
   }
 
   return (
@@ -148,9 +212,12 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
           title="إضافة محافظة جديدة"
           style={addBtnStyle}
           disabled={disabled}
-          onClick={() => { setAdding(true); setAddError(""); setNewName(""); }}
-        >+</button>
+          onClick={() => { setAdding(true); setAddError(""); setNewName(""); setSuggestion(null); }}
+        >
+          +
+        </button>
       </div>
+
       {adding && (
         <div style={inlineFormStyle}>
           <input
@@ -159,20 +226,51 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
             style={{ width: "100%", fontSize: "0.9rem" }}
             placeholder="اكتب اسم المحافظة الجديدة..."
             value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+            onChange={(e) => { setNewName(e.target.value); setSuggestion(null); }}
             onKeyDown={handleKeyDown}
             disabled={saving}
             maxLength={100}
           />
-          <button type="button" style={confirmBtnStyle} onClick={handleAdd} disabled={saving}>
+          <button
+            type="button"
+            style={confirmBtnStyle}
+            onClick={() => handleAdd(false)}
+            disabled={saving}
+          >
             {saving ? "..." : "حفظ"}
           </button>
-          <button type="button" style={cancelBtnStyle}
-            onClick={() => { setAdding(false); setNewName(""); setAddError(""); }} disabled={saving}>
+          <button
+            type="button"
+            style={cancelBtnStyle}
+            onClick={resetAddForm}
+            disabled={saving}
+          >
             إلغاء
           </button>
         </div>
       )}
+
+      {suggestion && (
+        <div style={suggestionBoxStyle}>
+          <span>هل تقصد: <strong>{suggestion}</strong>؟</span>
+          <button
+            type="button"
+            style={useSuggBtnStyle}
+            onClick={handleUseSuggestion}
+          >
+            نعم، استخدمه
+          </button>
+          <button
+            type="button"
+            style={forceAddBtnStyle}
+            onClick={() => handleAdd(true)}
+            disabled={saving}
+          >
+            لا، أضف جديداً
+          </button>
+        </div>
+      )}
+
       {addError && <p className="form-error">{addError}</p>}
     </div>
   );
@@ -194,6 +292,7 @@ export function CitySelect({
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState("");
+  const [suggestion, setSuggestion] = useState<{ id: string; name: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { fetchCities(province); }, [province]);
@@ -209,15 +308,32 @@ export function CitySelect({
     } catch { /* silent */ }
   }
 
-  async function handleAdd() {
+  function resetAddForm() {
+    setAdding(false);
+    setNewName("");
+    setAddError("");
+    setSuggestion(null);
+  }
+
+  async function handleAdd(forceCreate = false) {
     const name = newName.trim();
     if (!name) { setAddError("اسم المدينة مطلوب"); return; }
-    setSaving(true); setAddError("");
+    setSaving(true); setAddError(""); setSuggestion(null);
     try {
-      const result = await api.post<LocationOption>("/locations/cities", { name, province: province ?? "" });
-      await fetchCities(province);
-      onChange(result.name);
-      setAdding(false); setNewName("");
+      const result = await api.post<LocationCreateResult>(
+        "/locations/cities",
+        { name, province: province ?? "", forceCreate }
+      );
+      if (result.status === "created" || result.status === "exists") {
+        const finalName = result.item?.name ?? name;
+        await fetchCities(province);
+        onChange(finalName);
+        resetAddForm();
+      } else if (result.status === "similar" && result.suggestion) {
+        setSuggestion({ id: result.suggestion.id, name: result.suggestion.name });
+        setSaving(false);
+        return;
+      }
     } catch {
       setAddError("تعذّر إضافة المدينة — حاول مجدداً");
     } finally { setSaving(false); }
@@ -225,7 +341,14 @@ export function CitySelect({
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
-    if (e.key === "Escape") { setAdding(false); setNewName(""); setAddError(""); }
+    if (e.key === "Escape") { resetAddForm(); }
+  }
+
+  async function handleUseSuggestion() {
+    if (!suggestion) return;
+    await fetchCities(province);
+    onChange(suggestion.name);
+    resetAddForm();
   }
 
   return (
@@ -255,7 +378,7 @@ export function CitySelect({
           title="إضافة مدينة جديدة"
           style={addBtnStyle}
           disabled={disabled}
-          onClick={() => { setAdding(true); setAddError(""); setNewName(""); }}
+          onClick={() => { setAdding(true); setAddError(""); setNewName(""); setSuggestion(null); }}
         >
           +
         </button>
@@ -269,21 +392,47 @@ export function CitySelect({
             style={{ width: "100%", fontSize: "0.9rem" }}
             placeholder="اكتب اسم المدينة الجديدة..."
             value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+            onChange={(e) => { setNewName(e.target.value); setSuggestion(null); }}
             onKeyDown={handleKeyDown}
             disabled={saving}
             maxLength={100}
           />
-          <button type="button" style={confirmBtnStyle} onClick={handleAdd} disabled={saving}>
+          <button
+            type="button"
+            style={confirmBtnStyle}
+            onClick={() => handleAdd(false)}
+            disabled={saving}
+          >
             {saving ? "..." : "حفظ"}
           </button>
           <button
             type="button"
             style={cancelBtnStyle}
-            onClick={() => { setAdding(false); setNewName(""); setAddError(""); }}
+            onClick={resetAddForm}
             disabled={saving}
           >
             إلغاء
+          </button>
+        </div>
+      )}
+
+      {suggestion && (
+        <div style={suggestionBoxStyle}>
+          <span>هل تقصد: <strong>{suggestion.name}</strong>؟</span>
+          <button
+            type="button"
+            style={useSuggBtnStyle}
+            onClick={handleUseSuggestion}
+          >
+            نعم، استخدمه
+          </button>
+          <button
+            type="button"
+            style={forceAddBtnStyle}
+            onClick={() => handleAdd(true)}
+            disabled={saving}
+          >
+            لا، أضف جديداً
           </button>
         </div>
       )}
@@ -308,6 +457,7 @@ export function NeighborhoodSelect({
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState("");
+  const [suggestion, setSuggestion] = useState<{ id: string; name: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -328,39 +478,51 @@ export function NeighborhoodSelect({
         `/locations/neighborhoods?city=${encodeURIComponent(cityName)}`
       );
       setNeighborhoods(data);
-    } catch {
-      // silent
-    }
+    } catch { /* silent */ }
   }
 
-  async function handleAdd() {
-    const name = newName.trim();
-    if (!name) {
-      setAddError("اسم الحي مطلوب");
-      return;
-    }
-    if (!city) {
-      setAddError("اختر المدينة أولاً");
-      return;
-    }
-    setSaving(true);
+  function resetAddForm() {
+    setAdding(false);
+    setNewName("");
     setAddError("");
+    setSuggestion(null);
+  }
+
+  async function handleAdd(forceCreate = false) {
+    const name = newName.trim();
+    if (!name) { setAddError("اسم الحي مطلوب"); return; }
+    if (!city) { setAddError("اختر المدينة أولاً"); return; }
+    setSaving(true); setAddError(""); setSuggestion(null);
     try {
-      const result = await api.post<LocationOption>("/locations/neighborhoods", { name, city });
-      await fetchNeighborhoods(city);
-      onChange(result.name);
-      setAdding(false);
-      setNewName("");
+      const result = await api.post<LocationCreateResult>(
+        "/locations/neighborhoods",
+        { name, city, forceCreate }
+      );
+      if (result.status === "created" || result.status === "exists") {
+        const finalName = result.item?.name ?? name;
+        await fetchNeighborhoods(city);
+        onChange(finalName);
+        resetAddForm();
+      } else if (result.status === "similar" && result.suggestion) {
+        setSuggestion({ id: result.suggestion.id, name: result.suggestion.name });
+        setSaving(false);
+        return;
+      }
     } catch {
       setAddError("تعذّر إضافة الحي — حاول مجدداً");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
-    if (e.key === "Escape") { setAdding(false); setNewName(""); setAddError(""); }
+    if (e.key === "Escape") { resetAddForm(); }
+  }
+
+  async function handleUseSuggestion() {
+    if (!suggestion) return;
+    await fetchNeighborhoods(city);
+    onChange(suggestion.name);
+    resetAddForm();
   }
 
   return (
@@ -392,7 +554,7 @@ export function NeighborhoodSelect({
             cursor: !city ? "not-allowed" : "pointer",
           }}
           disabled={disabled || !city}
-          onClick={() => { setAdding(true); setAddError(""); setNewName(""); }}
+          onClick={() => { setAdding(true); setAddError(""); setNewName(""); setSuggestion(null); }}
         >
           +
         </button>
@@ -406,21 +568,47 @@ export function NeighborhoodSelect({
             style={{ width: "100%", fontSize: "0.9rem" }}
             placeholder="اكتب اسم الحي الجديد..."
             value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+            onChange={(e) => { setNewName(e.target.value); setSuggestion(null); }}
             onKeyDown={handleKeyDown}
             disabled={saving}
             maxLength={100}
           />
-          <button type="button" style={confirmBtnStyle} onClick={handleAdd} disabled={saving}>
+          <button
+            type="button"
+            style={confirmBtnStyle}
+            onClick={() => handleAdd(false)}
+            disabled={saving}
+          >
             {saving ? "..." : "حفظ"}
           </button>
           <button
             type="button"
             style={cancelBtnStyle}
-            onClick={() => { setAdding(false); setNewName(""); setAddError(""); }}
+            onClick={resetAddForm}
             disabled={saving}
           >
             إلغاء
+          </button>
+        </div>
+      )}
+
+      {suggestion && (
+        <div style={suggestionBoxStyle}>
+          <span>هل تقصد: <strong>{suggestion.name}</strong>؟</span>
+          <button
+            type="button"
+            style={useSuggBtnStyle}
+            onClick={handleUseSuggestion}
+          >
+            نعم، استخدمه
+          </button>
+          <button
+            type="button"
+            style={forceAddBtnStyle}
+            onClick={() => handleAdd(true)}
+            disabled={saving}
+          >
+            لا، أضف جديداً
           </button>
         </div>
       )}

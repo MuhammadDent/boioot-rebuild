@@ -1,5 +1,6 @@
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
+using Boioot.Infrastructure.Features.Locations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -169,7 +170,12 @@ public class DataSeeder
         {
             if (!existingSet.Contains(name))
             {
-                _context.LocationCities.Add(new LocationCity { Name = name, Province = province });
+                _context.LocationCities.Add(new LocationCity
+                {
+                    Name           = name,
+                    NormalizedName = ArabicNormalizer.Normalize(name),
+                    Province       = province,
+                });
                 added++;
             }
         }
