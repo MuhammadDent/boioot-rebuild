@@ -459,12 +459,12 @@ public class PropertyService : IPropertyService
         var ownerIdStr = userId.ToString();
 
         // ── Free-trial tier (User role) ────────────────────────────────────────
-        // Counting rule: ALL non-deleted personal listings (all-time, not monthly).
-        // Rationale: prevents gaming by deleting ads and re-posting to reset the counter.
+        // Counting rule: User.TrialListingsUsed — incremented on each creation,
+        // never decremented. Deletion does not restore trial quota.
         if (userRole == RoleNames.User)
         {
-            var used = await _context.Properties
-                .CountAsync(p => !p.IsDeleted && p.OwnerId == ownerIdStr, ct);
+            var trialUser = await _context.Users.FindAsync([userId]);
+            var used = trialUser?.TrialListingsUsed ?? 0;
             return (used, 2, true);
         }
 
@@ -501,14 +501,13 @@ public class PropertyService : IPropertyService
         // acctId == null → allow
 
         // ── Free-trial gate (User role — all-time, not monthly) ──────────────
-        // Regular users get exactly 2 ads total as a free trial.
-        // Counting is all-time to prevent gaming by delete-and-repost.
+        // Enforced via User.TrialListingsUsed (incremented on each creation,
+        // never decremented on deletion) — prevents gaming by delete-and-repost.
         if (userRole == RoleNames.User)
         {
-            var ownerIdStr = userId.ToString();
-            var totalPosted = await _context.Properties
-                .CountAsync(p => !p.IsDeleted && p.OwnerId == ownerIdStr, ct);
-            if (totalPosted >= 2)
+            var trialUser = await _context.Users.FindAsync([userId], ct)
+                            ?? throw new BoiootException("المستخدم غير موجود.", 404);
+            if (trialUser.TrialListingsUsed >= 2)
                 throw new BoiootException(
                     "انتهت إعلاناتك التجريبية المجانية. يرجى ترقية حسابك إلى مالك أو وسيط للمتابعة.",
                     403,
@@ -572,6 +571,16 @@ public class PropertyService : IPropertyService
 
         _context.Properties.Add(property);
         await _context.SaveChangesAsync(ct);
+
+        // ── Increment trial counter (User role only) ──────────────────────────
+        // Must happen after the property is saved so that a failure to save
+        // does not advance the counter. The counter is never decremented.
+        if (userRole == RoleNames.User)
+        {
+            await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE Users SET TrialListingsUsed = TrialListingsUsed + 1 WHERE Id = {0}",
+                userId.ToString());
+        }
 
         // Save images
         if (request.Images != null && request.Images.Count > 0)

@@ -15,6 +15,13 @@ public class User : BaseEntity, ISoftDeletable
     public bool IsDeleted { get; set; } = false;
     public string? ProfileImageUrl { get; set; }
 
+    /// <summary>
+    /// Counts how many listings this user has ever successfully created while on the
+    /// free-trial (User role). Incremented on creation, never decremented on deletion.
+    /// Used to enforce the 2-listing all-time trial cap.
+    /// </summary>
+    public int TrialListingsUsed { get; set; } = 0;
+
     public Agent? Agent { get; set; }
     public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<AccountUser> AccountUsers { get; set; } = [];

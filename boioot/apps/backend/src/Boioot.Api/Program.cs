@@ -310,6 +310,36 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN ProfileImageUrl TEXT"); }
         catch { /* column already exists */ }
 
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN TrialListingsUsed INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+
+        // Backfill TrialListingsUsed for existing User-role accounts.
+        // We use EF Core to enumerate users so GUID formatting matches exactly
+        // what EF Core stores in OwnerId on Properties.
+        try
+        {
+            var trialUsers = await db.Set<Boioot.Domain.Entities.User>()
+                .Where(u => u.Role == Boioot.Domain.Enums.UserRole.User && u.TrialListingsUsed == 0)
+                .ToListAsync();
+
+            foreach (var tu in trialUsers)
+            {
+                var ownerIdStr = tu.Id.ToString();
+                var allTimeCount = await db.Set<Boioot.Domain.Entities.Property>()
+                    .CountAsync(p => p.OwnerId == ownerIdStr);   // no IsDeleted filter — counts all-time
+                if (allTimeCount > 0)
+                {
+                    tu.TrialListingsUsed = allTimeCount;
+                }
+            }
+
+            if (trialUsers.Any(u => u.TrialListingsUsed > 0))
+                await db.SaveChangesAsync();
+
+            logger.LogInformation("TrialListingsUsed backfill completed for User-role accounts.");
+        }
+        catch (Exception ex) { logger.LogWarning("TrialListingsUsed backfill skipped: {msg}", ex.Message); }
+
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Requests ADD COLUMN UserId TEXT"); }
         catch { /* column already exists */ }
 
