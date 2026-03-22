@@ -9,6 +9,24 @@ import { adminApi } from "@/features/admin/api";
 import { normalizeError } from "@/lib/api";
 import type { AdminPlanDetail, AdminPlanPricingEntry, PlanLimitItem, PlanFeatureItem } from "@/types";
 
+// ── Feature group labels ───────────────────────────────────────────────────────
+
+const FEATURE_GROUP_LABELS: Record<string, string> = {
+  analytics:     "التحليلات",
+  support:       "الدعم الفني",
+  listing:       "الإعلانات",
+  media:         "الوسائط",
+  communication: "التواصل",
+  team:          "إدارة الفريق",
+  projects:      "إدارة المشاريع",
+  general:       "عام",
+};
+
+function featureGroupLabel(raw?: string): string {
+  if (!raw) return "عام";
+  return FEATURE_GROUP_LABELS[raw] ?? raw;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function formatPrice(n: number, currency = "ل.س") {
@@ -491,7 +509,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   const featureGroups = features.reduce<Record<string, PlanFeatureItem[]>>((acc, feat) => {
-    const grp = feat.featureGroup ?? "عام";
+    const grp = featureGroupLabel(feat.featureGroup);
     if (!acc[grp]) acc[grp] = [];
     acc[grp].push(feat);
     return acc;
@@ -898,7 +916,19 @@ export default function AdminPlansPage() {
               <h1 style={{ fontSize: "1.4rem", fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>إدارة خطط الاشتراك</h1>
               <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{plans.length} خطة</p>
             </div>
-            <button className="btn btn-primary" onClick={handleOpenCreate} style={{ flexShrink: 0 }}>+ خطة جديدة</button>
+            <div style={{ display: "flex", gap: "0.6rem", flexShrink: 0 }}>
+              <a
+                href="/dashboard/admin/plan-catalog"
+                style={{ display: "inline-flex", alignItems: "center", padding: "0.4rem 1rem", borderRadius: 8, fontSize: "0.85rem", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.75)", textDecoration: "none", background: "rgba(255,255,255,0.05)" }}>
+                كتالوج الميزات والحدود
+              </a>
+              <button
+                className="btn btn-primary"
+                onClick={handleOpenCreate}
+                style={{ flexShrink: 0 }}>
+                + خطة جديدة
+              </button>
+            </div>
           </div>
         </div>
 

@@ -1,0 +1,168 @@
+using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Plans.DTOs;
+using Boioot.Application.Features.Plans.Interfaces;
+using Boioot.Domain.Entities;
+using Boioot.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+namespace Boioot.Infrastructure.Features.Plans;
+
+public class AdminCatalogService : IAdminCatalogService
+{
+    private readonly BoiootDbContext _db;
+
+    public AdminCatalogService(BoiootDbContext db)
+    {
+        _db = db;
+    }
+
+    // ── Feature Definitions ──────────────────────────────────────────────────
+
+    public async Task<List<FeatureDefinitionResponse>> GetFeaturesAsync(CancellationToken ct = default)
+    {
+        return await _db.FeatureDefinitions
+            .OrderBy(f => f.FeatureGroup)
+            .ThenBy(f => f.Key)
+            .Select(f => MapFeature(f))
+            .ToListAsync(ct);
+    }
+
+    public async Task<FeatureDefinitionResponse> CreateFeatureAsync(
+        CreateFeatureDefinitionRequest request, CancellationToken ct = default)
+    {
+        if (await _db.FeatureDefinitions.AnyAsync(f => f.Key == request.Key, ct))
+            throw new BoiootException($"المفتاح '{request.Key}' موجود مسبقاً", 409);
+
+        var entity = new FeatureDefinition
+        {
+            Key          = request.Key.Trim().ToLowerInvariant(),
+            Name         = request.Name.Trim(),
+            Description  = request.Description?.Trim(),
+            FeatureGroup = request.FeatureGroup?.Trim().ToLowerInvariant(),
+            IsActive     = true
+        };
+
+        _db.FeatureDefinitions.Add(entity);
+        await _db.SaveChangesAsync(ct);
+        return MapFeature(entity);
+    }
+
+    public async Task<FeatureDefinitionResponse> UpdateFeatureAsync(
+        Guid id, UpdateFeatureDefinitionRequest request, CancellationToken ct = default)
+    {
+        var entity = await _db.FeatureDefinitions.FindAsync([id], ct)
+            ?? throw new BoiootException("تعريف الميزة غير موجود", 404);
+
+        entity.Name         = request.Name.Trim();
+        entity.Description  = request.Description?.Trim();
+        entity.FeatureGroup = request.FeatureGroup?.Trim().ToLowerInvariant();
+        entity.IsActive     = request.IsActive;
+        entity.UpdatedAt    = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return MapFeature(entity);
+    }
+
+    public async Task DeleteFeatureAsync(Guid id, CancellationToken ct = default)
+    {
+        var entity = await _db.FeatureDefinitions.FindAsync([id], ct)
+            ?? throw new BoiootException("تعريف الميزة غير موجود", 404);
+
+        bool inUse = await _db.PlanFeatures
+            .AnyAsync(pf => pf.FeatureDefinitionId == id, ct);
+        if (inUse)
+            throw new BoiootException("لا يمكن حذف تعريف مرتبط بخطط موجودة؛ قم بتعطيله بدلاً من ذلك", 409);
+
+        _db.FeatureDefinitions.Remove(entity);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    // ── Limit Definitions ────────────────────────────────────────────────────
+
+    public async Task<List<LimitDefinitionResponse>> GetLimitsAsync(CancellationToken ct = default)
+    {
+        return await _db.LimitDefinitions
+            .OrderBy(l => l.AppliesToScope)
+            .ThenBy(l => l.Key)
+            .Select(l => MapLimit(l))
+            .ToListAsync(ct);
+    }
+
+    public async Task<LimitDefinitionResponse> CreateLimitAsync(
+        CreateLimitDefinitionRequest request, CancellationToken ct = default)
+    {
+        if (await _db.LimitDefinitions.AnyAsync(l => l.Key == request.Key, ct))
+            throw new BoiootException($"المفتاح '{request.Key}' موجود مسبقاً", 409);
+
+        var entity = new LimitDefinition
+        {
+            Key            = request.Key.Trim().ToLowerInvariant(),
+            Name           = request.Name.Trim(),
+            Description    = request.Description?.Trim(),
+            Unit           = request.Unit?.Trim(),
+            ValueType      = string.IsNullOrWhiteSpace(request.ValueType) ? "integer" : request.ValueType,
+            AppliesToScope = request.AppliesToScope?.Trim().ToLowerInvariant(),
+            IsActive       = true
+        };
+
+        _db.LimitDefinitions.Add(entity);
+        await _db.SaveChangesAsync(ct);
+        return MapLimit(entity);
+    }
+
+    public async Task<LimitDefinitionResponse> UpdateLimitAsync(
+        Guid id, UpdateLimitDefinitionRequest request, CancellationToken ct = default)
+    {
+        var entity = await _db.LimitDefinitions.FindAsync([id], ct)
+            ?? throw new BoiootException("تعريف الحد غير موجود", 404);
+
+        entity.Name           = request.Name.Trim();
+        entity.Description    = request.Description?.Trim();
+        entity.Unit           = request.Unit?.Trim();
+        entity.ValueType      = string.IsNullOrWhiteSpace(request.ValueType) ? "integer" : request.ValueType;
+        entity.AppliesToScope = request.AppliesToScope?.Trim().ToLowerInvariant();
+        entity.IsActive       = request.IsActive;
+        entity.UpdatedAt      = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return MapLimit(entity);
+    }
+
+    public async Task DeleteLimitAsync(Guid id, CancellationToken ct = default)
+    {
+        var entity = await _db.LimitDefinitions.FindAsync([id], ct)
+            ?? throw new BoiootException("تعريف الحد غير موجود", 404);
+
+        bool inUse = await _db.PlanLimits
+            .AnyAsync(pl => pl.LimitDefinitionId == id, ct);
+        if (inUse)
+            throw new BoiootException("لا يمكن حذف تعريف مرتبط بخطط موجودة؛ قم بتعطيله بدلاً من ذلك", 409);
+
+        _db.LimitDefinitions.Remove(entity);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    // ── Private mappers ──────────────────────────────────────────────────────
+
+    private static FeatureDefinitionResponse MapFeature(FeatureDefinition f) => new()
+    {
+        Id           = f.Id,
+        Key          = f.Key,
+        Name         = f.Name,
+        Description  = f.Description,
+        FeatureGroup = f.FeatureGroup,
+        IsActive     = f.IsActive
+    };
+
+    private static LimitDefinitionResponse MapLimit(LimitDefinition l) => new()
+    {
+        Id             = l.Id,
+        Key            = l.Key,
+        Name           = l.Name,
+        Description    = l.Description,
+        Unit           = l.Unit,
+        ValueType      = l.ValueType,
+        AppliesToScope = l.AppliesToScope,
+        IsActive       = l.IsActive
+    };
+}

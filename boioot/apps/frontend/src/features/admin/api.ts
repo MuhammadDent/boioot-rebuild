@@ -507,4 +507,58 @@ export const adminApi = {
   paymentActivate(id: string): Promise<import("@/features/subscriptionPayments/types").PaymentRequestResponse> {
     return api.post(`/admin/payment-requests/${id}/activate`, {});
   },
+
+  // ── Plan Catalog — Feature Definitions ─────────────────────────────────────
+
+  /** GET /api/admin/plan-catalog/features */
+  getCatalogFeatures(): Promise<import("@/types").FeatureDefinitionEntry[]> {
+    return api.get("/admin/plan-catalog/features");
+  },
+
+  /** POST /api/admin/plan-catalog/features */
+  createCatalogFeature(
+    payload: import("@/types").CreateFeatureDefinitionPayload
+  ): Promise<import("@/types").FeatureDefinitionEntry> {
+    return api.post("/admin/plan-catalog/features", payload);
+  },
+
+  /** PUT /api/admin/plan-catalog/features/{id} */
+  updateCatalogFeature(
+    id: string,
+    payload: import("@/types").UpdateFeatureDefinitionPayload
+  ): Promise<import("@/types").FeatureDefinitionEntry> {
+    return api.put(`/admin/plan-catalog/features/${id}`, payload);
+  },
+
+  /** DELETE /api/admin/plan-catalog/features/{id} */
+  deleteCatalogFeature(id: string): Promise<void> {
+    return api.delete(`/admin/plan-catalog/features/${id}`);
+  },
+
+  // ── Plan Catalog — Limit Definitions ───────────────────────────────────────
+
+  /** GET /api/admin/plan-catalog/limits */
+  getCatalogLimits(): Promise<import("@/types").LimitDefinitionEntry[]> {
+    return api.get("/admin/plan-catalog/limits");
+  },
+
+  /** POST /api/admin/plan-catalog/limits */
+  createCatalogLimit(
+    payload: import("@/types").CreateLimitDefinitionPayload
+  ): Promise<import("@/types").LimitDefinitionEntry> {
+    return api.post("/admin/plan-catalog/limits", payload);
+  },
+
+  /** PUT /api/admin/plan-catalog/limits/{id} */
+  updateCatalogLimit(
+    id: string,
+    payload: import("@/types").UpdateLimitDefinitionPayload
+  ): Promise<import("@/types").LimitDefinitionEntry> {
+    return api.put(`/admin/plan-catalog/limits/${id}`, payload);
+  },
+
+  /** DELETE /api/admin/plan-catalog/limits/{id} */
+  deleteCatalogLimit(id: string): Promise<void> {
+    return api.delete(`/admin/plan-catalog/limits/${id}`);
+  },
 };

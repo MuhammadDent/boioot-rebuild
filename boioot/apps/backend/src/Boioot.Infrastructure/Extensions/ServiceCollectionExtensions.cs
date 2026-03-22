@@ -72,6 +72,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlanEntitlementService, PlanEntitlementService>();
         services.AddScoped<IAdminPlanService, AdminPlanService>();
         services.AddScoped<IAdminPlanPricingService, AdminPlanPricingService>();
+        services.AddScoped<IAdminCatalogService, AdminCatalogService>();
         services.AddScoped<IPublicPricingService, PublicPricingService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();

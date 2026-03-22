@@ -42,7 +42,52 @@ public class AdminPlanService : IAdminPlanService
             .FirstOrDefaultAsync(p => p.Id == planId, ct)
             ?? throw new BoiootException("الخطة غير موجودة", 404);
 
-        return MapToDetail(plan);
+        // Auto-ensure rows exist for every active definition (idempotent)
+        bool dirty = false;
+
+        var allLimitDefs = await _db.Set<LimitDefinition>()
+            .Where(ld => ld.IsActive).ToListAsync(ct);
+        var existingLimitIds = plan.PlanLimits
+            .Select(pl => pl.LimitDefinitionId).ToHashSet();
+        foreach (var ld in allLimitDefs.Where(ld => !existingLimitIds.Contains(ld.Id)))
+        {
+            _db.Set<PlanLimit>().Add(new PlanLimit
+            {
+                SubscriptionPlanId = plan.Id,
+                LimitDefinitionId  = ld.Id,
+                Value              = 0
+            });
+            dirty = true;
+        }
+
+        var allFeatureDefs = await _db.Set<FeatureDefinition>()
+            .Where(fd => fd.IsActive).ToListAsync(ct);
+        var existingFeatureIds = plan.PlanFeatures
+            .Select(pf => pf.FeatureDefinitionId).ToHashSet();
+        foreach (var fd in allFeatureDefs.Where(fd => !existingFeatureIds.Contains(fd.Id)))
+        {
+            _db.Set<PlanFeature>().Add(new PlanFeature
+            {
+                SubscriptionPlanId  = plan.Id,
+                FeatureDefinitionId = fd.Id,
+                IsEnabled           = false
+            });
+            dirty = true;
+        }
+
+        if (dirty)
+        {
+            await _db.SaveChangesAsync(ct);
+            plan = await _db.Set<Plan>()
+                .IgnoreQueryFilters()
+                .Include(p => p.PlanLimits)
+                    .ThenInclude(pl => pl.LimitDefinition)
+                .Include(p => p.PlanFeatures)
+                    .ThenInclude(pf => pf.FeatureDefinition)
+                .FirstOrDefaultAsync(p => p.Id == planId, ct)!;
+        }
+
+        return MapToDetail(plan!);
     }
 
     // ── CreatePlanAsync ───────────────────────────────────────────────────────

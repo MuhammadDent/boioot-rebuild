@@ -1178,6 +1178,29 @@ using (var scope = app.Services.CreateScope())
               ('c1000019-0000-0000-0000-000000000000', '00000009-0000-0000-0000-000000000000', 'add00004-0000-0000-0000-000000000000',  -1, {0}, {0})",
             nowPlan);
 
+        // ── New FeatureDefinitions: media, communication, listing additions ───────
+        // fd000005–fd000009  (fd000004 = project_management, already seeded above)
+        // Rows for existing plans are created automatically by GetPlanDetailAsync
+        // when a plan is first opened in the admin — no manual row seeding needed.
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO FeatureDefinitions (Id, Key, Name, Description, FeatureGroup, IsActive, CreatedAt, UpdatedAt)
+            VALUES
+              ('fd000005-0000-0000-0000-000000000000', 'video_upload',      'رفع الفيديو',                   'إمكانية رفع فيديو للإعلان',                   'media',         1, {0}, {0}),
+              ('fd000006-0000-0000-0000-000000000000', 'multiple_photos',   'صور متعددة للإعلان',            'رفع أكثر من صورة للإعلان الواحد',             'media',         1, {0}, {0}),
+              ('fd000007-0000-0000-0000-000000000000', 'whatsapp_contact',  'تواصل عبر واتساب',             'إظهار زر واتساب في صفحة الإعلان',             'communication', 1, {0}, {0}),
+              ('fd000008-0000-0000-0000-000000000000', 'verified_badge',    'شارة التحقق',                  'عرض علامة التحقق على الملف الشخصي والإعلانات', 'listing',       1, {0}, {0}),
+              ('fd000009-0000-0000-0000-000000000000', 'homepage_exposure', 'ظهور في الصفحة الرئيسية',      'عرض الإعلانات ضمن قسم مميز في الصفحة الرئيسية', 'listing',      1, {0}, {0})",
+            nowPlan);
+
+        // ── New LimitDefinitions: images per listing + featured slots ─────────
+        // add00005–add00006  (add00004 = max_project_units, already seeded above)
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO LimitDefinitions (Id, Key, Name, Description, Unit, ValueType, AppliesToScope, IsActive, CreatedAt, UpdatedAt)
+            VALUES
+              ('add00005-0000-0000-0000-000000000000', 'max_images_per_listing', 'الحد الأقصى للصور لكل إعلان',   'عدد الصور المسموح برفعها في الإعلان الواحد',    'صورة',   'integer', 'listing', 1, {0}, {0}),
+              ('add00006-0000-0000-0000-000000000000', 'max_featured_slots',     'الإعلانات المميزة المتاحة',      'عدد الإعلانات المميزة المسموح بها في نفس الوقت', 'إعلان',  'integer', 'account', 1, {0}, {0})",
+            nowPlan);
+
         // ══════════════════════════════════════════════════════════════════════════
         // END PHASE A v2
         // ══════════════════════════════════════════════════════════════════════════

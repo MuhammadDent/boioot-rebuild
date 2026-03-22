@@ -813,3 +813,57 @@ export interface AdminInvoiceResponse {
   paymentInstructions?: PaymentInstructionsDto;
   proof?: PaymentProofDto;
 }
+
+// ── Plan Catalog ─────────────────────────────────────────────────────────────
+
+export interface FeatureDefinitionEntry {
+  id: string;
+  key: string;
+  name: string;
+  description?: string;
+  featureGroup?: string;
+  isActive: boolean;
+}
+
+export interface LimitDefinitionEntry {
+  id: string;
+  key: string;
+  name: string;
+  description?: string;
+  unit?: string;
+  valueType: string;
+  appliesToScope?: string;
+  isActive: boolean;
+}
+
+export interface CreateFeatureDefinitionPayload {
+  key: string;
+  name: string;
+  description?: string;
+  featureGroup?: string;
+}
+
+export interface UpdateFeatureDefinitionPayload {
+  name: string;
+  description?: string;
+  featureGroup?: string;
+  isActive: boolean;
+}
+
+export interface CreateLimitDefinitionPayload {
+  key: string;
+  name: string;
+  description?: string;
+  unit?: string;
+  valueType?: string;
+  appliesToScope?: string;
+}
+
+export interface UpdateLimitDefinitionPayload {
+  name: string;
+  description?: string;
+  unit?: string;
+  valueType?: string;
+  appliesToScope?: string;
+  isActive: boolean;
+}

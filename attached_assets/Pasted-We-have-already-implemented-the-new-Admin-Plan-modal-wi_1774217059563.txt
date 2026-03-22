@@ -1,0 +1,128 @@
+We have already implemented the new Admin Plan modal with sections.
+
+However, the current implementation is still too basic internally.
+
+GOAL:
+Upgrade the internal system of Plan Limits and Plan Features to be dynamic, scalable, and SaaS-ready.
+
+==================================================
+PROBLEM
+==================================================
+
+Currently:
+- Limits are hardcoded fields
+- Features are simple boolean toggles
+- Not scalable
+- Not flexible for future expansion
+
+==================================================
+REQUIRED UPGRADE
+==================================================
+
+1) CREATE DYNAMIC PLAN LIMITS SYSTEM
+
+Instead of fixed columns, create:
+
+Table: PlanLimits
+- Id
+- PlanId
+- Key (string) → e.g. "max_listings"
+- Value (number)
+
+Examples:
+- max_listings = 10
+- max_featured = 3
+- max_images = 20
+- max_agents = 5
+
+==================================================
+
+2) CREATE DYNAMIC PLAN FEATURES SYSTEM
+
+Table: PlanFeatures
+- Id
+- PlanId
+- Key (string) → e.g. "video_upload"
+- Enabled (boolean)
+
+Examples:
+- video_upload = true
+- priority_listing = true
+- homepage_exposure = false
+- advanced_analytics = true
+
+==================================================
+
+3) FEATURE GROUPING (FRONTEND)
+
+Group features in UI:
+
+- Visibility & Promotion
+- Listing Content
+- Business Tools
+- Communication
+- Support
+
+Each group should render dynamically based on feature keys.
+
+==================================================
+
+4) LIMIT INPUT UI
+
+Replace static inputs with dynamic list:
+
+- Label (human readable)
+- Key (internal)
+- Value input
+
+Example:
+[ max_listings ] → 10
+[ max_images ] → 20
+
+==================================================
+
+5) API CHANGES
+
+Update:
+- CreatePlanRequest
+- UpdatePlanRequest
+
+To accept:
+- limits: { key, value }[]
+- features: { key, enabled }[]
+
+==================================================
+
+6) BACKWARD COMPATIBILITY
+
+If old columns exist:
+- Map them into the new system
+- Do not break existing data
+
+==================================================
+
+7) PLAN PREVIEW IMPROVEMENT
+
+Use:
+- limits + features
+
+To render:
+- clean feature list like pricing page
+
+==================================================
+
+8) CLEAN CODE
+
+- No hardcoded feature logic in frontend
+- Everything driven by DB keys
+- Add enums/constants for known keys
+
+==================================================
+
+DELIVERABLES
+
+- DB schema changes
+- Migration script
+- Updated DTOs
+- Updated Admin UI
+- Example seed data for plans
