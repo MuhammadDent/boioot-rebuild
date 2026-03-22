@@ -1,0 +1,121 @@
+We need to simplify and unify the registration form fields for Company, Office, and Broker.
+
+IMPORTANT
+Do NOT rebuild the system.
+Refactor the existing implementation safely.
+
+==================================================
+GOAL
+==================================================
+
+Unify naming fields and remove unnecessary duplication.
+
+==================================================
+REQUIRED CHANGES
+==================================================
+
+1) Unify Company and Office naming
+
+Currently:
+- "Company Name"
+- "Office Name"
+
+We want to replace BOTH with a single field:
+
+→ Business Name
+
+Applies to:
+- RealEstateOffice
+- DeveloperCompany
+
+==================================================
+
+2) Broker (IMPORTANT)
+
+Broker is an independent individual.
+
+REMOVE:
+- Office Name field
+- Any business/company name input
+
+Broker should only have:
+- Full Name
+
+==================================================
+
+3) Owner & User
+
+No change:
+- Only Full Name
+
+==================================================
+FRONTEND CHANGES
+==================================================
+
+Update registration forms:
+
+A) RealEstateOffice:
+- Full Name (required)
+- Business Name (required)
+
+B) DeveloperCompany:
+- Full Name (required)
+- Business Name (required)
+
+C) Broker:
+- Full Name (required)
+- REMOVE Business Name field completely
+
+==================================================
+BACKEND CHANGES
+==================================================
+
+1) Keep using existing Company table
+
+- For Office/Company:
+  - store BusinessName
+
+2) For Broker:
+- do NOT create company record
+- BusinessName should be NULL
+
+==================================================
+DATA MODEL RULE
+==================================================
+
+BusinessName:
+- required for CompanyOwner (Office/Developer)
+- NULL for Broker / Owner / User
+
+==================================================
+UI/UX IMPROVEMENT
+==================================================
+
+Rename labels:
+
+Arabic:
+- "اسم الكيان التجاري"
+
+English:
+- "Business Name"
+
+==================================================
+IMPORTANT
+==================================================
+
+- Do NOT create new tables
+- Do NOT duplicate fields
+- Do NOT break existing users
+
+Refactor only where needed.
+
+==================================================
+DELIVERABLES
+==================================================
+
+1. Updated forms
+2. Updated validation
+3. Updated backend handling
+4. Removed unnecessary fields
+5. List of changed files
+6. Migration notes if needed

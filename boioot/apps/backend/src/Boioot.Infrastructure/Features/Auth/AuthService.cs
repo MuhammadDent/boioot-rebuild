@@ -65,25 +65,21 @@ public class AuthService : IAuthService
 
         _context.Users.Add(user);
 
-        // ── Auto-create Company + Agent for business accounts ─────────────────
-        // CompanyOwner = شركة تطوير  |  Broker = مكتب عقاري
+        // ── Auto-create Company + Agent for CompanyOwner accounts ────────────
+        // Broker is an independent individual — no company record is created.
         // Everything is added to the EF change tracker before SaveChanges so
-        // all three records (User, Company, Agent) are written atomically.
-        if (role is UserRole.CompanyOwner or UserRole.Broker)
+        // all records (User, Company, Agent) are written atomically.
+        if (role is UserRole.CompanyOwner)
         {
-            var companyName = string.IsNullOrWhiteSpace(request.CompanyName)
+            var businessName = string.IsNullOrWhiteSpace(request.CompanyName)
                 ? request.FullName.Trim()
                 : request.CompanyName.Trim();
 
-            // CompanyType applies only to CompanyOwner accounts.
-            // Broker accounts are always solo (no CompanyType needed).
-            var companyType = role is UserRole.CompanyOwner
-                ? (request.CompanyType ?? "DeveloperCompany")
-                : "RealEstateOffice";
+            var companyType = request.CompanyType ?? "DeveloperCompany";
 
             var company = new Company
             {
-                Name        = companyName,
+                Name        = businessName,
                 Email       = emailLower,
                 Phone       = request.Phone?.Trim(),
                 CompanyType = companyType,
@@ -100,8 +96,8 @@ public class AuthService : IAuthService
             _context.Agents.Add(agent);
 
             _logger.LogInformation(
-                "Auto-created Company '{CompanyName}' and Agent for {Email} ({Role})",
-                companyName, emailLower, role);
+                "Auto-created Company '{BusinessName}' ({CompanyType}) and Agent for {Email}",
+                businessName, companyType, emailLower);
         }
 
         await _context.SaveChangesAsync(ct);

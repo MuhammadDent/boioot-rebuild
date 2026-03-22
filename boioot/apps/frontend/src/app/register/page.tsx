@@ -99,8 +99,7 @@ interface FormState {
 
 const INITIAL_FORM: FormState = { fullName: "", companyName: "", email: "", password: "", confirmPassword: "" };
 
-const BUSINESS_ROLES: RoleValue[] = ["CompanyOwner", "Broker"];
-const NEEDS_COMPANY_NAME: RoleValue[] = ["CompanyOwner", "Broker"];
+const NEEDS_BUSINESS_NAME: RoleValue[] = ["CompanyOwner"];
 
 export default function RegisterPage() {
   const { login, isAuthenticated, isLoading } = useAuth();
@@ -145,6 +144,9 @@ export default function RegisterPage() {
     if (form.fullName.trim().length < 3) {
       errors.fullName = "الاسم الكامل يجب أن لا يقل عن 3 أحرف";
     }
+    if (needsBusinessName && form.companyName.trim().length < 2) {
+      errors.companyName = "اسم الكيان التجاري مطلوب";
+    }
     if (!form.email.includes("@")) errors.email = "البريد الإلكتروني غير صالح";
     if (form.password.length < 8) errors.password = "كلمة المرور يجب أن لا تقل عن 8 أحرف";
     if (form.password !== form.confirmPassword) errors.confirmPassword = "كلمتا المرور غير متطابقتين";
@@ -154,7 +156,7 @@ export default function RegisterPage() {
 
   const selectedRoleOption = selectedRoleIndex !== null ? ROLES[selectedRoleIndex] : null;
   const selectedRole = selectedRoleOption?.value ?? null;
-  const isBusinessRole = selectedRole !== null && NEEDS_COMPANY_NAME.includes(selectedRole);
+  const needsBusinessName = selectedRole !== null && NEEDS_BUSINESS_NAME.includes(selectedRole);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -169,7 +171,7 @@ export default function RegisterPage() {
         password: form.password,
         phone: phone || undefined,
         role: option.value,
-        companyName: isBusinessRole && form.companyName.trim() ? form.companyName.trim() : undefined,
+        companyName: needsBusinessName && form.companyName.trim() ? form.companyName.trim() : undefined,
         companyType: option.companyType ?? undefined,
       });
       login(res.token, res.user, res.expiresAt);
@@ -314,31 +316,28 @@ export default function RegisterPage() {
                 {fieldErrors.fullName && <span className="form-error">{fieldErrors.fullName}</span>}
               </div>
 
-              {isBusinessRole && (
+              {needsBusinessName && (
                 <div className="form-group">
                   <label className="form-label" htmlFor="companyName">
-                    {selectedRoleOption?.companyType === "DeveloperCompany"
-                      ? "اسم الشركة"
-                      : selectedRoleOption?.companyType === "RealEstateOffice"
-                      ? "اسم المكتب العقاري"
-                      : "اسم المكتب"}{" "}
-                    <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
+                    اسم الكيان التجاري{" "}
+                    <span style={{ color: "var(--color-error)" }}>*</span>
                   </label>
                   <input
-                    id="companyName" name="companyName" type="text" className="form-input"
-                    value={form.companyName} onChange={handleChange}
+                    id="companyName"
+                    name="companyName"
+                    type="text"
+                    className="form-input"
+                    value={form.companyName}
+                    onChange={handleChange}
+                    required
                     autoComplete="organization"
                     placeholder={
                       selectedRoleOption?.companyType === "DeveloperCompany"
                         ? "مثال: شركة الأمل للتطوير العقاري"
-                        : selectedRoleOption?.companyType === "RealEstateOffice"
-                        ? "مثال: مكتب النجاح العقاري"
-                        : "مثال: مكتب الوسيط العقاري"
+                        : "مثال: مكتب النجاح العقاري"
                     }
                   />
-                  <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "0.25rem 0 0" }}>
-                    إذا تركته فارغاً سيُستخدم اسمك الكامل تلقائياً
-                  </p>
+                  {fieldErrors.companyName && <span className="form-error">{fieldErrors.companyName}</span>}
                 </div>
               )}
 

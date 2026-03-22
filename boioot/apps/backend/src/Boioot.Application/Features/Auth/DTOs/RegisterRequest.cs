@@ -33,10 +33,11 @@ public class RegisterRequest
     public string Role { get; set; } = "User";
 
     /// <summary>
-    /// اسم الشركة أو المكتب — مطلوب فقط للحسابات التجارية (CompanyOwner | Broker).
-    /// إذا لم يُقدَّم، يُستخدم FullName تلقائياً.
+    /// اسم الكيان التجاري — مطلوب لحسابات CompanyOwner فقط (مكتب عقاري / شركة تطوير).
+    /// للوسيط (Broker): يجب أن يكون NULL (وسيط مستقل، لا كيان تجاري).
+    /// إذا لم يُقدَّم لـ CompanyOwner، يُستخدم FullName تلقائياً.
     /// </summary>
-    [MaxLength(200, ErrorMessage = "اسم الشركة يجب أن لا يتجاوز 200 حرف")]
+    [MaxLength(200, ErrorMessage = "اسم الكيان التجاري يجب أن لا يتجاوز 200 حرف")]
     public string? CompanyName { get; set; }
 
     /// <summary>
