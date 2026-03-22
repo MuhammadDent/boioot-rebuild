@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
@@ -56,7 +57,7 @@ const labelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%", padding: "0.55rem 0.75rem", borderRadius: 8,
   border: "1.5px solid var(--color-border, #e5e7eb)", fontSize: "0.95rem",
-  background: "var(--color-bg)", color: "var(--color-text-primary)", boxSizing: "border-box",
+  background: "#ffffff", color: "var(--color-text-primary)", boxSizing: "border-box",
 };
 
 const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
@@ -375,15 +376,15 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     marginTop: "1.5rem",
   };
 
-  return (
+  const modalContent = (
     <div
-      style={{ position: "fixed", inset: 0, zIndex: 1200, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+      style={{ position: "fixed", inset: 0, zIndex: 3000, backgroundColor: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div style={{ backgroundColor: "var(--color-bg)", borderRadius: 14, width: "100%", maxWidth: 760, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.2)", overflow: "hidden" }}>
+      <div style={{ backgroundColor: "#ffffff", borderRadius: 14, width: "100%", maxWidth: 760, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "hidden", opacity: 1 }}>
 
         {/* ── Sticky Header ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.75rem", borderBottom: "1px solid var(--color-border, #e5e7eb)", flexShrink: 0, backgroundColor: "var(--color-bg)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.75rem", borderBottom: "1px solid var(--color-border, #e5e7eb)", flexShrink: 0, backgroundColor: "#ffffff" }}>
           <button
             onClick={onClose}
             style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1, color: "var(--color-text-secondary)", padding: "0.15rem 0.5rem", borderRadius: 6 }}
@@ -607,6 +608,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
@@ -677,7 +680,7 @@ export default function AdminPlansPage() {
   const sorted = [...plans].sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
+    <div style={{ minHeight: "100vh", backgroundColor: "var(--color-background, #f9f9f9)", padding: "2rem 1rem" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
 
         {/* ── Header ── */}
@@ -738,7 +741,7 @@ export default function AdminPlansPage() {
       {/* ── Delete Confirmation ── */}
       {deleteId && (
         <div style={{ position: "fixed", inset: 0, zIndex: 2000, backgroundColor: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-          <div style={{ background: "var(--color-bg)", borderRadius: 12, padding: "2rem", maxWidth: 440, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
+          <div style={{ background: "#ffffff", borderRadius: 12, padding: "2rem", maxWidth: 440, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
             <h3 style={{ margin: "0 0 0.75rem" }}>تأكيد الحذف</h3>
             <p style={{ color: "var(--color-text-secondary)", marginBottom: "1rem" }}>سيتم تعطيل هذه الخطة. لا يمكن حذف خطة لها مشتركون نشطون.</p>
             {deleteError && <p style={{ color: "var(--color-error)", fontSize: "0.9rem", marginBottom: "1rem" }}>{deleteError}</p>}
