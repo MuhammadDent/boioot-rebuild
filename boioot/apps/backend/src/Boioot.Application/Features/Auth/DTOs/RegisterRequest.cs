@@ -38,4 +38,12 @@ public class RegisterRequest
     /// </summary>
     [MaxLength(200, ErrorMessage = "اسم الشركة يجب أن لا يتجاوز 200 حرف")]
     public string? CompanyName { get; set; }
+
+    /// <summary>
+    /// نوع الكيان التجاري لحسابات CompanyOwner فقط.
+    /// القيم المقبولة: RealEstateOffice | DeveloperCompany
+    /// </summary>
+    [RegularExpression("^(RealEstateOffice|DeveloperCompany)$",
+        ErrorMessage = "نوع الشركة غير صالح")]
+    public string? CompanyType { get; set; }
 }

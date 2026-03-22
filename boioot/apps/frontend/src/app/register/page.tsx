@@ -15,9 +15,11 @@ import type { E164Number } from "libphonenumber-js/core";
 import { AUTH_INTENT_KEY } from "@/context/AuthGateContext";
 
 type RoleValue = "User" | "Owner" | "Broker" | "CompanyOwner";
+type CompanyTypeValue = "RealEstateOffice" | "DeveloperCompany" | null;
 
 interface RoleOption {
   value: RoleValue;
+  companyType: CompanyTypeValue;
   label: string;
   desc: string;
   icon: React.ReactNode;
@@ -26,6 +28,7 @@ interface RoleOption {
 const ROLES: RoleOption[] = [
   {
     value: "User",
+    companyType: null,
     label: "باحث عن عقار",
     desc: "أبحث عن شراء أو استئجار عقار",
     icon: (
@@ -36,8 +39,9 @@ const ROLES: RoleOption[] = [
   },
   {
     value: "Owner",
+    companyType: null,
     label: "مالك عقار",
-    desc: "أريد عرض عقاري للبيع أو الإيجار (حتى إعلانين/شهر)",
+    desc: "أريد عرض عقاري شخصي للبيع أو الإيجار",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -47,6 +51,19 @@ const ROLES: RoleOption[] = [
   },
   {
     value: "Broker",
+    companyType: null,
+    label: "وسيط / سمسار",
+    desc: "أعمل وسيطاً مستقلاً في مجال العقارات",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+  },
+  {
+    value: "CompanyOwner",
+    companyType: "RealEstateOffice",
     label: "مكتب عقاري",
     desc: "أدير مكتباً عقارياً وأريد إنشاء فريق وكلاء",
     icon: (
@@ -60,6 +77,7 @@ const ROLES: RoleOption[] = [
   },
   {
     value: "CompanyOwner",
+    companyType: "DeveloperCompany",
     label: "شركة تطوير",
     desc: "أمثّل شركة تطوير عقاري ومشاريع سكنية",
     icon: (
@@ -82,6 +100,7 @@ interface FormState {
 const INITIAL_FORM: FormState = { fullName: "", companyName: "", email: "", password: "", confirmPassword: "" };
 
 const BUSINESS_ROLES: RoleValue[] = ["CompanyOwner", "Broker"];
+const NEEDS_COMPANY_NAME: RoleValue[] = ["CompanyOwner", "Broker"];
 
 export default function RegisterPage() {
   const { login, isAuthenticated, isLoading } = useAuth();
@@ -133,8 +152,9 @@ export default function RegisterPage() {
     return Object.keys(errors).length === 0;
   }
 
-  const selectedRole = selectedRoleIndex !== null ? ROLES[selectedRoleIndex].value : null;
-  const isBusinessRole = selectedRole !== null && BUSINESS_ROLES.includes(selectedRole);
+  const selectedRoleOption = selectedRoleIndex !== null ? ROLES[selectedRoleIndex] : null;
+  const selectedRole = selectedRoleOption?.value ?? null;
+  const isBusinessRole = selectedRole !== null && NEEDS_COMPANY_NAME.includes(selectedRole);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -142,17 +162,19 @@ export default function RegisterPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      const option = ROLES[selectedRoleIndex!];
       const res = await authApi.register({
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
         phone: phone || undefined,
-        role: ROLES[selectedRoleIndex!].value,
+        role: option.value,
         companyName: isBusinessRole && form.companyName.trim() ? form.companyName.trim() : undefined,
+        companyType: option.companyType ?? undefined,
       });
       login(res.token, res.user, res.expiresAt);
       // Business accounts go to onboarding to complete their profile first.
-      const role = ROLES[selectedRoleIndex!].value;
+      const role = option.value;
       const needsOnboarding = role === "Broker" || role === "CompanyOwner";
       if (needsOnboarding) {
         router.push("/onboarding");
@@ -232,6 +254,7 @@ export default function RegisterPage() {
                     backgroundColor: selectedRoleIndex === i ? "var(--color-primary-light, #f0faf0)" : "var(--color-bg)",
                     color: selectedRoleIndex === i ? "var(--color-primary)" : "var(--color-text-primary)",
                     transition: "all 0.18s", textAlign: "center", fontFamily: "inherit",
+                    gridColumn: i === ROLES.length - 1 && ROLES.length % 2 !== 0 ? "1 / -1" : undefined,
                   }}
                 >
                   <span style={{ color: selectedRoleIndex === i ? "var(--color-primary)" : "var(--color-text-secondary)" }}>
@@ -294,14 +317,24 @@ export default function RegisterPage() {
               {isBusinessRole && (
                 <div className="form-group">
                   <label className="form-label" htmlFor="companyName">
-                    {selectedRole === "CompanyOwner" ? "اسم الشركة" : "اسم المكتب العقاري"}{" "}
+                    {selectedRoleOption?.companyType === "DeveloperCompany"
+                      ? "اسم الشركة"
+                      : selectedRoleOption?.companyType === "RealEstateOffice"
+                      ? "اسم المكتب العقاري"
+                      : "اسم المكتب"}{" "}
                     <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
                   </label>
                   <input
                     id="companyName" name="companyName" type="text" className="form-input"
                     value={form.companyName} onChange={handleChange}
                     autoComplete="organization"
-                    placeholder={selectedRole === "CompanyOwner" ? "مثال: شركة الأمل للتطوير العقاري" : "مثال: مكتب النجاح العقاري"}
+                    placeholder={
+                      selectedRoleOption?.companyType === "DeveloperCompany"
+                        ? "مثال: شركة الأمل للتطوير العقاري"
+                        : selectedRoleOption?.companyType === "RealEstateOffice"
+                        ? "مثال: مكتب النجاح العقاري"
+                        : "مثال: مكتب الوسيط العقاري"
+                    }
                   />
                   <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "0.25rem 0 0" }}>
                     إذا تركته فارغاً سيُستخدم اسمك الكامل تلقائياً

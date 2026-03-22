@@ -75,11 +75,18 @@ public class AuthService : IAuthService
                 ? request.FullName.Trim()
                 : request.CompanyName.Trim();
 
+            // CompanyType applies only to CompanyOwner accounts.
+            // Broker accounts are always solo (no CompanyType needed).
+            var companyType = role is UserRole.CompanyOwner
+                ? (request.CompanyType ?? "DeveloperCompany")
+                : "RealEstateOffice";
+
             var company = new Company
             {
-                Name  = companyName,
-                Email = emailLower,
-                Phone = request.Phone?.Trim(),
+                Name        = companyName,
+                Email       = emailLower,
+                Phone       = request.Phone?.Trim(),
+                CompanyType = companyType,
             };
 
             _context.Companies.Add(company);

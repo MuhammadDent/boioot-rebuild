@@ -1286,6 +1286,10 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_PropertyAmenitySelections_PropertyId ON PropertyAmenitySelections(PropertyId)"); }
         catch { /* index already exists */ }
 
+        // ── Companies: add CompanyType column (RealEstateOffice | DeveloperCompany) ──
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN CompanyType TEXT NOT NULL DEFAULT 'DeveloperCompany'"); }
+        catch { /* column already exists */ }
+
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS Notifications (
                 Id                TEXT NOT NULL PRIMARY KEY,

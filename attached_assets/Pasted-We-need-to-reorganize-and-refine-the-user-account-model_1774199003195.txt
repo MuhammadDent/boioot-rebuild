@@ -1,0 +1,257 @@
+We need to reorganize and refine the user/account model, naming, and permissions architecture in a clean SaaS-ready way.
+
+IMPORTANT
+This is NOT a greenfield implementation.
+We already have an existing system.
+
+DO NOT rebuild everything from scratch.
+Instead:
+- Refactor and adjust the existing implementation
+- Reuse existing roles, tables, and logic where possible
+- Apply incremental changes safely
+- Maintain backward compatibility as much as possible
+
+==================================================
+BUSINESS MODEL (CONFIRMED)
+==================================================
+
+We want to clearly separate between:
+
+1. RealEstateOffice
+2. DeveloperCompany
+3. Broker
+4. Agent
+5. Owner
+6. User / Seeker
+
+--------------------------------------------------
+
+A) RealEstateOffice
+- Business entity (office)
+- Can manage profile, listings, billing, messages, analytics
+- CAN create and manage Agents
+
+B) DeveloperCompany
+- Business entity (developer)
+- Can manage projects, units, billing, messages, analytics
+- CAN create and manage Agents
+
+C) Broker
+- Independent professional (solo account)
+- Has almost same operational capabilities as office
+- BUT:
+  - cannot create agents
+  - cannot manage team
+
+D) Agent
+- NOT a public registration type
+- Created ONLY by:
+  - RealEstateOffice
+  - DeveloperCompany
+- Must belong to parent organization
+- Permissions controlled by parent (RBAC)
+
+E) Owner
+- Individual property owner
+- Can manage personal listings
+- No team capabilities
+
+F) User / Seeker
+- Regular user browsing the platform
+- Can browse, save, and inquire
+
+==================================================
+CRITICAL RULE (VERY IMPORTANT)
+==================================================
+
+User / Seeker MUST remain a normal user.
+
+We ONLY allow:
+- posting up to 2 listings as a TRIAL EXPERIENCE
+
+IMPORTANT:
+- This does NOT change their role
+- This does NOT convert them into Owner
+- This does NOT grant them Owner permissions
+
+This is ONLY a temporary capability controlled by listing entitlement rules.
+
+==================================================
+PUBLIC REGISTRATION UI
+==================================================
+
+The registration screen should show:
+
+- Property Seeker
+- Property Owner
+- Broker
+- Real Estate Office
+- Developer Company
+
+Do NOT show:
+- Agent
+- Admin
+
+==================================================
+REFACTOR STRATEGY (IMPORTANT)
+==================================================
+
+1. DO NOT delete or recreate core tables unnecessarily
+2. Reuse existing:
+   - User table
+   - Roles
+   - Permissions
+   - Existing relationships
+3. Introduce new abstraction layers ONLY where needed:
+   - AccountType / RegistrationType
+   - Mapping layer
+   - Permission configuration
+4. If renaming is needed:
+   - apply safely (aliases or migration)
+5. Avoid breaking existing data
+
+==================================================
+PERMISSION MODEL (REFINEMENT)
+==================================================
+
+Define permissions as follows:
+
+1) RealEstateOffice:
+- full listing management
+- billing/subscription
+- messages/leads
+- analytics
+- create/manage agents
+
+2) DeveloperCompany:
+- project + unit management
+- billing/subscription
+- messages/leads
+- analytics
+- create/manage agents
+
+3) Broker:
+- full listing management (solo)
+- billing/subscription
+- messages/leads
+- analytics
+- MUST NOT create agents
+
+4) Agent:
+- limited access based on parent organization
+- cannot create organization
+- cannot access billing unless allowed
+
+5) Owner:
+- manage personal listings only
+- no team management
+
+6) User / Seeker:
+- browse marketplace
+- save favorites
+- send inquiries
+- manage profile
+- can create up to 2 listings ONLY (trial rule)
+
+==================================================
+LISTING TRIAL RULE (IMPORTANT IMPLEMENTATION)
+==================================================
+
+Implement a listing entitlement rule:
+
+User / Seeker:
+- can create MAX 2 listings total (lifetime or configurable)
+- after reaching limit:
+  - block new listing creation
+  - show upgrade prompt
+
+IMPORTANT:
+- Do NOT assign new role
+- Do NOT change permissions
+- Do NOT treat user as Owner
+
+This must be handled via:
+- listing policy
+- quota system
+- or entitlement service
+
+==================================================
+UPGRADE FLOW
+==================================================
+
+After trial limit reached:
+
+- user is blocked from creating new listings
+- show clear upgrade CTA
+- suggest:
+  - Owner
+  - Broker
+  - RealEstateOffice
+  - DeveloperCompany
+
+DO NOT:
+- delete existing listings
+- break dashboard access
+
+==================================================
+ARCHITECTURE REQUIREMENTS
+==================================================
+
+Separate clearly:
+
+- SystemRole (RBAC)
+- RegistrationAccountType (UI)
+- BusinessEntityType
+- ListingEntitlement / Quota
+
+Create centralized config for:
+
+- permissions
+- listing limits
+- trial rules
+- account capabilities
+
+==================================================
+BACKEND ENFORCEMENT
+==================================================
+
+IMPORTANT:
+Do NOT rely only on frontend checks.
+
+- Enforce listing limits in backend
+- Prevent bypass (API level validation)
+- Track listing counts per user
+- Ensure trial cannot be abused
+
+==================================================
+EXPECTED DELIVERABLES
+==================================================
+
+Please:
+
+1. Refactor existing code (NOT rebuild)
+2. Implement updated account model
+3. Implement trial listing rule (2 listings for User)
+4. Implement permission adjustments
+5. Update registration logic (without breaking existing users)
+6. Explain:
+   - what was changed
+   - what was reused
+   - what was added
+7. Provide list of modified files
+8. Provide migration notes if needed
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT rewrite the system.
+Do NOT introduce unnecessary complexity.
+
+This is a controlled refactor to align:
+- business model
+- roles
+- permissions
+- registration flow
+
+while keeping the current system stable.

@@ -13,6 +13,7 @@ export interface RegisterPayload {
   phone?: string;
   role: "User" | "Owner" | "Broker" | "CompanyOwner";
   companyName?: string;
+  companyType?: "RealEstateOffice" | "DeveloperCompany";
 }
 
 export interface UpdateProfilePayload {

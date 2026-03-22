@@ -16,6 +16,12 @@ public class Company : BaseEntity, ISoftDeletable
     public string? WhatsApp { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
+    /// <summary>
+    /// نوع الكيان التجاري: RealEstateOffice | DeveloperCompany
+    /// يُستخدم لتمييز مكاتب العقارات عن شركات التطوير رغم أن كليهما يحمل دور CompanyOwner.
+    /// </summary>
+    public string CompanyType { get; set; } = "DeveloperCompany";
+
     public bool IsProfileComplete { get; set; } = false;
     public bool IsVerified { get; set; } = false;
     public bool IsDeleted { get; set; } = false;
