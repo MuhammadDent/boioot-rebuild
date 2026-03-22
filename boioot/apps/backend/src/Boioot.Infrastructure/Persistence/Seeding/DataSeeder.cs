@@ -377,10 +377,10 @@ public class DataSeeder
                 "properties.view", "properties.create",
             },
 
+            // Broker: creates personal listings only. Does NOT manage agents.
             ["Broker"] = new[]
             {
                 "properties.view", "properties.create",
-                "agents.view", "agents.manage",
             },
 
             ["Agent"] = new[]

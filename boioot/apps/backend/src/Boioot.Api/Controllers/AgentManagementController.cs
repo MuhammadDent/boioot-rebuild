@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Boioot.Api.Controllers;
 
+// Agent management is restricted to CompanyOwner and Admin.
+// Broker is intentionally excluded — brokers cannot manage agents.
 [Route("api/agents")]
-[Authorize(Policy = "BrokerOrCompanyOwner")]
+[Authorize(Policy = "AdminOrCompanyOwner")]
 public class AgentManagementController : BaseController
 {
     private readonly IAgentManagementService _service;

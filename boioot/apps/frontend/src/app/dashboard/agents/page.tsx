@@ -49,7 +49,8 @@ export default function AgentsPage() {
   const [formError, setFormError] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  // "agents.manage" → Broker, CompanyOwner, Admin (see PLATFORM_ROLE_PERMISSIONS in rbac.ts).
+  // "agents.manage" → CompanyOwner, Admin only (see PLATFORM_ROLE_PERMISSIONS in rbac.ts).
+  // Broker does NOT have this permission — brokers cannot manage agents.
   const canManageAgents = hasPermission(user, "agents.manage");
 
   useEffect(() => {

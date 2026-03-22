@@ -272,7 +272,7 @@ export type PlatformPermission =
   | "projects.create"    // create a new project  (CompanyOwner, Admin)
   | "projects.delete"    // delete a project      (CompanyOwner, Admin)
   | "agents.view"        // view agents section   (Agent, CompanyOwner, Admin)
-  | "agents.manage";     // create/toggle agents  (Broker, CompanyOwner, Admin)
+  | "agents.manage";     // create/toggle agents  (CompanyOwner, Admin only — NOT Broker)
 
 // ── Platform role → permissions map ───────────────────────────────────────────
 //
@@ -293,9 +293,9 @@ export const PLATFORM_ROLE_PERMISSIONS: Record<string, string[]> = {
   Owner: [
     "properties.create",
   ],
+  // Broker: can create personal listings only. Does NOT manage agents.
   Broker: [
     "properties.create",
-    "agents.manage",
   ],
   // Agent: can view and edit their own listings (no create/delete in platform dashboard).
   // "agents.view" used as a lightweight marker so navigation/summary logic can detect
