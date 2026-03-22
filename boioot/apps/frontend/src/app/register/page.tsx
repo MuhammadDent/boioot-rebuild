@@ -141,7 +141,7 @@ export default function RegisterPage() {
 
   function validate(): boolean {
     const errors: Partial<FormState> = {};
-    if (form.fullName.trim().length < 3) {
+    if (!needsBusinessName && form.fullName.trim().length < 3) {
       errors.fullName = "الاسم الكامل يجب أن لا يقل عن 3 أحرف";
     }
     if (needsBusinessName && form.companyName.trim().length < 2) {
@@ -165,13 +165,14 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       const option = ROLES[selectedRoleIndex!];
+      const businessName = form.companyName.trim();
       const res = await authApi.register({
-        fullName: form.fullName.trim(),
+        fullName: needsBusinessName ? businessName : form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
         phone: phone || undefined,
         role: option.value,
-        companyName: needsBusinessName && form.companyName.trim() ? form.companyName.trim() : undefined,
+        companyName: needsBusinessName ? businessName : undefined,
         companyType: option.companyType ?? undefined,
       });
       login(res.token, res.user, res.expiresAt);
@@ -304,17 +305,25 @@ export default function RegisterPage() {
             {error && <div className="error-banner">{error}</div>}
 
             <form onSubmit={handleSubmit} noValidate>
-              <div className="form-group">
-                <label className="form-label" htmlFor="fullName">
-                  الاسم الكامل <span style={{ color: "var(--color-error)" }}>*</span>
-                </label>
-                <input
-                  id="fullName" name="fullName" type="text" className="form-input"
-                  value={form.fullName} onChange={handleChange} required
-                  autoComplete="name" placeholder="مثال: أحمد محمد"
-                />
-                {fieldErrors.fullName && <span className="form-error">{fieldErrors.fullName}</span>}
-              </div>
+              {!needsBusinessName && (
+                <div className="form-group">
+                  <label className="form-label" htmlFor="fullName">
+                    الاسم الكامل <span style={{ color: "var(--color-error)" }}>*</span>
+                  </label>
+                  <input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    className="form-input"
+                    value={form.fullName}
+                    onChange={handleChange}
+                    required
+                    autoComplete="name"
+                    placeholder="مثال: أحمد محمد"
+                  />
+                  {fieldErrors.fullName && <span className="form-error">{fieldErrors.fullName}</span>}
+                </div>
+              )}
 
               {needsBusinessName && (
                 <div className="form-group">
