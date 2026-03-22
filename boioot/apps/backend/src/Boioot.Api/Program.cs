@@ -840,6 +840,44 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Invoices ADD COLUMN StripeSessionUrl TEXT"); }
         catch { /* column already exists */ }
 
+        // ── SubscriptionPaymentRequests — flexible payment workflow table ────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS SubscriptionPaymentRequests (
+                Id                       TEXT NOT NULL PRIMARY KEY,
+                AccountId                TEXT NOT NULL REFERENCES Accounts(Id),
+                UserId                   TEXT NOT NULL REFERENCES Users(Id),
+                RequestedPlanId          TEXT NOT NULL REFERENCES Plans(Id),
+                RequestedPricingId       TEXT,
+                BillingCycle             TEXT NOT NULL DEFAULT 'Monthly',
+                Amount                   REAL NOT NULL DEFAULT 0,
+                Currency                 TEXT NOT NULL DEFAULT 'USD',
+                PaymentMethod            TEXT NOT NULL,
+                PaymentFlowType          TEXT NOT NULL DEFAULT 'manual',
+                ReceiptImageUrl          TEXT,
+                ReceiptFileName          TEXT,
+                CustomerNote             TEXT,
+                SalesRepresentativeName  TEXT,
+                SalesRepresentativeId    TEXT,
+                Status                   TEXT NOT NULL DEFAULT 'Pending',
+                ReviewedByUserId         TEXT,
+                ReviewNote               TEXT,
+                ExternalPaymentReference TEXT,
+                ReviewedAt               TEXT,
+                ActivatedAt              TEXT,
+                CompletedAt              TEXT,
+                CreatedAt                TEXT NOT NULL,
+                UpdatedAt                TEXT NOT NULL
+            )");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_spr_account_id ON SubscriptionPaymentRequests(AccountId)");
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_spr_status ON SubscriptionPaymentRequests(Status)");
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_spr_payment_method ON SubscriptionPaymentRequests(PaymentMethod)");
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS ix_spr_created_at ON SubscriptionPaymentRequests(CreatedAt)");
+
         // ── Force WAL checkpoint so ALL connections see schema changes ──────────
         // After ALTER TABLE, WAL frames must be merged into the main DB file so that
         // connection-pool connections (opened before migrations ran) see new columns.

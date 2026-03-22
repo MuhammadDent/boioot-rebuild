@@ -19,6 +19,8 @@ using Boioot.Application.Features.Projects.Interfaces;
 using Boioot.Application.Features.Properties.Interfaces;
 using Boioot.Application.Features.Requests.Interfaces;
 using Boioot.Application.Features.Subscriptions.Interfaces;
+using Boioot.Application.Features.SubscriptionPayments.Interfaces;
+using Boioot.Infrastructure.Features.SubscriptionPayments;
 using Boioot.Infrastructure.Common;
 using Boioot.Infrastructure.Features.Admin;
 using Boioot.Infrastructure.Features.AgentManagement;
@@ -73,6 +75,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPublicPricingService, PublicPricingService>();
         services.AddScoped<IAccountResolver, AccountResolver>();
         services.AddScoped<ISubscriptionService, SubscriptionService>();
+        services.AddScoped<ISubscriptionPaymentService, SubscriptionPaymentService>();
         services.AddScoped<IBlogSlugService, BlogSlugService>();
         services.AddScoped<IBlogService, BlogService>();
         services.AddScoped<ILocationMasterService, LocationMasterService>();

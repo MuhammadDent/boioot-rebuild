@@ -1,0 +1,177 @@
+We need to extend the subscription system with a FLEXIBLE PAYMENT METHOD ARCHITECTURE.
+
+IMPORTANT BUSINESS CONTEXT
+
+We do NOT want to rely only on manual payment.
+Manual payment must be ONE of the supported payment methods.
+
+The system should support multiple payment methods such as:
+- online payment gateway (future-ready)
+- local transfer
+- cash to sales representative
+- manual receipt upload
+- other manual/local methods
+
+So we need a clean architecture where:
+- payment method is selectable
+- some methods may activate automatically in future
+- some methods require manual review and manual activation
+
+IMPORTANT:
+Do NOT replace the current subscription architecture.
+Extend it safely.
+
+==================================================
+GOAL
+==================================================
+
+Build a flexible subscription payment request workflow that supports BOTH:
+
+1. manual/offline payment methods
+2. future online payment methods
+
+==================================================
+REQUIRED ARCHITECTURE
+==================================================
+
+Create a model/table such as:
+
+SubscriptionPaymentRequest
+or
+SubscriptionCheckoutRequest
+
+It should store at minimum:
+
+- Id
+- AccountId and/or UserId
+- RequestedPlanId
+- RequestedPricingId (if applicable)
+- RequestedBillingCycle
+- Amount
+- Currency
+- PaymentMethod
+- PaymentFlowType (manual / online / hybrid)
+- ReceiptFileUrl / ReceiptImageUrl (nullable)
+- CustomerNote
+- SalesRepresentativeName (optional)
+- SalesRepresentativeId (optional later)
+- Status
+- ReviewedByUserId (nullable)
+- ReviewNote
+- ExternalPaymentReference (nullable)
+- CreatedAt
+- ReviewedAt
+- CompletedAt
+
+==================================================
+PAYMENT METHOD MODEL
+==================================================
+
+Support flexible payment methods such as:
+- online_gateway
+- bank_transfer
+- cash_to_sales_rep
+- receipt_upload
+- other_manual
+
+Use enum/string structure that is extensible.
+
+==================================================
+STATUS MODEL
+==================================================
+
+Support statuses like:
+- pending
+- awaiting_payment
+- receipt_uploaded
+- under_review
+- approved
+- rejected
+- paid
+- activated
+- canceled
+
+Choose a safe V1 subset if needed, but keep future extensibility.
+
+==================================================
+BUSINESS RULES
+==================================================
+
+1. Customer selects a plan
+2. Customer selects a payment method
+3. System creates a payment request / checkout request
+4. If payment method is manual:
+   - customer may upload receipt
+   - request goes under review
+   - admin/staff can approve and activate manually
+5. If payment method is online (future):
+   - architecture must be ready for auto-confirmation later
+6. Subscription must not always activate immediately
+7. Activation depends on payment method + payment status + approval workflow
+
+==================================================
+IMPORTANT SEPARATION
+==================================================
+
+Keep separate:
+
+1) SubscriptionPlan
+2) AccountSubscription
+3) SubscriptionPaymentRequest / CheckoutRequest
+
+Do NOT merge all concerns into one table.
+
+==================================================
+ADMIN / STAFF FLOW
+==================================================
+
+We need backend readiness for:
+- list payment requests
+- filter by status
+- review manual requests
+- approve request
+- reject request
+- activate subscription after approval
+
+==================================================
+CUSTOMER FLOW
+==================================================
+
+We need backend readiness for:
+- choose plan
+- choose payment method
+- create payment request
+- upload receipt if needed
+- track request/payment status
+
+==================================================
+MANUAL PAYMENT AS ONE OPTION
+==================================================
+
+Manual payment is NOT the only payment flow.
+It is one supported option in the system.
+
+Examples:
+- cash with sales representative
+- local transfer + receipt upload
+- hand-to-hand payment + receipt
+- future online gateway
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+Please implement and report:
+
+1. new model/table(s)
+2. payment method design
+3. status model
+4. how manual approval works
+5. how future online payment can fit later
+6. affected files
+7. migration notes
+8. what is implemented now vs prepared for later
+
+IMPORTANT:
+Do NOT move to dashboard UI yet.
+This phase is about building the payment request architecture correctly.

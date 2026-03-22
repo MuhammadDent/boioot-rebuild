@@ -1,0 +1,438 @@
+using Boioot.Application.Common.Models;
+using Boioot.Application.Exceptions;
+using Boioot.Application.Features.SubscriptionPayments;
+using Boioot.Application.Features.SubscriptionPayments.DTOs;
+using Boioot.Application.Features.SubscriptionPayments.Interfaces;
+using Boioot.Application.Features.Subscriptions.Interfaces;
+using Boioot.Domain.Entities;
+using Boioot.Domain.Enums;
+using Boioot.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+namespace Boioot.Infrastructure.Features.SubscriptionPayments;
+
+public class SubscriptionPaymentService : ISubscriptionPaymentService
+{
+    private readonly BoiootDbContext       _db;
+    private readonly IAccountResolver      _accountResolver;
+    private readonly ILogger<SubscriptionPaymentService> _logger;
+
+    public SubscriptionPaymentService(
+        BoiootDbContext                      db,
+        IAccountResolver                     accountResolver,
+        ILogger<SubscriptionPaymentService>  logger)
+    {
+        _db              = db;
+        _accountResolver = accountResolver;
+        _logger          = logger;
+    }
+
+    // ── Customer: Create ─────────────────────────────────────────────────
+
+    public async Task<PaymentRequestResponse> CreateAsync(
+        Guid userId, CreatePaymentRequestDto dto, CancellationToken ct = default)
+    {
+        // Validate payment method
+        if (!PaymentMethodKeys.All.Contains(dto.PaymentMethod))
+            throw new BoiootException(
+                $"طريقة الدفع '{dto.PaymentMethod}' غير مدعومة.", 400);
+
+        // Resolve account
+        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct)
+            ?? throw new BoiootException("لا يوجد حساب مرتبط بهذا المستخدم. يرجى إكمال إعداد الحساب أولاً.", 404);
+
+        // Validate plan
+        var plan = await _db.Plans.FirstOrDefaultAsync(p => p.Id == dto.PlanId, ct)
+            ?? throw new BoiootException("الخطة المطلوبة غير موجودة.", 404);
+
+        // Resolve amount: from PlanPricing row (preferred) or plan defaults
+        decimal amount   = 0m;
+        string  currency = "USD";
+        string  cycle    = dto.BillingCycle;
+
+        if (dto.PricingId.HasValue)
+        {
+            var pricing = await _db.PlanPricings
+                .FirstOrDefaultAsync(p => p.Id == dto.PricingId.Value && p.PlanId == dto.PlanId, ct)
+                ?? throw new BoiootException("بيانات التسعير غير صحيحة أو لا تنتمي للخطة المحددة.", 400);
+
+            amount   = pricing.PriceAmount;
+            currency = pricing.CurrencyCode ?? "USD";
+            cycle    = pricing.BillingCycle ?? dto.BillingCycle;
+        }
+        else
+        {
+            // Fallback: find any active pricing for the plan + cycle
+            var pricing = await _db.PlanPricings
+                .Where(p => p.PlanId == dto.PlanId
+                         && (p.BillingCycle == dto.BillingCycle || p.BillingCycle == null))
+                .OrderBy(p => p.PriceAmount)
+                .FirstOrDefaultAsync(ct);
+
+            if (pricing != null)
+            {
+                amount   = pricing.PriceAmount;
+                currency = pricing.CurrencyCode ?? "USD";
+            }
+        }
+
+        var request = new SubscriptionPaymentRequest
+        {
+            AccountId              = accountId,
+            UserId                 = userId,
+            RequestedPlanId        = dto.PlanId,
+            RequestedPricingId     = dto.PricingId,
+            BillingCycle           = cycle,
+            Amount                 = amount,
+            Currency               = currency,
+            PaymentMethod          = dto.PaymentMethod,
+            PaymentFlowType        = PaymentMethodKeys.GetFlowType(dto.PaymentMethod),
+            Status                 = PaymentRequestStatus.Pending,
+            CustomerNote           = dto.CustomerNote?.Trim(),
+            SalesRepresentativeName= dto.SalesRepresentativeName?.Trim(),
+            CreatedAt              = DateTime.UtcNow,
+            UpdatedAt              = DateTime.UtcNow,
+        };
+
+        _db.SubscriptionPaymentRequests.Add(request);
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "PaymentRequest {Id} created: account={AccountId}, plan={PlanId}, method={Method}",
+            request.Id, accountId, dto.PlanId, dto.PaymentMethod);
+
+        return ToResponse(request, plan.Name, plan.Code ?? string.Empty);
+    }
+
+    // ── Customer: Upload Receipt ─────────────────────────────────────────
+
+    public async Task<PaymentRequestResponse> UploadReceiptAsync(
+        Guid requestId, Guid userId, UploadReceiptDto dto, CancellationToken ct = default)
+    {
+        var req = await LoadOwnedRequestAsync(requestId, userId, ct);
+
+        if (req.Status != PaymentRequestStatus.Pending &&
+            req.Status != PaymentRequestStatus.AwaitingPayment)
+            throw new BoiootException(
+                "لا يمكن رفع إيصال لطلب في هذه الحالة. الحالة الحالية: " + req.Status, 400);
+
+        req.ReceiptImageUrl = dto.ReceiptImageUrl;
+        req.ReceiptFileName = dto.ReceiptFileName?.Trim();
+        req.Status          = PaymentRequestStatus.ReceiptUploaded;
+        if (!string.IsNullOrWhiteSpace(dto.CustomerNote))
+            req.CustomerNote = dto.CustomerNote.Trim();
+        req.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Receipt uploaded for PaymentRequest {Id} by user {UserId}", requestId, userId);
+
+        return ToResponse(req);
+    }
+
+    // ── Customer: Get by Id ──────────────────────────────────────────────
+
+    public async Task<PaymentRequestResponse> GetByIdAsync(
+        Guid requestId, Guid userId, CancellationToken ct = default)
+    {
+        var req = await LoadOwnedRequestAsync(requestId, userId, ct);
+        return ToResponse(req);
+    }
+
+    // ── Customer: My requests ────────────────────────────────────────────
+
+    public async Task<List<PaymentRequestResponse>> GetMyRequestsAsync(
+        Guid userId, CancellationToken ct = default)
+    {
+        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (!accountId.HasValue) return [];
+
+        var requests = await _db.SubscriptionPaymentRequests
+            .Include(r => r.Plan)
+            .Where(r => r.AccountId == accountId.Value)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync(ct);
+
+        return requests.Select(r => ToResponse(r)).ToList();
+    }
+
+    // ── Customer: Cancel ─────────────────────────────────────────────────
+
+    public async Task<PaymentRequestResponse> CancelAsync(
+        Guid requestId, Guid userId, CancellationToken ct = default)
+    {
+        var req = await LoadOwnedRequestAsync(requestId, userId, ct);
+
+        if (req.Status != PaymentRequestStatus.Pending &&
+            req.Status != PaymentRequestStatus.AwaitingPayment)
+            throw new BoiootException(
+                "لا يمكن إلغاء طلب في هذه الحالة. يرجى التواصل مع الدعم.", 400);
+
+        req.Status    = PaymentRequestStatus.Cancelled;
+        req.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return ToResponse(req);
+    }
+
+    // ── Admin: Get All ───────────────────────────────────────────────────
+
+    public async Task<PagedResult<PaymentRequestResponse>> GetAllAsync(
+        PaymentRequestFilter filter, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = _db.SubscriptionPaymentRequests
+            .Include(r => r.Plan)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(filter.Status))
+            query = query.Where(r => r.Status == Enum.Parse<PaymentRequestStatus>(filter.Status));
+
+        if (!string.IsNullOrEmpty(filter.PaymentMethod))
+            query = query.Where(r => r.PaymentMethod == filter.PaymentMethod);
+
+        if (!string.IsNullOrEmpty(filter.PaymentFlowType))
+            query = query.Where(r => r.PaymentFlowType == filter.PaymentFlowType);
+
+        if (filter.AccountId.HasValue)
+            query = query.Where(r => r.AccountId == filter.AccountId.Value);
+
+        if (filter.PlanId.HasValue)
+            query = query.Where(r => r.RequestedPlanId == filter.PlanId.Value);
+
+        if (filter.FromDate.HasValue)
+            query = query.Where(r => r.CreatedAt >= filter.FromDate.Value);
+
+        if (filter.ToDate.HasValue)
+            query = query.Where(r => r.CreatedAt <= filter.ToDate.Value);
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return new PagedResult<PaymentRequestResponse>(
+            items.Select(r => ToResponse(r)).ToList(),
+            page,
+            pageSize,
+            total);
+    }
+
+    // ── Admin: Get by Id ─────────────────────────────────────────────────
+
+    public async Task<PaymentRequestResponse> AdminGetByIdAsync(
+        Guid requestId, CancellationToken ct = default)
+    {
+        var req = await _db.SubscriptionPaymentRequests
+            .Include(r => r.Plan)
+            .FirstOrDefaultAsync(r => r.Id == requestId, ct)
+            ?? throw new BoiootException("طلب الدفع غير موجود.", 404);
+
+        return ToResponse(req);
+    }
+
+    // ── Admin: Mark Under Review ─────────────────────────────────────────
+
+    public async Task<PaymentRequestResponse> MarkUnderReviewAsync(
+        Guid requestId, Guid adminUserId, CancellationToken ct = default)
+    {
+        var req = await LoadAdminRequestAsync(requestId, ct);
+
+        if (req.Status != PaymentRequestStatus.ReceiptUploaded &&
+            req.Status != PaymentRequestStatus.Pending &&
+            req.Status != PaymentRequestStatus.AwaitingPayment)
+            throw new BoiootException("لا يمكن تغيير حالة هذا الطلب إلى 'قيد المراجعة'.", 400);
+
+        req.Status          = PaymentRequestStatus.UnderReview;
+        req.ReviewedByUserId= adminUserId;
+        req.ReviewedAt      = DateTime.UtcNow;
+        req.UpdatedAt       = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return ToResponse(req);
+    }
+
+    // ── Admin: Approve ───────────────────────────────────────────────────
+
+    public async Task<PaymentRequestResponse> ApproveAsync(
+        Guid requestId, Guid adminUserId, ReviewPaymentRequestDto dto, CancellationToken ct = default)
+    {
+        var req = await LoadAdminRequestAsync(requestId, ct);
+
+        var allowedStatuses = new[]
+        {
+            PaymentRequestStatus.Pending,
+            PaymentRequestStatus.AwaitingPayment,
+            PaymentRequestStatus.ReceiptUploaded,
+            PaymentRequestStatus.UnderReview,
+        };
+
+        if (!allowedStatuses.Contains(req.Status))
+            throw new BoiootException("لا يمكن الموافقة على طلب في هذه الحالة: " + req.Status, 400);
+
+        req.Status          = PaymentRequestStatus.Approved;
+        req.ReviewedByUserId= adminUserId;
+        req.ReviewNote      = dto.Note?.Trim();
+        req.ReviewedAt      = DateTime.UtcNow;
+        req.UpdatedAt       = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "PaymentRequest {Id} approved by admin {AdminId}", requestId, adminUserId);
+
+        return ToResponse(req);
+    }
+
+    // ── Admin: Reject ────────────────────────────────────────────────────
+
+    public async Task<PaymentRequestResponse> RejectAsync(
+        Guid requestId, Guid adminUserId, ReviewPaymentRequestDto dto, CancellationToken ct = default)
+    {
+        var req = await LoadAdminRequestAsync(requestId, ct);
+
+        if (req.Status == PaymentRequestStatus.Activated ||
+            req.Status == PaymentRequestStatus.Cancelled)
+            throw new BoiootException("لا يمكن رفض طلب في هذه الحالة: " + req.Status, 400);
+
+        if (string.IsNullOrWhiteSpace(dto.Note))
+            throw new BoiootException("سبب الرفض مطلوب.", 400);
+
+        req.Status          = PaymentRequestStatus.Rejected;
+        req.ReviewedByUserId= adminUserId;
+        req.ReviewNote      = dto.Note.Trim();
+        req.ReviewedAt      = DateTime.UtcNow;
+        req.UpdatedAt       = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "PaymentRequest {Id} rejected by admin {AdminId}: {Reason}", requestId, adminUserId, dto.Note);
+
+        return ToResponse(req);
+    }
+
+    // ── Admin: Activate Subscription ────────────────────────────────────
+
+    public async Task<PaymentRequestResponse> ActivateSubscriptionAsync(
+        Guid requestId, Guid adminUserId, CancellationToken ct = default)
+    {
+        var req = await LoadAdminRequestAsync(requestId, ct);
+
+        if (req.Status != PaymentRequestStatus.Approved)
+            throw new BoiootException("يمكن تفعيل الاشتراك فقط بعد الموافقة على الطلب. الحالة الحالية: " + req.Status, 400);
+
+        // Deactivate any existing active subscriptions for the account
+        var existingActive = await _db.Subscriptions
+            .Where(s => s.AccountId == req.AccountId && s.IsActive)
+            .ToListAsync(ct);
+
+        foreach (var sub in existingActive)
+        {
+            sub.IsActive  = false;
+            sub.Status    = SubscriptionStatus.Cancelled;
+            sub.UpdatedAt = DateTime.UtcNow;
+        }
+
+        // Calculate subscription end date from billing cycle
+        var startDate = DateTime.UtcNow;
+        var endDate   = req.BillingCycle == "Yearly"
+            ? startDate.AddYears(1)
+            : startDate.AddMonths(1);
+
+        var subscription = new Subscription
+        {
+            AccountId  = req.AccountId,
+            PlanId     = req.RequestedPlanId,
+            PricingId  = req.RequestedPricingId,
+            Status     = SubscriptionStatus.Active,
+            StartDate  = startDate,
+            EndDate    = endDate,
+            IsActive   = true,
+            AutoRenew  = false,   // manual payment — no auto-renew by default
+            PaymentRef = req.Id.ToString(),
+            CreatedAt  = DateTime.UtcNow,
+            UpdatedAt  = DateTime.UtcNow,
+        };
+
+        _db.Subscriptions.Add(subscription);
+
+        // Update request
+        req.Status      = PaymentRequestStatus.Activated;
+        req.ActivatedAt = DateTime.UtcNow;
+        req.CompletedAt = DateTime.UtcNow;
+        req.UpdatedAt   = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Subscription activated for account {AccountId} via PaymentRequest {ReqId}. " +
+            "Plan={PlanId}, Cycle={Cycle}, EndDate={EndDate}",
+            req.AccountId, requestId, req.RequestedPlanId, req.BillingCycle, endDate);
+
+        return ToResponse(req);
+    }
+
+    // ── Private helpers ──────────────────────────────────────────────────
+
+    private async Task<SubscriptionPaymentRequest> LoadOwnedRequestAsync(
+        Guid requestId, Guid userId, CancellationToken ct)
+    {
+        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+
+        var req = await _db.SubscriptionPaymentRequests
+            .Include(r => r.Plan)
+            .FirstOrDefaultAsync(r => r.Id == requestId, ct)
+            ?? throw new BoiootException("طلب الدفع غير موجود.", 404);
+
+        // Ownership check: user must belong to the request's account
+        if (req.UserId != userId && req.AccountId != accountId)
+            throw new BoiootException("غير مصرح بالوصول إلى هذا الطلب.", 403);
+
+        return req;
+    }
+
+    private async Task<SubscriptionPaymentRequest> LoadAdminRequestAsync(
+        Guid requestId, CancellationToken ct)
+    {
+        return await _db.SubscriptionPaymentRequests
+            .Include(r => r.Plan)
+            .FirstOrDefaultAsync(r => r.Id == requestId, ct)
+            ?? throw new BoiootException("طلب الدفع غير موجود.", 404);
+    }
+
+    private static PaymentRequestResponse ToResponse(
+        SubscriptionPaymentRequest r,
+        string? planName = null,
+        string? planCode = null) => new()
+    {
+        Id                      = r.Id,
+        AccountId               = r.AccountId,
+        UserId                  = r.UserId,
+        PlanId                  = r.RequestedPlanId,
+        PlanName                = planName ?? r.Plan?.Name ?? string.Empty,
+        PlanCode                = planCode ?? r.Plan?.Code ?? string.Empty,
+        PricingId               = r.RequestedPricingId,
+        BillingCycle            = r.BillingCycle,
+        Amount                  = r.Amount,
+        Currency                = r.Currency,
+        PaymentMethod           = r.PaymentMethod,
+        PaymentFlowType         = r.PaymentFlowType,
+        Status                  = r.Status.ToString(),
+        ReceiptImageUrl         = r.ReceiptImageUrl,
+        ReceiptFileName         = r.ReceiptFileName,
+        CustomerNote            = r.CustomerNote,
+        SalesRepresentativeName = r.SalesRepresentativeName,
+        ReviewedByUserId        = r.ReviewedByUserId,
+        ReviewNote              = r.ReviewNote,
+        ExternalPaymentReference= r.ExternalPaymentReference,
+        CreatedAt               = r.CreatedAt,
+        ReviewedAt              = r.ReviewedAt,
+        ActivatedAt             = r.ActivatedAt,
+        CompletedAt             = r.CompletedAt,
+    };
+}
