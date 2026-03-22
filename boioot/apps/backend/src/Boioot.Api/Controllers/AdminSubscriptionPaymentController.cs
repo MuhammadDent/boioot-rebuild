@@ -23,18 +23,19 @@ public class AdminSubscriptionPaymentController : BaseController
     /// <summary>
     /// GET /api/admin/payment-requests?status=&amp;paymentMethod=&amp;planId=&amp;page=1&amp;pageSize=20
     /// Paginated list with optional filters.
+    /// Returns 400 if the status value is not a valid PaymentRequestStatus enum member.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetAll(
-        [FromQuery] string?  status          = null,
-        [FromQuery] string?  paymentMethod   = null,
-        [FromQuery] string?  paymentFlowType = null,
-        [FromQuery] Guid?    accountId       = null,
-        [FromQuery] Guid?    planId          = null,
-        [FromQuery] DateTime? fromDate       = null,
-        [FromQuery] DateTime? toDate         = null,
-        [FromQuery] int      page            = 1,
-        [FromQuery] int      pageSize        = 20,
+        [FromQuery] string?   status          = null,
+        [FromQuery] string?   paymentMethod   = null,
+        [FromQuery] string?   paymentFlowType = null,
+        [FromQuery] Guid?     accountId       = null,
+        [FromQuery] Guid?     planId          = null,
+        [FromQuery] DateTime? fromDate        = null,
+        [FromQuery] DateTime? toDate          = null,
+        [FromQuery] int       page            = 1,
+        [FromQuery] int       pageSize        = 20,
         CancellationToken ct = default)
     {
         var filter = new PaymentRequestFilter
@@ -65,8 +66,8 @@ public class AdminSubscriptionPaymentController : BaseController
 
     /// <summary>
     /// POST /api/admin/payment-requests/{id}/under-review
-    /// Signals to the customer that an admin is reviewing their submission.
-    /// Transitions: Pending | AwaitingPayment | ReceiptUploaded → UnderReview.
+    /// Signals to the customer that an admin is actively reviewing their submission.
+    /// Allowed: Pending, AwaitingPayment, ReceiptUploaded.
     /// </summary>
     [HttpPost("{id:guid}/under-review")]
     public async Task<IActionResult> MarkUnderReview(Guid id, CancellationToken ct)
@@ -77,9 +78,8 @@ public class AdminSubscriptionPaymentController : BaseController
 
     /// <summary>
     /// POST /api/admin/payment-requests/{id}/approve
-    /// Admin confirms payment was received.
-    /// Status → Approved. Subscription is NOT yet activated at this step.
-    /// Call /activate to activate the subscription.
+    /// Admin confirms payment was received. Status → Approved.
+    /// Subscription is NOT activated at this step — call /activate next.
     /// </summary>
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(
@@ -93,7 +93,8 @@ public class AdminSubscriptionPaymentController : BaseController
 
     /// <summary>
     /// POST /api/admin/payment-requests/{id}/reject
-    /// Admin rejects the request. Requires a rejection note.
+    /// Admin rejects the request. Requires a non-empty note.
+    /// Blocked: Approved, Activated, Cancelled.
     /// </summary>
     [HttpPost("{id:guid}/reject")]
     public async Task<IActionResult> Reject(
@@ -106,9 +107,26 @@ public class AdminSubscriptionPaymentController : BaseController
     }
 
     /// <summary>
+    /// POST /api/admin/payment-requests/{id}/cancel
+    /// Admin administratively cancels a request.
+    /// Allowed in any non-terminal state (not Activated, not already Cancelled).
+    /// Optional note in request body.
+    /// </summary>
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<IActionResult> AdminCancel(
+        Guid id,
+        [FromBody] ReviewPaymentRequestDto dto,
+        CancellationToken ct)
+    {
+        var result = await _service.AdminCancelAsync(id, GetUserId(), dto.Note, ct);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// POST /api/admin/payment-requests/{id}/activate
     /// Activates the subscription for the account.
-    /// Deactivates any existing active subscription, creates new Subscription record.
+    /// Deactivates any existing active subscription, creates a new Subscription record.
+    /// Runs inside a DB transaction. Idempotency-safe.
     /// Can only be called after the request is Approved.
     /// </summary>
     [HttpPost("{id:guid}/activate")]

@@ -18,6 +18,16 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
     private readonly IAccountResolver      _accountResolver;
     private readonly ILogger<SubscriptionPaymentService> _logger;
 
+    // Statuses that block new request creation for the same account.
+    private static readonly PaymentRequestStatus[] ActiveStatuses =
+    [
+        PaymentRequestStatus.Pending,
+        PaymentRequestStatus.AwaitingPayment,
+        PaymentRequestStatus.ReceiptUploaded,
+        PaymentRequestStatus.UnderReview,
+        PaymentRequestStatus.Approved,
+    ];
+
     public SubscriptionPaymentService(
         BoiootDbContext                      db,
         IAccountResolver                     accountResolver,
@@ -33,20 +43,30 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
     public async Task<PaymentRequestResponse> CreateAsync(
         Guid userId, CreatePaymentRequestDto dto, CancellationToken ct = default)
     {
-        // Validate payment method
+        // FIX-1: Validate payment method
         if (!PaymentMethodKeys.All.Contains(dto.PaymentMethod))
             throw new BoiootException(
                 $"طريقة الدفع '{dto.PaymentMethod}' غير مدعومة.", 400);
 
         // Resolve account
         var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct)
-            ?? throw new BoiootException("لا يوجد حساب مرتبط بهذا المستخدم. يرجى إكمال إعداد الحساب أولاً.", 404);
+            ?? throw new BoiootException(
+                "لا يوجد حساب مرتبط بهذا المستخدم. يرجى إكمال إعداد الحساب أولاً.", 404);
+
+        // FIX-4: Prevent duplicate active requests
+        var hasActive = await _db.SubscriptionPaymentRequests
+            .AnyAsync(r => r.AccountId == accountId
+                        && ActiveStatuses.Contains(r.Status), ct);
+
+        if (hasActive)
+            throw new BoiootException(
+                "لديك طلب دفع نشط بالفعل. يرجى انتظار معالجته أو إلغاؤه قبل إنشاء طلب جديد.", 409);
 
         // Validate plan
         var plan = await _db.Plans.FirstOrDefaultAsync(p => p.Id == dto.PlanId, ct)
             ?? throw new BoiootException("الخطة المطلوبة غير موجودة.", 404);
 
-        // Resolve amount: from PlanPricing row (preferred) or plan defaults
+        // FIX-5: Resolve amount — must be > 0, no silent fallback
         decimal amount   = 0m;
         string  currency = "USD";
         string  cycle    = dto.BillingCycle;
@@ -54,8 +74,10 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         if (dto.PricingId.HasValue)
         {
             var pricing = await _db.PlanPricings
-                .FirstOrDefaultAsync(p => p.Id == dto.PricingId.Value && p.PlanId == dto.PlanId, ct)
-                ?? throw new BoiootException("بيانات التسعير غير صحيحة أو لا تنتمي للخطة المحددة.", 400);
+                .FirstOrDefaultAsync(p => p.Id == dto.PricingId.Value
+                                       && p.PlanId == dto.PlanId, ct)
+                ?? throw new BoiootException(
+                    "بيانات التسعير غير صحيحة أو لا تنتمي للخطة المحددة.", 400);
 
             amount   = pricing.PriceAmount;
             currency = pricing.CurrencyCode ?? "USD";
@@ -63,7 +85,7 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         }
         else
         {
-            // Fallback: find any active pricing for the plan + cycle
+            // Attempt fallback: find any pricing for the plan + cycle
             var pricing = await _db.PlanPricings
                 .Where(p => p.PlanId == dto.PlanId
                          && (p.BillingCycle == dto.BillingCycle || p.BillingCycle == null))
@@ -77,30 +99,35 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             }
         }
 
+        // FIX-5: Reject requests with zero amount — no silent free subscriptions
+        if (amount <= 0m)
+            throw new BoiootException(
+                "لم يتم العثور على تسعير مناسب للخطة المطلوبة. يرجى تحديد رقم التسعير (PricingId) بشكل صريح.", 400);
+
         var request = new SubscriptionPaymentRequest
         {
-            AccountId              = accountId,
-            UserId                 = userId,
-            RequestedPlanId        = dto.PlanId,
-            RequestedPricingId     = dto.PricingId,
-            BillingCycle           = cycle,
-            Amount                 = amount,
-            Currency               = currency,
-            PaymentMethod          = dto.PaymentMethod,
-            PaymentFlowType        = PaymentMethodKeys.GetFlowType(dto.PaymentMethod),
-            Status                 = PaymentRequestStatus.Pending,
-            CustomerNote           = dto.CustomerNote?.Trim(),
-            SalesRepresentativeName= dto.SalesRepresentativeName?.Trim(),
-            CreatedAt              = DateTime.UtcNow,
-            UpdatedAt              = DateTime.UtcNow,
+            AccountId               = accountId,
+            UserId                  = userId,
+            RequestedPlanId         = dto.PlanId,
+            RequestedPricingId      = dto.PricingId,
+            BillingCycle            = cycle,
+            Amount                  = amount,
+            Currency                = currency,
+            PaymentMethod           = dto.PaymentMethod,
+            PaymentFlowType         = PaymentMethodKeys.GetFlowType(dto.PaymentMethod),
+            Status                  = PaymentRequestStatus.Pending,
+            CustomerNote            = dto.CustomerNote?.Trim(),
+            SalesRepresentativeName = dto.SalesRepresentativeName?.Trim(),
+            CreatedAt               = DateTime.UtcNow,
+            UpdatedAt               = DateTime.UtcNow,
         };
 
         _db.SubscriptionPaymentRequests.Add(request);
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "PaymentRequest {Id} created: account={AccountId}, plan={PlanId}, method={Method}",
-            request.Id, accountId, dto.PlanId, dto.PaymentMethod);
+            "PaymentRequest {Id} created: account={AccountId}, plan={PlanId}, method={Method}, amount={Amount}{Currency}",
+            request.Id, accountId, dto.PlanId, dto.PaymentMethod, amount, currency);
 
         return ToResponse(request, plan.Name, plan.Code ?? string.Empty);
     }
@@ -112,10 +139,12 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
     {
         var req = await LoadOwnedRequestAsync(requestId, userId, ct);
 
+        // FIX-2: Only Pending or AwaitingPayment may receive a receipt
         if (req.Status != PaymentRequestStatus.Pending &&
             req.Status != PaymentRequestStatus.AwaitingPayment)
             throw new BoiootException(
-                "لا يمكن رفع إيصال لطلب في هذه الحالة. الحالة الحالية: " + req.Status, 400);
+                $"لا يمكن رفع إيصال لطلب في الحالة '{req.Status}'. " +
+                "يُسمح برفع الإيصال فقط في حالة Pending أو AwaitingPayment.", 400);
 
         req.ReceiptImageUrl = dto.ReceiptImageUrl;
         req.ReceiptFileName = dto.ReceiptFileName?.Trim();
@@ -166,9 +195,10 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         var req = await LoadOwnedRequestAsync(requestId, userId, ct);
 
         if (req.Status != PaymentRequestStatus.Pending &&
-            req.Status != PaymentRequestStatus.AwaitingPayment)
+            req.Status != PaymentRequestStatus.AwaitingPayment &&
+            req.Status != PaymentRequestStatus.ReceiptUploaded)
             throw new BoiootException(
-                "لا يمكن إلغاء طلب في هذه الحالة. يرجى التواصل مع الدعم.", 400);
+                $"لا يمكن إلغاء طلب في الحالة '{req.Status}'. يرجى التواصل مع الدعم.", 400);
 
         req.Status    = PaymentRequestStatus.Cancelled;
         req.UpdatedAt = DateTime.UtcNow;
@@ -186,8 +216,16 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             .Include(r => r.Plan)
             .AsQueryable();
 
+        // FIX-1: Safe enum parsing — return 400 on invalid status string
         if (!string.IsNullOrEmpty(filter.Status))
-            query = query.Where(r => r.Status == Enum.Parse<PaymentRequestStatus>(filter.Status));
+        {
+            if (!Enum.TryParse<PaymentRequestStatus>(filter.Status, ignoreCase: true, out var parsedStatus))
+                throw new BoiootException(
+                    $"قيمة الحالة '{filter.Status}' غير صالحة. " +
+                    $"القيم المقبولة: {string.Join(", ", Enum.GetNames<PaymentRequestStatus>())}", 400);
+
+            query = query.Where(r => r.Status == parsedStatus);
+        }
 
         if (!string.IsNullOrEmpty(filter.PaymentMethod))
             query = query.Where(r => r.PaymentMethod == filter.PaymentMethod);
@@ -245,12 +283,13 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         if (req.Status != PaymentRequestStatus.ReceiptUploaded &&
             req.Status != PaymentRequestStatus.Pending &&
             req.Status != PaymentRequestStatus.AwaitingPayment)
-            throw new BoiootException("لا يمكن تغيير حالة هذا الطلب إلى 'قيد المراجعة'.", 400);
+            throw new BoiootException(
+                $"لا يمكن تغيير حالة طلب في الحالة '{req.Status}' إلى 'قيد المراجعة'.", 400);
 
-        req.Status          = PaymentRequestStatus.UnderReview;
-        req.ReviewedByUserId= adminUserId;
-        req.ReviewedAt      = DateTime.UtcNow;
-        req.UpdatedAt       = DateTime.UtcNow;
+        req.Status           = PaymentRequestStatus.UnderReview;
+        req.ReviewedByUserId = adminUserId;
+        req.ReviewedAt       = DateTime.UtcNow;
+        req.UpdatedAt        = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
         return ToResponse(req);
@@ -263,6 +302,7 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
     {
         var req = await LoadAdminRequestAsync(requestId, ct);
 
+        // FIX-2: Explicit allowlist — Rejected and Cancelled are implicitly blocked
         var allowedStatuses = new[]
         {
             PaymentRequestStatus.Pending,
@@ -272,13 +312,15 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         };
 
         if (!allowedStatuses.Contains(req.Status))
-            throw new BoiootException("لا يمكن الموافقة على طلب في هذه الحالة: " + req.Status, 400);
+            throw new BoiootException(
+                $"لا يمكن الموافقة على طلب في الحالة '{req.Status}'. " +
+                "الموافقة مسموحة فقط للطلبات في: Pending, AwaitingPayment, ReceiptUploaded, UnderReview.", 400);
 
-        req.Status          = PaymentRequestStatus.Approved;
-        req.ReviewedByUserId= adminUserId;
-        req.ReviewNote      = dto.Note?.Trim();
-        req.ReviewedAt      = DateTime.UtcNow;
-        req.UpdatedAt       = DateTime.UtcNow;
+        req.Status           = PaymentRequestStatus.Approved;
+        req.ReviewedByUserId = adminUserId;
+        req.ReviewNote       = dto.Note?.Trim();
+        req.ReviewedAt       = DateTime.UtcNow;
+        req.UpdatedAt        = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
 
@@ -295,23 +337,61 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
     {
         var req = await LoadAdminRequestAsync(requestId, ct);
 
-        if (req.Status == PaymentRequestStatus.Activated ||
-            req.Status == PaymentRequestStatus.Cancelled)
-            throw new BoiootException("لا يمكن رفض طلب في هذه الحالة: " + req.Status, 400);
+        // FIX-2: Block terminal and post-approval states
+        if (req.Status == PaymentRequestStatus.Activated   ||
+            req.Status == PaymentRequestStatus.Cancelled   ||
+            req.Status == PaymentRequestStatus.Approved)
+            throw new BoiootException(
+                $"لا يمكن رفض طلب في الحالة '{req.Status}'. " +
+                "الطلبات المعتمدة أو المُفعَّلة أو الملغاة لا يمكن رفضها.", 400);
 
         if (string.IsNullOrWhiteSpace(dto.Note))
             throw new BoiootException("سبب الرفض مطلوب.", 400);
 
-        req.Status          = PaymentRequestStatus.Rejected;
-        req.ReviewedByUserId= adminUserId;
-        req.ReviewNote      = dto.Note.Trim();
-        req.ReviewedAt      = DateTime.UtcNow;
-        req.UpdatedAt       = DateTime.UtcNow;
+        req.Status           = PaymentRequestStatus.Rejected;
+        req.ReviewedByUserId = adminUserId;
+        req.ReviewNote       = dto.Note.Trim();
+        req.ReviewedAt       = DateTime.UtcNow;
+        req.UpdatedAt        = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "PaymentRequest {Id} rejected by admin {AdminId}: {Reason}", requestId, adminUserId, dto.Note);
+            "PaymentRequest {Id} rejected by admin {AdminId}: {Reason}",
+            requestId, adminUserId, dto.Note);
+
+        return ToResponse(req);
+    }
+
+    // ── Admin: Cancel ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// FIX-3: Admin administrative cancel — semantically distinct from customer cancel.
+    /// Allowed in any non-terminal state (not Activated).
+    /// </summary>
+    public async Task<PaymentRequestResponse> AdminCancelAsync(
+        Guid requestId, Guid adminUserId, string? note, CancellationToken ct = default)
+    {
+        var req = await LoadAdminRequestAsync(requestId, ct);
+
+        if (req.Status == PaymentRequestStatus.Activated)
+            throw new BoiootException(
+                "لا يمكن إلغاء طلب تم تفعيله بالفعل. الاشتراك ساري المفعول.", 400);
+
+        if (req.Status == PaymentRequestStatus.Cancelled)
+            throw new BoiootException("الطلب ملغى مسبقاً.", 400);
+
+        req.Status           = PaymentRequestStatus.Cancelled;
+        req.ReviewedByUserId = adminUserId;
+        req.ReviewNote       = note?.Trim();
+        req.ReviewedAt       = DateTime.UtcNow;
+        req.UpdatedAt        = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "PaymentRequest {Id} cancelled administratively by admin {AdminId}. Note: {Note}",
+            requestId, adminUserId, note ?? "—");
 
         return ToResponse(req);
     }
@@ -321,60 +401,84 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
     public async Task<PaymentRequestResponse> ActivateSubscriptionAsync(
         Guid requestId, Guid adminUserId, CancellationToken ct = default)
     {
-        var req = await LoadAdminRequestAsync(requestId, ct);
-
-        if (req.Status != PaymentRequestStatus.Approved)
-            throw new BoiootException("يمكن تفعيل الاشتراك فقط بعد الموافقة على الطلب. الحالة الحالية: " + req.Status, 400);
-
-        // Deactivate any existing active subscriptions for the account
-        var existingActive = await _db.Subscriptions
-            .Where(s => s.AccountId == req.AccountId && s.IsActive)
-            .ToListAsync(ct);
-
-        foreach (var sub in existingActive)
+        // FIX-6: Wrap in a transaction to prevent race conditions
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        try
         {
-            sub.IsActive  = false;
-            sub.Status    = SubscriptionStatus.Cancelled;
-            sub.UpdatedAt = DateTime.UtcNow;
+            // Re-fetch inside the transaction for a fresh, consistent read
+            var req = await _db.SubscriptionPaymentRequests
+                .Include(r => r.Plan)
+                .FirstOrDefaultAsync(r => r.Id == requestId, ct)
+                ?? throw new BoiootException("طلب الدفع غير موجود.", 404);
+
+            if (req.Status != PaymentRequestStatus.Approved)
+                throw new BoiootException(
+                    $"يمكن تفعيل الاشتراك فقط بعد الموافقة على الطلب. الحالة الحالية: {req.Status}", 400);
+
+            // FIX-6: Idempotency guard — check if a subscription was already created
+            // for this exact payment request (PaymentRef = req.Id)
+            var alreadyActivated = await _db.Subscriptions
+                .AnyAsync(s => s.PaymentRef == req.Id.ToString(), ct);
+
+            if (alreadyActivated)
+                throw new BoiootException(
+                    "تم تفعيل اشتراك لهذا الطلب مسبقاً. لا يمكن التفعيل مرتين.", 409);
+
+            // Deactivate any existing active subscriptions for the account
+            var existingActive = await _db.Subscriptions
+                .Where(s => s.AccountId == req.AccountId && s.IsActive)
+                .ToListAsync(ct);
+
+            foreach (var sub in existingActive)
+            {
+                sub.IsActive  = false;
+                sub.Status    = SubscriptionStatus.Cancelled;
+                sub.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Calculate subscription dates
+            var startDate = DateTime.UtcNow;
+            var endDate   = req.BillingCycle == "Yearly"
+                ? startDate.AddYears(1)
+                : startDate.AddMonths(1);
+
+            var subscription = new Subscription
+            {
+                AccountId  = req.AccountId,
+                PlanId     = req.RequestedPlanId,
+                PricingId  = req.RequestedPricingId,
+                Status     = SubscriptionStatus.Active,
+                StartDate  = startDate,
+                EndDate    = endDate,
+                IsActive   = true,
+                AutoRenew  = false,
+                PaymentRef = req.Id.ToString(),
+                CreatedAt  = DateTime.UtcNow,
+                UpdatedAt  = DateTime.UtcNow,
+            };
+
+            _db.Subscriptions.Add(subscription);
+
+            req.Status      = PaymentRequestStatus.Activated;
+            req.ActivatedAt = DateTime.UtcNow;
+            req.CompletedAt = DateTime.UtcNow;
+            req.UpdatedAt   = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+
+            _logger.LogInformation(
+                "Subscription activated: account={AccountId}, plan={PlanId}, " +
+                "cycle={Cycle}, end={EndDate}, via PaymentRequest={ReqId}",
+                req.AccountId, req.RequestedPlanId, req.BillingCycle, endDate, requestId);
+
+            return ToResponse(req);
         }
-
-        // Calculate subscription end date from billing cycle
-        var startDate = DateTime.UtcNow;
-        var endDate   = req.BillingCycle == "Yearly"
-            ? startDate.AddYears(1)
-            : startDate.AddMonths(1);
-
-        var subscription = new Subscription
+        catch
         {
-            AccountId  = req.AccountId,
-            PlanId     = req.RequestedPlanId,
-            PricingId  = req.RequestedPricingId,
-            Status     = SubscriptionStatus.Active,
-            StartDate  = startDate,
-            EndDate    = endDate,
-            IsActive   = true,
-            AutoRenew  = false,   // manual payment — no auto-renew by default
-            PaymentRef = req.Id.ToString(),
-            CreatedAt  = DateTime.UtcNow,
-            UpdatedAt  = DateTime.UtcNow,
-        };
-
-        _db.Subscriptions.Add(subscription);
-
-        // Update request
-        req.Status      = PaymentRequestStatus.Activated;
-        req.ActivatedAt = DateTime.UtcNow;
-        req.CompletedAt = DateTime.UtcNow;
-        req.UpdatedAt   = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync(ct);
-
-        _logger.LogInformation(
-            "Subscription activated for account {AccountId} via PaymentRequest {ReqId}. " +
-            "Plan={PlanId}, Cycle={Cycle}, EndDate={EndDate}",
-            req.AccountId, requestId, req.RequestedPlanId, req.BillingCycle, endDate);
-
-        return ToResponse(req);
+            await tx.RollbackAsync(ct);
+            throw;
+        }
     }
 
     // ── Private helpers ──────────────────────────────────────────────────
@@ -389,7 +493,6 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             .FirstOrDefaultAsync(r => r.Id == requestId, ct)
             ?? throw new BoiootException("طلب الدفع غير موجود.", 404);
 
-        // Ownership check: user must belong to the request's account
         if (req.UserId != userId && req.AccountId != accountId)
             throw new BoiootException("غير مصرح بالوصول إلى هذا الطلب.", 403);
 
@@ -410,29 +513,29 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         string? planName = null,
         string? planCode = null) => new()
     {
-        Id                      = r.Id,
-        AccountId               = r.AccountId,
-        UserId                  = r.UserId,
-        PlanId                  = r.RequestedPlanId,
-        PlanName                = planName ?? r.Plan?.Name ?? string.Empty,
-        PlanCode                = planCode ?? r.Plan?.Code ?? string.Empty,
-        PricingId               = r.RequestedPricingId,
-        BillingCycle            = r.BillingCycle,
-        Amount                  = r.Amount,
-        Currency                = r.Currency,
-        PaymentMethod           = r.PaymentMethod,
-        PaymentFlowType         = r.PaymentFlowType,
-        Status                  = r.Status.ToString(),
-        ReceiptImageUrl         = r.ReceiptImageUrl,
-        ReceiptFileName         = r.ReceiptFileName,
-        CustomerNote            = r.CustomerNote,
-        SalesRepresentativeName = r.SalesRepresentativeName,
-        ReviewedByUserId        = r.ReviewedByUserId,
-        ReviewNote              = r.ReviewNote,
-        ExternalPaymentReference= r.ExternalPaymentReference,
-        CreatedAt               = r.CreatedAt,
-        ReviewedAt              = r.ReviewedAt,
-        ActivatedAt             = r.ActivatedAt,
-        CompletedAt             = r.CompletedAt,
+        Id                       = r.Id,
+        AccountId                = r.AccountId,
+        UserId                   = r.UserId,
+        PlanId                   = r.RequestedPlanId,
+        PlanName                 = planName ?? r.Plan?.Name ?? string.Empty,
+        PlanCode                 = planCode ?? r.Plan?.Code ?? string.Empty,
+        PricingId                = r.RequestedPricingId,
+        BillingCycle             = r.BillingCycle,
+        Amount                   = r.Amount,
+        Currency                 = r.Currency,
+        PaymentMethod            = r.PaymentMethod,
+        PaymentFlowType          = r.PaymentFlowType,
+        Status                   = r.Status.ToString(),
+        ReceiptImageUrl          = r.ReceiptImageUrl,
+        ReceiptFileName          = r.ReceiptFileName,
+        CustomerNote             = r.CustomerNote,
+        SalesRepresentativeName  = r.SalesRepresentativeName,
+        ReviewedByUserId         = r.ReviewedByUserId,
+        ReviewNote               = r.ReviewNote,
+        ExternalPaymentReference = r.ExternalPaymentReference,
+        CreatedAt                = r.CreatedAt,
+        ReviewedAt               = r.ReviewedAt,
+        ActivatedAt              = r.ActivatedAt,
+        CompletedAt              = r.CompletedAt,
     };
 }

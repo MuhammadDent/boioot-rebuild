@@ -13,14 +13,16 @@ public interface ISubscriptionPaymentService
 
     /// <summary>
     /// Customer selects a plan + payment method → creates a PaymentRequest.
-    /// Amount is locked from PlanPricing at creation time.
+    /// Blocks if an active request already exists for the same account.
+    /// Amount is locked from PlanPricing at creation time — must be > 0.
     /// </summary>
     Task<PaymentRequestResponse> CreateAsync(
         Guid userId, CreatePaymentRequestDto dto, CancellationToken ct = default);
 
     /// <summary>
-    /// Customer uploads a receipt image for a pending/awaiting-payment request.
-    /// Transitions status: Pending/AwaitingPayment → ReceiptUploaded.
+    /// Customer uploads a receipt image.
+    /// Allowed only when Status ∈ { Pending, AwaitingPayment }.
+    /// Transitions status → ReceiptUploaded.
     /// </summary>
     Task<PaymentRequestResponse> UploadReceiptAsync(
         Guid requestId, Guid userId, UploadReceiptDto dto, CancellationToken ct = default);
@@ -35,14 +37,17 @@ public interface ISubscriptionPaymentService
 
     /// <summary>
     /// Customer cancels their own pending request.
-    /// Only allowed while Status ∈ { Pending, AwaitingPayment }.
+    /// Allowed when Status ∈ { Pending, AwaitingPayment, ReceiptUploaded }.
     /// </summary>
     Task<PaymentRequestResponse> CancelAsync(
         Guid requestId, Guid userId, CancellationToken ct = default);
 
     // ── Admin operations ──────────────────────────────────────────────────
 
-    /// <summary>Paginated list of all payment requests with optional filters.</summary>
+    /// <summary>
+    /// Paginated list of all payment requests with optional filters.
+    /// Returns 400 if an invalid status string is provided.
+    /// </summary>
     Task<PagedResult<PaymentRequestResponse>> GetAllAsync(
         PaymentRequestFilter filter, int page, int pageSize, CancellationToken ct = default);
 
@@ -52,28 +57,37 @@ public interface ISubscriptionPaymentService
 
     /// <summary>
     /// Admin marks request as UnderReview.
-    /// Useful signal to customer that their submission was seen.
+    /// Allowed: Pending, AwaitingPayment, ReceiptUploaded.
     /// </summary>
     Task<PaymentRequestResponse> MarkUnderReviewAsync(
         Guid requestId, Guid adminUserId, CancellationToken ct = default);
 
     /// <summary>
-    /// Admin approves the payment request — confirms money was received.
-    /// Status → Approved. Subscription is NOT yet activated at this point.
+    /// Admin approves the payment — confirms money was received.
+    /// Allowed: Pending, AwaitingPayment, ReceiptUploaded, UnderReview.
+    /// Blocked: Rejected, Cancelled, Approved, Activated.
     /// </summary>
     Task<PaymentRequestResponse> ApproveAsync(
         Guid requestId, Guid adminUserId, ReviewPaymentRequestDto dto, CancellationToken ct = default);
 
     /// <summary>
-    /// Admin rejects the payment request (bad receipt, fraud, etc.).
-    /// Status → Rejected. Note is required.
+    /// Admin rejects the request. Note is required.
+    /// Blocked: Approved, Activated, Cancelled.
     /// </summary>
     Task<PaymentRequestResponse> RejectAsync(
         Guid requestId, Guid adminUserId, ReviewPaymentRequestDto dto, CancellationToken ct = default);
 
     /// <summary>
+    /// Admin administratively cancels a request.
+    /// Allowed in any non-terminal state (not Activated, not already Cancelled).
+    /// Semantically distinct from Reject — used for operational/admin reasons.
+    /// </summary>
+    Task<PaymentRequestResponse> AdminCancelAsync(
+        Guid requestId, Guid adminUserId, string? note, CancellationToken ct = default);
+
+    /// <summary>
     /// Activates the subscription for the account tied to the payment request.
-    /// Creates a new Subscription record, sets Status → Activated.
+    /// Runs inside a DB transaction. Idempotency-safe: rejects if already activated.
     /// Can only be called after Approve.
     /// </summary>
     Task<PaymentRequestResponse> ActivateSubscriptionAsync(
