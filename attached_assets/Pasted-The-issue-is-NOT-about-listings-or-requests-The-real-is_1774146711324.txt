@@ -1,0 +1,84 @@
+The issue is NOT about listings or requests.
+
+The real issue is:
+There is still NO UI in the dashboard profile page to view/edit/select the office/company location.
+
+We need to fix the BUSINESS PROFILE / DASHBOARD PROFILE page itself.
+
+==================================================
+GOAL
+==================================================
+
+Add a full "Office / Company Location" section inside:
+
+/dashboard/profile
+
+This must allow the business user to:
+- view current saved location
+- edit city/district/address
+- choose office location on map
+- save updated location
+
+==================================================
+TASKS
+==================================================
+
+1) Inspect the current dashboard profile/settings page UI.
+
+2) Add a new dedicated section/card:
+"موقع المكتب / الشركة"
+
+Fields:
+- City
+- District / Neighborhood
+- Address
+- Interactive map picker
+- Latitude
+- Longitude
+
+3) Map behavior:
+- click to select location
+- draggable marker
+- optional "Use my current location" button
+
+4) Load existing saved values from business profile API:
+- city
+- district
+- address
+- latitude
+- longitude
+
+5) When opening dashboard/profile:
+- existing location must be displayed if already saved
+- marker must appear on map if latitude/longitude exist
+
+6) Save behavior:
+- updateBusinessProfile() must be called from dashboard profile page too
+- saving profile should persist edited location fields
+
+7) UI requirements:
+- RTL support
+- same design system as current dashboard
+- professional card layout
+- location section should be clearly separated from personal info
+
+8) Important:
+- Do NOT limit location editing to onboarding only
+- Business user must be able to edit office/company location anytime from dashboard/profile
+
+9) If onboarding already has location UI:
+- reuse the same reusable component in dashboard/profile
+- avoid duplicate logic
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+Inside /dashboard/profile, I want to see and edit:
+- office/company city
+- district
+- address
+- map-selected location
+- saved coordinates
+
+This is the real missing feature.

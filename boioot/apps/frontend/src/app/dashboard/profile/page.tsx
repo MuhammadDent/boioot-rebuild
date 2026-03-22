@@ -10,7 +10,9 @@ import {
   ROLE_GROUP_COLORS,
   type NormalizedProfile,
 } from "@/lib/profile-model";
-import type { UserProfileResponse } from "@/types";
+import type { UserProfileResponse, BusinessProfileResponse } from "@/types";
+import { onboardingApi } from "@/features/onboarding/api";
+import LocationPickerDynamic from "@/components/onboarding/LocationPickerDynamic";
 
 // ─── Payload types (API shape — unchanged) ────────────────────────────────────
 
@@ -1262,14 +1264,245 @@ function ProfileSettingsTab({ profile }: { profile: NormalizedProfile }) {
   );
 }
 
-// ─── ProfileTabs ──────────────────────────────────────────────────────────────
+// ─── Tab 5: BusinessLocationTab — office/company location ─────────────────────
 
-const TABS = [
-  { id: "info",     label: "الملف الشخصي"  },
-  { id: "security", label: "الأمان"         },
-  { id: "media",    label: "الصورة الشخصية" },
-  { id: "settings", label: "الإعدادات"      },
-];
+function BusinessLocationTab() {
+  const [loadingData, setLoadingData] = useState(true);
+  const [saving,      setSaving]      = useState(false);
+  const [banner,      setBanner]      = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  const [snapshot,  setSnapshot]  = useState<BusinessProfileResponse | null>(null);
+  const [city,      setCity]      = useState("");
+  const [district,  setDistrict]  = useState("");
+  const [address,   setAddress]   = useState("");
+  const [latitude,  setLatitude]  = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+
+  useEffect(() => {
+    onboardingApi
+      .getBusinessProfile()
+      .then((data) => {
+        setSnapshot(data);
+        setCity(data.city ?? "");
+        setDistrict(data.neighborhood ?? "");
+        setAddress(data.address ?? "");
+        setLatitude(data.latitude ?? null);
+        setLongitude(data.longitude ?? null);
+      })
+      .catch((err: unknown) => {
+        console.error("[BusinessLocationTab] load error:", err);
+        setBanner({ type: "error", msg: "تعذّر تحميل بيانات الموقع." });
+      })
+      .finally(() => setLoadingData(false));
+  }, []);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setBanner(null);
+
+    if (!city.trim()) {
+      setBanner({ type: "error", msg: "المدينة مطلوبة." });
+      return;
+    }
+    if (!snapshot) return;
+
+    setSaving(true);
+    try {
+      await onboardingApi.updateBusinessProfile({
+        displayName:  snapshot.displayName,
+        city:         city.trim(),
+        neighborhood: district.trim() || undefined,
+        address:      address.trim()  || undefined,
+        phone:        snapshot.phone    || undefined,
+        whatsApp:     snapshot.whatsApp || undefined,
+        description:  snapshot.description || undefined,
+        latitude:     latitude  ?? undefined,
+        longitude:    longitude ?? undefined,
+      });
+      setBanner({ type: "success", msg: "تم حفظ موقع المكتب بنجاح." });
+    } catch (error: unknown) {
+      console.error("API ERROR:", error);
+      setBanner({ type: "error", msg: (error as Error).message ?? "حدث خطأ أثناء الحفظ." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      setLatitude(pos.coords.latitude);
+      setLongitude(pos.coords.longitude);
+    });
+  }
+
+  if (loadingData) {
+    return (
+      <div style={{ textAlign: "center", padding: "2.5rem", color: "var(--color-text-secondary)" }}>
+        جارٍ تحميل بيانات الموقع…
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSave} noValidate>
+      {banner && <Banner type={banner.type} msg={banner.msg} />}
+
+      {/* Section header */}
+      <div style={{ marginBottom: "1.5rem" }}>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "1rem",
+            fontWeight: 700,
+            color: "var(--color-text)",
+          }}
+        >
+          موقع المكتب / الشركة
+        </h3>
+        <p
+          style={{
+            margin: "0.3rem 0 0",
+            fontSize: "0.85rem",
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          حدّث عنوان ومكان مكتبك على الخريطة ليظهر للعملاء
+        </p>
+      </div>
+
+      {/* Text fields */}
+      <div style={{ display: "grid", gap: "1rem", maxWidth: 560 }}>
+        <div>
+          <FieldLabel>المدينة *</FieldLabel>
+          <Input
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="مثال: دمشق"
+            maxLength={100}
+          />
+        </div>
+
+        <div>
+          <FieldLabel>الحي / المنطقة</FieldLabel>
+          <Input
+            value={district}
+            onChange={(e) => setDistrict(e.target.value)}
+            placeholder="مثال: المزة"
+            maxLength={100}
+          />
+        </div>
+
+        <div>
+          <FieldLabel>العنوان التفصيلي</FieldLabel>
+          <Input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="مثال: شارع بغداد، بناء رقم 12"
+            maxLength={250}
+          />
+        </div>
+      </div>
+
+      {/* Map section */}
+      <div
+        style={{
+          marginTop: "1.75rem",
+          padding: "1.25rem",
+          background: "#f8faf8",
+          borderRadius: 10,
+          border: "1px solid var(--color-border)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1rem",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}
+        >
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: "0.9rem",
+              color: "var(--color-text)",
+            }}
+          >
+            الموقع على الخريطة
+          </span>
+          <button
+            type="button"
+            onClick={useMyLocation}
+            style={{
+              padding: "0.4rem 0.9rem",
+              background: "#f0fdf4",
+              color: "var(--color-primary)",
+              border: "1px solid var(--color-primary)",
+              borderRadius: 7,
+              fontFamily: "var(--font-arabic)",
+              fontWeight: 600,
+              fontSize: "0.82rem",
+              cursor: "pointer",
+            }}
+          >
+            📍 استخدم موقعي الحالي
+          </button>
+        </div>
+
+        <LocationPickerDynamic
+          latitude={latitude}
+          longitude={longitude}
+          onChange={(lat, lng) => {
+            setLatitude(lat);
+            setLongitude(lng);
+          }}
+        />
+
+        {latitude !== null && longitude !== null && (
+          <div
+            style={{
+              marginTop: "0.65rem",
+              fontSize: "0.8rem",
+              color: "var(--color-text-secondary)",
+              direction: "ltr",
+              textAlign: "start",
+              fontFamily: "monospace",
+            }}
+          >
+            {latitude.toFixed(6)}, {longitude.toFixed(6)}
+          </div>
+        )}
+      </div>
+
+      {/* Save button */}
+      <div style={{ marginTop: "1.75rem" }}>
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: "0.6rem 1.75rem",
+            background: saving ? "#a7c4a0" : "var(--color-primary)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontFamily: "var(--font-arabic)",
+            fontWeight: 700,
+            fontSize: "0.95rem",
+            cursor: saving ? "not-allowed" : "pointer",
+            transition: "background 0.15s",
+          }}
+        >
+          {saving ? "جارٍ الحفظ…" : "حفظ الموقع"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ─── ProfileTabs ──────────────────────────────────────────────────────────────
 
 function ProfileTabs({
   raw,
@@ -1284,6 +1517,16 @@ function ProfileTabs({
   setActiveTab: (id: string) => void;
   onUpdate:     (u: UserProfileResponse) => void;
 }) {
+  const isBusiness = profile.roleGroup === "business";
+
+  const tabs = [
+    { id: "info",     label: "الملف الشخصي"  },
+    { id: "security", label: "الأمان"         },
+    { id: "media",    label: "الصورة الشخصية" },
+    ...(isBusiness ? [{ id: "location", label: "موقع المكتب" }] : []),
+    { id: "settings", label: "الإعدادات"      },
+  ];
+
   return (
     <div
       style={{
@@ -1302,7 +1545,7 @@ function ProfileTabs({
           overflowX: "auto",
         }}
       >
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const active = tab.id === activeTab;
           return (
             <button
@@ -1335,6 +1578,7 @@ function ProfileTabs({
         {activeTab === "info"     && <ProfileBasicInfoForm raw={raw} onUpdate={onUpdate} />}
         {activeTab === "security" && <ProfileSecurityTab raw={raw} />}
         {activeTab === "media"    && <ProfileAvatarTab raw={raw} onUpdate={onUpdate} />}
+        {activeTab === "location" && isBusiness && <BusinessLocationTab />}
         {activeTab === "settings" && <ProfileSettingsTab profile={profile} />}
       </div>
     </div>
