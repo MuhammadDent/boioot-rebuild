@@ -49,6 +49,16 @@ public class Property : BaseEntity, ISoftDeletable
     // Phase A: future ownership source — will replace CompanyId in Phase C
     public Guid? AccountId { get; set; }
 
+    // ── Audit fields — populated server-side from JWT claims ONLY ────────────
+    // NEVER accept these from the request body; they are set in the service layer.
+    public string CreatedByUserId { get; set; } = string.Empty;
+    public string CreatedByRole { get; set; } = string.Empty;
+    /// <summary>
+    /// Null for personal listings (Owner/Broker with no company).
+    /// Set to the creator's company when the listing belongs to a company.
+    /// </summary>
+    public Guid? CreatedByCompanyId { get; set; }
+
     // Analytics
     public int ViewCount { get; set; } = 0;
 

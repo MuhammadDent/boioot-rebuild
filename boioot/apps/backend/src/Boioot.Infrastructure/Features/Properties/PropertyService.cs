@@ -273,6 +273,10 @@ public class PropertyService : IPropertyService
             Features = request.Features is { Count: > 0 }
                 ? System.Text.Json.JsonSerializer.Serialize(request.Features)
                 : null,
+            // ── Audit — server-side only, never from request body ─────────────
+            CreatedByUserId   = userId.ToString(),
+            CreatedByRole     = userRole,
+            CreatedByCompanyId = companyId,
         };
 
         _context.Properties.Add(property);
@@ -281,8 +285,8 @@ public class PropertyService : IPropertyService
         await SaveAmenitySelectionsAsync(property.Id, request.Features, ct);
 
         _logger.LogInformation(
-            "Property created: {PropertyId} | Company: {CompanyId} | By: {UserId}",
-            property.Id, property.CompanyId, userId);
+            "Property created: {PropertyId} | Company: {CompanyId} | By: {UserId} ({Role})",
+            property.Id, property.CompanyId, userId, userRole);
 
         return await LoadAndMapAsync(property.Id, ct);
     }
@@ -492,6 +496,11 @@ public class PropertyService : IPropertyService
                 $"لقد وصلت إلى الحد الأقصى من الإعلانات هذا الشهر ({limit} إعلانات). يرجى ترقية عضويتك لإضافة المزيد.",
                 429);
 
+        // ── Audit: resolve creator's company (if any) ────────────────────────
+        // Personal listings have no "company posting" context, but we still
+        // record the company the creator belongs to (null if none).
+        var creatorCompanyId = await _ownership.GetCompanyIdForUserAsync(userId, ct);
+
         var property = new Property
         {
             Title             = request.Title.Trim(),
@@ -527,6 +536,10 @@ public class PropertyService : IPropertyService
                                     ? System.Text.Json.JsonSerializer.Serialize(request.Features)
                                     : null,
             VideoUrl          = request.VideoUrl?.Trim(),
+            // ── Audit — server-side only, never from request body ─────────────
+            CreatedByUserId    = userId.ToString(),
+            CreatedByRole      = userRole,
+            CreatedByCompanyId = creatorCompanyId,   // null if user has no company
         };
 
         _context.Properties.Add(property);
@@ -930,6 +943,10 @@ public class PropertyService : IPropertyService
             .ToList(),
         ViewCount = p.ViewCount,
         CreatedAt = p.CreatedAt,
-        UpdatedAt = p.UpdatedAt
+        UpdatedAt = p.UpdatedAt,
+        // ── Audit ─────────────────────────────────────────────────────────────
+        CreatedByUserId    = p.CreatedByUserId,
+        CreatedByRole      = p.CreatedByRole,
+        CreatedByCompanyId = p.CreatedByCompanyId,
     };
 }

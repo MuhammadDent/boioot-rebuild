@@ -59,4 +59,9 @@ public class PropertyResponse
 
     // Analytics
     public int ViewCount { get; set; }
+
+    // ── Audit (read-only — set server-side from JWT claims, never from request body) ──
+    public string CreatedByUserId { get; set; } = string.Empty;
+    public string CreatedByRole { get; set; } = string.Empty;
+    public Guid? CreatedByCompanyId { get; set; }
 }

@@ -634,6 +634,16 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN AccountId TEXT"); }
         catch { /* column already exists */ }
 
+        // ── Audit fields (server-side only — never from request body) ─────────
+        // CreatedByUserId / CreatedByRole: who created the listing and in what role.
+        // CreatedByCompanyId: the creator's company, null for personal listings.
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN CreatedByUserId TEXT NOT NULL DEFAULT ''"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN CreatedByRole TEXT NOT NULL DEFAULT ''"); }
+        catch { /* column already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Properties ADD COLUMN CreatedByCompanyId TEXT"); }
+        catch { /* column already exists */ }
+
         // ── Phase B: FeatureDefinitions catalog ──────────────────────────────
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS FeatureDefinitions (
