@@ -211,14 +211,17 @@ export default function AdminPropertiesPage() {
   // ── Location options — built from full raw dataset ─────────────────────────
   const provinceOptions = useMemo(() => {
     const seen = new Set<string>();
-    allProperties.forEach(p => { if (p.province) seen.add(p.province); });
+    allProperties.forEach(p => { const v = p.province?.trim(); if (v) seen.add(v); });
     return [...seen].sort((a, b) => a.localeCompare(b, "ar"));
   }, [allProperties]);
 
   const cityOptions = useMemo(() => {
     const seen = new Set<string>();
     allProperties.forEach(p => {
-      if (!provinceFilter || p.province === provinceFilter) seen.add(p.city);
+      const city = p.city?.trim();
+      const province = p.province?.trim();
+      if (!city) return;
+      if (!provinceFilter || province === provinceFilter) seen.add(city);
     });
     return [...seen].sort((a, b) => a.localeCompare(b, "ar"));
   }, [allProperties, provinceFilter]);
@@ -226,10 +229,13 @@ export default function AdminPropertiesPage() {
   const neighborhoodOptions = useMemo(() => {
     const seen = new Set<string>();
     allProperties.forEach(p => {
-      if (!p.neighborhood) return;
-      if (cityFilter && p.city !== cityFilter) return;
-      if (!cityFilter && provinceFilter && p.province !== provinceFilter) return;
-      seen.add(p.neighborhood);
+      const nbhd = p.neighborhood?.trim();
+      const city = p.city?.trim();
+      const province = p.province?.trim();
+      if (!nbhd) return;
+      if (cityFilter && city !== cityFilter) return;
+      if (!cityFilter && provinceFilter && province !== provinceFilter) return;
+      seen.add(nbhd);
     });
     return [...seen].sort((a, b) => a.localeCompare(b, "ar"));
   }, [allProperties, provinceFilter, cityFilter]);

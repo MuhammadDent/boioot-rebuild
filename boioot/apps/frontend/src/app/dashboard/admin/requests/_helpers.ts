@@ -142,8 +142,14 @@ export function computeDistribution(
 
 // ─── Filter options from enriched data ───────────────────────────────────────
 function uniqueSorted(values: string[]): string[] {
-  const s = new Set(values.filter(v => v && v !== "—" && v !== "غير محدد" && v !== "بدون تحديد"));
-  return Array.from(s).sort((a, b) => a.localeCompare(b, "ar"));
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  values.forEach(v => {
+    const trimmed = v?.trim() ?? "";
+    if (!trimmed || trimmed === "—" || trimmed === "غير محدد" || trimmed === "بدون تحديد") return;
+    if (!seen.has(trimmed)) { seen.add(trimmed); unique.push(trimmed); }
+  });
+  return unique.sort((a, b) => a.localeCompare(b, "ar"));
 }
 
 export function buildFilterOptions(requests: EnrichedRequest[]): FilterOptions {

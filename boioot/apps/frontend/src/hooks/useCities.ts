@@ -9,6 +9,10 @@ interface CityOption {
   province: string;
 }
 
+function normalizeName(name: string): string {
+  return name.trim();
+}
+
 export function useCities() {
   const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +20,21 @@ export function useCities() {
   useEffect(() => {
     api
       .get<CityOption[]>("/locations/cities")
-      .then((data) => setCities(data.map((c) => c.name).sort((a, b) => a.localeCompare("ar"))))
+      .then((data) => {
+        const seen = new Set<string>();
+        const unique: string[] = [];
+        data.forEach((c) => {
+          const name = normalizeName(c.name);
+          if (!name) return;
+          const key = name;
+          if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(name);
+          }
+        });
+        unique.sort((a, b) => a.localeCompare(b, "ar"));
+        setCities(unique);
+      })
       .catch(() => setCities([]))
       .finally(() => setLoading(false));
   }, []);

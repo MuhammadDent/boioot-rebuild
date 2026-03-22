@@ -509,7 +509,7 @@ export default function HomePage() {
           <FilterSection label="المدينة">
             <select value={draft.city} onChange={(e) => { setDraftField("city", e.target.value); setDraftField("neighborhood", ""); }} style={selectStyle}>
               <option value="">الكل</option>
-              {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+              {cities.map((c, i) => <option key={`city-${i}-${c}`} value={c}>{c}</option>)}
             </select>
           </FilterSection>
 
@@ -522,7 +522,7 @@ export default function HomePage() {
               style={{ ...selectStyle, opacity: draft.city ? 1 : 0.5 }}
             >
               <option value="">الكل</option>
-              {neighborhoods.map((n) => <option key={n} value={n}>{n}</option>)}
+              {neighborhoods.map((n, i) => <option key={`nbhd-${i}-${n}`} value={n}>{n}</option>)}
             </select>
             {!draft.city && (
               <p style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>يرجى اختيار المدينة أولاً</p>
