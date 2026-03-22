@@ -985,6 +985,148 @@ using (var scope = app.Services.CreateScope())
               ('ef000011-0000-0000-0000-000000000000', '00000009-0000-0000-0000-000000000000', 'Yearly', 176000, 'SYP', 1, 1, NULL, NULL, {0}, {0})",
             nowPlan);
 
+        // ══════════════════════════════════════════════════════════════════════════
+        // PHASE A v2 — Subscription system completion (incremental, idempotent)
+        // ══════════════════════════════════════════════════════════════════════════
+
+        // ── New columns ────────────────────────────────────────────────────────
+        // Plans.Code — stable machine-readable slug for enforcement code references
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN Code TEXT"); }
+        catch { /* already exists */ }
+
+        // Subscriptions.AutoRenew — whether the subscription auto-renews
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Subscriptions ADD COLUMN AutoRenew INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* already exists */ }
+
+        // ── Rename existing plans to align with role terminology ───────────────
+        // Safe: only the display Name changes; Id/FK relationships are unaffected.
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE Plans SET Name = 'BrokerPro'    WHERE Id = '00000006-0000-0000-0000-000000000000' AND Name = 'AgentPro';
+            UPDATE Plans SET Name = 'BrokerPremium' WHERE Id = '00000007-0000-0000-0000-000000000000' AND Name = 'AgentPremium';
+            UPDATE Plans SET Name = 'OfficeGrowth'  WHERE Id = '00000009-0000-0000-0000-000000000000' AND Name = 'BusinessGrowth'");
+
+        // ── Fix ApplicableAccountType for plans 06, 07, 08, 09 ────────────────
+        // 06 BrokerPro + 07 BrokerPremium: Broker is an Individual account type.
+        // 08 OfficeStarter + 09 OfficeGrowth: RealEstateOffice is an Office account type.
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE Plans SET ApplicableAccountType = 'Individual' WHERE Id = '00000006-0000-0000-0000-000000000000';
+            UPDATE Plans SET ApplicableAccountType = 'Individual' WHERE Id = '00000007-0000-0000-0000-000000000000';
+            UPDATE Plans SET ApplicableAccountType = 'Office'     WHERE Id = '00000008-0000-0000-0000-000000000000';
+            UPDATE Plans SET ApplicableAccountType = 'Office'     WHERE Id = '00000009-0000-0000-0000-000000000000'");
+
+        // ── Seed Code (slug) for all 9 existing plans (idempotent) ────────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE Plans SET Code = 'free_user'         WHERE Id = '00000001-0000-0000-0000-000000000000';
+            UPDATE Plans SET Code = 'silver'            WHERE Id = '00000002-0000-0000-0000-000000000000';
+            UPDATE Plans SET Code = 'gold'              WHERE Id = '00000003-0000-0000-0000-000000000000';
+            UPDATE Plans SET Code = 'platinum'          WHERE Id = '00000004-0000-0000-0000-000000000000';
+            UPDATE Plans SET Code = 'owner_pro'         WHERE Id = '00000005-0000-0000-0000-000000000000';
+            UPDATE Plans SET Code = 'broker_pro'        WHERE Id = '00000006-0000-0000-0000-000000000000';
+            UPDATE Plans SET Code = 'broker_premium'    WHERE Id = '00000007-0000-0000-0000-000000000000';
+            UPDATE Plans SET Code = 'office_starter'    WHERE Id = '00000008-0000-0000-0000-000000000000';
+            UPDATE Plans SET Code = 'office_growth'     WHERE Id = '00000009-0000-0000-0000-000000000000'");
+
+        // ── New FeatureDefinition: project_management ──────────────────────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO FeatureDefinitions (Id, Key, Name, Description, FeatureGroup, IsActive, CreatedAt, UpdatedAt)
+            VALUES ('fd000004-0000-0000-0000-000000000000', 'project_management', 'إدارة المشاريع', 'أدوات إنشاء وإدارة المشاريع العقارية والوحدات', 'projects', 1, {0}, {0})",
+            nowPlan);
+
+        // ── New LimitDefinition: max_project_units ────────────────────────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO LimitDefinitions (Id, Key, Name, Description, Unit, ValueType, AppliesToScope, IsActive, CreatedAt, UpdatedAt)
+            VALUES ('add00004-0000-0000-0000-000000000000', 'max_project_units', 'الحد الأقصى لوحدات المشروع', 'إجمالي الوحدات العقارية المسموح بها عبر جميع المشاريع', 'وحدة', 'integer', 'account', 1, {0}, {0})",
+            nowPlan);
+
+        // ── New plans: DeveloperBusiness (0a) + DeveloperPremium (0b) ─────────
+        // GUIDs 0000000a and 0000000b — fully fixed and idempotent.
+        // ApplicableAccountType = 'Company' (DeveloperCompany maps to AccountType.Company).
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO Plans (Id, Name, Code, ListingLimit, ProjectLimit, AgentLimit, FeaturedSlots, PriceMonthly, PriceYearly, IsActive, BillingMode, Rank, DisplayOrder, IsPublic, IsRecommended, ApplicableAccountType, PlanCategory, CreatedAt, UpdatedAt)
+            VALUES
+              ('0000000a-0000-0000-0000-000000000000', 'DeveloperBusiness', 'developer_business',  50, 5, 10, 10, 15000, 130000, 1, 'InternalOnly', 15, 15, 1, 0, 'Company', 'Business', {0}, {0}),
+              ('0000000b-0000-0000-0000-000000000000', 'DeveloperPremium',  'developer_premium',   -1, -1, -1, 30, 30000, 260000, 1, 'InternalOnly', 16, 16, 1, 1, 'Company', 'Business', {0}, {0})",
+            nowPlan);
+
+        // ── Update missing plan metadata for 0a + 0b (idempotent) ────────────
+        await db.Database.ExecuteSqlRawAsync(@"
+            UPDATE Plans SET
+                ImageLimitPerListing = 30,
+                VideoAllowed         = 1,
+                AnalyticsAccess      = 1,
+                Description          = 'لشركات التطوير العقاري الناشئة — مشاريع متعددة وفرق عمل'
+            WHERE Id = '0000000a-0000-0000-0000-000000000000';
+            UPDATE Plans SET
+                ImageLimitPerListing = -1,
+                VideoAllowed         = 1,
+                AnalyticsAccess      = 1,
+                IsRecommended        = 1,
+                Description          = 'لكبرى شركات التطوير العقاري — طاقة غير محدودة ودعم أولوية'
+            WHERE Id = '0000000b-0000-0000-0000-000000000000'");
+
+        // ── PlanFeatures for DeveloperBusiness (0a) + DeveloperPremium (0b) ───
+        // Features: fd1=analytics  fd2=priority_support  fd3=featured_listings  fd4=project_management
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO PlanFeatures (Id, SubscriptionPlanId, FeatureDefinitionId, IsEnabled, CreatedAt, UpdatedAt)
+            VALUES
+              ('ce000010-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'fd000001-0000-0000-0000-000000000000', 1, {0}, {0}),
+              ('ce000011-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'fd000002-0000-0000-0000-000000000000', 0, {0}, {0}),
+              ('ce000012-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'fd000003-0000-0000-0000-000000000000', 1, {0}, {0}),
+              ('ce000013-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'fd000004-0000-0000-0000-000000000000', 1, {0}, {0}),
+              ('ce000014-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'fd000001-0000-0000-0000-000000000000', 1, {0}, {0}),
+              ('ce000015-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'fd000002-0000-0000-0000-000000000000', 1, {0}, {0}),
+              ('ce000016-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'fd000003-0000-0000-0000-000000000000', 1, {0}, {0}),
+              ('ce000017-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'fd000004-0000-0000-0000-000000000000', 1, {0}, {0})",
+            nowPlan);
+
+        // ── PlanLimits for DeveloperBusiness (0a) + DeveloperPremium (0b) ─────
+        // Limits: add1=max_active_listings  add2=max_agents  add3=max_projects  add4=max_project_units
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO PlanLimits (Id, SubscriptionPlanId, LimitDefinitionId, Value, CreatedAt, UpdatedAt)
+            VALUES
+              ('c1000010-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'add00001-0000-0000-0000-000000000000',  50, {0}, {0}),
+              ('c1000011-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'add00002-0000-0000-0000-000000000000',  10, {0}, {0}),
+              ('c1000012-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'add00003-0000-0000-0000-000000000000',   5, {0}, {0}),
+              ('c1000013-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'add00004-0000-0000-0000-000000000000', 200, {0}, {0}),
+              ('c1000014-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'add00001-0000-0000-0000-000000000000',  -1, {0}, {0}),
+              ('c1000015-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'add00002-0000-0000-0000-000000000000',  -1, {0}, {0}),
+              ('c1000016-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'add00003-0000-0000-0000-000000000000',  -1, {0}, {0}),
+              ('c1000017-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'add00004-0000-0000-0000-000000000000',  -1, {0}, {0})",
+            nowPlan);
+
+        // ── PlanPricings for DeveloperBusiness (0a) + DeveloperPremium (0b) ───
+        // IDs ef000012–ef000015 (next available after ef000011)
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO PlanPricings (Id, PlanId, BillingCycle, PriceAmount, CurrencyCode, IsActive, IsPublic, ExternalProvider, ExternalPriceId, CreatedAt, UpdatedAt)
+            VALUES
+              ('ef000012-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'Monthly',  15000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000013-0000-0000-0000-000000000000', '0000000a-0000-0000-0000-000000000000', 'Yearly',  130000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000014-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'Monthly',  30000, 'SYP', 1, 1, NULL, NULL, {0}, {0}),
+              ('ef000015-0000-0000-0000-000000000000', '0000000b-0000-0000-0000-000000000000', 'Yearly',  260000, 'SYP', 1, 1, NULL, NULL, {0}, {0})",
+            nowPlan);
+
+        // ── Seed project_management feature for existing business plans ─────────
+        // OfficeStarter (08) and OfficeGrowth (09) also get project_management access.
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO PlanFeatures (Id, SubscriptionPlanId, FeatureDefinitionId, IsEnabled, CreatedAt, UpdatedAt)
+            VALUES
+              ('ce000018-0000-0000-0000-000000000000', '00000008-0000-0000-0000-000000000000', 'fd000004-0000-0000-0000-000000000000', 1, {0}, {0}),
+              ('ce000019-0000-0000-0000-000000000000', '00000009-0000-0000-0000-000000000000', 'fd000004-0000-0000-0000-000000000000', 1, {0}, {0})",
+            nowPlan);
+
+        // ── Seed max_project_units for existing business plans ────────────────
+        // OfficeStarter(08): 100 units. OfficeGrowth(09): -1 (unlimited).
+        await db.Database.ExecuteSqlRawAsync(@"
+            INSERT OR IGNORE INTO PlanLimits (Id, SubscriptionPlanId, LimitDefinitionId, Value, CreatedAt, UpdatedAt)
+            VALUES
+              ('c1000018-0000-0000-0000-000000000000', '00000008-0000-0000-0000-000000000000', 'add00004-0000-0000-0000-000000000000', 100, {0}, {0}),
+              ('c1000019-0000-0000-0000-000000000000', '00000009-0000-0000-0000-000000000000', 'add00004-0000-0000-0000-000000000000',  -1, {0}, {0})",
+            nowPlan);
+
+        // ══════════════════════════════════════════════════════════════════════════
+        // END PHASE A v2
+        // ══════════════════════════════════════════════════════════════════════════
+
         // Seed the personal listings sentinel company (fixed GUID)
         var personalCompanyId = "00000000-0000-0000-0000-000000000001";
         var now0 = DateTime.UtcNow.ToString("O");

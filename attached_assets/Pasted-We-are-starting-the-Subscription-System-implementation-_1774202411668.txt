@@ -1,0 +1,143 @@
+We are starting the Subscription System implementation for Boioot.
+
+IMPORTANT:
+Do NOT rebuild the system.
+Do NOT change existing registration/role architecture.
+Do NOT implement everything at once.
+
+For now, implement PHASE A ONLY.
+
+==================================================
+PHASE A GOAL
+==================================================
+
+Build the foundational subscription data model only.
+
+I want in this phase:
+
+1. Subscription plan model/table
+2. User/account subscription model/table
+3. Seed/default plans
+4. Safe migration/data model changes
+5. Subscription assignment structure
+
+Do NOT implement:
+- dashboard UI
+- billing UI
+- Stripe
+- enforcement rules yet
+- admin CRUD yet
+
+==================================================
+CURRENT SYSTEM CONTEXT
+==================================================
+
+The current system already has:
+- roles
+- registration flow
+- User / Owner / Broker / CompanyOwner / Agent / Admin
+- CompanyType distinction (RealEstateOffice / DeveloperCompany)
+- User trial logic for 2 listings
+
+This phase must be added incrementally on top of the existing system.
+
+==================================================
+REQUIRED DATA MODEL
+==================================================
+
+Please design and implement the minimum safe version of:
+
+1) SubscriptionPlan
+Include fields such as:
+- Id
+- Name
+- Code/Slug
+- TargetAccountType or applicable account types
+- MonthlyPrice
+- YearlyPrice (optional if easy)
+- IsActive
+- SortOrder
+- basic entitlement structure
+
+2) AccountSubscription (or UserSubscription depending on current architecture)
+Include fields such as:
+- Id
+- UserId and/or CompanyId depending on the architecture
+- PlanId
+- Status
+- StartsAt
+- EndsAt
+- BillingCycle
+- AutoRenew
+- CreatedAt
+- UpdatedAt
+
+3) Plan entitlements
+We need the plan to support limits like:
+- MaxListings
+- MaxAgents
+- MaxProjects
+- MaxProjectUnits
+- FeaturedListingsAllowed
+- AnalyticsAccess
+- PrioritySupport
+- ProjectManagementAccess
+
+You may implement entitlements:
+- as explicit columns
+OR
+- as structured config/json
+Choose the safest option for the current codebase.
+
+==================================================
+DEFAULT V1 PLANS TO SEED
+==================================================
+
+Please seed initial default plans such as:
+
+Owner:
+- OwnerPro
+
+Broker:
+- BrokerPro
+- BrokerPremium
+
+RealEstateOffice:
+- OfficeStarter
+- OfficeGrowth
+
+DeveloperCompany:
+- DeveloperBusiness
+- DeveloperPremium
+
+User/Seeker:
+- no normal paid plan for now
+- keep current trial logic as-is
+
+==================================================
+IMPORTANT RULES
+==================================================
+
+- Keep RBAC separate from subscription logic
+- Do NOT break existing users
+- Do NOT rewrite current architecture
+- Avoid destructive migrations
+- Keep this phase backend/data-model focused only
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+When done, provide:
+
+1. DB/model design summary
+2. New tables/models created
+3. Seeded plans list
+4. Any migrations added
+5. Files changed
+6. How subscriptions are assigned structurally
+7. What is prepared now for future phases
+
+IMPORTANT:
+Stop after PHASE A.
+Do not continue to enforcement, dashboard, or admin management yet.

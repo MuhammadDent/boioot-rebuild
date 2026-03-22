@@ -25,6 +25,9 @@ public class Subscription : BaseEntity
     /// <summary>Explicit active flag. Set to false when cancelling/expiring without changing Status.</summary>
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Whether the subscription should auto-renew at end of billing cycle.</summary>
+    public bool AutoRenew { get; set; } = true;
+
     public Account Account { get; set; } = null!;
     public Plan Plan { get; set; } = null!;
 }

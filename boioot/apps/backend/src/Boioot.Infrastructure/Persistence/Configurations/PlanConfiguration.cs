@@ -11,6 +11,8 @@ public class PlanConfiguration : IEntityTypeConfiguration<Plan>
         builder.HasKey(p => p.Id);
 
         builder.Property(p => p.Name).IsRequired().HasMaxLength(100);
+        builder.Property(p => p.Code).HasMaxLength(100);
+        builder.HasIndex(p => p.Code).IsUnique().HasFilter("Code IS NOT NULL");
         builder.Property(p => p.Description).HasMaxLength(500);
         builder.Property(p => p.ApplicableAccountType).HasConversion<string>().HasMaxLength(50);
         builder.Property(p => p.Features).HasMaxLength(2000);

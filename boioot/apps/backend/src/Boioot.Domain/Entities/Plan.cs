@@ -6,6 +6,14 @@ public class Plan : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Stable machine-readable identifier for this plan.
+    /// Used by entitlement/enforcement code to reference plans without relying on Names.
+    /// Format: snake_case, e.g. "owner_pro", "broker_premium", "office_starter".
+    /// Never rename after plans are in use.
+    /// </summary>
+    public string? Code { get; set; }
+
     /// <summary>Marketing description shown on the pricing page.</summary>
     public string? Description { get; set; }
 

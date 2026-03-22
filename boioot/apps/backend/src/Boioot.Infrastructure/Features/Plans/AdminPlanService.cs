@@ -250,6 +250,7 @@ public class AdminPlanService : IAdminPlanService
     {
         Id                   = p.Id,
         Name                 = p.Name,
+        Code                 = p.Code,
         Description          = p.Description,
         IsActive             = p.IsActive,
         BasePriceMonthly     = p.BasePriceMonthly,
@@ -268,6 +269,7 @@ public class AdminPlanService : IAdminPlanService
     {
         Id                   = p.Id,
         Name                 = p.Name,
+        Code                 = p.Code,
         Description          = p.Description,
         IsActive             = p.IsActive,
         BasePriceMonthly     = p.BasePriceMonthly,
