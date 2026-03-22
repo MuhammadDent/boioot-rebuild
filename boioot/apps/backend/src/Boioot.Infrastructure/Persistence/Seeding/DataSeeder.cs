@@ -355,7 +355,13 @@ public class DataSeeder
                 "blog.view",
             },
 
-            // Platform roles
+            // ── Platform roles ────────────────────────────────────────────────
+            // Note: platform users (Owner, Broker, CompanyOwner) authenticate
+            // via JWT role claim, NOT via DB RBAC permission claims.
+            // These entries seed the permission definitions for consistency
+            // and for any future admin-panel overrides, not for JWT claim generation.
+            // Backend policies for platform users use RequireRole(), not permissions.
+            // Frontend reads PLATFORM_ROLE_PERMISSIONS in lib/rbac.ts for UI gating.
             ["CompanyOwner"] = new[]
             {
                 "properties.view", "properties.create", "properties.edit", "properties.delete",
@@ -363,6 +369,12 @@ public class DataSeeder
                 "agents.view", "agents.manage",
                 "requests.view", "requests.create",
                 "dashboard.view",
+            },
+
+            // Owner (مالك عقار): creates personal listings via POST /api/properties/post.
+            ["Owner"] = new[]
+            {
+                "properties.view", "properties.create",
             },
 
             ["Broker"] = new[]

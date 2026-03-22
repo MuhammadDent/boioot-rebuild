@@ -1,0 +1,74 @@
+We need to fully fix and unify property/ad creation access control across the app.
+
+Project context:
+- Next.js frontend
+- .NET backend
+- Real estate SaaS platform
+- We must avoid mixed legacy permission naming
+
+Main goal:
+Unify the creation flow so the UI, route protection, navigation buttons, and API all use the SAME permission and SAME route.
+
+Tasks:
+
+1. Permission unification
+- Search the entire codebase for:
+  - ads.create
+  - properties.create
+  - listings.create
+- Choose one final permission only for property creation:
+  - properties.create
+- Replace legacy or conflicting permission checks so the whole app consistently uses properties.create.
+
+2. Route unification
+- Search the entire codebase for creation routes such as:
+  - /listings/create
+  - /dashboard/listings/create
+  - /dashboard/properties/new
+- Keep only one final create route:
+  - /dashboard/properties/new
+- Update all buttons, links, menus, CTAs, and redirects to use this route only.
+
+3. RBAC map cleanup
+- Review lib/rbac.ts or equivalent permission source.
+- Ensure the correct roles have properties.create:
+  - CompanyOwner
+  - Owner
+  - Broker (if intended by business rules)
+  - Admin
+- Ensure regular User does not have it.
+- Remove conflicting or duplicated logic.
+
+4. Frontend authorization behavior
+- Review useProtectedRoute and any page guards.
+- Do not use silent redirects when permission is missing.
+- Return a clear unauthorized state.
+- On /dashboard/properties/new show a proper access denied UI:
+  - clear Arabic message
+  - no blank page
+  - no flicker
+  - no confusing redirect loop
+
+5. Listings/dashboard buttons
+- Review all “Add Property”, “Add Listing”, “Add Ad”, and related CTA buttons.
+- Make sure visibility is based on properties.create only.
+- Make sure the target route is /dashboard/properties/new only.
+
+6. Backend/API alignment
+- Review the backend endpoint(s) for property creation.
+- Ensure backend authorization also uses the same business rule and permission meaning.
+- If frontend allows creation but backend blocks it incorrectly, fix the mismatch.
+- If API validation fails, the error should be a real validation/auth response, not a route mismatch issue.
+
+7. Remove dead legacy paths
+- Remove or refactor old create-listing paths if they no longer exist.
+- Avoid keeping broken legacy routes in the code.
+
+8. Deliverables
+After changes, explain clearly:
+- which permission name is now the single source of truth
+- which route is the final create route
+- which files were changed
+- which old permission names/routes were removed
+- which roles can now create properties
+- how unauthorized users are handled now

@@ -73,9 +73,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("BrokerOrCompanyOwner", policy =>
         policy.RequireRole(RoleNames.Broker, RoleNames.CompanyOwner, RoleNames.Admin));
 
-    options.AddPolicy("CanListProperty", policy =>
-        policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Broker, RoleNames.Agent, RoleNames.Owner, RoleNames.User));
-
     // ── Legacy blog policies — retained for backward compatibility ─────────────
     // AdminBlogController now uses [RequirePermission] directly, but we keep
     // these so any external callers or older attributes don't break.

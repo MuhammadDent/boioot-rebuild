@@ -29,6 +29,20 @@ public class PropertiesController : BaseController
         return Ok(result);
     }
 
+    // ── Property creation — two routes, same permission intent ──────────────────
+    //
+    // POST /api/properties          → AdminOrCompanyOwner policy
+    //   Used by: Admin, CompanyOwner (company-linked listings)
+    //   Frontend routes: dashboard/properties/new with COMPANY_ROLES check
+    //
+    // POST /api/properties/post     → [Authorize] (any authenticated user)
+    //   Used by: Owner, Broker (personal listings)
+    //   Also used by: public /post-ad wizard (any platform user)
+    //   Frontend routes: dashboard/properties/new with user listing path
+    //
+    // Canonical permission string (frontend + seeder): "properties.create"
+    // Backend enforces via role claim policies, not DB permission claims.
+
     [Authorize(Policy = "AdminOrCompanyOwner")]
     [HttpPost]
     [RequestSizeLimit(104_857_600)]
