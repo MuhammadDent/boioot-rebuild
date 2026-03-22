@@ -360,166 +360,250 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
 
   void rank; // rank is read-only for now (updated via existing Rank seed)
 
+  const sectionHeadStyle: React.CSSProperties = {
+    margin: "0 0 1rem",
+    fontWeight: 700,
+    fontSize: "0.78rem",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    color: "var(--color-text-secondary)",
+  };
+
+  const sectionDivStyle: React.CSSProperties = {
+    borderTop: "1px solid var(--color-border, #e5e7eb)",
+    paddingTop: "1.25rem",
+    marginTop: "1.5rem",
+  };
+
   return (
     <div
-      style={{ position: "fixed", inset: 0, zIndex: 1000, backgroundColor: "rgba(0,0,0,0.45)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "2rem 1rem", overflowY: "auto" }}
+      style={{ position: "fixed", inset: 0, zIndex: 1200, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div style={{ backgroundColor: "var(--color-bg)", borderRadius: 12, padding: "2rem", width: "100%", maxWidth: 680, boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-          <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>
+      <div style={{ backgroundColor: "var(--color-bg)", borderRadius: 14, width: "100%", maxWidth: 760, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.2)", overflow: "hidden" }}>
+
+        {/* ── Sticky Header ── */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.75rem", borderBottom: "1px solid var(--color-border, #e5e7eb)", flexShrink: 0, backgroundColor: "var(--color-bg)" }}>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1, color: "var(--color-text-secondary)", padding: "0.15rem 0.5rem", borderRadius: 6 }}
+          >
+            ×
+          </button>
+          <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
             {isNew ? "إنشاء خطة جديدة" : `تعديل: ${plan!.name}`}
           </h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1 }}>×</button>
         </div>
 
-        {error && (
-          <div style={{ background: "var(--color-error-bg, #fef2f2)", color: "var(--color-error)", padding: "0.75rem 1rem", borderRadius: 8, marginBottom: "1rem", fontSize: "0.9rem" }}>
-            {error}
-          </div>
-        )}
+        {/* ── Scrollable Body ── */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "1.75rem" }}>
 
-        {/* ── Basic Info Form ── */}
-        <form onSubmit={handleSavePlan}>
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={labelStyle}>اسم الخطة *</label>
-            <input required value={name} onChange={e => setName(e.target.value)} style={inputStyle} placeholder="مثال: AgentPro" />
-          </div>
-
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={labelStyle}>الوصف</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} placeholder="وصف مختصر للخطة..." />
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1rem" }}>
-            <div>
-              <label style={labelStyle}>السعر الشهري الأساسي (ل.س)</label>
-              <input type="number" min={0} value={priceMonthly} onChange={e => setPriceMonthly(e.target.value)} style={inputStyle} />
+          {error && (
+            <div style={{ background: "var(--color-error-bg, #fef2f2)", color: "var(--color-error)", padding: "0.75rem 1rem", borderRadius: 8, marginBottom: "1.25rem", fontSize: "0.9rem" }}>
+              {error}
             </div>
-            <div>
-              <label style={labelStyle}>السعر السنوي الأساسي (ل.س)</label>
-              <input type="number" min={0} value={priceYearly} onChange={e => setPriceYearly(e.target.value)} style={inputStyle} />
-            </div>
-          </div>
-
-          {!isNew && (
-            <>
-              {/* ── Visibility & Display ── */}
-              <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem", marginTop: "0.5rem", marginBottom: "1rem" }}>
-                <p style={{ margin: "0 0 0.75rem", fontWeight: 700, fontSize: "0.9rem" }}>الظهور والترتيب</p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
-                  <div>
-                    <label style={labelStyle}>ترتيب العرض (رقم أصغر = يظهر أولاً)</label>
-                    <input type="number" value={displayOrder} onChange={e => setDisplayOrder(e.target.value)} style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>الفئة</label>
-                    <select value={planCategory} onChange={e => setPlanCategory(e.target.value)} style={selectStyle}>
-                      <option value="">— بدون فئة —</option>
-                      <option value="Individual">أفراد (Individual)</option>
-                      <option value="Business">أعمال (Business)</option>
-                    </select>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <label style={{ ...labelStyle, marginBottom: 0 }}>نشطة</label>
-                    <ToggleSwitch checked={isActive} onChange={setIsActive} disabled={saving} />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <label style={{ ...labelStyle, marginBottom: 0 }}>مرئية للعموم</label>
-                    <ToggleSwitch checked={isPublic} onChange={setIsPublic} disabled={saving} />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <label style={{ ...labelStyle, marginBottom: 0 }}>موصى بها ⭐</label>
-                    <ToggleSwitch checked={isRecommended} onChange={setIsRecommended} disabled={saving} />
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Billing Mode ── */}
-              <div style={{ marginBottom: "1rem" }}>
-                <label style={labelStyle}>وضع الفوترة</label>
-                <select value={billingMode} onChange={e => setBillingMode(e.target.value)} style={selectStyle}>
-                  <option value="InternalOnly">داخلي فقط (تحويل بنكي)</option>
-                  <option value="StripeOnly">Stripe فقط</option>
-                  <option value="Hybrid">هجين (داخلي + Stripe)</option>
-                </select>
-              </div>
-            </>
           )}
 
-          <button type="submit" className="btn btn-primary" style={{ width: "100%" }} disabled={saving}>
-            {saving ? "جاري الحفظ..." : isNew ? "إنشاء الخطة" : "حفظ المعلومات الأساسية"}
-          </button>
-        </form>
+          {/* ── Basic Info Form ── */}
+          <form onSubmit={handleSavePlan}>
 
-        {/* ── Pricing entries (only for existing plans) ── */}
-        {!isNew && (
-          <div style={{ marginTop: "1.75rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: 0 }}>أسعار الاشتراك</h3>
-              {!showAddPricing && (
-                <button className="btn btn-primary" style={{ padding: "0.3rem 0.85rem", fontSize: "0.82rem" }} onClick={() => setShowAddPricing(true)}>
+            {/* Section: Basic Info */}
+            <p style={sectionHeadStyle}>المعلومات الأساسية</p>
+
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={labelStyle}>اسم الخطة *</label>
+              <input
+                required
+                value={name}
+                onChange={e => setName(e.target.value)}
+                style={inputStyle}
+                placeholder="مثال: AgentPro"
+              />
+            </div>
+
+            <div style={{ marginBottom: "0.25rem" }}>
+              <label style={labelStyle}>الوصف</label>
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
+                placeholder="وصف مختصر للخطة..."
+              />
+            </div>
+
+            {/* Section: Pricing */}
+            <div style={sectionDivStyle}>
+              <p style={sectionHeadStyle}>التسعير الأساسي</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                <div>
+                  <label style={labelStyle}>السعر الشهري الأساسي (ل.س)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceMonthly}
+                    onChange={e => setPriceMonthly(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>السعر السنوي الأساسي (ل.س)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceYearly}
+                    onChange={e => setPriceYearly(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {!isNew && (
+              <>
+                {/* Section: Visibility & Display */}
+                <div style={sectionDivStyle}>
+                  <p style={sectionHeadStyle}>الظهور والترتيب</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1rem" }}>
+                    <div>
+                      <label style={labelStyle}>ترتيب العرض (رقم أصغر = يظهر أولاً)</label>
+                      <input
+                        type="number"
+                        value={displayOrder}
+                        onChange={e => setDisplayOrder(e.target.value)}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>الفئة</label>
+                      <select
+                        value={planCategory}
+                        onChange={e => setPlanCategory(e.target.value)}
+                        style={selectStyle}
+                      >
+                        <option value="">— بدون فئة —</option>
+                        <option value="Individual">أفراد (Individual)</option>
+                        <option value="Business">أعمال (Business)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "1.75rem", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>نشطة</label>
+                      <ToggleSwitch checked={isActive} onChange={setIsActive} disabled={saving} />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>مرئية للعموم</label>
+                      <ToggleSwitch checked={isPublic} onChange={setIsPublic} disabled={saving} />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>موصى بها ⭐</label>
+                      <ToggleSwitch checked={isRecommended} onChange={setIsRecommended} disabled={saving} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Billing Mode */}
+                <div style={sectionDivStyle}>
+                  <p style={sectionHeadStyle}>وضع الفوترة</p>
+                  <select
+                    value={billingMode}
+                    onChange={e => setBillingMode(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="InternalOnly">داخلي فقط (تحويل بنكي)</option>
+                    <option value="StripeOnly">Stripe فقط</option>
+                    <option value="Hybrid">هجين (داخلي + Stripe)</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            {/* ── Save Button ── */}
+            <div style={{ borderTop: "1px solid var(--color-border, #e5e7eb)", paddingTop: "1.25rem", marginTop: "1.5rem" }}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: "100%" }}
+                disabled={saving}
+              >
+                {saving ? "جاري الحفظ..." : isNew ? "إنشاء الخطة" : "حفظ المعلومات الأساسية"}
+              </button>
+            </div>
+          </form>
+
+          {/* ── Pricing entries (only for existing plans) ── */}
+          {!isNew && (
+            <div style={sectionDivStyle}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.9rem" }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: "0.3rem 0.85rem", fontSize: "0.82rem", visibility: showAddPricing ? "hidden" : "visible" }}
+                  onClick={() => setShowAddPricing(true)}
+                >
                   + إضافة سعر
                 </button>
-              )}
+                <p style={sectionHeadStyle}>أسعار الاشتراك</p>
+              </div>
+              {pricingLoading && <p style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem" }}>جاري التحميل...</p>}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {pricing.map(entry => (
+                  <PricingRow
+                    key={entry.id}
+                    entry={entry}
+                    planId={plan!.id}
+                    onUpdated={updated => setPricing(prev => prev.map(p => p.id === updated.id ? updated : p))}
+                    onDeleted={id => setPricing(prev => prev.filter(p => p.id !== id))}
+                  />
+                ))}
+                {!pricingLoading && pricing.length === 0 && !showAddPricing && (
+                  <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem", textAlign: "center", padding: "0.75rem 0" }}>لا توجد أسعار بعد.</p>
+                )}
+                {showAddPricing && (
+                  <AddPricingForm
+                    planId={plan!.id}
+                    onCreated={entry => { setPricing(prev => [...prev, entry]); setShowAddPricing(false); }}
+                    onCancel={() => setShowAddPricing(false)}
+                  />
+                )}
+              </div>
             </div>
-            {pricingLoading && <p style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem" }}>جاري التحميل...</p>}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {pricing.map(entry => (
-                <PricingRow
-                  key={entry.id}
-                  entry={entry}
-                  planId={plan!.id}
-                  onUpdated={updated => setPricing(prev => prev.map(p => p.id === updated.id ? updated : p))}
-                  onDeleted={id => setPricing(prev => prev.filter(p => p.id !== id))}
-                />
-              ))}
-              {!pricingLoading && pricing.length === 0 && !showAddPricing && (
-                <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem", textAlign: "center", padding: "0.75rem 0" }}>لا توجد أسعار بعد.</p>
-              )}
-              {showAddPricing && (
-                <AddPricingForm
-                  planId={plan!.id}
-                  onCreated={entry => { setPricing(prev => [...prev, entry]); setShowAddPricing(false); }}
-                  onCancel={() => setShowAddPricing(false)}
-                />
-              )}
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* ── Limits (only for existing plans) ── */}
-        {!isNew && limits.length > 0 && (
-          <div style={{ marginTop: "1.75rem" }}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.75rem" }}>الحدود الكمية</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              {limits.map(lim => (
-                <LimitRow key={lim.key} limit={lim} saving={limitSaving === lim.key} onSave={(val) => handleLimitChange(lim.key, val)} />
-              ))}
+          {/* ── Limits (only for existing plans) ── */}
+          {!isNew && limits.length > 0 && (
+            <div style={sectionDivStyle}>
+              <p style={sectionHeadStyle}>الحدود الكمية</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                {limits.map(lim => (
+                  <LimitRow key={lim.key} limit={lim} saving={limitSaving === lim.key} onSave={(val) => handleLimitChange(lim.key, val)} />
+                ))}
+              </div>
+              <p style={{ margin: "0.5rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>استخدم ‑1 لتعيين الحد كـ &quot;غير محدود&quot;</p>
             </div>
-            <p style={{ margin: "0.5rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>استخدم ‑1 لتعيين الحد كـ &quot;غير محدود&quot;</p>
-          </div>
-        )}
+          )}
 
-        {/* ── Features (only for existing plans) ── */}
-        {!isNew && features.length > 0 && (
-          <div style={{ marginTop: "1.75rem" }}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.75rem" }}>الميزات</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {features.map(feat => (
-                <div key={feat.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.75rem", borderRadius: 8, background: "var(--color-bg-secondary, #f9fafb)", opacity: featureSaving === feat.key ? 0.6 : 1, transition: "opacity 0.2s" }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 500 }}>{feat.name}</p>
-                    {feat.featureGroup && <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{feat.featureGroup}</p>}
+          {/* ── Features (only for existing plans) ── */}
+          {!isNew && features.length > 0 && (
+            <div style={sectionDivStyle}>
+              <p style={sectionHeadStyle}>الميزات</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {features.map(feat => (
+                  <div
+                    key={feat.key}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0.75rem", borderRadius: 8, background: "var(--color-bg-secondary, #f9fafb)", opacity: featureSaving === feat.key ? 0.6 : 1, transition: "opacity 0.2s" }}
+                  >
+                    <div>
+                      <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 500 }}>{feat.name}</p>
+                      {feat.featureGroup && <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{feat.featureGroup}</p>}
+                    </div>
+                    <ToggleSwitch checked={feat.isEnabled} onChange={(val) => handleFeatureToggle(feat.key, val)} disabled={featureSaving === feat.key} />
                   </div>
-                  <ToggleSwitch checked={feat.isEnabled} onChange={(val) => handleFeatureToggle(feat.key, val)} disabled={featureSaving === feat.key} />
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+        </div>
       </div>
     </div>
   );
