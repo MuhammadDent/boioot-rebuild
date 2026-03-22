@@ -13,7 +13,7 @@ import type { CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
 const COMPANY_ROLES = ["Admin", "CompanyOwner"];
 
 export default function NewPropertyPage() {
-  const { user, isLoading } = useProtectedRoute({
+  const { user, isLoading, isUnauthorized } = useProtectedRoute({
     allowedRoles: ["Admin", "CompanyOwner", "Broker", "Owner"],
   });
 
@@ -41,7 +41,48 @@ export default function NewPropertyPage() {
     }
   }
 
-  if (isLoading || !user) return null;
+  if (isLoading) return null;
+
+  // Authenticated but role not allowed — show brief message before redirect fires.
+  if (isUnauthorized || !user) {
+    return (
+      <div
+        style={{
+          minHeight: "60vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.75rem",
+          textAlign: "center",
+          padding: "2rem",
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ opacity: 0.5 }}
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <p style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
+          ليس لديك صلاحية إضافة إعلانات
+        </p>
+        <p style={{ margin: 0, fontSize: "0.85rem" }}>
+          يجب أن يكون حسابك مُفعّلاً كمالك عقار أو وسيط أو مالك شركة.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div

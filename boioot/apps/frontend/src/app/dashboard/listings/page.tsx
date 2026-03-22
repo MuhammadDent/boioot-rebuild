@@ -41,7 +41,8 @@ function formatDate(d: string) {
 }
 
 export default function ListingsPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, hasPermission } = useAuth();
+  const canCreate = hasPermission("properties.create");
   const router = useRouter();
 
   // ── Listings state (primary / critical) ───────────────────────────────────
@@ -153,18 +154,20 @@ export default function ListingsPage() {
                 </p>
               )}
             </div>
-            <Link
-              href="/dashboard/properties/new"
-              style={{
-                padding: "0.55rem 1.3rem", borderRadius: 9,
-                background: limitReached ? "#9ca3af" : "var(--color-primary)",
-                color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem",
-                pointerEvents: limitReached ? "none" : "auto",
-                opacity: limitReached ? 0.65 : 1,
-              }}
-            >
-              + إضافة إعلان جديد
-            </Link>
+            {canCreate && (
+              <Link
+                href="/dashboard/properties/new"
+                style={{
+                  padding: "0.55rem 1.3rem", borderRadius: 9,
+                  background: limitReached ? "#9ca3af" : "var(--color-primary)",
+                  color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem",
+                  pointerEvents: limitReached ? "none" : "auto",
+                  opacity: limitReached ? 0.65 : 1,
+                }}
+              >
+                + إضافة إعلان جديد
+              </Link>
+            )}
           </div>
         </div>
 
@@ -249,13 +252,21 @@ export default function ListingsPage() {
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
             <p style={{ margin: "0 0 0.5rem", fontSize: "1rem", color: "#374151", fontWeight: 600 }}>لا توجد إعلانات بعد</p>
-            <p style={{ margin: "0 0 1.5rem", fontSize: "0.85rem", color: "#94a3b8" }}>أضف إعلانك الأول الآن وابدأ في التواصل مع المشترين</p>
-            <Link
-              href="/dashboard/properties/new"
-              style={{ padding: "0.65rem 1.5rem", borderRadius: 9, background: "var(--color-primary)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem" }}
-            >
-              + إضافة إعلان جديد
-            </Link>
+            {canCreate ? (
+              <>
+                <p style={{ margin: "0 0 1.5rem", fontSize: "0.85rem", color: "#94a3b8" }}>أضف إعلانك الأول الآن وابدأ في التواصل مع المشترين</p>
+                <Link
+                  href="/dashboard/properties/new"
+                  style={{ padding: "0.65rem 1.5rem", borderRadius: 9, background: "var(--color-primary)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem" }}
+                >
+                  + إضافة إعلان جديد
+                </Link>
+              </>
+            ) : (
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#94a3b8" }}>
+                لا توجد إعلانات مرتبطة بحسابك حالياً.
+              </p>
+            )}
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>

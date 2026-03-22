@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
@@ -28,6 +28,10 @@ interface Options {
 /**
  * Protects a page by redirecting unauthenticated users.
  *
+ * Returns { user, isLoading, isAuthenticated, isUnauthorized, logout }.
+ * isUnauthorized is true momentarily when an authenticated user lacks access,
+ * before the redirect fires — use it to show a "no permission" UI state.
+ *
  * Preferred usage (permission-based — admin pages):
  *   const { isLoading } = useProtectedRoute({ requiredPermission: "blog.view" });
  *
@@ -51,6 +55,7 @@ export function useProtectedRoute(options: Options = {}) {
 
   const { user, isAuthenticated, isLoading, logout, hasPermission } = useAuth();
   const router = useRouter();
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
@@ -63,6 +68,7 @@ export function useProtectedRoute(options: Options = {}) {
     // Permission-based guard (preferred for admin pages)
     if (requiredPermission !== undefined) {
       if (!hasPermission(requiredPermission)) {
+        setIsUnauthorized(true);
         router.replace(unauthorizedRedirect);
       }
       return;
@@ -70,9 +76,10 @@ export function useProtectedRoute(options: Options = {}) {
 
     // Role-based guard (legacy, for platform-facing pages)
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+      setIsUnauthorized(true);
       router.replace(unauthorizedRedirect);
     }
   }, [isLoading, isAuthenticated, user, router, redirectTo, allowedRoles, unauthorizedRedirect, requiredPermission, hasPermission]);
 
-  return { user, isLoading, isAuthenticated, logout };
+  return { user, isLoading, isAuthenticated, isUnauthorized, logout };
 }
