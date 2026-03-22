@@ -451,4 +451,55 @@ export const adminApi = {
   rejectInvoice(invoiceId: string, note?: string): Promise<AdminInvoiceResponse> {
     return api.post(`/admin/billing/invoices/${invoiceId}/reject`, { note: note || null });
   },
+
+  // ── Subscription Payment Requests ─────────────────────────────────────────
+
+  /** GET /api/admin/payment-requests — paginated + filtered */
+  getPaymentRequests(params: {
+    status?: string;
+    paymentMethod?: string;
+    fromDate?: string;
+    toDate?: string;
+    page?: number;
+    pageSize?: number;
+  } = {}): Promise<import("@/types").PagedResult<import("@/features/subscriptionPayments/types").PaymentRequestResponse>> {
+    const qs = new URLSearchParams();
+    if (params.status)        qs.set("status", params.status);
+    if (params.paymentMethod) qs.set("paymentMethod", params.paymentMethod);
+    if (params.fromDate)      qs.set("fromDate", params.fromDate);
+    if (params.toDate)        qs.set("toDate", params.toDate);
+    qs.set("page",     String(params.page     ?? 1));
+    qs.set("pageSize", String(params.pageSize ?? 30));
+    return api.get(`/admin/payment-requests?${qs}`);
+  },
+
+  /** GET /api/admin/payment-requests/{id} */
+  getPaymentRequest(id: string): Promise<import("@/features/subscriptionPayments/types").PaymentRequestResponse> {
+    return api.get(`/admin/payment-requests/${id}`);
+  },
+
+  /** POST /api/admin/payment-requests/{id}/under-review */
+  paymentMarkUnderReview(id: string): Promise<import("@/features/subscriptionPayments/types").PaymentRequestResponse> {
+    return api.post(`/admin/payment-requests/${id}/under-review`, {});
+  },
+
+  /** POST /api/admin/payment-requests/{id}/approve */
+  paymentApprove(id: string, note?: string): Promise<import("@/features/subscriptionPayments/types").PaymentRequestResponse> {
+    return api.post(`/admin/payment-requests/${id}/approve`, { note: note || null });
+  },
+
+  /** POST /api/admin/payment-requests/{id}/reject  — note is required */
+  paymentReject(id: string, note: string): Promise<import("@/features/subscriptionPayments/types").PaymentRequestResponse> {
+    return api.post(`/admin/payment-requests/${id}/reject`, { note });
+  },
+
+  /** POST /api/admin/payment-requests/{id}/cancel */
+  paymentAdminCancel(id: string, note?: string): Promise<import("@/features/subscriptionPayments/types").PaymentRequestResponse> {
+    return api.post(`/admin/payment-requests/${id}/cancel`, { note: note || null });
+  },
+
+  /** POST /api/admin/payment-requests/{id}/activate */
+  paymentActivate(id: string): Promise<import("@/features/subscriptionPayments/types").PaymentRequestResponse> {
+    return api.post(`/admin/payment-requests/${id}/activate`, {});
+  },
 };
