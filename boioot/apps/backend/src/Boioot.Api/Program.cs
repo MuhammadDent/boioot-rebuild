@@ -1286,6 +1286,24 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_PropertyAmenitySelections_PropertyId ON PropertyAmenitySelections(PropertyId)"); }
         catch { /* index already exists */ }
 
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS Notifications (
+                Id                TEXT NOT NULL PRIMARY KEY,
+                UserId            TEXT NOT NULL REFERENCES Users(Id) ON DELETE CASCADE,
+                Type              TEXT NOT NULL,
+                Title             TEXT NOT NULL,
+                Body              TEXT NOT NULL,
+                IsRead            INTEGER NOT NULL DEFAULT 0,
+                RelatedEntityId   TEXT,
+                RelatedEntityType TEXT,
+                CreatedAt         TEXT NOT NULL DEFAULT (datetime('now')),
+                UpdatedAt         TEXT NOT NULL DEFAULT (datetime('now'))
+            )");
+        try { await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Notifications_UserId ON Notifications(UserId)"); }
+        catch { /* index already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Notifications_UserId_IsRead ON Notifications(UserId, IsRead)"); }
+        catch { /* index already exists */ }
+
         await seeder.SeedAsync();
 
         // DIAGNOSTIC: verify OgDescription via raw ADO.NET (bypasses EF Core)

@@ -1,0 +1,85 @@
+We need to separate communication features into two simple systems only.
+
+We do NOT want an enterprise-level implementation.
+We want a clean, simple, scalable separation at the application level.
+
+==================================================
+TARGET STRUCTURE
+==================================================
+
+System 1: Messaging System
+System 2: Notification System
+
+==================================================
+SYSTEM 1: MESSAGING SYSTEM
+==================================================
+
+Purpose:
+Handle only direct conversations between users.
+
+Includes:
+- private messages
+- chat/conversation threads
+- unread message count
+- messages page
+- messages icon in header
+
+Must NOT include:
+- listing approval/rejection
+- trial limit alerts
+- upgrade prompts
+- system alerts
+- business event notifications
+
+Header behavior:
+- clicking the messages icon opens the messages page only
+- badge count should represent unread conversations/messages only
+
+==================================================
+SYSTEM 2: NOTIFICATION SYSTEM
+==================================================
+
+Purpose:
+Handle only system and business event notifications.
+
+Includes:
+- listing approved
+- listing rejected
+- new request on listing
+- free trial warning
+- trial limit reached
+- upgrade account prompt
+- general system alerts related to user activity
+
+Must NOT include:
+- user-to-user chat messages
+- conversation threads
+- direct replies between users
+
+Header behavior:
+- add a bell icon in the header
+- clicking it opens a simple notifications dropdown or notifications panel
+- badge count should represent unread notifications only
+
+==================================================
+GENERAL RULES
+==================================================
+
+1. Keep both systems separated in logic and UI.
+2. Do not mix message data with notification data.
+3. Use two distinct models/concepts:
+   - Message
+   - Notification
+4. Keep implementation simple and practical.
+5. No enterprise-level complexity.
+6. Build it in a way that is clean now and extendable later.
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+- Messages icon is only for conversations
+- Notifications bell is only for alerts/events
+- Each has its own badge counter
+- Clear separation in dashboard/header behavior
+- Clean SaaS-style UX without overengineering

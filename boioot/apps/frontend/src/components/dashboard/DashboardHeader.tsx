@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import NotificationsBell from "./NotificationsBell";
 
 // ─── Icon helper ──────────────────────────────────────────────────────────────
 
@@ -71,6 +72,9 @@ export default function DashboardHeader({ onMenuToggle }: Props) {
             d={<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></>}
           />
         </Link>
+
+        {/* Notifications bell */}
+        <NotificationsBell />
 
         {/* Back to site */}
         <Link

@@ -11,6 +11,8 @@ using Boioot.Application.Features.BuyerRequests.Interfaces;
 using Boioot.Application.Features.Dashboard.Interfaces;
 using Boioot.Application.Features.Favorites.Interfaces;
 using Boioot.Application.Features.Messaging.Interfaces;
+using Boioot.Application.Features.Notifications.Interfaces;
+using Boioot.Infrastructure.Features.Notifications;
 using Boioot.Application.Features.Plans.Interfaces;
 using Boioot.Application.Features.Pricing.Interfaces;
 using Boioot.Application.Features.Projects.Interfaces;
@@ -74,6 +76,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBlogSlugService, BlogSlugService>();
         services.AddScoped<IBlogService, BlogService>();
         services.AddScoped<ILocationMasterService, LocationMasterService>();
+        services.AddScoped<IUserNotificationService, NotificationService>();
 
         // ── Billing providers ──────────────────────────────────────────────────
         // Both registered as IBillingProvider — BillingService injects IEnumerable<IBillingProvider>
