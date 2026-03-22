@@ -13,6 +13,11 @@ import {
 import type { UserProfileResponse, BusinessProfileResponse } from "@/types";
 import { onboardingApi } from "@/features/onboarding/api";
 import LocationPickerDynamic from "@/components/onboarding/LocationPickerDynamic";
+import {
+  ProvinceSelect,
+  CitySelect,
+  NeighborhoodSelect,
+} from "@/components/dashboard/LocationSelect";
 
 // ─── Payload types (API shape — unchanged) ────────────────────────────────────
 
@@ -1272,6 +1277,7 @@ function BusinessLocationTab() {
   const [banner,      setBanner]      = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const [snapshot,  setSnapshot]  = useState<BusinessProfileResponse | null>(null);
+  const [province,  setProvince]  = useState("");
   const [city,      setCity]      = useState("");
   const [district,  setDistrict]  = useState("");
   const [address,   setAddress]   = useState("");
@@ -1283,6 +1289,7 @@ function BusinessLocationTab() {
       .getBusinessProfile()
       .then((data) => {
         setSnapshot(data);
+        setProvince(data.province ?? "");
         setCity(data.city ?? "");
         setDistrict(data.neighborhood ?? "");
         setAddress(data.address ?? "");
@@ -1300,18 +1307,15 @@ function BusinessLocationTab() {
     e.preventDefault();
     setBanner(null);
 
-    if (!city.trim()) {
-      setBanner({ type: "error", msg: "المدينة مطلوبة." });
-      return;
-    }
     if (!snapshot) return;
 
     setSaving(true);
     try {
       await onboardingApi.updateBusinessProfile({
         displayName:  snapshot.displayName,
-        city:         city.trim(),
-        neighborhood: district.trim() || undefined,
+        province:     province.trim()  || undefined,
+        city:         city.trim()      || undefined,
+        neighborhood: district.trim()  || undefined,
         address:      address.trim()  || undefined,
         phone:        snapshot.phone    || undefined,
         whatsApp:     snapshot.whatsApp || undefined,
@@ -1328,7 +1332,7 @@ function BusinessLocationTab() {
     }
   }
 
-  function useMyLocation() {
+  function handleUseMyLocation() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
       setLatitude(pos.coords.latitude);
@@ -1371,27 +1375,27 @@ function BusinessLocationTab() {
         </p>
       </div>
 
-      {/* Text fields */}
+      {/* Location fields */}
       <div style={{ display: "grid", gap: "1rem", maxWidth: 560 }}>
-        <div>
-          <FieldLabel>المدينة *</FieldLabel>
-          <Input
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="مثال: دمشق"
-            maxLength={100}
-          />
-        </div>
+        <ProvinceSelect
+          label="المحافظة"
+          value={province}
+          onChange={(val) => { setProvince(val); setCity(""); setDistrict(""); }}
+        />
 
-        <div>
-          <FieldLabel>الحي / المنطقة</FieldLabel>
-          <Input
-            value={district}
-            onChange={(e) => setDistrict(e.target.value)}
-            placeholder="مثال: المزة"
-            maxLength={100}
-          />
-        </div>
+        <CitySelect
+          label="المدينة"
+          value={city}
+          onChange={(val) => { setCity(val); setDistrict(""); }}
+          province={province}
+        />
+
+        <NeighborhoodSelect
+          label="الحي / المنطقة"
+          value={district}
+          onChange={setDistrict}
+          city={city}
+        />
 
         <div>
           <FieldLabel>العنوان التفصيلي</FieldLabel>
@@ -1435,7 +1439,7 @@ function BusinessLocationTab() {
           </span>
           <button
             type="button"
-            onClick={useMyLocation}
+            onClick={handleUseMyLocation}
             style={{
               padding: "0.4rem 0.9rem",
               background: "#f0fdf4",
@@ -1453,11 +1457,10 @@ function BusinessLocationTab() {
         </div>
 
         <LocationPickerDynamic
-          latitude={latitude}
-          longitude={longitude}
-          onChange={(lat, lng) => {
-            setLatitude(lat);
-            setLongitude(lng);
+          value={latitude !== null && longitude !== null ? { lat: latitude, lng: longitude } : null}
+          onChange={(pos) => {
+            setLatitude(pos.lat);
+            setLongitude(pos.lng);
           }}
         />
 

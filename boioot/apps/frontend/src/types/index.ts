@@ -1,6 +1,7 @@
 export interface BusinessProfileResponse {
   companyId: string;
   displayName: string;
+  province?: string;
   city?: string;
   neighborhood?: string;
   address?: string;

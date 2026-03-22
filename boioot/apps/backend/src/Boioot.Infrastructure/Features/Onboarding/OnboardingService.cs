@@ -29,7 +29,8 @@ public class OnboardingService : IOnboardingService
         var company = await ResolveCompanyAsync(userId, ct);
 
         company.Name          = request.DisplayName.Trim();
-        company.City          = request.City.Trim();
+        company.Province      = string.IsNullOrWhiteSpace(request.Province)     ? null : request.Province.Trim();
+        company.City          = string.IsNullOrWhiteSpace(request.City)         ? null : request.City.Trim();
         company.Neighborhood  = string.IsNullOrWhiteSpace(request.Neighborhood) ? null : request.Neighborhood.Trim();
         company.Address       = string.IsNullOrWhiteSpace(request.Address)      ? null : request.Address.Trim();
         company.Phone         = string.IsNullOrWhiteSpace(request.Phone)        ? null : request.Phone.Trim();
@@ -63,6 +64,7 @@ public class OnboardingService : IOnboardingService
         {
             CompanyId         = c.Id,
             DisplayName       = c.Name,
+            Province          = c.Province,
             City              = c.City,
             Neighborhood      = c.Neighborhood,
             Address           = c.Address,

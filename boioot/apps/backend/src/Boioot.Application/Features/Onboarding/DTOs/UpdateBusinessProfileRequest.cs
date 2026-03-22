@@ -8,9 +8,11 @@ public class UpdateBusinessProfileRequest
     [MaxLength(200, ErrorMessage = "الاسم التجاري لا يتجاوز 200 حرف")]
     public string DisplayName { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "المدينة مطلوبة")]
+    [MaxLength(100, ErrorMessage = "اسم المحافظة لا يتجاوز 100 حرف")]
+    public string? Province { get; set; }
+
     [MaxLength(100, ErrorMessage = "اسم المدينة لا يتجاوز 100 حرف")]
-    public string City { get; set; } = string.Empty;
+    public string? City { get; set; }
 
     [MaxLength(150, ErrorMessage = "الحي/المنطقة لا تتجاوز 150 حرف")]
     public string? Neighborhood { get; set; }

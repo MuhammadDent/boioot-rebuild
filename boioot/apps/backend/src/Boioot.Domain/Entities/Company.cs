@@ -10,6 +10,7 @@ public class Company : BaseEntity, ISoftDeletable
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public string? Address { get; set; }
+    public string? Province { get; set; }
     public string? City { get; set; }
     public string? Neighborhood { get; set; }
     public string? WhatsApp { get; set; }

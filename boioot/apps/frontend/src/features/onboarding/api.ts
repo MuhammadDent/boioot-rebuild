@@ -3,7 +3,8 @@ import type { BusinessProfileResponse } from "@/types";
 
 export interface UpdateBusinessProfilePayload {
   displayName: string;
-  city: string;
+  province?: string;
+  city?: string;
   neighborhood?: string;
   address?: string;
   phone?: string;

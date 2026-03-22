@@ -287,6 +287,8 @@ using (var scope = app.Services.CreateScope())
         catch { /* column already exists */ }
 
         // ── Company business-profile fields (onboarding) ──────────────────────
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN Province TEXT"); }
+        catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN Neighborhood TEXT"); }
         catch { /* column already exists */ }
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN WhatsApp TEXT"); }
