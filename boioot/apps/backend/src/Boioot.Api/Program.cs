@@ -95,7 +95,18 @@ app.UseExceptionHandler(errorApp =>
         var error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
         context.Response.ContentType = "application/json";
 
-        if (error is BoiootException boiootEx)
+        if (error is PlanLimitException planEx)
+        {
+            context.Response.StatusCode = planEx.StatusCode;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                code            = planEx.ErrorCode,
+                limit           = planEx.LimitKey,
+                message         = planEx.Message,
+                upgradeRequired = planEx.UpgradeRequired,
+            });
+        }
+        else if (error is BoiootException boiootEx)
         {
             context.Response.StatusCode = boiootEx.StatusCode;
             await context.Response.WriteAsJsonAsync(new

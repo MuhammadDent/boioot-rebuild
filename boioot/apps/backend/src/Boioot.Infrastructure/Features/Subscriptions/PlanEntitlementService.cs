@@ -148,4 +148,40 @@ public class PlanEntitlementService : IPlanEntitlementService
 
         return agentCount < (int)limit;
     }
+
+    // ── CanCreateProjectAsync ─────────────────────────────────────────────
+    public async Task<bool> CanCreateProjectAsync(Guid accountId, CancellationToken ct = default)
+    {
+        // 1. Feature gate: project_management must be enabled
+        var hasFeature = await HasFeatureAsync(accountId, SubscriptionKeys.ProjectManagement, ct);
+        if (!hasFeature) return false;
+
+        // 2. Limit gate: max_projects (-1 = unlimited, 0 = no access)
+        var limit = await GetLimitAsync(accountId, SubscriptionKeys.MaxProjects, ct);
+
+        if (limit == -1) return true;
+        if (limit == 0)  return false;
+
+        // 3. Count current projects.
+        // Projects belong to Companies. Companies are linked to Account via AccountUsers → Agents.
+        // Path: accountId → AccountUsers (get userIds) → Agents (get companyIds) → Projects
+        var userIds = await _db.AccountUsers
+            .Where(au => au.AccountId == accountId && au.IsActive)
+            .Select(au => au.UserId)
+            .ToListAsync(ct);
+
+        var companyIds = await _db.Set<Domain.Entities.Agent>()
+            .Where(a => userIds.Contains(a.UserId) && a.CompanyId != null)
+            .Select(a => a.CompanyId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (!companyIds.Any()) return true; // no companies yet → allow first project
+
+        var projectCount = await _db.Projects
+            .Where(p => companyIds.Contains(p.CompanyId))
+            .CountAsync(ct);
+
+        return projectCount < (int)limit;
+    }
 }

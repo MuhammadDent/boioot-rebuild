@@ -3,6 +3,7 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
+using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
@@ -488,39 +489,43 @@ public class PropertyService : IPropertyService
     public async Task<PropertyResponse> CreateUserListingAsync(
         Guid userId, string userRole, CreatePropertyRequest request, CancellationToken ct = default)
     {
-        // ── فحص حد الاشتراك (النظام الجديد) ──────────────────────────────
-        // Fallback: بدون حساب مرتبط → يُسمح (المالك الشخصي قبل ربط الحساب).
+        // ── Subscription plan enforcement ─────────────────────────────────
+        // Priority: subscription plan limits > trial/monthly legacy logic.
+        // If user has an active account subscription → enforce plan limits only.
+        // If no account (e.g. User role before upgrade) → fall back to trial/monthly limits.
         var acctId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
         if (acctId.HasValue)
         {
             var canCreate = await _entitlement.CanCreatePropertyAsync(acctId.Value, ct);
             if (!canCreate)
-                throw new BoiootException(
-                    "لقد وصلت إلى الحد الأقصى في خطتك. يرجى ترقية خطتك للمتابعة.", 403);
-        }
-        // acctId == null → allow
-
-        // ── Free-trial gate (User role — all-time, not monthly) ──────────────
-        // Enforced via User.TrialListingsUsed (incremented on each creation,
-        // never decremented on deletion) — prevents gaming by delete-and-repost.
-        if (userRole == RoleNames.User)
-        {
-            var trialUser = await _context.Users.FindAsync([userId], ct)
-                            ?? throw new BoiootException("المستخدم غير موجود.", 404);
-            if (trialUser.TrialListingsUsed >= 2)
-                throw new BoiootException(
-                    "انتهت إعلاناتك التجريبية المجانية. يرجى ترقية حسابك إلى مالك أو وسيط للمتابعة.",
-                    403,
-                    "TRIAL_LIMIT_REACHED");
+                throw new PlanLimitException(
+                    SubscriptionKeys.MaxActiveListings,
+                    "لقد وصلت إلى الحد الأقصى من الإعلانات في خطتك الحالية. يرجى ترقية خطتك للمتابعة.");
+            // Subscription check passed → skip legacy monthly limit check below
         }
         else
         {
-            // ── Monthly limit (Owner, Broker, etc.) ──────────────────────────
-            var (used, limit, _) = await GetMonthlyListingStatsAsync(userId, userRole, ct);
-            if (used >= limit)
-                throw new BoiootException(
-                    $"لقد وصلت إلى الحد الأقصى من الإعلانات هذا الشهر ({limit} إعلانات). يرجى ترقية عضويتك لإضافة المزيد.",
-                    429);
+            // ── No subscription: fall back to trial / monthly legacy limits ──
+            if (userRole == RoleNames.User)
+            {
+                // Free-trial gate: all-time counter (never decremented on deletion)
+                var trialUser = await _context.Users.FindAsync([userId], ct)
+                                ?? throw new BoiootException("المستخدم غير موجود.", 404);
+                if (trialUser.TrialListingsUsed >= 2)
+                    throw new BoiootException(
+                        "انتهت إعلاناتك التجريبية المجانية. يرجى ترقية حسابك إلى مالك أو وسيط للمتابعة.",
+                        403,
+                        "TRIAL_LIMIT_REACHED");
+            }
+            else
+            {
+                // Monthly limit for Owner, Broker, etc.
+                var (used, limit, _) = await GetMonthlyListingStatsAsync(userId, userRole, ct);
+                if (used >= limit)
+                    throw new PlanLimitException(
+                        SubscriptionKeys.MaxActiveListings,
+                        $"لقد وصلت إلى الحد الأقصى من الإعلانات هذا الشهر ({limit} إعلانات). يرجى ترقية عضويتك لإضافة المزيد.");
+            }
         }
 
         // ── Audit: resolve creator's company (if any) ────────────────────────

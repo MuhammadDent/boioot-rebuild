@@ -1,0 +1,120 @@
+We are now moving to PHASE B of the Subscription System.
+
+IMPORTANT:
+- Do NOT modify database schema unless absolutely necessary
+- Use the existing Plan, PlanLimits, PlanFeatures, Subscription models
+- Do NOT build UI yet
+- Focus on backend enforcement only
+
+==================================================
+PHASE B GOAL
+==================================================
+
+Activate subscription enforcement rules in the system.
+
+We want the system to actually PREVENT actions when limits are exceeded.
+
+==================================================
+STEP 1 — BUILD SUBSCRIPTION RESOLVER
+==================================================
+
+Create a central service:
+
+SubscriptionResolver / SubscriptionService
+
+Responsibilities:
+
+- Get current user's active subscription
+- Resolve current Plan
+- Resolve all PlanLimits
+- Resolve all PlanFeatures
+
+Expose methods like:
+
+- GetCurrentPlan(user)
+- GetLimit(user, "max_active_listings")
+- GetLimit(user, "max_agents")
+- GetLimit(user, "max_projects")
+- HasFeature(user, "project_management")
+
+==================================================
+STEP 2 — LISTING LIMIT ENFORCEMENT
+==================================================
+
+In PropertyService (or listing creation logic):
+
+Before creating a new listing:
+
+1. Get user's current plan
+2. Get max_active_listings limit
+3. Count current listings (IMPORTANT: only ACTIVE listings)
+4. If exceeded:
+   - return error:
+     code: PLAN_LIMIT_REACHED
+     message: "You have reached your plan limit"
+
+IMPORTANT:
+- Keep trial logic working for free users
+- If user has subscription → override trial logic
+
+==================================================
+STEP 3 — AGENT LIMIT ENFORCEMENT
+==================================================
+
+In Agent creation logic:
+
+- Apply max_agents limit from PlanLimits
+- If exceeded → block creation
+
+==================================================
+STEP 4 — PROJECT LIMIT ENFORCEMENT
+==================================================
+
+In Project creation:
+
+- Check:
+  - HasFeature("project_management")
+  - max_projects
+- If feature disabled → block
+- If limit exceeded → block
+
+==================================================
+STEP 5 — ERROR STANDARDIZATION
+==================================================
+
+All limit errors should follow:
+
+{
+  code: "PLAN_LIMIT_REACHED",
+  limit: "max_active_listings",
+  message: "...",
+  upgradeRequired: true
+}
+
+==================================================
+STEP 6 — KEEP SYSTEM SAFE
+==================================================
+
+- Do NOT break existing flows
+- If user has NO subscription:
+  → fallback to current trial system
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+When done, provide:
+
+1. Where SubscriptionResolver is implemented
+2. How limits are read (PlanLimits usage)
+3. Which services were modified:
+   - PropertyService
+   - AgentService
+   - ProjectService
+4. Example of enforcement code
+5. Example of error response
+6. Confirmation trial still works
+
+IMPORTANT:
+Stop after PHASE B.
+Do NOT implement UI or dashboard yet.

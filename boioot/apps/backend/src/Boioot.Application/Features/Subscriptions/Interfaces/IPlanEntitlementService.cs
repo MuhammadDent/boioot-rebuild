@@ -26,4 +26,10 @@ public interface IPlanEntitlementService
     /// Uses the "max_agents" limit key.
     /// </summary>
     Task<bool> CanAddAgentAsync(Guid accountId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns true if the account can create a new project.
+    /// Requires the "project_management" feature AND checks "max_projects" limit.
+    /// </summary>
+    Task<bool> CanCreateProjectAsync(Guid accountId, CancellationToken ct = default);
 }

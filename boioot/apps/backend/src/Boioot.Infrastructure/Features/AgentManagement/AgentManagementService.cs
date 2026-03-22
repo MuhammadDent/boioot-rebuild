@@ -2,6 +2,7 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.AgentManagement.DTOs;
 using Boioot.Application.Features.AgentManagement.Interfaces;
+using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
@@ -45,8 +46,9 @@ public class AgentManagementService : IAgentManagementService
         {
             var canAdd = await _entitlement.CanAddAgentAsync(accountId.Value, ct);
             if (!canAdd)
-                throw new BoiootException(
-                    "لقد وصلت إلى الحد الأقصى في خطتك. يرجى ترقية خطتك للمتابعة.", 403);
+                throw new PlanLimitException(
+                    SubscriptionKeys.MaxAgents,
+                    "لقد وصلت إلى الحد الأقصى لعدد الوكلاء في خطتك الحالية. يرجى ترقية خطتك لإضافة المزيد.");
         }
         // accountId == null → allow (no active account membership found)
 

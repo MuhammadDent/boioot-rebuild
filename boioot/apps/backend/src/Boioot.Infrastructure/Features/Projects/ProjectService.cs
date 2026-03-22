@@ -3,6 +3,8 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Projects.DTOs;
 using Boioot.Application.Features.Projects.Interfaces;
+using Boioot.Application.Features.Subscriptions;
+using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
 using Boioot.Infrastructure.Persistence;
@@ -15,16 +17,22 @@ public class ProjectService : IProjectService
 {
     private readonly BoiootDbContext _context;
     private readonly ICompanyOwnershipService _ownership;
+    private readonly IPlanEntitlementService _entitlement;
+    private readonly IAccountResolver _accountResolver;
     private readonly ILogger<ProjectService> _logger;
 
     public ProjectService(
         BoiootDbContext context,
         ICompanyOwnershipService ownership,
+        IPlanEntitlementService entitlement,
+        IAccountResolver accountResolver,
         ILogger<ProjectService> logger)
     {
-        _context = context;
-        _ownership = ownership;
-        _logger = logger;
+        _context        = context;
+        _ownership      = ownership;
+        _entitlement    = entitlement;
+        _accountResolver = accountResolver;
+        _logger         = logger;
     }
 
     public async Task<PagedResult<ProjectResponse>> GetPublicListAsync(
@@ -90,6 +98,17 @@ public class ProjectService : IProjectService
             throw new BoiootException("الشركة غير موجودة", 404);
 
         await EnsureCanManageCompanyAsync(userId, userRole, companyId, ct);
+
+        // ── Subscription enforcement: project_management feature + max_projects ──
+        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (accountId.HasValue)
+        {
+            var canCreate = await _entitlement.CanCreateProjectAsync(accountId.Value, ct);
+            if (!canCreate)
+                throw new PlanLimitException(
+                    SubscriptionKeys.MaxProjects,
+                    "لقد وصلت إلى الحد الأقصى للمشاريع في خطتك الحالية، أو أن خطتك لا تدعم إدارة المشاريع. يرجى ترقية خطتك للمتابعة.");
+        }
 
         var project = new Project
         {
