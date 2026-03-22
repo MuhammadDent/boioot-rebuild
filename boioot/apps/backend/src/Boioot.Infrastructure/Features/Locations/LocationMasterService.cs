@@ -48,9 +48,10 @@ public sealed class LocationMasterService : ILocationMasterService
         var displayName    = CapitalizeArabic(name);
         var normalizedName = ArabicNormalizer.Normalize(name);
 
-        // ── 1. Strict duplicate ───────────────────────────────────────────────
+        // ── 1. Strict duplicate — ACTIVE rows only ────────────────────────────
+        // Inactive rows are deactivated duplicates; they do NOT block creation.
         var strictDup = await _db.LocationCities
-            .Where(c => c.Province == province && c.NormalizedName == normalizedName)
+            .Where(c => c.IsActive && c.Province == province && c.NormalizedName == normalizedName)
             .Select(c => new LocationItemDto(c.Id, c.Name, c.Province))
             .FirstOrDefaultAsync(ct);
 
@@ -60,13 +61,15 @@ public sealed class LocationMasterService : ILocationMasterService
             return new LocationMasterResult("exists", strictDup, []);
         }
 
-        // ── 2. Soft similarity (skip if user forced creation) ─────────────────
+        // ── 2. Soft similarity — ACTIVE rows only; blocked unless forceCreate ─
+        // If similar active entries exist and the user has NOT explicitly confirmed,
+        // return suggestions. Creation is BLOCKED until forceCreate = true.
         if (!forceCreate)
         {
             var softKey = ArabicNormalizer.SoftNormalize(name);
 
             var candidates = await _db.LocationCities
-                .Where(c => c.Province == province && c.IsActive)
+                .Where(c => c.IsActive && c.Province == province)
                 .Select(c => new { c.Id, c.Name, c.Province, c.NormalizedName })
                 .ToListAsync(ct);
 
@@ -78,7 +81,7 @@ public sealed class LocationMasterService : ILocationMasterService
 
             if (similar.Count > 0)
             {
-                _logger.LogDebug("City '{Name}' has {Count} soft similar entries in '{Province}'.", name, similar.Count, province);
+                _logger.LogDebug("City '{Name}' has {Count} soft similar entries in '{Province}'. Creation blocked — forceCreate required.", name, similar.Count, province);
                 return new LocationMasterResult("similar", null, similar);
             }
         }
@@ -100,9 +103,9 @@ public sealed class LocationMasterService : ILocationMasterService
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true)
         {
-            // Race condition — another request won; return existing
+            // Race condition — another active request beat us; return that existing row.
             var race = await _db.LocationCities
-                .Where(c => c.Province == province && c.NormalizedName == normalizedName)
+                .Where(c => c.IsActive && c.Province == province && c.NormalizedName == normalizedName)
                 .Select(c => new LocationItemDto(c.Id, c.Name, c.Province))
                 .FirstOrDefaultAsync(ct);
 
@@ -140,9 +143,9 @@ public sealed class LocationMasterService : ILocationMasterService
         var displayName    = CapitalizeArabic(name);
         var normalizedName = ArabicNormalizer.Normalize(name);
 
-        // ── 1. Strict duplicate ───────────────────────────────────────────────
+        // ── 1. Strict duplicate — ACTIVE rows only ────────────────────────────
         var strictDup = await _db.LocationNeighborhoods
-            .Where(n => n.City == city && n.NormalizedName == normalizedName)
+            .Where(n => n.IsActive && n.City == city && n.NormalizedName == normalizedName)
             .Select(n => new LocationItemDto(n.Id, n.Name, n.City))
             .FirstOrDefaultAsync(ct);
 
@@ -152,13 +155,13 @@ public sealed class LocationMasterService : ILocationMasterService
             return new LocationMasterResult("exists", strictDup, []);
         }
 
-        // ── 2. Soft similarity (skip if user forced creation) ─────────────────
+        // ── 2. Soft similarity — ACTIVE rows only; blocked unless forceCreate ─
         if (!forceCreate)
         {
             var softKey = ArabicNormalizer.SoftNormalize(name);
 
             var candidates = await _db.LocationNeighborhoods
-                .Where(n => n.City == city && n.IsActive)
+                .Where(n => n.IsActive && n.City == city)
                 .Select(n => new { n.Id, n.Name, n.City, n.NormalizedName })
                 .ToListAsync(ct);
 
@@ -170,7 +173,7 @@ public sealed class LocationMasterService : ILocationMasterService
 
             if (similar.Count > 0)
             {
-                _logger.LogDebug("Neighborhood '{Name}' has {Count} soft similar entries in '{City}'.", name, similar.Count, city);
+                _logger.LogDebug("Neighborhood '{Name}' has {Count} soft similar entries in '{City}'. Creation blocked — forceCreate required.", name, similar.Count, city);
                 return new LocationMasterResult("similar", null, similar);
             }
         }
@@ -192,8 +195,9 @@ public sealed class LocationMasterService : ILocationMasterService
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true)
         {
+            // Race condition — another active request beat us; return that existing row.
             var race = await _db.LocationNeighborhoods
-                .Where(n => n.City == city && n.NormalizedName == normalizedName)
+                .Where(n => n.IsActive && n.City == city && n.NormalizedName == normalizedName)
                 .Select(n => new LocationItemDto(n.Id, n.Name, n.City))
                 .FirstOrDefaultAsync(ct);
 

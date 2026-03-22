@@ -226,33 +226,88 @@ using (var scope = app.Services.CreateScope())
         }
         catch { /* ignore backfill errors */ }
 
-        // Transition indexes: drop old exact-name indexes, create normalized-name indexes
-        try { await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS IX_LocationCities_Name"); }
-        catch { /* ignore */ }
-
-        try
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationCities_Province_NormalizedName ON LocationCities(Province, NormalizedName) WHERE NormalizedName != ''");
-        }
-        catch { /* already exists */ }
-
-        try { await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS IX_LocationNeighborhoods_Name_City"); }
-        catch { /* ignore */ }
-
-        try
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "CREATE UNIQUE INDEX IF NOT EXISTS IX_LocationNeighborhoods_NormalizedName_City ON LocationNeighborhoods(NormalizedName, City) WHERE NormalizedName != ''");
-        }
-        catch { /* already exists */ }
-
         // ── Location IsActive column ──────────────────────────────────────────────
+        // Must be added BEFORE deduplication logic below.
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE LocationCities ADD COLUMN IsActive INTEGER NOT NULL DEFAULT 1"); }
         catch { /* column already exists */ }
 
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE LocationNeighborhoods ADD COLUMN IsActive INTEGER NOT NULL DEFAULT 1"); }
         catch { /* column already exists */ }
+
+        // ── Deactivate duplicate cities — keep the canonical (MIN Id) per (Province, NormalizedName) ──
+        // Must run BEFORE unique-index creation or the index will fail on existing dupes.
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                UPDATE LocationCities
+                SET IsActive = 0
+                WHERE IsActive = 1
+                  AND NormalizedName != ''
+                  AND Id NOT IN (
+                      SELECT MIN(Id)
+                      FROM LocationCities
+                      WHERE IsActive = 1
+                        AND NormalizedName != ''
+                      GROUP BY Province, NormalizedName
+                  )");
+        }
+        catch (Exception ex) { logger.LogWarning("City dedup update: {msg}", ex.Message); }
+
+        // ── Deactivate duplicate neighborhoods — keep the canonical (MIN Id) per (City, NormalizedName) ──
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                UPDATE LocationNeighborhoods
+                SET IsActive = 0
+                WHERE IsActive = 1
+                  AND NormalizedName != ''
+                  AND Id NOT IN (
+                      SELECT MIN(Id)
+                      FROM LocationNeighborhoods
+                      WHERE IsActive = 1
+                        AND NormalizedName != ''
+                      GROUP BY City, NormalizedName
+                  )");
+        }
+        catch (Exception ex) { logger.LogWarning("Neighborhood dedup update: {msg}", ex.Message); }
+
+        // ── Transition indexes ────────────────────────────────────────────────────
+        // Drop old non-filtered indexes (replaced by IsActive-scoped indexes below).
+        try { await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS IX_LocationCities_Name"); }
+        catch { /* ignore */ }
+
+        try { await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS IX_LocationNeighborhoods_Name_City"); }
+        catch { /* ignore */ }
+
+        // Drop previous partial indexes that did NOT scope to IsActive=1.
+        // They must be recreated with the correct filter.
+        try { await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS IX_LocationCities_Province_NormalizedName"); }
+        catch { /* ignore */ }
+
+        try { await db.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS IX_LocationNeighborhoods_NormalizedName_City"); }
+        catch { /* ignore */ }
+
+        // Create unique indexes scoped to ACTIVE rows only.
+        // This allows deactivated rows to coexist without blocking future active inserts.
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE UNIQUE INDEX IX_LocationCities_Province_NormalizedName_Active " +
+                "ON LocationCities(Province, NormalizedName) " +
+                "WHERE IsActive = 1 AND NormalizedName != ''");
+            logger.LogInformation("Created unique index IX_LocationCities_Province_NormalizedName_Active");
+        }
+        catch (Exception ex) { logger.LogWarning("City unique index: {msg}", ex.Message); }
+
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE UNIQUE INDEX IX_LocationNeighborhoods_NormalizedName_City_Active " +
+                "ON LocationNeighborhoods(NormalizedName, City) " +
+                "WHERE IsActive = 1 AND NormalizedName != ''");
+            logger.LogInformation("Created unique index IX_LocationNeighborhoods_NormalizedName_City_Active");
+        }
+        catch (Exception ex) { logger.LogWarning("Neighborhood unique index: {msg}", ex.Message); }
 
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN ProfileImageUrl TEXT"); }
         catch { /* column already exists */ }

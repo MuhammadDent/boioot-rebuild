@@ -171,91 +171,9 @@ function AddLocationModal({
           </p>
         )}
 
-        {hasSuggestions && (
-          <div
-            style={{
-              padding: "0.75rem",
-              borderRadius: "10px",
-              background: "#FFF8E1",
-              border: "1px solid #FFD54F",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.55rem",
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                fontSize: "0.88rem",
-                fontWeight: 600,
-                color: "#5D4037",
-              }}
-            >
-              هل تقصد أحد هذه الأسماء؟
-            </p>
-
-            {suggestions.map((s) => (
-              <div
-                key={s.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.9rem",
-                    color: "#4E342E",
-                    fontWeight: 600,
-                  }}
-                >
-                  {s.name}
-                </span>
-                <button
-                  type="button"
-                  style={{
-                    padding: "0.28rem 0.7rem",
-                    borderRadius: "6px",
-                    border: "none",
-                    background: "#F57F17",
-                    color: "#fff",
-                    fontWeight: 600,
-                    fontSize: "0.8rem",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                  }}
-                  onClick={() => onUseSuggestion(s)}
-                >
-                  نعم، استخدمه
-                </button>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              style={{
-                alignSelf: "flex-start",
-                marginTop: "0.25rem",
-                padding: "0.3rem 0.75rem",
-                borderRadius: "6px",
-                border: "1px solid #bbb",
-                background: "transparent",
-                fontSize: "0.82rem",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-              onClick={onForceAdd}
-              disabled={saving}
-            >
-              لا، أضف اسماً جديداً
-            </button>
-          </div>
-        )}
-
-        {!hasSuggestions && (
+        {/* ── Action row ── */}
+        {!hasSuggestions ? (
+          /* Normal state: show Save + Cancel */
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
             <button
               type="button"
@@ -290,25 +208,132 @@ function AddLocationModal({
               إلغاء
             </button>
           </div>
-        )}
+        ) : (
+          /* Similar state: show warning + suggestions + cancel */
+          <div
+            style={{
+              borderRadius: "10px",
+              border: "1.5px solid #F4A000",
+              background: "#FFFBEE",
+              padding: "0.9rem 1rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.6rem",
+            }}
+          >
+            {/* Warning header */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <span style={{ fontSize: "1.1rem" }}>⚠️</span>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  color: "#7A4500",
+                }}
+              >
+                يوجد اسم مشابه — الإنشاء موقوف
+              </p>
+            </div>
 
-        {hasSuggestions && (
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <button
-              type="button"
+            <p style={{ margin: 0, fontSize: "0.82rem", color: "#5D4037" }}>
+              هل تقصد أحد هذه الأسماء؟ اختر الصحيح أو ألغِ العملية.
+            </p>
+
+            {/* Suggestion list */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              {suggestions.map((s) => (
+                <div
+                  key={s.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "0.5rem",
+                    padding: "0.35rem 0.5rem",
+                    borderRadius: "6px",
+                    background: "#fff",
+                    border: "1px solid #E0C060",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.9rem",
+                      color: "#4E342E",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {s.name}
+                  </span>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "0.3rem 0.75rem",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: "#2E7D32",
+                      color: "#fff",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                    onClick={() => onUseSuggestion(s)}
+                  >
+                    استخدم هذا
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Divider + force-add escape hatch */}
+            <div
               style={{
-                padding: "0.4rem 0.9rem",
-                borderRadius: "7px",
-                border: "1px solid #ccc",
-                background: "transparent",
-                fontSize: "0.88rem",
-                cursor: "pointer",
+                borderTop: "1px solid #E0C060",
+                paddingTop: "0.55rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "0.4rem",
               }}
-              onClick={onCancel}
-              disabled={saving}
             >
-              إلغاء
-            </button>
+              <button
+                type="button"
+                style={{
+                  padding: 0,
+                  border: "none",
+                  background: "transparent",
+                  color: "#999",
+                  fontSize: "0.78rem",
+                  cursor: saving ? "not-allowed" : "pointer",
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                }}
+                onClick={onForceAdd}
+                disabled={saving}
+                title="أضف الاسم الجديد بقوة — فقط إذا كنت متأكداً أنه مختلف"
+              >
+                {saving ? "جارٍ الإنشاء..." : "أضف هذا الاسم بأي حال (متقدم)"}
+              </button>
+
+              <button
+                type="button"
+                style={{
+                  padding: "0.38rem 0.9rem",
+                  borderRadius: "7px",
+                  border: "1px solid #ccc",
+                  background: "transparent",
+                  fontSize: "0.88rem",
+                  cursor: "pointer",
+                }}
+                onClick={onCancel}
+                disabled={saving}
+              >
+                إلغاء
+              </button>
+            </div>
           </div>
         )}
       </div>
