@@ -549,7 +549,9 @@ export interface PlanFeatureItem {
   featureDefinitionId: string;
   key: string;
   name: string;
+  description?: string;
   featureGroup?: string;
+  icon?: string;
   isEnabled: boolean;
 }
 
@@ -822,6 +824,7 @@ export interface FeatureDefinitionEntry {
   name: string;
   description?: string;
   featureGroup?: string;
+  icon?: string;
   isActive: boolean;
 }
 
@@ -841,12 +844,14 @@ export interface CreateFeatureDefinitionPayload {
   name: string;
   description?: string;
   featureGroup?: string;
+  icon?: string;
 }
 
 export interface UpdateFeatureDefinitionPayload {
   name: string;
   description?: string;
   featureGroup?: string;
+  icon?: string;
   isActive: boolean;
 }
 

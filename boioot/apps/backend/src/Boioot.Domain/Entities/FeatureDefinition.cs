@@ -22,5 +22,11 @@ public class FeatureDefinition : BaseEntity
     /// </summary>
     public string? FeatureGroup { get; set; }
 
+    /// <summary>
+    /// Emoji or icon identifier shown in admin UI and pricing pages.
+    /// e.g. "📊", "⭐", "🎥"
+    /// </summary>
+    public string? Icon { get; set; }
+
     public bool IsActive { get; set; } = true;
 }

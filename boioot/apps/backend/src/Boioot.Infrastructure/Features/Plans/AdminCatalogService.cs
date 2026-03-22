@@ -39,6 +39,7 @@ public class AdminCatalogService : IAdminCatalogService
             Name         = request.Name.Trim(),
             Description  = request.Description?.Trim(),
             FeatureGroup = request.FeatureGroup?.Trim().ToLowerInvariant(),
+            Icon         = request.Icon?.Trim(),
             IsActive     = true
         };
 
@@ -56,6 +57,7 @@ public class AdminCatalogService : IAdminCatalogService
         entity.Name         = request.Name.Trim();
         entity.Description  = request.Description?.Trim();
         entity.FeatureGroup = request.FeatureGroup?.Trim().ToLowerInvariant();
+        entity.Icon         = request.Icon?.Trim();
         entity.IsActive     = request.IsActive;
         entity.UpdatedAt    = DateTime.UtcNow;
 
@@ -151,6 +153,7 @@ public class AdminCatalogService : IAdminCatalogService
         Name         = f.Name,
         Description  = f.Description,
         FeatureGroup = f.FeatureGroup,
+        Icon         = f.Icon,
         IsActive     = f.IsActive
     };
 

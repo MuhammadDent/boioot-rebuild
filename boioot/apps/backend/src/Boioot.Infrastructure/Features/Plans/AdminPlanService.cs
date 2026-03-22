@@ -354,7 +354,9 @@ public class AdminPlanService : IAdminPlanService
                 FeatureDefinitionId = pf.FeatureDefinitionId,
                 Key                 = pf.FeatureDefinition.Key,
                 Name                = pf.FeatureDefinition.Name,
+                Description         = pf.FeatureDefinition.Description,
                 FeatureGroup        = pf.FeatureDefinition.FeatureGroup,
+                Icon                = pf.FeatureDefinition.Icon,
                 IsEnabled           = pf.IsEnabled
             }).ToList()
     };

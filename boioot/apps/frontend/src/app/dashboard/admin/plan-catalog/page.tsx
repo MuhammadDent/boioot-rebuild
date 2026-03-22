@@ -19,13 +19,17 @@ import type {
 // ── Group label mapping ───────────────────────────────────────────────────────
 
 const FEATURE_GROUP_LABELS: Record<string, string> = {
-  analytics:     "التحليلات",
-  support:       "الدعم الفني",
-  listing:       "الإعلانات",
-  media:         "الوسائط",
-  communication: "التواصل",
-  team:          "إدارة الفريق",
-  projects:      "إدارة المشاريع",
+  marketing:     "📢 التسويق والظهور",
+  content:       "🏠 محتوى الإعلان",
+  business:      "📊 إدارة الأعمال",
+  communication: "💬 التواصل",
+  support:       "🛠 الدعم الفني",
+  // legacy
+  analytics:     "📊 إدارة الأعمال",
+  listing:       "🏠 محتوى الإعلان",
+  media:         "🏠 محتوى الإعلان",
+  team:          "📊 إدارة الأعمال",
+  projects:      "📊 إدارة الأعمال",
 };
 
 function groupLabel(key?: string) {
@@ -122,11 +126,12 @@ interface FeatForm {
   name: string;
   description: string;
   featureGroup: string;
+  icon: string;
   isActive: boolean;
 }
 
 function defaultFeatForm(): FeatForm {
-  return { key: "", name: "", description: "", featureGroup: "", isActive: true };
+  return { key: "", name: "", description: "", featureGroup: "", icon: "", isActive: true };
 }
 
 function featFromEntry(e: FeatureDefinitionEntry): FeatForm {
@@ -135,6 +140,7 @@ function featFromEntry(e: FeatureDefinitionEntry): FeatForm {
     name:         e.name,
     description:  e.description ?? "",
     featureGroup: e.featureGroup ?? "",
+    icon:         e.icon ?? "",
     isActive:     e.isActive,
   };
 }
@@ -193,6 +199,7 @@ function FeatureSection({
           name:         form.name.trim(),
           description:  form.description.trim() || undefined,
           featureGroup: form.featureGroup.trim() || undefined,
+          icon:         form.icon.trim() || undefined,
         };
         await adminApi.createCatalogFeature(payload);
         setGlobalSuccess("تم إضافة تعريف الميزة بنجاح");
@@ -201,6 +208,7 @@ function FeatureSection({
           name:         form.name.trim(),
           description:  form.description.trim() || undefined,
           featureGroup: form.featureGroup.trim() || undefined,
+          icon:         form.icon.trim() || undefined,
           isActive:     form.isActive,
         };
         await adminApi.updateCatalogFeature(editId!, payload);
@@ -281,6 +289,18 @@ function FeatureSection({
             </div>
             <div>
               <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
+                الأيقونة (إيموجي)
+              </label>
+              <input
+                value={form.icon}
+                onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
+                placeholder="🎥"
+                maxLength={8}
+                style={{ ...inputStyle, width: 90 }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
                 المجموعة
               </label>
               <select
@@ -341,6 +361,7 @@ function FeatureSection({
             <tr>
               <th style={thStyle}>المفتاح</th>
               <th style={thStyle}>الاسم</th>
+              <th style={{ ...thStyle, textAlign: "center", width: 52 }}>أيقونة</th>
               <th style={thStyle}>المجموعة</th>
               <th style={thStyle}>الوصف</th>
               <th style={{ ...thStyle, textAlign: "center" }}>الحالة</th>
@@ -361,6 +382,9 @@ function FeatureSection({
                   <span style={codeStyle}>{item.key}</span>
                 </td>
                 <td style={tdStyle}>{item.name}</td>
+                <td style={{ ...tdStyle, textAlign: "center", fontSize: "1.25rem" }}>
+                  {item.icon ?? "—"}
+                </td>
                 <td style={tdStyle}>
                   {item.featureGroup ? (
                     <span style={{ fontSize: 11, background: "rgba(167,139,250,0.12)", color: "#a78bfa", borderRadius: 4, padding: "2px 8px" }}>

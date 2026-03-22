@@ -12,13 +12,17 @@ import type { AdminPlanDetail, AdminPlanPricingEntry, PlanLimitItem, PlanFeature
 // ── Feature group labels ───────────────────────────────────────────────────────
 
 const FEATURE_GROUP_LABELS: Record<string, string> = {
-  analytics:     "التحليلات",
-  support:       "الدعم الفني",
-  listing:       "الإعلانات",
-  media:         "الوسائط",
-  communication: "التواصل",
-  team:          "إدارة الفريق",
-  projects:      "إدارة المشاريع",
+  marketing:     "📢 التسويق والظهور",
+  content:       "🏠 محتوى الإعلان",
+  business:      "📊 إدارة الأعمال",
+  communication: "💬 التواصل",
+  support:       "🛠 الدعم الفني",
+  // legacy keys kept for backward compatibility
+  analytics:     "📊 إدارة الأعمال",
+  listing:       "🏠 محتوى الإعلان",
+  media:         "🏠 محتوى الإعلان",
+  team:          "📊 إدارة الأعمال",
+  projects:      "📊 إدارة الأعمال",
   general:       "عام",
 };
 
@@ -342,6 +346,7 @@ function PlanPreviewCard({
   planCategory,
   basePriceMonthly,
   enabledFeatures,
+  limits,
 }: {
   name: string;
   badgeText: string;
@@ -350,12 +355,23 @@ function PlanPreviewCard({
   planCategory: string;
   basePriceMonthly: string;
   enabledFeatures: PlanFeatureItem[];
+  limits?: PlanLimitItem[];
 }) {
   const accent = planColor.trim() || "#2e7d32";
   const price  = parseFloat(basePriceMonthly);
   const top6   = enabledFeatures.filter(f => f.isEnabled).slice(0, 6);
+
+  const listingLimit = limits?.find(l => l.key === "max_active_listings");
+  const imagesLimit  = limits?.find(l => l.key === "max_images_per_listing");
+  const featuredLimit = limits?.find(l => l.key === "max_featured_slots");
+  const limitsChips = [
+    listingLimit  ? (listingLimit.value  === -1 ? "∞ إعلان"      : `${listingLimit.value} إعلان`)      : null,
+    imagesLimit   ? (imagesLimit.value   === -1 ? "∞ صورة"        : `${imagesLimit.value} صورة`)        : null,
+    featuredLimit ? (featuredLimit.value === -1 ? "∞ مميز"        : `${featuredLimit.value} مميز`)       : null,
+  ].filter(Boolean) as string[];
+
   return (
-    <div style={{ border: `2px solid ${accent}`, borderRadius: 14, padding: "1.25rem", background: "#fff", maxWidth: 260, margin: "0 auto", position: "relative", fontFamily: "inherit" }}>
+    <div style={{ border: `2px solid ${accent}`, borderRadius: 14, padding: "1.25rem", background: "#fff", maxWidth: 270, margin: "0 auto", position: "relative", fontFamily: "inherit" }}>
       {isRecommended && (
         <div style={{ position: "absolute", top: -14, right: 16, background: accent, color: "#fff", padding: "0.2rem 0.8rem", borderRadius: 20, fontSize: "0.72rem", fontWeight: 700, whiteSpace: "nowrap" }}>
           ⭐ موصى بها
@@ -368,18 +384,30 @@ function PlanPreviewCard({
       )}
       <h3 style={{ margin: "0 0 0.2rem", fontSize: "1.1rem", fontWeight: 800 }}>{name || "اسم الباقة"}</h3>
       {planCategory && (
-        <p style={{ margin: "0 0 0.6rem", fontSize: "0.75rem", color: "#888" }}>
+        <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", color: "#888" }}>
           {planCategory === "Individual" ? "للأفراد" : planCategory === "Business" ? "للأعمال" : planCategory}
         </p>
       )}
-      <p style={{ margin: "0 0 0.8rem", fontSize: "1.25rem", fontWeight: 800, color: accent }}>
+      <p style={{ margin: "0 0 0.6rem", fontSize: "1.25rem", fontWeight: 800, color: accent }}>
         {price === 0 ? "مجاني" : `${price.toLocaleString("ar-SY")} ل.س / شهر`}
       </p>
+      {limitsChips.length > 0 && (
+        <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+          {limitsChips.map(chip => (
+            <span
+              key={chip}
+              style={{ background: accent + "18", color: accent, borderRadius: 20, padding: "0.15rem 0.6rem", fontSize: "0.72rem", fontWeight: 700 }}
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
       {top6.length > 0 ? (
         <ul style={{ margin: "0 0 0.8rem", padding: 0, listStyle: "none" }}>
           {top6.map(f => (
-            <li key={f.key} style={{ fontSize: "0.8rem", color: "#444", padding: "0.18rem 0", display: "flex", gap: "0.4rem" }}>
-              <span style={{ color: accent, fontWeight: 700 }}>✓</span>
+            <li key={f.key} style={{ fontSize: "0.8rem", color: "#444", padding: "0.18rem 0", display: "flex", gap: "0.4rem", alignItems: "center" }}>
+              <span style={{ color: accent, fontWeight: 700, fontSize: "0.75rem" }}>{f.icon || "✓"}</span>
               <span>{f.name}</span>
             </li>
           ))}
@@ -797,7 +825,17 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                         key={feat.key}
                         style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.75rem", borderRadius: 8, background: feat.isEnabled ? "#f0fdf4" : "var(--color-bg-secondary, #f9fafb)", border: feat.isEnabled ? "1px solid #bbf7d0" : "1px solid transparent", opacity: featureSaving === feat.key ? 0.55 : 1, transition: "all 0.18s" }}
                       >
-                        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: feat.isEnabled ? 600 : 400 }}>{feat.name}</p>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
+                          {feat.icon && (
+                            <span style={{ fontSize: "1rem", marginTop: "0.05rem", flexShrink: 0 }}>{feat.icon}</span>
+                          )}
+                          <div>
+                            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: feat.isEnabled ? 600 : 400 }}>{feat.name}</p>
+                            {feat.description && (
+                              <p style={{ margin: 0, fontSize: "0.73rem", color: "var(--color-text-secondary)", lineHeight: 1.35 }}>{feat.description}</p>
+                            )}
+                          </div>
+                        </div>
                         <ToggleSwitch
                           checked={feat.isEnabled}
                           onChange={(val) => handleFeatureToggle(feat.key, val)}
@@ -825,6 +863,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                 planCategory={planCategory}
                 basePriceMonthly={priceMonthly}
                 enabledFeatures={features}
+                limits={limits}
               />
             </CollapsibleSection>
           )}
