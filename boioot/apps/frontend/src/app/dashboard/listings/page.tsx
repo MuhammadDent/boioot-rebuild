@@ -157,7 +157,7 @@ export default function ListingsPage() {
             </div>
             {canCreate && !limitReached && (
               <Link
-                href="/dashboard/properties/new"
+                href="/post-ad"
                 style={{
                   padding: "0.55rem 1.3rem", borderRadius: 9,
                   background: "var(--color-primary)",
@@ -319,7 +319,7 @@ export default function ListingsPage() {
               <>
                 <p style={{ margin: "0 0 1.5rem", fontSize: "0.85rem", color: "#94a3b8" }}>أضف إعلانك الأول الآن وابدأ في التواصل مع المشترين</p>
                 <Link
-                  href="/dashboard/properties/new"
+                  href="/post-ad"
                   style={{ padding: "0.65rem 1.5rem", borderRadius: 9, background: "var(--color-primary)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem" }}
                 >
                   + إضافة إعلان جديد

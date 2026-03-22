@@ -16,7 +16,7 @@ type TrialStats = { used: number; limit: number; isFreeTrial: boolean };
 
 export default function NewPropertyPage() {
   const { user, isLoading, isUnauthorized } = useProtectedRoute({
-    allowedRoles: ["Admin", "CompanyOwner", "Broker", "Owner", "User"],
+    allowedRoles: ["Admin", "CompanyOwner"],
   });
 
   const router = useRouter();
@@ -28,10 +28,14 @@ export default function NewPropertyPage() {
 
   useEffect(() => {
     if (!user) return;
+    if (!COMPANY_ROLES.includes(user.role)) {
+      router.replace("/post-ad");
+      return;
+    }
     api.get<TrialStats>("/properties/my-listings/stats")
       .then((s) => setTrialStats(s))
       .catch(() => {});
-  }, [user]);
+  }, [user, router]);
 
   async function handleSubmit(data: CreatePropertyRequest | UpdatePropertyRequest) {
     setIsSubmitting(true);

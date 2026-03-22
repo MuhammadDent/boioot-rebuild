@@ -13,17 +13,19 @@ import Spinner from "@/components/ui/Spinner";
 const ROLE_LABELS: Record<string, string> = {
   User:         "مستخدم عادي",
   Owner:        "مالك عقار",
-  Agent:        "وسيط عقاري",
+  Broker:       "وسيط عقاري",
   CompanyOwner: "مالك شركة",
   Admin:        "مشرف",
 };
+
+type StatsResponse = { used: number; limit: number; isFreeTrial?: boolean };
 
 export default function PostAdPage() {
   const { user, isLoading: authLoading } = useAuth();
   const { openAuthModal } = useAuthGate();
   const router = useRouter();
 
-  const [stats, setStats]               = useState<{ used: number; limit: number } | null>(null);
+  const [stats, setStats]               = useState<StatsResponse | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [listingTypes, setListingTypes]   = useState<ListingTypeConfig[]>([]);
   const [propertyTypes, setPropertyTypes] = useState<PropertyTypeConfig[]>([]);
@@ -114,7 +116,9 @@ export default function PostAdPage() {
     );
   }
 
+  const isFreeTrial  = stats?.isFreeTrial === true;
   const limitReached = stats !== null && stats.used >= stats.limit;
+  const isLastTrial  = isFreeTrial && stats !== null && stats.used === stats.limit - 1;
 
   return (
     <div style={{ backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
@@ -123,10 +127,10 @@ export default function PostAdPage() {
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
           <Link
-            href="/"
+            href="/dashboard/listings"
             style={{ fontSize: "0.85rem", color: "var(--color-primary)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.3rem", marginBottom: "0.75rem" }}
           >
-            ← الرئيسية
+            ← إعلاناتي
           </Link>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 800, margin: "0 0 0.4rem", color: "var(--color-text-primary)" }}>
             أضف إعلانك العقاري
@@ -136,28 +140,49 @@ export default function PostAdPage() {
           </p>
         </div>
 
-        {/* ── Monthly usage banner ── */}
+        {/* ── Quota banner ── */}
         {!statsLoading && stats !== null && (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            background: limitReached ? "#fff1f2" : "#f0fdf4",
-            border: `1px solid ${limitReached ? "#fecaca" : "#bbf7d0"}`,
+            background: limitReached
+              ? "#fff1f2"
+              : isLastTrial
+                ? "#fffbeb"
+                : isFreeTrial
+                  ? "#f0f9ff"
+                  : "#f0fdf4",
+            border: `1px solid ${
+              limitReached ? "#fecaca" : isLastTrial ? "#fde68a" : isFreeTrial ? "#bae6fd" : "#bbf7d0"
+            }`,
             borderRadius: 12, padding: "0.9rem 1.2rem", marginBottom: "1.5rem",
             gap: "1rem",
           }}>
             <div>
-              <p style={{ margin: "0 0 0.2rem", fontWeight: 700, fontSize: "0.92rem", color: limitReached ? "#dc2626" : "#166534" }}>
-                {limitReached
-                  ? "وصلت إلى الحد الأقصى من الإعلانات هذا الشهر"
-                  : `متبقٍّ لك ${stats.limit - stats.used} إعلان هذا الشهر`}
+              <p style={{
+                margin: "0 0 0.2rem", fontWeight: 700, fontSize: "0.92rem",
+                color: limitReached ? "#dc2626" : isLastTrial ? "#92400e" : isFreeTrial ? "#0369a1" : "#166534",
+              }}>
+                {isFreeTrial
+                  ? limitReached
+                    ? "انتهت إعلاناتك التجريبية المجانية"
+                    : isLastTrial
+                      ? "هذا آخر إعلان تجريبي مجاني لك"
+                      : `استخدمت ${stats.used} من ${stats.limit} إعلانات تجريبية مجانية`
+                  : limitReached
+                    ? "وصلت إلى الحد الأقصى من الإعلانات هذا الشهر"
+                    : `متبقٍّ لك ${stats.limit - stats.used} إعلان هذا الشهر`}
               </p>
               <p style={{ margin: 0, fontSize: "0.8rem", color: "#6b7280" }}>
-                استخدمت {stats.used} من أصل {stats.limit} إعلان شهرياً
-                {" · "}عضويتك الحالية: <strong>{ROLE_LABELS[user?.role ?? ""] ?? user?.role}</strong>
+                {isFreeTrial
+                  ? "الإعلانات التجريبية صالحة للأبد · لا تنتهي شهرياً"
+                  : <>
+                    استخدمت {stats.used} من أصل {stats.limit} إعلان شهرياً
+                    {" · "}عضويتك الحالية: <strong>{ROLE_LABELS[user?.role ?? ""] ?? user?.role}</strong>
+                  </>}
               </p>
             </div>
             <div style={{
-              background: limitReached ? "#dc2626" : "#16a34a",
+              background: limitReached ? "#dc2626" : isLastTrial ? "#f59e0b" : isFreeTrial ? "#0ea5e9" : "#16a34a",
               color: "#fff", borderRadius: 99, padding: "0.3rem 0.85rem",
               fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap",
             }}>
@@ -169,17 +194,25 @@ export default function PostAdPage() {
         {/* ── Limit reached — upgrade prompt ── */}
         {limitReached ? (
           <div style={{
-            background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14,
-            padding: "2.5rem 2rem", textAlign: "center",
+            background: "#fff",
+            border: "1.5px solid #fecaca",
+            borderRadius: 14,
+            padding: "2.5rem 2rem",
+            textAlign: "center",
           }}>
-            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔒</div>
-            <h2 style={{ margin: "0 0 0.75rem", fontSize: "1.2rem", fontWeight: 700, color: "#0f172a" }}>
-              الحد الشهري مكتمل
+            <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🔒</div>
+            <h2 style={{ margin: "0 0 0.75rem", fontSize: "1.2rem", fontWeight: 800, color: "#0f172a" }}>
+              {isFreeTrial ? "انتهت إعلاناتك التجريبية المجانية" : "الحد الشهري مكتمل"}
             </h2>
             <p style={{ margin: "0 0 1.5rem", color: "#64748b", lineHeight: 1.7 }}>
-              لقد استخدمت إعلاناتك الشهرية كاملةً.
-              لإضافة المزيد من الإعلانات، قم بترقية عضويتك إلى{" "}
-              <strong>مالك عقار</strong> (5 إعلانات/شهر) أو <strong>وسيط عقاري</strong>.
+              {isFreeTrial
+                ? <>
+                  لقد استخدمت {stats!.used} من {stats!.limit} إعلانات تجريبية مجانية. للمتابعة ونشر المزيد، قم بترقية حسابك إلى <strong>مالك عقار</strong> أو <strong>وسيط عقاري</strong>.
+                </>
+                : <>
+                  لقد استخدمت إعلاناتك الشهرية كاملةً. لإضافة المزيد، قم بترقية عضويتك إلى{" "}
+                  <strong>مالك عقار</strong> (5 إعلانات/شهر) أو <strong>وسيط عقاري</strong>.
+                </>}
             </p>
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
               <Link
@@ -189,11 +222,19 @@ export default function PostAdPage() {
                 إعلاناتي
               </Link>
               <Link
-                href="/dashboard/profile"
+                href="/pricing?upgrade=Owner"
                 style={{ padding: "0.65rem 1.5rem", borderRadius: 9, background: "var(--color-primary)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem" }}
               >
-                ترقية العضوية
+                ترقية إلى مالك عقار
               </Link>
+              {isFreeTrial && (
+                <Link
+                  href="/pricing?upgrade=Broker"
+                  style={{ padding: "0.65rem 1.5rem", borderRadius: 9, background: "#0f172a", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem" }}
+                >
+                  ترقية إلى وسيط عقاري
+                </Link>
+              )}
             </div>
           </div>
         ) : (

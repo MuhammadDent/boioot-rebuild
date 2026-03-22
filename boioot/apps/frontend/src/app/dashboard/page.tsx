@@ -533,7 +533,7 @@ export default function DashboardPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
               {hasPermission(user, "properties.create") && (
                 <QuickActionCard
-                  href="/dashboard/properties/new"
+                  href={["Admin", "CompanyOwner"].includes(user.role) ? "/dashboard/properties/new" : "/post-ad"}
                   label="إضافة إعلان جديد"
                   description="نشر إعلان عقاري جديد على المنصة"
                   color="var(--color-primary)"

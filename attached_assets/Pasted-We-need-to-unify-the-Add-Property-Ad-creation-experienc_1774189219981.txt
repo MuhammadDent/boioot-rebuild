@@ -1,0 +1,82 @@
+We need to unify the “Add Property Ad” creation experience across the application.
+
+PROBLEM:
+Right now, users can reach the ad creation flow from different entry points, but the visual design is inconsistent.
+
+Examples:
+- The header “Add Ad” button opens a much nicer, cleaner creation experience
+- The dashboard “Add New Ad” card/button has a different and weaker design
+- Functionally they lead to the same result, but visually they feel like different systems
+
+GOAL:
+Unify the ad creation UX/UI so all entry points use the SAME beautiful design style as the current header “Add Ad” flow.
+
+IMPORTANT DESIGN RULE:
+The first design (the more elegant one reached from the top “Add Ad” button) should be the visual reference and source of truth.
+We want that design language everywhere for property creation.
+
+==================================================
+REQUIRED CHANGES
+==================================================
+
+1. Single unified create experience
+- There must be only one canonical ad creation page design
+- Same page header
+- Same title/subtitle
+- Same quota / remaining ads banner
+- Same stepper
+- Same form shell
+- Same visual spacing and hierarchy
+
+2. Same destination from all entry points
+Review all “Add Ad / Add Property / Add New Ad” entry points, including:
+- top header CTA
+- dashboard CTA
+- empty state CTA in listings page
+- any other ad creation links
+
+All of them must route to the same unified creation page.
+
+3. Use the first design as the reference
+The design style currently shown when the user clicks the top “Add Ad” button is better.
+Use that style as the master design.
+Do NOT keep a second weaker dashboard-specific create design.
+
+4. Dashboard cleanup
+Inside the dashboard:
+- keep the CTA/button/card for adding an ad
+- but redesign it so it feels consistent with the unified create flow
+- it should act only as an entry point, not as a different experience
+
+5. Shared components
+Refactor the ad creation UI into reusable shared components if needed, such as:
+- page header / hero
+- quota banner
+- wizard stepper
+- form container
+
+Avoid duplicated layouts for the same flow.
+
+6. UX consistency
+Ensure the user feels they are entering the exact same creation flow regardless of where they clicked from.
+No duplicated page variants.
+No public version vs dashboard version mismatch.
+
+7. Preserve behavior
+Do not break:
+- trial ad count display
+- role/permission checks
+- upgrade prompt logic
+- form validation
+- step navigation
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+After implementation, report clearly:
+- which route is now the single unified ad creation route
+- which entry points were updated
+- which duplicated layouts were removed or merged
+- which shared components were created/refactored
+- confirmation that the dashboard now uses the same design language as the main “Add Ad” experience
