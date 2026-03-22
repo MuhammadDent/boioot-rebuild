@@ -25,8 +25,14 @@ export const dashboardPropertiesApi = {
     return api.get(`/dashboard/properties/${id}`);
   },
 
+  // For CompanyOwner / Admin — attaches property to their company.
   create(data: CreatePropertyRequest): Promise<PropertyResponse> {
     return api.post("/properties", data);
+  },
+
+  // For Owner / Broker / Agent — personal listing, no company required.
+  postUserListing(data: CreatePropertyRequest): Promise<PropertyResponse> {
+    return api.post("/properties/post", data);
   },
 
   update(id: string, data: UpdatePropertyRequest): Promise<PropertyResponse> {

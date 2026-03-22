@@ -9,9 +9,12 @@ import PropertyForm from "@/components/dashboard/properties/PropertyForm";
 import { normalizeError } from "@/lib/api";
 import type { CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
 
+// Roles that create via POST /api/properties (company-linked).
+const COMPANY_ROLES = ["Admin", "CompanyOwner"];
+
 export default function NewPropertyPage() {
   const { user, isLoading } = useProtectedRoute({
-    allowedRoles: ["Admin", "CompanyOwner", "Broker"],
+    allowedRoles: ["Admin", "CompanyOwner", "Broker", "Owner"],
   });
 
   const router = useRouter();
@@ -22,7 +25,14 @@ export default function NewPropertyPage() {
     setIsSubmitting(true);
     setServerError("");
     try {
-      await dashboardPropertiesApi.create(data as CreatePropertyRequest);
+      const payload = data as CreatePropertyRequest;
+      // CompanyOwner / Admin → POST /api/properties (attaches to company).
+      // Owner / Broker / Agent → POST /api/properties/post (personal listing).
+      if (user && COMPANY_ROLES.includes(user.role)) {
+        await dashboardPropertiesApi.create(payload);
+      } else {
+        await dashboardPropertiesApi.postUserListing(payload);
+      }
       router.push("/dashboard/listings?success=1");
     } catch (e) {
       setServerError(normalizeError(e));
