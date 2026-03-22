@@ -1043,6 +1043,12 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN Code TEXT"); }
         catch { /* already exists */ }
 
+        // Plans.BadgeText / PlanColor — optional UI display metadata
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN BadgeText TEXT"); }
+        catch { /* already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN PlanColor TEXT"); }
+        catch { /* already exists */ }
+
         // Subscriptions.AutoRenew — whether the subscription auto-renews
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Subscriptions ADD COLUMN AutoRenew INTEGER NOT NULL DEFAULT 1"); }
         catch { /* already exists */ }

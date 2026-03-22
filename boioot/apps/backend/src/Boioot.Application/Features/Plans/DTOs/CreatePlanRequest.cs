@@ -18,4 +18,12 @@ public class CreatePlanRequest
 
     /// <summary>null = applies to all account types. "Individual" | "Business" | etc.</summary>
     public string? ApplicableAccountType { get; set; }
+
+    public int     DisplayOrder         { get; set; } = 0;
+
+    [MaxLength(80)]
+    public string? BadgeText            { get; set; }
+
+    [MaxLength(20)]
+    public string? PlanColor            { get; set; }
 }

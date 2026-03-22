@@ -60,6 +60,9 @@ public class AdminPlanService : IAdminPlanService
             BasePriceMonthly     = request.BasePriceMonthly,
             BasePriceYearly      = request.BasePriceYearly,
             ApplicableAccountType = accountType,
+            DisplayOrder         = request.DisplayOrder,
+            BadgeText            = string.IsNullOrWhiteSpace(request.BadgeText) ? null : request.BadgeText.Trim(),
+            PlanColor            = string.IsNullOrWhiteSpace(request.PlanColor)  ? null : request.PlanColor.Trim(),
             IsActive             = true
         };
 
@@ -128,6 +131,8 @@ public class AdminPlanService : IAdminPlanService
         plan.IsRecommended        = request.IsRecommended;
         plan.PlanCategory         = request.PlanCategory?.Trim();
         plan.BillingMode          = request.BillingMode;
+        plan.BadgeText            = string.IsNullOrWhiteSpace(request.BadgeText) ? null : request.BadgeText.Trim();
+        plan.PlanColor            = string.IsNullOrWhiteSpace(request.PlanColor)  ? null : request.PlanColor.Trim();
 
         await _db.SaveChangesAsync(ct);
 
@@ -263,6 +268,8 @@ public class AdminPlanService : IAdminPlanService
         PlanCategory         = p.PlanCategory,
         BillingMode          = p.BillingMode,
         Rank                 = p.Rank,
+        BadgeText            = p.BadgeText,
+        PlanColor            = p.PlanColor,
     };
 
     private static PlanDetailResponse MapToDetail(Plan p) => new()
@@ -282,6 +289,8 @@ public class AdminPlanService : IAdminPlanService
         PlanCategory         = p.PlanCategory,
         BillingMode          = p.BillingMode,
         Rank                 = p.Rank,
+        BadgeText            = p.BadgeText,
+        PlanColor            = p.PlanColor,
         Limits = p.PlanLimits
             .OrderBy(pl => pl.LimitDefinition.Key)
             .Select(pl => new PlanLimitItem

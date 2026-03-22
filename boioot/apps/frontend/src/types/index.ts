@@ -556,6 +556,7 @@ export interface PlanFeatureItem {
 export interface AdminPlanSummary {
   id: string;
   name: string;
+  code?: string;
   description?: string;
   isActive: boolean;
   basePriceMonthly: number;
@@ -568,6 +569,8 @@ export interface AdminPlanSummary {
   planCategory?: string;
   billingMode: string;
   rank: number;
+  badgeText?: string;
+  planColor?: string;
 }
 
 export interface AdminPlanDetail extends AdminPlanSummary {

@@ -17,4 +17,6 @@ public class PlanSummaryResponse
     public string? PlanCategory      { get; set; }
     public string  BillingMode       { get; set; } = "InternalOnly";
     public int     Rank              { get; set; }
+    public string? BadgeText         { get; set; }
+    public string? PlanColor         { get; set; }
 }

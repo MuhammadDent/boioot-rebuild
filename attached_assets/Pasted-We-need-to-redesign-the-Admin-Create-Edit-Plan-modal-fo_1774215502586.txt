@@ -1,0 +1,186 @@
+We need to redesign the Admin Create/Edit Plan modal for Boioot subscription plans.
+
+CURRENT PROBLEM:
+The current plan form is too basic and does not allow professional control over the actual package structure.
+It only includes basic fields like name, category, sort order, status, visibility, recommendation, and billing status.
+This is not enough for a SaaS-grade real estate platform.
+
+GOAL:
+Transform the Create/Edit Plan UI into a professional, structured admin form that supports full package configuration.
+
+==================================================
+REQUIRED UI SECTIONS
+==================================================
+
+1) BASIC INFORMATION
+- Plan name
+- Internal name / slug
+- Target category:
+  - Individual
+  - Agent
+  - Office
+  - RealEstateCompany
+  - Developer
+- Short description
+- Sort order
+- Active toggle
+- Public visibility toggle
+- Recommended toggle
+- Optional badge/label text
+- Optional plan color/theme marker
+
+2) USAGE LIMITS
+Add clear numeric inputs for:
+- Max listings count
+- Max featured listings count
+- Max pinned listings count
+- Max requests count
+- Max projects count
+- Max agents/team members
+- Max branches
+- Max images per listing
+- Max videos per listing
+- Max attachments/files per listing
+- Listing duration in days
+- Featured duration in days
+- Max listing renewals
+- Auto-renew allowed toggle
+
+3) PROFESSIONAL FEATURES
+Group features into logical toggle sections:
+
+A. Visibility & Promotion
+- Priority in search results
+- Homepage exposure
+- Featured badge
+- Top placement
+- Recommended sections placement
+- Marketing campaign support
+- Discount/coupon eligibility
+
+B. Listing Content Features
+- Video upload
+- Virtual tour
+- Floor plan upload
+- PDF attachments
+- Extended description
+- Smart templates
+- Unlimited drafts
+
+C. Business Management Features
+- Advanced dashboard
+- Advanced analytics
+- Listing performance reports
+- Views/clicks tracking
+- Export reports
+- Lead management
+- Lead distribution
+- Multi-user team support
+- Internal permissions support
+
+D. Communication Features
+- WhatsApp direct
+- Internal messaging
+- Viewing request form
+- Call request support
+- Instant notifications
+- CRM-ready integration flag
+
+E. Support Features
+- Standard support
+- Priority support
+- Dedicated account manager
+- Assisted onboarding
+
+4) BILLING & PRICING
+Improve pricing section to support:
+- Multiple billing cycles:
+  - Monthly
+  - Quarterly
+  - SemiAnnual
+  - Annual
+  - Custom
+- Currency
+- Base price
+- Discounted price
+- Savings label
+- Trial days
+- Setup fee
+- Auto-renew enabled
+- Allowed payment methods per plan
+
+5) PLAN PREVIEW
+At the bottom of the form, add a preview card that shows:
+- Plan name
+- Price
+- Badge
+- Recommended state
+- Visible feature bullets
+- CTA preview
+
+==================================================
+DATA MODEL REQUIREMENTS
+==================================================
+
+Refactor plan structure so it is SaaS-ready and normalized.
+
+Recommended structure:
+- Plans
+- PlanPrices
+- PlanLimits
+- PlanFeatures
+
+If current schema is too flat, refactor carefully without breaking existing data.
+
+Suggested modeling:
+- Plan = identity/basic info
+- PlanPrice = billing cycle + currency + price + discount status
+- PlanLimit = typed numeric limits
+- PlanFeature = typed boolean features or feature key/value system
+
+IMPORTANT:
+Do not hardcode feature rendering only in frontend.
+Make the structure DB-driven and extensible for future packages.
+
+==================================================
+UX REQUIREMENTS
+==================================================
+
+- Keep the modal clean and professional
+- Use section cards or collapsible sections
+- Make the form mobile-friendly
+- Improve Arabic RTL alignment
+- Fix spacing and label clarity
+- Use helper text under complex fields
+- Add validation for numeric fields
+- Add empty/default states
+- Add save loading state
+- Add success/error feedback
+
+==================================================
+ADMIN EXPERIENCE
+==================================================
+
+The admin should be able to understand the package deeply from one screen.
+This form should feel like a professional SaaS pricing management interface, not a simple modal.
+
+Please implement:
+1. UI redesign
+2. schema update if needed
+3. backend DTO/API update
+4. proper save/load support
+5. preserve backward compatibility where possible
+6. improve the pricing rows/cards UI below the form
+
+Also:
+- Make the pricing items clearer visually
+- Show billing period badge
+- Show active/inactive status
+- Better edit/delete action placement
+- Cleaner Arabic labels
+
+At the end, provide:
+- What files were changed
+- What schema changes were made
+- What migration is needed
+- What old fields were preserved

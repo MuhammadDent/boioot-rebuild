@@ -360,6 +360,9 @@ export const adminApi = {
     basePriceMonthly: number;
     basePriceYearly: number;
     applicableAccountType?: string;
+    displayOrder?: number;
+    badgeText?: string;
+    planColor?: string;
   }): Promise<AdminPlanDetail> {
     return api.post("/admin/plans", payload);
   },
@@ -377,6 +380,8 @@ export const adminApi = {
     isRecommended: boolean;
     planCategory?: string;
     billingMode: string;
+    badgeText?: string;
+    planColor?: string;
   }): Promise<AdminPlanDetail> {
     return api.put(`/admin/plans/${id}`, payload);
   },

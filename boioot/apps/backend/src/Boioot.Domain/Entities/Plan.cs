@@ -83,6 +83,12 @@ public class Plan : BaseEntity
     /// <summary>Controls which billing providers are offered for this plan. "InternalOnly" | "StripeOnly" | "Hybrid".</summary>
     public string BillingMode { get; set; } = "InternalOnly";
 
+    /// <summary>Optional short badge/label shown on the pricing card (e.g. "الأكثر مبيعاً").</summary>
+    public string? BadgeText { get; set; }
+
+    /// <summary>Optional hex color used as the plan card accent (e.g. "#2e7d32").</summary>
+    public string? PlanColor { get; set; }
+
     public ICollection<Account> Accounts { get; set; } = [];
     public ICollection<Subscription> Subscriptions { get; set; } = [];
     public ICollection<PlanFeature> PlanFeatures { get; set; } = [];

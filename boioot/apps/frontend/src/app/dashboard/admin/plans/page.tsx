@@ -253,6 +253,129 @@ function AddPricingForm({ planId, onCreated, onCancel }: AddPricingFormProps) {
   );
 }
 
+// ── CollapsibleSection ─────────────────────────────────────────────────────────
+
+function CollapsibleSection({
+  title,
+  icon,
+  count,
+  accent,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  icon: string;
+  count?: number;
+  accent?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 10, marginBottom: "0.75rem", overflow: "hidden" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0.75rem 1rem",
+          background: open ? "#f0f7ff" : "#f8fafc",
+          border: "none",
+          borderBottom: open ? "1px solid var(--color-border, #e5e7eb)" : "none",
+          cursor: "pointer",
+          fontSize: "0.82rem",
+          fontWeight: 700,
+          color: "var(--color-text-primary)",
+          transition: "background 0.15s",
+        }}
+      >
+        <span style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          {open ? "▲" : "▼"}
+          {count !== undefined && (
+            <span style={{ background: accent ?? "var(--color-primary, #2563eb)", color: "#fff", borderRadius: 20, padding: "0 0.45rem", fontSize: "0.68rem", fontWeight: 700, lineHeight: "1.5" }}>
+              {count}
+            </span>
+          )}
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+          <span>{title}</span>
+          <span style={{ fontSize: "1rem" }}>{icon}</span>
+        </span>
+      </button>
+      {open && (
+        <div style={{ padding: "1rem" }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── PlanPreviewCard ─────────────────────────────────────────────────────────────
+
+function PlanPreviewCard({
+  name,
+  badgeText,
+  planColor,
+  isRecommended,
+  planCategory,
+  basePriceMonthly,
+  enabledFeatures,
+}: {
+  name: string;
+  badgeText: string;
+  planColor: string;
+  isRecommended: boolean;
+  planCategory: string;
+  basePriceMonthly: string;
+  enabledFeatures: PlanFeatureItem[];
+}) {
+  const accent = planColor.trim() || "#2e7d32";
+  const price  = parseFloat(basePriceMonthly);
+  const top6   = enabledFeatures.filter(f => f.isEnabled).slice(0, 6);
+  return (
+    <div style={{ border: `2px solid ${accent}`, borderRadius: 14, padding: "1.25rem", background: "#fff", maxWidth: 260, margin: "0 auto", position: "relative", fontFamily: "inherit" }}>
+      {isRecommended && (
+        <div style={{ position: "absolute", top: -14, right: 16, background: accent, color: "#fff", padding: "0.2rem 0.8rem", borderRadius: 20, fontSize: "0.72rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+          ⭐ موصى بها
+        </div>
+      )}
+      {badgeText.trim() && (
+        <div style={{ background: accent + "22", color: accent, padding: "0.2rem 0.65rem", borderRadius: 20, fontSize: "0.72rem", fontWeight: 700, display: "inline-block", marginBottom: "0.5rem" }}>
+          {badgeText}
+        </div>
+      )}
+      <h3 style={{ margin: "0 0 0.2rem", fontSize: "1.1rem", fontWeight: 800 }}>{name || "اسم الباقة"}</h3>
+      {planCategory && (
+        <p style={{ margin: "0 0 0.6rem", fontSize: "0.75rem", color: "#888" }}>
+          {planCategory === "Individual" ? "للأفراد" : planCategory === "Business" ? "للأعمال" : planCategory}
+        </p>
+      )}
+      <p style={{ margin: "0 0 0.8rem", fontSize: "1.25rem", fontWeight: 800, color: accent }}>
+        {price === 0 ? "مجاني" : `${price.toLocaleString("ar-SY")} ل.س / شهر`}
+      </p>
+      {top6.length > 0 ? (
+        <ul style={{ margin: "0 0 0.8rem", padding: 0, listStyle: "none" }}>
+          {top6.map(f => (
+            <li key={f.key} style={{ fontSize: "0.8rem", color: "#444", padding: "0.18rem 0", display: "flex", gap: "0.4rem" }}>
+              <span style={{ color: accent, fontWeight: 700 }}>✓</span>
+              <span>{f.name}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p style={{ fontSize: "0.8rem", color: "#bbb", marginBottom: "0.8rem" }}>لا توجد ميزات مفعّلة بعد</p>
+      )}
+      <div style={{ background: accent, color: "#fff", borderRadius: 8, padding: "0.5rem", textAlign: "center", fontSize: "0.82rem", fontWeight: 600 }}>
+        اشترك الآن
+      </div>
+    </div>
+  );
+}
+
 // ── EditPlanModal ──────────────────────────────────────────────────────────────
 
 interface EditModalProps {
@@ -264,28 +387,30 @@ interface EditModalProps {
 function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const isNew = plan === null;
 
-  const [name, setName]                 = useState(plan?.name ?? "");
-  const [description, setDescription]   = useState(plan?.description ?? "");
-  const [priceMonthly, setPriceMonthly] = useState(String(plan?.basePriceMonthly ?? 0));
-  const [priceYearly, setPriceYearly]   = useState(String(plan?.basePriceYearly ?? 0));
-  const [isActive, setIsActive]         = useState(plan?.isActive ?? true);
-  const [isPublic, setIsPublic]         = useState(plan?.isPublic ?? true);
-  const [isRecommended, setIsRecommended] = useState(plan?.isRecommended ?? false);
-  const [displayOrder, setDisplayOrder] = useState(String(plan?.displayOrder ?? 0));
-  const [billingMode, setBillingMode]   = useState(plan?.billingMode ?? "InternalOnly");
-  const [planCategory, setPlanCategory] = useState(plan?.planCategory ?? "");
-  const [rank, setRank]                 = useState(String(plan?.rank ?? 0));
+  const [name, setName]                           = useState(plan?.name ?? "");
+  const [description, setDescription]             = useState(plan?.description ?? "");
+  const [applicableAccountType, setApplicableAccountType] = useState(plan?.applicableAccountType ?? "");
+  const [priceMonthly, setPriceMonthly]           = useState(String(plan?.basePriceMonthly ?? 0));
+  const [priceYearly, setPriceYearly]             = useState(String(plan?.basePriceYearly ?? 0));
+  const [isActive, setIsActive]                   = useState(plan?.isActive ?? true);
+  const [isPublic, setIsPublic]                   = useState(plan?.isPublic ?? true);
+  const [isRecommended, setIsRecommended]         = useState(plan?.isRecommended ?? false);
+  const [displayOrder, setDisplayOrder]           = useState(String(plan?.displayOrder ?? 0));
+  const [billingMode, setBillingMode]             = useState(plan?.billingMode ?? "InternalOnly");
+  const [planCategory, setPlanCategory]           = useState(plan?.planCategory ?? "");
+  const [badgeText, setBadgeText]                 = useState(plan?.badgeText ?? "");
+  const [planColor, setPlanColor]                 = useState(plan?.planColor ?? "");
 
   const [limits, setLimits]     = useState<PlanLimitItem[]>(plan?.limits ?? []);
   const [features, setFeatures] = useState<PlanFeatureItem[]>(plan?.features ?? []);
 
-  const [pricing, setPricing]           = useState<AdminPlanPricingEntry[]>([]);
+  const [pricing, setPricing]               = useState<AdminPlanPricingEntry[]>([]);
   const [pricingLoading, setPricingLoading] = useState(false);
   const [showAddPricing, setShowAddPricing] = useState(false);
 
-  const [saving, setSaving]           = useState(false);
-  const [error, setError]             = useState("");
-  const [limitSaving, setLimitSaving] = useState<string | null>(null);
+  const [saving, setSaving]               = useState(false);
+  const [error, setError]                 = useState("");
+  const [limitSaving, setLimitSaving]     = useState<string | null>(null);
   const [featureSaving, setFeatureSaving] = useState<string | null>(null);
 
   useEffect(() => {
@@ -305,23 +430,29 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       let result: AdminPlanDetail;
       if (isNew) {
         result = await adminApi.createPlan({
-          name: name.trim(),
-          description: description.trim() || undefined,
-          basePriceMonthly: parseFloat(priceMonthly) || 0,
-          basePriceYearly:  parseFloat(priceYearly)  || 0,
+          name:                 name.trim(),
+          description:          description.trim() || undefined,
+          basePriceMonthly:     parseFloat(priceMonthly) || 0,
+          basePriceYearly:      parseFloat(priceYearly)  || 0,
+          applicableAccountType: applicableAccountType || undefined,
+          badgeText:            badgeText.trim() || undefined,
+          planColor:            planColor.trim() || undefined,
         });
       } else {
         result = await adminApi.updatePlan(plan!.id, {
-          name: name.trim(),
-          description: description.trim() || undefined,
-          basePriceMonthly: parseFloat(priceMonthly) || 0,
-          basePriceYearly:  parseFloat(priceYearly)  || 0,
+          name:                 name.trim(),
+          description:          description.trim() || undefined,
+          basePriceMonthly:     parseFloat(priceMonthly) || 0,
+          basePriceYearly:      parseFloat(priceYearly)  || 0,
           isActive,
-          displayOrder: parseInt(displayOrder) || 0,
+          applicableAccountType: applicableAccountType || undefined,
+          displayOrder:         parseInt(displayOrder) || 0,
           isPublic,
           isRecommended,
-          planCategory: planCategory || undefined,
+          planCategory:         planCategory || undefined,
           billingMode,
+          badgeText:            badgeText.trim() || undefined,
+          planColor:            planColor.trim() || undefined,
         });
       }
       setLimits(result.limits);
@@ -359,85 +490,140 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     finally { setFeatureSaving(null); }
   }
 
-  void rank; // rank is read-only for now (updated via existing Rank seed)
+  const featureGroups = features.reduce<Record<string, PlanFeatureItem[]>>((acc, feat) => {
+    const grp = feat.featureGroup ?? "عام";
+    if (!acc[grp]) acc[grp] = [];
+    acc[grp].push(feat);
+    return acc;
+  }, {});
 
-  const sectionHeadStyle: React.CSSProperties = {
-    margin: "0 0 1rem",
-    fontWeight: 700,
-    fontSize: "0.78rem",
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    color: "var(--color-text-secondary)",
-  };
-
-  const sectionDivStyle: React.CSSProperties = {
-    borderTop: "1px solid var(--color-border, #e5e7eb)",
-    paddingTop: "1.25rem",
-    marginTop: "1.5rem",
-  };
+  const enabledCount = features.filter(f => f.isEnabled).length;
 
   const modalContent = (
     <div
       style={{ position: "fixed", inset: 0, zIndex: 3000, backgroundColor: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div style={{ backgroundColor: "#ffffff", borderRadius: 14, width: "100%", maxWidth: 760, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "hidden", opacity: 1 }}>
+      <div style={{ backgroundColor: "#ffffff", borderRadius: 14, width: "100%", maxWidth: 780, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "hidden" }}>
 
         {/* ── Sticky Header ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.75rem", borderBottom: "1px solid var(--color-border, #e5e7eb)", flexShrink: 0, backgroundColor: "#ffffff" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.5rem", borderBottom: "1px solid var(--color-border, #e5e7eb)", flexShrink: 0, backgroundColor: "#ffffff" }}>
           <button
             onClick={onClose}
             style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1, color: "var(--color-text-secondary)", padding: "0.15rem 0.5rem", borderRadius: 6 }}
           >
             ×
           </button>
-          <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
-            {isNew ? "إنشاء خطة جديدة" : `تعديل: ${plan!.name}`}
+          <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700 }}>
+            {isNew ? "✦ إنشاء خطة جديدة" : `تعديل: ${plan!.name}`}
           </h2>
         </div>
 
         {/* ── Scrollable Body ── */}
-        <div style={{ overflowY: "auto", flex: 1, padding: "1.75rem" }}>
+        <div style={{ overflowY: "auto", flex: 1, padding: "1.25rem 1.5rem" }}>
 
           {error && (
-            <div style={{ background: "var(--color-error-bg, #fef2f2)", color: "var(--color-error)", padding: "0.75rem 1rem", borderRadius: 8, marginBottom: "1.25rem", fontSize: "0.9rem" }}>
+            <div style={{ background: "#fef2f2", color: "var(--color-error)", padding: "0.75rem 1rem", borderRadius: 8, marginBottom: "1rem", fontSize: "0.88rem" }}>
               {error}
             </div>
           )}
 
-          {/* ── Basic Info Form ── */}
           <form onSubmit={handleSavePlan}>
 
-            {/* Section: Basic Info */}
-            <p style={sectionHeadStyle}>المعلومات الأساسية</p>
-
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={labelStyle}>اسم الخطة *</label>
-              <input
-                required
-                value={name}
-                onChange={e => setName(e.target.value)}
-                style={inputStyle}
-                placeholder="مثال: AgentPro"
-              />
-            </div>
-
-            <div style={{ marginBottom: "0.25rem" }}>
-              <label style={labelStyle}>الوصف</label>
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-                placeholder="وصف مختصر للخطة..."
-              />
-            </div>
-
-            {/* Section: Pricing */}
-            <div style={sectionDivStyle}>
-              <p style={sectionHeadStyle}>التسعير الأساسي</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            {/* ── Section 1: Basic Info ── */}
+            <CollapsibleSection title="المعلومات الأساسية" icon="📋" defaultOpen={true}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>اسم الخطة *</label>
+                  <input
+                    required
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    style={inputStyle}
+                    placeholder="مثال: AgentPro"
+                  />
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>الوصف</label>
+                  <textarea
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    style={{ ...inputStyle, minHeight: 72, resize: "vertical" }}
+                    placeholder="وصف مختصر للخطة..."
+                  />
+                </div>
                 <div>
-                  <label style={labelStyle}>السعر الشهري الأساسي (ل.س)</label>
+                  <label style={labelStyle}>نوع الحساب المستهدف</label>
+                  <select
+                    value={applicableAccountType}
+                    onChange={e => setApplicableAccountType(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">— للجميع —</option>
+                    <option value="Individual">فرد (Individual)</option>
+                    <option value="Office">مكتب (Office)</option>
+                    <option value="Company">شركة (Company)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>فئة الخطة</label>
+                  <select
+                    value={planCategory}
+                    onChange={e => setPlanCategory(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">— بدون فئة —</option>
+                    <option value="Individual">أفراد (Individual)</option>
+                    <option value="Business">أعمال (Business)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>نص الشارة (Badge)</label>
+                  <input
+                    value={badgeText}
+                    onChange={e => setBadgeText(e.target.value)}
+                    style={inputStyle}
+                    placeholder="مثال: الأكثر مبيعاً"
+                    maxLength={80}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>لون الخطة</label>
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                    <input
+                      type="color"
+                      value={planColor || "#2e7d32"}
+                      onChange={e => setPlanColor(e.target.value)}
+                      style={{ width: 44, height: 36, borderRadius: 6, border: "1.5px solid var(--color-border, #e5e7eb)", cursor: "pointer", padding: 2, flexShrink: 0 }}
+                    />
+                    <input
+                      value={planColor}
+                      onChange={e => setPlanColor(e.target.value)}
+                      style={{ ...inputStyle, flex: 1 }}
+                      placeholder="#2e7d32"
+                      maxLength={20}
+                    />
+                  </div>
+                </div>
+                {!isNew && (
+                  <div>
+                    <label style={labelStyle}>ترتيب العرض</label>
+                    <input
+                      type="number"
+                      value={displayOrder}
+                      onChange={e => setDisplayOrder(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+                )}
+              </div>
+            </CollapsibleSection>
+
+            {/* ── Section 2: Pricing ── */}
+            <CollapsibleSection title="التسعير الأساسي" icon="💰" defaultOpen={true}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
+                <div>
+                  <label style={labelStyle}>السعر الشهري (ل.س)</label>
                   <input
                     type="number"
                     min={0}
@@ -447,7 +633,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>السعر السنوي الأساسي (ل.س)</label>
+                  <label style={labelStyle}>السعر السنوي (ل.س)</label>
                   <input
                     type="number"
                     min={0}
@@ -457,55 +643,30 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                   />
                 </div>
               </div>
-            </div>
+              <p style={{ margin: "0.6rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                أسعار الاشتراك المفصّلة (بعملات متعددة) تُضاف في قسم &quot;أسعار الاشتراك&quot; بعد الحفظ.
+              </p>
+            </CollapsibleSection>
 
+            {/* ── Section 3: Status & Visibility (existing plans only) ── */}
             {!isNew && (
-              <>
-                {/* Section: Visibility & Display */}
-                <div style={sectionDivStyle}>
-                  <p style={sectionHeadStyle}>الظهور والترتيب</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1rem" }}>
-                    <div>
-                      <label style={labelStyle}>ترتيب العرض (رقم أصغر = يظهر أولاً)</label>
-                      <input
-                        type="number"
-                        value={displayOrder}
-                        onChange={e => setDisplayOrder(e.target.value)}
-                        style={inputStyle}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>الفئة</label>
-                      <select
-                        value={planCategory}
-                        onChange={e => setPlanCategory(e.target.value)}
-                        style={selectStyle}
-                      >
-                        <option value="">— بدون فئة —</option>
-                        <option value="Individual">أفراد (Individual)</option>
-                        <option value="Business">أعمال (Business)</option>
-                      </select>
-                    </div>
+              <CollapsibleSection title="الحالة والظهور" icon="👁" defaultOpen={true}>
+                <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>نشطة</label>
+                    <ToggleSwitch checked={isActive} onChange={setIsActive} disabled={saving} />
                   </div>
-                  <div style={{ display: "flex", gap: "1.75rem", flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <label style={{ ...labelStyle, marginBottom: 0 }}>نشطة</label>
-                      <ToggleSwitch checked={isActive} onChange={setIsActive} disabled={saving} />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <label style={{ ...labelStyle, marginBottom: 0 }}>مرئية للعموم</label>
-                      <ToggleSwitch checked={isPublic} onChange={setIsPublic} disabled={saving} />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <label style={{ ...labelStyle, marginBottom: 0 }}>موصى بها ⭐</label>
-                      <ToggleSwitch checked={isRecommended} onChange={setIsRecommended} disabled={saving} />
-                    </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>مرئية للعموم</label>
+                    <ToggleSwitch checked={isPublic} onChange={setIsPublic} disabled={saving} />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>موصى بها ⭐</label>
+                    <ToggleSwitch checked={isRecommended} onChange={setIsRecommended} disabled={saving} />
                   </div>
                 </div>
-
-                {/* Section: Billing Mode */}
-                <div style={sectionDivStyle}>
-                  <p style={sectionHeadStyle}>وضع الفوترة</p>
+                <div>
+                  <label style={labelStyle}>وضع الفوترة</label>
                   <select
                     value={billingMode}
                     onChange={e => setBillingMode(e.target.value)}
@@ -516,36 +677,41 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     <option value="Hybrid">هجين (داخلي + Stripe)</option>
                   </select>
                 </div>
-              </>
+              </CollapsibleSection>
             )}
 
             {/* ── Save Button ── */}
-            <div style={{ borderTop: "1px solid var(--color-border, #e5e7eb)", paddingTop: "1.25rem", marginTop: "1.5rem" }}>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ width: "100%" }}
-                disabled={saving}
-              >
-                {saving ? "جاري الحفظ..." : isNew ? "إنشاء الخطة" : "حفظ المعلومات الأساسية"}
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: "100%", marginBottom: "0.75rem" }}
+              disabled={saving}
+            >
+              {saving ? "جاري الحفظ..." : isNew ? "إنشاء الخطة" : "حفظ المعلومات الأساسية"}
+            </button>
           </form>
 
-          {/* ── Pricing entries (only for existing plans) ── */}
+          {/* ── Section 4: Pricing Entries (existing plans only) ── */}
           {!isNew && (
-            <div style={sectionDivStyle}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.9rem" }}>
-                <button
-                  className="btn btn-primary"
-                  style={{ padding: "0.3rem 0.85rem", fontSize: "0.82rem", visibility: showAddPricing ? "hidden" : "visible" }}
-                  onClick={() => setShowAddPricing(true)}
-                >
-                  + إضافة سعر
-                </button>
-                <p style={sectionHeadStyle}>أسعار الاشتراك</p>
-              </div>
-              {pricingLoading && <p style={{ color: "var(--color-text-secondary)", fontSize: "0.9rem" }}>جاري التحميل...</p>}
+            <CollapsibleSection
+              title="أسعار الاشتراك"
+              icon="🏷"
+              count={pricing.length}
+              defaultOpen={false}
+            >
+              {!showAddPricing && (
+                <div style={{ marginBottom: "0.75rem" }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ padding: "0.3rem 0.85rem", fontSize: "0.82rem" }}
+                    onClick={() => setShowAddPricing(true)}
+                  >
+                    + إضافة سعر
+                  </button>
+                </div>
+              )}
+              {pricingLoading && <p style={{ color: "var(--color-text-secondary)", fontSize: "0.88rem" }}>جاري التحميل...</p>}
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {pricing.map(entry => (
                   <PricingRow
@@ -567,41 +733,82 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                   />
                 )}
               </div>
-            </div>
+            </CollapsibleSection>
           )}
 
-          {/* ── Limits (only for existing plans) ── */}
+          {/* ── Section 5: Limits (existing plans only) ── */}
           {!isNew && limits.length > 0 && (
-            <div style={sectionDivStyle}>
-              <p style={sectionHeadStyle}>الحدود الكمية</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            <CollapsibleSection
+              title="الحدود الكمية"
+              icon="📊"
+              count={limits.length}
+              defaultOpen={false}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {limits.map(lim => (
-                  <LimitRow key={lim.key} limit={lim} saving={limitSaving === lim.key} onSave={(val) => handleLimitChange(lim.key, val)} />
+                  <LimitRow
+                    key={lim.key}
+                    limit={lim}
+                    saving={limitSaving === lim.key}
+                    onSave={(val) => handleLimitChange(lim.key, val)}
+                  />
                 ))}
               </div>
-              <p style={{ margin: "0.5rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>استخدم ‑1 لتعيين الحد كـ &quot;غير محدود&quot;</p>
-            </div>
+              <p style={{ margin: "0.5rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                استخدم ‑1 لتعيين الحد كـ &quot;غير محدود&quot;
+              </p>
+            </CollapsibleSection>
           )}
 
-          {/* ── Features (only for existing plans) ── */}
+          {/* ── Section 6: Features grouped (existing plans only) ── */}
           {!isNew && features.length > 0 && (
-            <div style={sectionDivStyle}>
-              <p style={sectionHeadStyle}>الميزات</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {features.map(feat => (
-                  <div
-                    key={feat.key}
-                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0.75rem", borderRadius: 8, background: "var(--color-bg-secondary, #f9fafb)", opacity: featureSaving === feat.key ? 0.6 : 1, transition: "opacity 0.2s" }}
-                  >
-                    <div>
-                      <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 500 }}>{feat.name}</p>
-                      {feat.featureGroup && <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{feat.featureGroup}</p>}
-                    </div>
-                    <ToggleSwitch checked={feat.isEnabled} onChange={(val) => handleFeatureToggle(feat.key, val)} disabled={featureSaving === feat.key} />
+            <CollapsibleSection
+              title="الميزات"
+              icon="⭐"
+              count={enabledCount}
+              defaultOpen={false}
+            >
+              {Object.entries(featureGroups).map(([grp, feats]) => (
+                <div key={grp} style={{ marginBottom: "0.85rem" }}>
+                  <p style={{ margin: "0 0 0.4rem", fontSize: "0.73rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-secondary)" }}>
+                    {grp}
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                    {feats.map(feat => (
+                      <div
+                        key={feat.key}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.75rem", borderRadius: 8, background: feat.isEnabled ? "#f0fdf4" : "var(--color-bg-secondary, #f9fafb)", border: feat.isEnabled ? "1px solid #bbf7d0" : "1px solid transparent", opacity: featureSaving === feat.key ? 0.55 : 1, transition: "all 0.18s" }}
+                      >
+                        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: feat.isEnabled ? 600 : 400 }}>{feat.name}</p>
+                        <ToggleSwitch
+                          checked={feat.isEnabled}
+                          onChange={(val) => handleFeatureToggle(feat.key, val)}
+                          disabled={featureSaving === feat.key}
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              ))}
+            </CollapsibleSection>
+          )}
+
+          {/* ── Section 7: Live Plan Preview (existing plans only) ── */}
+          {!isNew && (
+            <CollapsibleSection title="معاينة الخطة" icon="🔍" defaultOpen={false}>
+              <p style={{ margin: "0 0 0.9rem", fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
+                معاينة مباشرة لكيفية ظهور الخطة في صفحة التسعير.
+              </p>
+              <PlanPreviewCard
+                name={name}
+                badgeText={badgeText}
+                planColor={planColor}
+                isRecommended={isRecommended}
+                planCategory={planCategory}
+                basePriceMonthly={priceMonthly}
+                enabledFeatures={features}
+              />
+            </CollapsibleSection>
           )}
 
         </div>

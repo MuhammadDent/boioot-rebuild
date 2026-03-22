@@ -30,4 +30,10 @@ public class UpdatePlanRequest
 
     /// <summary>"InternalOnly" | "StripeOnly" | "Hybrid"</summary>
     public string  BillingMode          { get; set; } = "InternalOnly";
+
+    [MaxLength(80)]
+    public string? BadgeText            { get; set; }
+
+    [MaxLength(20)]
+    public string? PlanColor            { get; set; }
 }
