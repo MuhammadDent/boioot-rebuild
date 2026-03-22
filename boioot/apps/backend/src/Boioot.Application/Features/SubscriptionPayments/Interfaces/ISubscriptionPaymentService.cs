@@ -92,4 +92,14 @@ public interface ISubscriptionPaymentService
     /// </summary>
     Task<PaymentRequestResponse> ActivateSubscriptionAsync(
         Guid requestId, Guid adminUserId, CancellationToken ct = default);
+
+    // ── Free plan shortcut ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Directly activates a free plan (priceAmount = 0) for the calling user.
+    /// No payment request is created — subscription is provisioned immediately.
+    /// Throws 400 if the plan has any paid pricing.
+    /// </summary>
+    Task<FreePlanActivationResponse> ActivateFreeAsync(
+        Guid userId, Guid planId, CancellationToken ct = default);
 }

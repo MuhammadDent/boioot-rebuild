@@ -47,17 +47,23 @@ function PlanCard({
   cycle,
   currentPlanId,
   onChoose,
+  onActivateFree,
+  freeActivatingId,
 }: {
   plan: PublicPricingItem;
   cycle: "Monthly" | "Yearly";
   currentPlanId: string | null;
   onChoose: (plan: PublicPricingItem, pricing: PublicPricingEntry) => void;
+  onActivateFree: (planId: string) => void;
+  freeActivatingId: string | null;
 }) {
   const pricing = plan.pricing.find(p => p.billingCycle === cycle)
     ?? plan.pricing[0];
 
+  const isFree = pricing ? pricing.priceAmount === 0 : plan.pricing.every(p => p.priceAmount === 0);
   const isCurrent = plan.planId === currentPlanId;
   const isRecommended = plan.isRecommended;
+  const isActivatingFree = freeActivatingId === plan.planId;
 
   const keyLimits = plan.limits.filter(l => LIMIT_KEYS.includes(l.key));
 
@@ -166,8 +172,15 @@ function PlanCard({
 
       {/* CTA */}
       <button
-        onClick={() => pricing && onChoose(plan, pricing)}
-        disabled={isCurrent}
+        onClick={() => {
+          if (isCurrent || isActivatingFree) return;
+          if (isFree) {
+            onActivateFree(plan.planId);
+          } else if (pricing) {
+            onChoose(plan, pricing);
+          }
+        }}
+        disabled={isCurrent || isActivatingFree}
         type="button"
         style={{
           marginTop: "auto",
@@ -175,18 +188,24 @@ function PlanCard({
           padding: "0.7rem",
           borderRadius: 10,
           border: "none",
-          backgroundColor: isCurrent
+          backgroundColor: isCurrent || isActivatingFree
             ? "#e2e8f0"
             : isRecommended
               ? "#059669"
               : "#1a2e1a",
-          color: isCurrent ? "#94a3b8" : "#fff",
+          color: isCurrent || isActivatingFree ? "#94a3b8" : "#fff",
           fontSize: "0.9rem",
           fontWeight: 700,
-          cursor: isCurrent ? "default" : "pointer",
+          cursor: isCurrent || isActivatingFree ? "default" : "pointer",
         }}
       >
-        {isCurrent ? "باقتك الحالية" : "اختر الباقة"}
+        {isCurrent
+          ? "باقتك الحالية"
+          : isActivatingFree
+            ? "جارٍ التفعيل..."
+            : isFree
+              ? "تفعيل مجاني"
+              : "اختر الباقة"}
       </button>
     </div>
   );
@@ -565,6 +584,82 @@ function SuccessModal({
   );
 }
 
+// ── FreeSuccessModal ──────────────────────────────────────────────────────────
+
+function FreeSuccessModal({
+  planName,
+  onGoToDashboard,
+  onClose,
+}: {
+  planName: string;
+  onGoToDashboard: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "1rem",
+    }}>
+      <div style={{
+        backgroundColor: "#fff",
+        borderRadius: 18,
+        width: "100%",
+        maxWidth: 420,
+        padding: "2rem",
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🎉</div>
+        <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.2rem", fontWeight: 800, color: "#1a2e1a" }}>
+          تم تفعيل الباقة المجانية!
+        </h2>
+        <p style={{ margin: "0 0 0.35rem", fontSize: "1rem", fontWeight: 700, color: "#059669" }}>
+          {planName}
+        </p>
+        <p style={{ margin: "0 0 1.5rem", fontSize: "0.88rem", color: "#475569", lineHeight: 1.7 }}>
+          تم تفعيل اشتراكك المجاني فوراً. يمكنك الآن الاستفادة من جميع مزايا الباقة.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+          <button
+            onClick={onGoToDashboard}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.8rem",
+              borderRadius: 10,
+              border: "none",
+              backgroundColor: "#059669",
+              color: "#fff",
+              fontSize: "0.9rem",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            الانتقال للوحة التحكم
+          </button>
+          <button
+            onClick={onClose}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.7rem",
+              borderRadius: 10,
+              border: "1.5px solid #e2e8f0",
+              backgroundColor: "transparent",
+              color: "#64748b",
+              fontSize: "0.88rem",
+              cursor: "pointer",
+            }}
+          >
+            العودة للباقات
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function PlansPage() {
@@ -580,6 +675,9 @@ export default function PlansPage() {
   const [checkoutPlan, setCheckoutPlan]       = useState<PublicPricingItem | null>(null);
   const [checkoutPricing, setCheckoutPricing] = useState<PublicPricingEntry | null>(null);
   const [successMethod, setSuccessMethod]     = useState<string | null>(null);
+
+  const [freeActivatingId, setFreeActivatingId]   = useState<string | null>(null);
+  const [freeSuccessPlan, setFreeSuccessPlan]     = useState<string | null>(null);
 
   const loadPlans = useCallback(async () => {
     setPlansLoading(true);
@@ -604,6 +702,22 @@ export default function PlansPage() {
       .then(sub => setCurrentSub(sub))
       .catch(() => setCurrentSub(null));
   }, [user]);
+
+  async function handleActivateFree(planId: string) {
+    setFreeActivatingId(planId);
+    try {
+      const result = await paymentRequestsApi.activateFree(planId);
+      setFreeSuccessPlan(result.planName);
+      // Refresh current subscription banner
+      subscriptionApi.getCurrent()
+        .then(sub => setCurrentSub(sub))
+        .catch(() => {});
+    } catch (err) {
+      alert(normalizeError(err));
+    } finally {
+      setFreeActivatingId(null);
+    }
+  }
 
   if (isLoading || !user) return null;
 
@@ -787,6 +901,8 @@ export default function PlansPage() {
                     setCheckoutPricing(pricing);
                     setSuccessMethod(null);
                   }}
+                  onActivateFree={handleActivateFree}
+                  freeActivatingId={freeActivatingId}
                 />
               ))}
           </div>
@@ -832,6 +948,15 @@ export default function PlansPage() {
           paymentMethod={successMethod}
           onViewRequests={() => router.push("/dashboard/subscription/requests")}
           onClose={() => setSuccessMethod(null)}
+        />
+      )}
+
+      {/* Free plan success modal */}
+      {freeSuccessPlan && (
+        <FreeSuccessModal
+          planName={freeSuccessPlan}
+          onGoToDashboard={() => router.push("/dashboard")}
+          onClose={() => setFreeSuccessPlan(null)}
         />
       )}
 

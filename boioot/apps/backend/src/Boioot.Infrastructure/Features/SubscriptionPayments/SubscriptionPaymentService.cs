@@ -481,6 +481,69 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         }
     }
 
+    // ── Free Plan Shortcut ───────────────────────────────────────────────
+
+    public async Task<FreePlanActivationResponse> ActivateFreeAsync(
+        Guid userId, Guid planId, CancellationToken ct = default)
+    {
+        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct)
+            ?? throw new BoiootException(
+                "لا يوجد حساب مرتبط بهذا المستخدم. يرجى إكمال إعداد الحساب أولاً.", 404);
+
+        var plan = await _db.Plans.FirstOrDefaultAsync(p => p.Id == planId, ct)
+            ?? throw new BoiootException("الخطة المطلوبة غير موجودة.", 404);
+
+        // Guard: reject if the plan has ANY paid pricing
+        var hasPaidPricing = await _db.PlanPricings
+            .AnyAsync(p => p.PlanId == planId && p.PriceAmount > 0, ct);
+
+        if (hasPaidPricing)
+            throw new BoiootException(
+                "هذه الباقة ليست مجانية. يرجى اختيار طريقة دفع للاشتراك.", 400);
+
+        // Deactivate any existing active subscriptions for this account
+        var existingActive = await _db.Subscriptions
+            .Where(s => s.AccountId == accountId && s.IsActive)
+            .ToListAsync(ct);
+
+        foreach (var sub in existingActive)
+        {
+            sub.IsActive  = false;
+            sub.Status    = SubscriptionStatus.Cancelled;
+            sub.UpdatedAt = DateTime.UtcNow;
+        }
+
+        // Create the free subscription (no expiry)
+        var subscription = new Subscription
+        {
+            AccountId  = accountId,
+            PlanId     = planId,
+            PricingId  = null,
+            Status     = SubscriptionStatus.Active,
+            StartDate  = DateTime.UtcNow,
+            EndDate    = null,
+            IsActive   = true,
+            AutoRenew  = false,
+            PaymentRef = "free",
+            CreatedAt  = DateTime.UtcNow,
+            UpdatedAt  = DateTime.UtcNow,
+        };
+
+        _db.Subscriptions.Add(subscription);
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Free plan activated directly: account={AccountId}, plan={PlanId}",
+            accountId, planId);
+
+        return new FreePlanActivationResponse
+        {
+            SubscriptionId = subscription.Id,
+            PlanName       = plan.Name,
+            Message        = "تم تفعيل الباقة المجانية بنجاح.",
+        };
+    }
+
     // ── Private helpers ──────────────────────────────────────────────────
 
     private async Task<SubscriptionPaymentRequest> LoadOwnedRequestAsync(

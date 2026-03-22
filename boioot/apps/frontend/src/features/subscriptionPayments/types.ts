@@ -49,3 +49,9 @@ export interface UploadReceiptDto {
   receiptFileName?: string;
   customerNote?:   string;
 }
+
+export interface FreePlanActivationResponse {
+  subscriptionId: string;
+  planName:       string;
+  message:        string;
+}

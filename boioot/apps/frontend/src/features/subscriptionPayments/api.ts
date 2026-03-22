@@ -3,6 +3,7 @@ import type {
   PaymentRequestResponse,
   CreatePaymentRequestDto,
   UploadReceiptDto,
+  FreePlanActivationResponse,
 } from "./types";
 
 export const paymentRequestsApi = {
@@ -24,5 +25,9 @@ export const paymentRequestsApi = {
 
   cancel(id: string): Promise<PaymentRequestResponse> {
     return api.post<PaymentRequestResponse>(`/payment-requests/${id}/cancel`, {});
+  },
+
+  activateFree(planId: string): Promise<FreePlanActivationResponse> {
+    return api.post<FreePlanActivationResponse>("/payment-requests/activate-free", { planId });
   },
 };

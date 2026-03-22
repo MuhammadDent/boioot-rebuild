@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { paymentRequestsApi } from "@/features/subscriptionPayments/api";
@@ -50,14 +50,204 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ── ReceiptUploadSection ──────────────────────────────────────────────────────
+
+const RECEIPT_METHODS = ["bank_transfer", "receipt_upload"];
+
+function ReceiptUploadSection({
+  requestId,
+  onUpdate,
+}: {
+  requestId: string;
+  onUpdate: (req: PaymentRequestResponse) => void;
+}) {
+  const fileInputRef                      = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile]   = useState<File | null>(null);
+  const [preview, setPreview]             = useState<string | null>(null);
+  const [uploading, setUploading]         = useState(false);
+  const [uploadError, setUploadError]     = useState<string | null>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      setUploadError("حجم الملف كبير جداً. الحد الأقصى 3 ميغابايت.");
+      return;
+    }
+    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowed.includes(file.type)) {
+      setUploadError("نوع الملف غير مدعوم. يُقبل: JPG، PNG، WebP، PDF.");
+      return;
+    }
+
+    setUploadError(null);
+    setSelectedFile(file);
+
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = ev => setPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setPreview(null);
+    }
+  }
+
+  async function handleUpload() {
+    if (!selectedFile) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = ev => resolve(ev.target?.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedFile);
+      });
+      const updated = await paymentRequestsApi.uploadReceipt(requestId, {
+        receiptImageUrl: dataUrl,
+        receiptFileName: selectedFile.name,
+      });
+      onUpdate(updated);
+    } catch (err) {
+      setUploadError(normalizeError(err));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div style={{
+      marginTop: "0.85rem",
+      backgroundColor: "#fffbeb",
+      border: "1.5px solid #fde68a",
+      borderRadius: 10,
+      padding: "0.9rem",
+    }}>
+      <p style={{ margin: "0 0 0.65rem", fontSize: "0.82rem", fontWeight: 700, color: "#92400e" }}>
+        📎 يرجى رفع إيصال الدفع لإكمال الاشتراك
+      </p>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,application/pdf"
+        onChange={handleFileChange}
+        style={{ display: "none" }}
+      />
+
+      {!selectedFile ? (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          type="button"
+          style={{
+            width: "100%",
+            padding: "0.65rem",
+            borderRadius: 8,
+            border: "1.5px dashed #fbbf24",
+            backgroundColor: "#fef9c3",
+            color: "#92400e",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            textAlign: "center",
+          }}
+        >
+          اختر صورة الإيصال أو ملف PDF (حتى 3 ميغابايت)
+        </button>
+      ) : (
+        <div>
+          {preview && (
+            <img
+              src={preview}
+              alt="معاينة الإيصال"
+              style={{
+                width: "100%",
+                maxHeight: 180,
+                objectFit: "contain",
+                borderRadius: 8,
+                border: "1px solid #e2e8f0",
+                marginBottom: "0.6rem",
+                backgroundColor: "#f8fafc",
+              }}
+            />
+          )}
+          {!preview && selectedFile && (
+            <div style={{
+              padding: "0.55rem 0.85rem",
+              backgroundColor: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              fontSize: "0.8rem",
+              color: "#374151",
+              marginBottom: "0.6rem",
+            }}>
+              📄 {selectedFile.name}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              onClick={() => {
+                setSelectedFile(null);
+                setPreview(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+              type="button"
+              disabled={uploading}
+              style={{
+                flex: 1,
+                padding: "0.6rem",
+                borderRadius: 8,
+                border: "1.5px solid #e2e8f0",
+                backgroundColor: "#f8fafc",
+                color: "#64748b",
+                fontSize: "0.8rem",
+                cursor: uploading ? "default" : "pointer",
+              }}
+            >
+              تغيير
+            </button>
+            <button
+              onClick={handleUpload}
+              type="button"
+              disabled={uploading}
+              style={{
+                flex: 2,
+                padding: "0.6rem",
+                borderRadius: 8,
+                border: "none",
+                backgroundColor: uploading ? "#94a3b8" : "#059669",
+                color: "#fff",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                cursor: uploading ? "default" : "pointer",
+              }}
+            >
+              {uploading ? "جارٍ الرفع..." : "رفع الإيصال"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {uploadError && (
+        <p style={{ margin: "0.5rem 0 0", fontSize: "0.78rem", color: "#b91c1c" }}>
+          {uploadError}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── RequestCard ───────────────────────────────────────────────────────────────
 
 function RequestCard({
   req,
   onCancel,
+  onUpdate,
 }: {
   req: PaymentRequestResponse;
   onCancel: (id: string) => void;
+  onUpdate: (req: PaymentRequestResponse) => void;
 }) {
   const meta = STATUS_META[req.status];
   const canCancel = ["Pending", "AwaitingPayment", "ReceiptUploaded"].includes(req.status);
@@ -128,6 +318,50 @@ function RequestCard({
           </div>
         )}
       </div>
+
+      {/* Receipt upload section — Pending / AwaitingPayment with receipt methods */}
+      {(req.status === "Pending" || req.status === "AwaitingPayment") &&
+        RECEIPT_METHODS.includes(req.paymentMethod) && (
+        <ReceiptUploadSection
+          requestId={req.id}
+          onUpdate={onUpdate}
+        />
+      )}
+
+      {/* Uploaded receipt preview — ReceiptUploaded */}
+      {req.status === "ReceiptUploaded" && req.receiptImageUrl && (
+        <div style={{
+          marginTop: "0.7rem",
+          marginBottom: "0.85rem",
+          backgroundColor: "#f0fdf4",
+          border: "1.5px solid #bbf7d0",
+          borderRadius: 10,
+          padding: "0.8rem",
+        }}>
+          <p style={{ margin: "0 0 0.5rem", fontSize: "0.78rem", fontWeight: 700, color: "#166534" }}>
+            ✅ تم رفع الإيصال — بانتظار المراجعة
+          </p>
+          {req.receiptImageUrl.startsWith("data:image") && (
+            <img
+              src={req.receiptImageUrl}
+              alt="الإيصال المرفوع"
+              style={{
+                width: "100%",
+                maxHeight: 180,
+                objectFit: "contain",
+                borderRadius: 8,
+                border: "1px solid #e2e8f0",
+                backgroundColor: "#fff",
+              }}
+            />
+          )}
+          {!req.receiptImageUrl.startsWith("data:image") && (
+            <p style={{ margin: 0, fontSize: "0.8rem", color: "#374151" }}>
+              📄 {req.receiptFileName ?? "إيصال الدفع"}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Status note */}
       {meta && !isTerminal && (
@@ -472,6 +706,9 @@ export default function MyRequestsPage() {
               key={req.id}
               req={req}
               onCancel={id => setCancelId(id)}
+              onUpdate={updated =>
+                setRequests(prev => prev.map(r => r.id === updated.id ? updated : r))
+              }
             />
           ))}
         </div>

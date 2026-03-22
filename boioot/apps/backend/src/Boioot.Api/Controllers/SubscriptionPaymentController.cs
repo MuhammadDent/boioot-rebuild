@@ -81,4 +81,19 @@ public class SubscriptionPaymentController : BaseController
         var result = await _service.CancelAsync(id, GetUserId(), ct);
         return Ok(result);
     }
+
+    /// <summary>
+    /// POST /api/payment-requests/activate-free
+    /// Directly activates a free plan (priceAmount = 0) with no payment request.
+    /// Returns 400 if the plan has any paid pricing.
+    /// </summary>
+    [HttpPost("activate-free")]
+    public async Task<IActionResult> ActivateFree(
+        [FromBody] ActivateFreePlanDto dto,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        var result = await _service.ActivateFreeAsync(GetUserId(), dto.PlanId, ct);
+        return StatusCode(201, result);
+    }
 }
