@@ -268,7 +268,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 // The new strings below (properties.create, projects.create, etc.) are added to
 // the Admin entry so a two-pass permission check covers them too.
 export type PlatformPermission =
-  | "properties.create"  // create a new listing  (CompanyOwner, Admin)
+  | "properties.create"  // create a new listing  (Owner, Broker, CompanyOwner, Admin)
   | "projects.create"    // create a new project  (CompanyOwner, Admin)
   | "projects.delete"    // delete a project      (CompanyOwner, Admin)
   | "agents.view"        // view agents section   (Agent, CompanyOwner, Admin)
@@ -289,7 +289,12 @@ export const PLATFORM_ROLE_PERMISSIONS: Record<string, string[]> = {
     "projects.delete",
     "agents.manage",
   ],
+  // Owner (مالك عقار): can create personal listings via POST /api/properties/post.
+  Owner: [
+    "properties.create",
+  ],
   Broker: [
+    "properties.create",
     "agents.manage",
   ],
   // Agent: can view and edit their own listings (no create/delete in platform dashboard).
