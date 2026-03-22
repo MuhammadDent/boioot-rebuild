@@ -170,8 +170,10 @@ export default function OnboardingPage() {
         longitude:    payload.longitude,
       });
       router.push("/dashboard");
-    } catch (err) {
-      setError(normalizeError(err));
+    } catch (error: unknown) {
+      console.error("API ERROR:", error);
+      console.log("Payload sent:", payload);
+      setError(normalizeError(error));
     } finally {
       setSubmitting(false);
     }
