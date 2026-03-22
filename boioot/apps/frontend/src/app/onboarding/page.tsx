@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, type FormEvent, type ChangeEvent } from "react";
+import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,22 +23,31 @@ const STEPS = [
   { label: "مكتمل" },
 ];
 
+// ── Form state — mirrors the payload structure exactly ────────────────────────
 interface FormState {
   displayName:  string;
   city:         string;
-  neighborhood: string;
+  district:     string;
   address:      string;
+  phoneNumber:  string;
+  whatsapp:     string;
   description:  string;
+  latitude:     number | null;
+  longitude:    number | null;
 }
 
-type FieldKey = keyof FormState | "location";
+type FieldKey = keyof FormState;
 
 const EMPTY: FormState = {
   displayName:  "",
   city:         "",
-  neighborhood: "",
+  district:     "",
   address:      "",
+  phoneNumber:  "",
+  whatsapp:     "",
   description:  "",
+  latitude:     null,
+  longitude:    null,
 };
 
 export default function OnboardingPage() {
@@ -46,11 +55,7 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   const [form, setForm]           = useState<FormState>(EMPTY);
-  const [phone, setPhone]         = useState<E164Number | undefined>(undefined);
-  const [whatsApp, setWhatsApp]   = useState<E164Number | undefined>(undefined);
-  const [location, setLocation]   = useState<LatLng | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
-
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
   const [error, setError]         = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -72,31 +77,32 @@ export default function OnboardingPage() {
         setForm({
           displayName:  p.displayName  ?? "",
           city:         p.city         ?? "",
-          neighborhood: p.neighborhood ?? "",
+          district:     p.neighborhood ?? "",
           address:      p.address      ?? "",
+          phoneNumber:  p.phone        ?? "",
+          whatsapp:     p.whatsApp     ?? "",
           description:  p.description  ?? "",
+          latitude:     p.latitude  ?? null,
+          longitude:    p.longitude ?? null,
         });
-        if (p.phone)    setPhone(p.phone as E164Number);
-        if (p.whatsApp) setWhatsApp(p.whatsApp as E164Number);
-        if (p.latitude != null && p.longitude != null) {
-          setLocation({ lat: p.latitude, lng: p.longitude });
-        }
       })
       .catch(() => { /* start fresh */ })
       .finally(() => setProfileLoading(false));
   }, [isAuthenticated, user]);
 
-  // ── Field change ──────────────────────────────────────────────────────────
-  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+  // ── Generic field change ──────────────────────────────────────────────────
+  function setField<K extends FieldKey>(key: K, value: FormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
   }
 
-  // ── Map selection ─────────────────────────────────────────────────────────
+  function handleTextChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    setField(e.target.name as FieldKey, e.target.value);
+  }
+
+  // ── Map selection → updates form.latitude / form.longitude ────────────────
   const handleMapChange = useCallback((pos: LatLng) => {
-    setLocation(pos);
-    setFieldErrors((prev) => ({ ...prev, location: undefined }));
+    setForm((prev) => ({ ...prev, latitude: pos.lat, longitude: pos.lng }));
   }, []);
 
   // ── Browser geolocation ───────────────────────────────────────────────────
@@ -116,13 +122,22 @@ export default function OnboardingPage() {
   // ── Validation ────────────────────────────────────────────────────────────
   function validate(): boolean {
     const errors: Partial<Record<FieldKey, string>> = {};
-    if (!form.displayName.trim())  errors.displayName  = "الاسم التجاري مطلوب";
-    if (!form.city.trim())         errors.city         = "المدينة مطلوبة";
-    if (!form.neighborhood.trim()) errors.neighborhood = "الحي / المنطقة مطلوب";
-    if (!form.address.trim())      errors.address      = "العنوان التفصيلي مطلوب";
-    if (!location)                 errors.location     = "يرجى تحديد موقعك على الخريطة";
+    if (!form.displayName.trim()) errors.displayName = "الاسم التجاري مطلوب";
+    if (!form.city.trim())        errors.city        = "المدينة مطلوبة";
+    if (!form.district.trim())    errors.district    = "الحي / المنطقة مطلوب";
+    if (!form.address.trim())     errors.address     = "العنوان التفصيلي مطلوب";
+    if (!form.phoneNumber.trim()) errors.phoneNumber = "رقم الهاتف مطلوب";
     setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+
+    if (Object.keys(errors).length > 0) return false;
+
+    // Location check — exact behaviour requested
+    if (!form.latitude || !form.longitude) {
+      alert("يجب تحديد الموقع على الخريطة");
+      return false;
+    }
+
+    return true;
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -130,18 +145,29 @@ export default function OnboardingPage() {
     e.preventDefault();
     setError("");
     if (!validate()) return;
+
+    const payload = {
+      city:        form.city,
+      district:    form.district,
+      address:     form.address,
+      phoneNumber: form.phoneNumber,
+      whatsapp:    form.whatsapp,
+      latitude:    form.latitude!,
+      longitude:   form.longitude!,
+    };
+
     setSubmitting(true);
     try {
       await onboardingApi.updateBusinessProfile({
         displayName:  form.displayName.trim(),
-        city:         form.city.trim(),
-        neighborhood: form.neighborhood.trim() || undefined,
-        address:      form.address.trim()      || undefined,
-        phone:        phone                    || undefined,
-        whatsApp:     whatsApp                 || undefined,
-        description:  form.description.trim()  || undefined,
-        latitude:     location?.lat,
-        longitude:    location?.lng,
+        city:         payload.city.trim(),
+        neighborhood: payload.district.trim(),
+        address:      payload.address.trim()     || undefined,
+        phone:        payload.phoneNumber.trim()  || undefined,
+        whatsApp:     payload.whatsapp.trim()     || undefined,
+        description:  form.description.trim()    || undefined,
+        latitude:     payload.latitude,
+        longitude:    payload.longitude,
       });
       router.push("/dashboard");
     } catch (err) {
@@ -156,6 +182,12 @@ export default function OnboardingPage() {
   if (!isAuthenticated || !user || !BUSINESS_ROLES.includes(user.role)) return null;
 
   const roleLabel = user.role === "CompanyOwner" ? "شركة تطوير" : "مكتب عقاري";
+
+  // MapPicker value derived from form state
+  const mapValue: LatLng | null =
+    form.latitude != null && form.longitude != null
+      ? { lat: form.latitude, lng: form.longitude }
+      : null;
 
   return (
     <div className="login-page">
@@ -235,14 +267,9 @@ export default function OnboardingPage() {
 
           {/* ── المعلومات الأساسية ────────────────────────────────────────── */}
           <div style={{
-            fontSize: "0.78rem",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.04em",
-            color: "var(--color-text-muted)",
-            borderBottom: "1px solid var(--color-border)",
-            paddingBottom: "0.4rem",
-            marginBottom: "1rem",
+            fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.04em",
+            color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)",
+            paddingBottom: "0.4rem", marginBottom: "1rem",
           }}>
             المعلومات الأساسية
           </div>
@@ -255,7 +282,7 @@ export default function OnboardingPage() {
             </label>
             <input
               id="displayName" name="displayName" type="text" className="form-input"
-              value={form.displayName} onChange={handleChange} required
+              value={form.displayName} onChange={handleTextChange} required
               placeholder={user.role === "CompanyOwner" ? "مثال: شركة الأمل للتطوير العقاري" : "مثال: مكتب النجاح العقاري"}
             />
             {fieldErrors.displayName && <span className="form-error">{fieldErrors.displayName}</span>}
@@ -264,21 +291,30 @@ export default function OnboardingPage() {
           {/* Phone + WhatsApp — two columns */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="phone">رقم الهاتف الرئيسي</label>
+              <label className="form-label" htmlFor="phoneNumber">
+                رقم الهاتف <span style={{ color: "var(--color-error)" }}>*</span>
+              </label>
               <PhoneInput
-                id="phone" international defaultCountry="SY"
-                value={phone} onChange={setPhone}
+                id="phoneNumber"
+                international
+                defaultCountry="SY"
+                value={(form.phoneNumber || undefined) as E164Number | undefined}
+                onChange={(val) => setField("phoneNumber", val ?? "")}
                 className="phone-input-wrapper"
               />
+              {fieldErrors.phoneNumber && <span className="form-error">{fieldErrors.phoneNumber}</span>}
             </div>
             <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="whatsApp">
+              <label className="form-label" htmlFor="whatsapp">
                 واتساب{" "}
                 <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
               </label>
               <PhoneInput
-                id="whatsApp" international defaultCountry="SY"
-                value={whatsApp} onChange={setWhatsApp}
+                id="whatsapp"
+                international
+                defaultCountry="SY"
+                value={(form.whatsapp || undefined) as E164Number | undefined}
+                onChange={(val) => setField("whatsapp", val ?? "")}
                 className="phone-input-wrapper"
               />
             </div>
@@ -292,7 +328,7 @@ export default function OnboardingPage() {
             </label>
             <textarea
               id="description" name="description" className="form-input"
-              value={form.description} onChange={handleChange}
+              value={form.description} onChange={handleTextChange}
               rows={3}
               placeholder="اكتب نبذة مختصرة عن نشاطك العقاري..."
               style={{ resize: "vertical", minHeight: 80 }}
@@ -301,20 +337,14 @@ export default function OnboardingPage() {
 
           {/* ── معلومات الموقع ───────────────────────────────────────────── */}
           <div style={{
-            fontSize: "0.78rem",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.04em",
-            color: "var(--color-text-muted)",
-            borderBottom: "1px solid var(--color-border)",
-            paddingBottom: "0.4rem",
-            marginBottom: "1rem",
-            marginTop: "0.5rem",
+            fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.04em",
+            color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)",
+            paddingBottom: "0.4rem", marginBottom: "1rem", marginTop: "0.5rem",
           }}>
             معلومات الموقع
           </div>
 
-          {/* City + Neighborhood — two columns */}
+          {/* City + District — two columns */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label" htmlFor="city">
@@ -322,21 +352,21 @@ export default function OnboardingPage() {
               </label>
               <input
                 id="city" name="city" type="text" className="form-input"
-                value={form.city} onChange={handleChange} required
+                value={form.city} onChange={handleTextChange} required
                 placeholder="مثال: دمشق"
               />
               {fieldErrors.city && <span className="form-error">{fieldErrors.city}</span>}
             </div>
             <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="neighborhood">
+              <label className="form-label" htmlFor="district">
                 الحي / المنطقة <span style={{ color: "var(--color-error)" }}>*</span>
               </label>
               <input
-                id="neighborhood" name="neighborhood" type="text" className="form-input"
-                value={form.neighborhood} onChange={handleChange} required
+                id="district" name="district" type="text" className="form-input"
+                value={form.district} onChange={handleTextChange} required
                 placeholder="مثال: المزة"
               />
-              {fieldErrors.neighborhood && <span className="form-error">{fieldErrors.neighborhood}</span>}
+              {fieldErrors.district && <span className="form-error">{fieldErrors.district}</span>}
             </div>
           </div>
 
@@ -347,7 +377,7 @@ export default function OnboardingPage() {
             </label>
             <input
               id="address" name="address" type="text" className="form-input"
-              value={form.address} onChange={handleChange} required
+              value={form.address} onChange={handleTextChange} required
               placeholder="مثال: شارع الثورة، بناء رقم 7، الطابق الثالث"
             />
             {fieldErrors.address && <span className="form-error">{fieldErrors.address}</span>}
@@ -364,16 +394,10 @@ export default function OnboardingPage() {
                 onClick={useCurrentLocation}
                 disabled={geoLoading}
                 style={{
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  color: "var(--color-primary)",
-                  background: "none",
-                  border: "none",
+                  fontSize: "0.78rem", fontWeight: 600, color: "var(--color-primary)",
+                  background: "none", border: "none",
                   cursor: geoLoading ? "wait" : "pointer",
-                  padding: "0.2rem 0",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.3rem",
+                  padding: "0.2rem 0", display: "flex", alignItems: "center", gap: "0.3rem",
                 }}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -388,25 +412,16 @@ export default function OnboardingPage() {
               انقر على الخريطة لتحديد موقع مكتبك، أو اسحب العلامة لضبط الموقع بدقة
             </p>
 
-            <LocationPickerDynamic value={location} onChange={handleMapChange} />
+            <LocationPickerDynamic value={mapValue} onChange={handleMapChange} />
 
-            {fieldErrors.location && (
-              <span className="form-error" style={{ marginTop: "0.4rem", display: "block" }}>
-                {fieldErrors.location}
-              </span>
-            )}
-
-            {/* Coordinates display */}
-            {location && (
+            {/* Coordinates display — form.latitude / form.longitude */}
+            {form.latitude != null && form.longitude != null && (
               <p style={{
-                fontSize: "0.72rem",
-                color: "var(--color-text-muted)",
-                marginTop: "0.4rem",
-                fontFamily: "monospace",
-                direction: "ltr",
-                textAlign: "right",
+                fontSize: "0.72rem", color: "var(--color-text-muted)",
+                marginTop: "0.4rem", fontFamily: "monospace",
+                direction: "ltr", textAlign: "right",
               }}>
-                {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                {form.latitude.toFixed(6)}, {form.longitude.toFixed(6)}
               </p>
             )}
           </div>
