@@ -228,18 +228,19 @@ public class PropertyService : IPropertyService
             }
         }
 
-        // ── فحص حد الإعلانات في خطة الاشتراك ───────────────────────────
-        // Fallback: إذا لم يكن للمستخدم حساب مرتبط (مثل Admin أو قبل ربط الحساب)،
-        // يُسمح بالعملية بدون فحص الحصة (سلوك متساهل للمرحلة الانتقالية).
+        // ── Subscription enforcement (company listing path) ───────────────
+        // Admin with no account → allowed (admin bypass).
+        // CompanyOwner with account → plan limits enforced via PlanEntitlementService.
         var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
         if (accountId.HasValue)
         {
             var canCreate = await _entitlement.CanCreatePropertyAsync(accountId.Value, ct);
             if (!canCreate)
-                throw new BoiootException(
-                    "لقد وصلت إلى الحد الأقصى في خطتك. يرجى ترقية خطتك للمتابعة.", 403);
+                throw new PlanLimitException(
+                    SubscriptionKeys.MaxActiveListings,
+                    "لقد وصلت إلى الحد الأقصى من الإعلانات في خطتك الحالية. يرجى ترقية خطتك للمتابعة.");
         }
-        // accountId == null → allow (no active account membership found)
+        // accountId == null → allow (Admin or unlinked user)
 
         if (request.AgentId.HasValue)
         {

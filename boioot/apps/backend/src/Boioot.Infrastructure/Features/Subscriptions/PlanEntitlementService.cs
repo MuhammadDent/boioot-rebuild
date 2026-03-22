@@ -1,3 +1,4 @@
+using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Enums;
@@ -18,17 +19,15 @@ public class PlanEntitlementService : IPlanEntitlementService
         _logger = logger;
     }
 
-    // ── Shared filter: what counts as an "active" subscription ────────────
-    // Fix 1: added s.IsActive = true in all methods (ChatGPT suggestion)
-    private static bool IsActiveSubscription(Domain.Entities.Subscription s) =>
+    // ── Active subscription filter predicate ──────────────────────────────
+    private static bool IsActiveFilter(Domain.Entities.Subscription s) =>
         s.IsActive &&
         (s.Status == SubscriptionStatus.Trial || s.Status == SubscriptionStatus.Active) &&
         (s.EndDate == null || s.EndDate > DateTime.UtcNow);
 
-    // ── Core: resolve the active SubscriptionPlanId for an account ────────
-    private async Task<Guid?> GetActivePlanIdAsync(Guid accountId, CancellationToken ct)
-    {
-        return await _db.Subscriptions
+    // ── Resolve the active PlanId for an account ──────────────────────────
+    private Task<Guid?> GetActivePlanIdAsync(Guid accountId, CancellationToken ct) =>
+        _db.Subscriptions
             .Where(s => s.AccountId == accountId
                      && s.IsActive
                      && (s.Status == SubscriptionStatus.Trial ||
@@ -37,18 +36,40 @@ public class PlanEntitlementService : IPlanEntitlementService
             .OrderByDescending(s => s.StartDate)
             .Select(s => (Guid?)s.PlanId)
             .FirstOrDefaultAsync(ct);
+
+    // ── FIX 5: Detect expired subscription and throw dedicated error ──────
+    // Call at the start of every Can*Async method that resolves a limit.
+    // If there is NO active subscription but there IS a past/expired one,
+    // throw SUBSCRIPTION_EXPIRED instead of the generic "limit reached".
+    private async Task ThrowIfSubscriptionExpiredAsync(Guid accountId, CancellationToken ct)
+    {
+        var activePlanId = await GetActivePlanIdAsync(accountId, ct);
+        if (activePlanId.HasValue) return; // active → nothing to check
+
+        var hasExpired = await _db.Subscriptions
+            .AnyAsync(s => s.AccountId == accountId
+                        && (s.Status == SubscriptionStatus.Expired
+                         || s.Status == SubscriptionStatus.Cancelled
+                         || (!s.IsActive && s.Status != SubscriptionStatus.Trial)
+                         || (s.EndDate != null && s.EndDate <= DateTime.UtcNow)), ct);
+
+        if (hasExpired)
+            throw new PlanLimitException(
+                limitKey:        "subscription",
+                message:         "لقد انتهت صلاحية اشتراكك. يرجى تجديد الاشتراك للمتابعة.",
+                upgradeRequired: true,
+                errorCode:       "SUBSCRIPTION_EXPIRED");
     }
 
     // ── HasFeatureAsync ───────────────────────────────────────────────────
+    // FIX 4: No longer swallows exceptions. DB errors surface as 500.
     public async Task<bool> HasFeatureAsync(Guid accountId, string featureKey, CancellationToken ct = default)
     {
         try
         {
-            // Single query: Subscriptions → PlanFeatures → FeatureDefinitions
-            // Fix 1: s.IsActive == true added
             var isEnabled = await _db.Subscriptions
                 .Where(s => s.AccountId == accountId
-                         && s.IsActive == true
+                         && s.IsActive
                          && (s.Status == SubscriptionStatus.Trial ||
                              s.Status == SubscriptionStatus.Active)
                          && (s.EndDate == null || s.EndDate > DateTime.UtcNow))
@@ -70,21 +91,23 @@ public class PlanEntitlementService : IPlanEntitlementService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking feature '{Key}' for account {AccountId}", featureKey, accountId);
-            return false;
+            _logger.LogError(ex,
+                "DB error checking feature '{Key}' for account {AccountId}", featureKey, accountId);
+            throw new BoiootException(
+                "حدث خطأ أثناء التحقق من صلاحيات الخطة. يرجى المحاولة مرة أخرى.", 500);
         }
     }
 
     // ── GetLimitAsync ─────────────────────────────────────────────────────
+    // FIX 4: No longer swallows exceptions. DB errors surface as 500.
+    // Returns null when no active subscription or limit is not configured.
     public async Task<decimal> GetLimitAsync(Guid accountId, string limitKey, CancellationToken ct = default)
     {
         try
         {
-            // Single query: Subscriptions → PlanLimits → LimitDefinitions
-            // Fix 1: s.IsActive == true added
             var value = await _db.Subscriptions
                 .Where(s => s.AccountId == accountId
-                         && s.IsActive == true
+                         && s.IsActive
                          && (s.Status == SubscriptionStatus.Trial ||
                              s.Status == SubscriptionStatus.Active)
                          && (s.EndDate == null || s.EndDate > DateTime.UtcNow))
@@ -102,26 +125,28 @@ public class PlanEntitlementService : IPlanEntitlementService
                 .Select(x => (decimal?)x.Value)
                 .FirstOrDefaultAsync(ct);
 
-            // null = no active subscription or limit not configured → safest default is 0
             return value ?? 0m;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting limit '{Key}' for account {AccountId}", limitKey, accountId);
-            return 0m;
+            _logger.LogError(ex,
+                "DB error getting limit '{Key}' for account {AccountId}", limitKey, accountId);
+            throw new BoiootException(
+                "حدث خطأ أثناء التحقق من حدود الخطة. يرجى المحاولة مرة أخرى.", 500);
         }
     }
 
     // ── CanCreatePropertyAsync ────────────────────────────────────────────
     public async Task<bool> CanCreatePropertyAsync(Guid accountId, CancellationToken ct = default)
     {
+        // FIX 5: Throw SUBSCRIPTION_EXPIRED before returning a generic "limit=0"
+        await ThrowIfSubscriptionExpiredAsync(accountId, ct);
+
         var limit = await GetLimitAsync(accountId, SubscriptionKeys.MaxActiveListings, ct);
 
         if (limit == -1) return true;   // unlimited
-        if (limit == 0)  return false;  // no access
+        if (limit == 0)  return false;  // plan has no listing access
 
-        // Quota rule: count listings that still occupy a slot (Available + Inactive).
-        // Sold and Rented are completed transactions and release their slot.
         var activeCount = await _db.Properties
             .Where(p => p.AccountId == accountId
                      && p.IsDeleted == false
@@ -133,38 +158,70 @@ public class PlanEntitlementService : IPlanEntitlementService
     }
 
     // ── CanAddAgentAsync ──────────────────────────────────────────────────
+    // FIX 1: Count agents via Agents table + company ownership path.
+    // AgentManagementService creates User+Agent only (no AccountUser row),
+    // so counting AccountUsers would always return 0 → limit never enforced.
     public async Task<bool> CanAddAgentAsync(Guid accountId, CancellationToken ct = default)
     {
+        // FIX 5: Throw SUBSCRIPTION_EXPIRED before returning a generic "limit=0"
+        await ThrowIfSubscriptionExpiredAsync(accountId, ct);
+
         var limit = await GetLimitAsync(accountId, SubscriptionKeys.MaxAgents, ct);
 
         if (limit == -1) return true;   // unlimited
-        if (limit == 0)  return false;  // no access
+        if (limit == 0)  return false;  // plan has no agent access
 
-        var agentCount = await _db.AccountUsers
-            .Where(au => au.AccountId == accountId
-                      && au.OrganizationUserRole == OrganizationUserRole.Agent
-                      && au.IsActive == true)
-            .CountAsync(ct);
+        // Resolve company IDs that belong to users of this account
+        // Path: accountId → AccountUsers (get userIds) → Agents → companyIds
+        var userIds = await _db.AccountUsers
+            .Where(au => au.AccountId == accountId && au.IsActive)
+            .Select(au => au.UserId)
+            .ToListAsync(ct);
+
+        if (!userIds.Any()) return (int)limit > 0;
+
+        var companyIds = await _db.Set<Domain.Entities.Agent>()
+            .Where(a => userIds.Contains(a.UserId) && a.CompanyId != null)
+            .Select(a => a.CompanyId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (!companyIds.Any()) return (int)limit > 0;
+
+        // Count only active users with Agent role belonging to those companies
+        var agentCount = await (
+            from a in _db.Set<Domain.Entities.Agent>()
+            join u in _db.Users on a.UserId equals u.Id
+            where a.CompanyId != null
+               && companyIds.Contains(a.CompanyId!.Value)
+               && u.Role == UserRole.Agent
+               && u.IsActive
+            select a.Id
+        ).CountAsync(ct);
 
         return agentCount < (int)limit;
     }
 
     // ── CanCreateProjectAsync ─────────────────────────────────────────────
+    // FIX 2: Removed "if (!companyIds.Any()) return true" bypass.
+    //         An account with no linked companies counts 0 projects;
+    //         0 < limit still evaluates correctly without bypassing the check.
     public async Task<bool> CanCreateProjectAsync(Guid accountId, CancellationToken ct = default)
     {
-        // 1. Feature gate: project_management must be enabled
+        // FIX 5: Throw SUBSCRIPTION_EXPIRED before returning a generic "limit=0"
+        await ThrowIfSubscriptionExpiredAsync(accountId, ct);
+
+        // 1. Feature gate: project_management must be enabled on the plan
         var hasFeature = await HasFeatureAsync(accountId, SubscriptionKeys.ProjectManagement, ct);
         if (!hasFeature) return false;
 
-        // 2. Limit gate: max_projects (-1 = unlimited, 0 = no access)
+        // 2. Limit gate: max_projects
         var limit = await GetLimitAsync(accountId, SubscriptionKeys.MaxProjects, ct);
 
-        if (limit == -1) return true;
-        if (limit == 0)  return false;
+        if (limit == -1) return true;   // unlimited
+        if (limit == 0)  return false;  // plan has no project access
 
-        // 3. Count current projects.
-        // Projects belong to Companies. Companies are linked to Account via AccountUsers → Agents.
-        // Path: accountId → AccountUsers (get userIds) → Agents (get companyIds) → Projects
+        // 3. Count current projects via company ownership path
         var userIds = await _db.AccountUsers
             .Where(au => au.AccountId == accountId && au.IsActive)
             .Select(au => au.UserId)
@@ -176,11 +233,12 @@ public class PlanEntitlementService : IPlanEntitlementService
             .Distinct()
             .ToListAsync(ct);
 
-        if (!companyIds.Any()) return true; // no companies yet → allow first project
-
-        var projectCount = await _db.Projects
-            .Where(p => companyIds.Contains(p.CompanyId))
-            .CountAsync(ct);
+        // FIX 2: No early return — let count fall through (0 < limit = allowed)
+        var projectCount = companyIds.Count == 0
+            ? 0
+            : await _db.Projects
+                .Where(p => companyIds.Contains(p.CompanyId))
+                .CountAsync(ct);
 
         return projectCount < (int)limit;
     }
