@@ -102,7 +102,7 @@ public class PropertiesController : BaseController
     [HttpGet("my-listings/stats")]
     public async Task<IActionResult> GetMyListingStats(CancellationToken ct)
     {
-        var (used, limit) = await _propertyService.GetMonthlyListingStatsAsync(GetUserId(), GetUserRole(), ct);
-        return Ok(new { used, limit });
+        var (used, limit, isFreeTrial) = await _propertyService.GetMonthlyListingStatsAsync(GetUserId(), GetUserRole(), ct);
+        return Ok(new { used, limit, isFreeTrial });
     }
 }

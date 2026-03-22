@@ -51,7 +51,7 @@ export default function ListingsPage() {
   const [listingsError, setListingsError] = useState("");
 
   // ── Stats state (secondary / non-critical) ─────────────────────────────────
-  const [stats, setStats]               = useState<{ used: number; limit: number } | null>(null);
+  const [stats, setStats]               = useState<{ used: number; limit: number; isFreeTrial?: boolean } | null>(null);
   const [statsError, setStatsError]     = useState("");
 
   const [deletingId, setDeletingId]     = useState<string | null>(null);
@@ -132,8 +132,9 @@ export default function ListingsPage() {
     );
   }
 
-  const isUnlimited  = stats !== null && stats.limit >= 999;
-  const limitReached = stats !== null && !isUnlimited && stats.used >= stats.limit;
+  const isUnlimited    = stats !== null && !stats.isFreeTrial && stats.limit >= 999;
+  const limitReached   = stats !== null && !isUnlimited && stats.used >= stats.limit;
+  const isFreeTrial    = stats?.isFreeTrial === true;
   const statsAvailable = stats !== null && !statsError;
 
   return (
@@ -154,18 +155,28 @@ export default function ListingsPage() {
                 </p>
               )}
             </div>
-            {canCreate && (
+            {canCreate && !limitReached && (
               <Link
                 href="/dashboard/properties/new"
                 style={{
                   padding: "0.55rem 1.3rem", borderRadius: 9,
-                  background: limitReached ? "#9ca3af" : "var(--color-primary)",
+                  background: "var(--color-primary)",
                   color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem",
-                  pointerEvents: limitReached ? "none" : "auto",
-                  opacity: limitReached ? 0.65 : 1,
                 }}
               >
                 + إضافة إعلان جديد
+              </Link>
+            )}
+            {canCreate && limitReached && isFreeTrial && (
+              <Link
+                href="/pricing"
+                style={{
+                  padding: "0.55rem 1.3rem", borderRadius: 9,
+                  background: "#0f172a",
+                  color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem",
+                }}
+              >
+                ترقية الحساب
               </Link>
             )}
           </div>
@@ -178,28 +189,80 @@ export default function ListingsPage() {
           </div>
         )}
 
-        {/* ── Monthly stats widget (secondary — gracefully degrades) ── */}
+        {/* ── Stats widget (secondary — gracefully degrades) ── */}
         {statsAvailable && !isUnlimited && (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem",
-            background: limitReached ? "#fff1f2" : "#f8fafc",
-            border: `1px solid ${limitReached ? "#fecaca" : "#e2e8f0"}`,
+            background: limitReached ? "#fff1f2" : isFreeTrial ? "#f0f9ff" : "#f8fafc",
+            border: `1px solid ${limitReached ? "#fecaca" : isFreeTrial ? "#bae6fd" : "#e2e8f0"}`,
             borderRadius: 12, padding: "0.85rem 1.2rem", marginBottom: "1.5rem",
           }}>
             <div>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: "0.9rem", color: limitReached ? "#dc2626" : "#374151" }}>
-                {limitReached ? "وصلت إلى الحد الأقصى هذا الشهر" : `باقٍ لك ${stats!.limit - stats!.used} إعلان هذا الشهر`}
+              <p style={{ margin: 0, fontWeight: 700, fontSize: "0.9rem", color: limitReached ? "#dc2626" : isFreeTrial ? "#0369a1" : "#374151" }}>
+                {isFreeTrial
+                  ? limitReached
+                    ? "انتهت إعلاناتك التجريبية المجانية"
+                    : `استخدمت ${stats!.used} من ${stats!.limit} إعلانات تجريبية مجانية`
+                  : limitReached
+                    ? "وصلت إلى الحد الأقصى هذا الشهر"
+                    : `باقٍ لك ${stats!.limit - stats!.used} إعلان هذا الشهر`}
               </p>
               <p style={{ margin: "0.15rem 0 0", fontSize: "0.78rem", color: "#94a3b8" }}>
-                الاستخدام الشهري: {stats!.used} / {stats!.limit}{limitReached && " · ترقية العضوية تمنحك حداً أعلى"}
+                {isFreeTrial
+                  ? limitReached
+                    ? "رُقّ حسابك لمواصلة النشر"
+                    : "الإعلانات التجريبية صالحة للأبد · لا تنتهي شهرياً"
+                  : `الاستخدام الشهري: ${stats!.used} / ${stats!.limit}${limitReached ? " · ترقية العضوية تمنحك حداً أعلى" : ""}`}
               </p>
             </div>
             <div style={{
-              background: limitReached ? "#dc2626" : "var(--color-primary)",
+              background: limitReached ? "#dc2626" : isFreeTrial ? "#0ea5e9" : "var(--color-primary)",
               color: "#fff", borderRadius: 99, padding: "0.3rem 0.9rem",
               fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap",
             }}>
               {stats!.used} / {stats!.limit}
+            </div>
+          </div>
+        )}
+
+        {/* ── Free-trial upgrade card (shown when trial limit is reached) ── */}
+        {statsAvailable && isFreeTrial && limitReached && (
+          <div style={{
+            background: "#fff",
+            border: "1.5px solid #fecaca",
+            borderRadius: 14,
+            padding: "1.75rem 1.5rem",
+            marginBottom: "1.75rem",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "2.25rem", marginBottom: "0.6rem" }}>🔒</div>
+            <h3 style={{ margin: "0 0 0.6rem", fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+              ترقية حسابك للمتابعة
+            </h3>
+            <p style={{ margin: "0 0 1.5rem", fontSize: "0.88rem", color: "#64748b", lineHeight: 1.7 }}>
+              لقد استخدمت الإعلانات التجريبية المجانية. للمتابعة، يجب ترقية حسابك إلى <strong>مالك عقار</strong> أو <strong>وسيط عقاري</strong>.
+            </p>
+            <div style={{ display: "flex", gap: "0.65rem", justifyContent: "center", flexWrap: "wrap" }}>
+              <a
+                href="/pricing?upgrade=Owner"
+                style={{
+                  padding: "0.65rem 1.4rem", borderRadius: 9,
+                  background: "var(--color-primary)", color: "#fff",
+                  textDecoration: "none", fontWeight: 700, fontSize: "0.9rem",
+                }}
+              >
+                ترقية إلى مالك عقار
+              </a>
+              <a
+                href="/pricing?upgrade=Broker"
+                style={{
+                  padding: "0.65rem 1.4rem", borderRadius: 9,
+                  background: "#0f172a", color: "#fff",
+                  textDecoration: "none", fontWeight: 700, fontSize: "0.9rem",
+                }}
+              >
+                ترقية إلى وسيط عقاري
+              </a>
             </div>
           </div>
         )}

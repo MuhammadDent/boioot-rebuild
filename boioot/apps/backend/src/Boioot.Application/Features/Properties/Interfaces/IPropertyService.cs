@@ -15,5 +15,10 @@ public interface IPropertyService
     Task<PropertyResponse> CreateUserListingAsync(Guid userId, string userRole, CreatePropertyRequest request, CancellationToken ct = default);
     Task<PagedResult<PropertyResponse>> GetMyListingsAsync(Guid userId, int page, int pageSize, CancellationToken ct = default);
     Task DeleteMyListingAsync(Guid userId, Guid propertyId, CancellationToken ct = default);
-    Task<(int used, int limit)> GetMonthlyListingStatsAsync(Guid userId, string userRole, CancellationToken ct = default);
+    /// <summary>
+    /// Returns listing usage stats.
+    /// isFreeTrial = true when the user is on the free-trial tier (User role, all-time limit of 2).
+    /// isFreeTrial = false for all other roles (monthly limits apply).
+    /// </summary>
+    Task<(int used, int limit, bool isFreeTrial)> GetMonthlyListingStatsAsync(Guid userId, string userRole, CancellationToken ct = default);
 }

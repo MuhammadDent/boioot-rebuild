@@ -1,33 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { dashboardPropertiesApi } from "@/features/dashboard/properties/api";
 import PropertyForm from "@/components/dashboard/properties/PropertyForm";
-import { normalizeError } from "@/lib/api";
+import { api, normalizeError } from "@/lib/api";
 import type { CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
 
-// Roles that create via POST /api/properties (company-linked).
 const COMPANY_ROLES = ["Admin", "CompanyOwner"];
+
+type TrialStats = { used: number; limit: number; isFreeTrial: boolean };
 
 export default function NewPropertyPage() {
   const { user, isLoading, isUnauthorized } = useProtectedRoute({
-    allowedRoles: ["Admin", "CompanyOwner", "Broker", "Owner"],
+    allowedRoles: ["Admin", "CompanyOwner", "Broker", "Owner", "User"],
   });
 
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError]   = useState("");
+  const [trialStats, setTrialStats]     = useState<TrialStats | null>(null);
+
+  const isUserRole = user?.role === "User";
+
+  useEffect(() => {
+    if (!user) return;
+    api.get<TrialStats>("/properties/my-listings/stats")
+      .then((s) => setTrialStats(s))
+      .catch(() => {});
+  }, [user]);
 
   async function handleSubmit(data: CreatePropertyRequest | UpdatePropertyRequest) {
     setIsSubmitting(true);
     setServerError("");
     try {
       const payload = data as CreatePropertyRequest;
-      // CompanyOwner / Admin → POST /api/properties (attaches to company).
-      // Owner / Broker / Agent → POST /api/properties/post (personal listing).
       if (user && COMPANY_ROLES.includes(user.role)) {
         await dashboardPropertiesApi.create(payload);
       } else {
@@ -35,7 +45,13 @@ export default function NewPropertyPage() {
       }
       router.push("/dashboard/listings?success=1");
     } catch (e) {
-      setServerError(normalizeError(e));
+      const msg = normalizeError(e);
+      setServerError(msg);
+      if (isUserRole) {
+        api.get<TrialStats>("/properties/my-listings/stats")
+          .then((s) => setTrialStats(s))
+          .catch(() => {});
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -43,7 +59,6 @@ export default function NewPropertyPage() {
 
   if (isLoading) return null;
 
-  // Authenticated but role not allowed — show brief message before redirect fires.
   if (isUnauthorized || !user) {
     return (
       <div
@@ -84,6 +99,117 @@ export default function NewPropertyPage() {
     );
   }
 
+  const trialLimitReached =
+    isUserRole && trialStats !== null && trialStats.used >= trialStats.limit;
+
+  if (trialLimitReached) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "var(--color-bg)",
+          padding: "2rem 1rem",
+        }}
+      >
+        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          <div style={{ marginBottom: "1.75rem" }}>
+            <DashboardBackLink href="/dashboard/listings" label="← إعلاناتي" />
+          </div>
+
+          <div
+            style={{
+              background: "#fff",
+              border: "1.5px solid #fecaca",
+              borderRadius: 16,
+              padding: "2.5rem 2rem",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🔒</div>
+            <h2
+              style={{
+                margin: "0 0 0.75rem",
+                fontSize: "1.25rem",
+                fontWeight: 800,
+                color: "#0f172a",
+              }}
+            >
+              انتهت إعلاناتك التجريبية المجانية
+            </h2>
+            <p
+              style={{
+                margin: "0 0 0.5rem",
+                fontSize: "0.92rem",
+                color: "#64748b",
+                lineHeight: 1.7,
+              }}
+            >
+              لقد استخدمت {trialStats!.used} من {trialStats!.limit} إعلانات تجريبية مجانية.
+            </p>
+            <p
+              style={{
+                margin: "0 0 2rem",
+                fontSize: "0.92rem",
+                color: "#64748b",
+                lineHeight: 1.7,
+              }}
+            >
+              للمتابعة ونشر المزيد من الإعلانات، يجب ترقية حسابك إلى <strong>مالك عقار</strong> أو <strong>وسيط عقاري</strong>.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "0.75rem",
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <Link
+                href="/pricing?upgrade=Owner"
+                style={{
+                  padding: "0.75rem 1.75rem",
+                  borderRadius: 10,
+                  background: "var(--color-primary)",
+                  color: "#fff",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                  fontSize: "0.95rem",
+                }}
+              >
+                ترقية إلى مالك عقار
+              </Link>
+              <Link
+                href="/pricing?upgrade=Broker"
+                style={{
+                  padding: "0.75rem 1.75rem",
+                  borderRadius: 10,
+                  background: "#0f172a",
+                  color: "#fff",
+                  textDecoration: "none",
+                  fontWeight: 700,
+                  fontSize: "0.95rem",
+                }}
+              >
+                ترقية إلى وسيط عقاري
+              </Link>
+            </div>
+
+            <p
+              style={{
+                marginTop: "1.75rem",
+                fontSize: "0.78rem",
+                color: "#94a3b8",
+              }}
+            >
+              الإعلانات التجريبية المجانية: {trialStats!.used} / {trialStats!.limit} مستخدمة
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -94,7 +220,6 @@ export default function NewPropertyPage() {
     >
       <div style={{ maxWidth: 680, margin: "0 auto" }}>
 
-        {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
           <DashboardBackLink href="/dashboard/listings" label="← إعلاناتي" />
           <h1
@@ -109,7 +234,56 @@ export default function NewPropertyPage() {
           </h1>
         </div>
 
-        {/* ── Form ── */}
+        {isUserRole && trialStats !== null && (
+          <div
+            style={{
+              background: trialStats.used === trialStats.limit - 1
+                ? "#fffbeb"
+                : "#f0f9ff",
+              border: `1px solid ${trialStats.used === trialStats.limit - 1 ? "#fde68a" : "#bae6fd"}`,
+              borderRadius: 10,
+              padding: "0.85rem 1.2rem",
+              marginBottom: "1.5rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "1rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <p
+                style={{
+                  margin: 0,
+                  fontWeight: 700,
+                  fontSize: "0.9rem",
+                  color: trialStats.used === trialStats.limit - 1 ? "#92400e" : "#0369a1",
+                }}
+              >
+                {trialStats.used === trialStats.limit - 1
+                  ? "هذا آخر إعلان تجريبي مجاني لك"
+                  : "حساب تجريبي مجاني"}
+              </p>
+              <p style={{ margin: "0.15rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+                استخدمت {trialStats.used} من {trialStats.limit} إعلانات تجريبية مجانية
+              </p>
+            </div>
+            <div
+              style={{
+                background: trialStats.used === trialStats.limit - 1 ? "#f59e0b" : "var(--color-primary)",
+                color: "#fff",
+                borderRadius: 99,
+                padding: "0.3rem 0.9rem",
+                fontWeight: 700,
+                fontSize: "0.88rem",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {trialStats.used} / {trialStats.limit}
+            </div>
+          </div>
+        )}
+
         <div className="form-card">
           <PropertyForm
             mode="create"

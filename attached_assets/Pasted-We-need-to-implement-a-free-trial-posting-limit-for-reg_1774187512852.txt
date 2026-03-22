@@ -1,0 +1,95 @@
+We need to implement a free trial posting limit for regular users.
+
+BUSINESS GOAL:
+A regular user should be allowed to post only 2 property ads as a free trial.
+After reaching the limit, the system must stop further posting and ask the user to upgrade their account to either:
+- Owner
+- Broker
+
+IMPORTANT:
+This is NOT a pure RBAC-only rule.
+This is a business rule combining:
+- role/account type
+- posting quota
+- upgrade flow
+
+==================================================
+REQUIRED BEHAVIOR
+==================================================
+
+1. Regular User trial limit
+- A regular User can create up to 2 property ads only.
+- After posting 2 ads, they must no longer be allowed to create more.
+- Instead, they should see a clear upgrade prompt.
+
+2. Owner and Broker
+- Owner and Broker should not use the same free-trial limitation logic as regular User.
+- Their creation flow should remain compatible with the existing role/plan system.
+
+3. Backend enforcement (critical)
+- Enforce the limit in backend, not only in frontend.
+- If a regular User already posted 2 ads, property creation must be blocked server-side.
+- Return a clear business error message such as:
+  "Free trial limit reached. Please upgrade to Owner or Broker."
+
+4. Frontend behavior
+- On the “Add Property” page, show trial usage clearly:
+  - used count
+  - total free limit (2)
+- Example:
+  "You used 1 of 2 free trial ads"
+- When the user reaches the limit:
+  - show a friendly upgrade card/message in Arabic
+  - explain that the free trial has ended
+  - offer upgrade actions to:
+    - Owner
+    - Broker
+
+5. Dashboard/Listings page
+- Show remaining free ads for regular users.
+- If limit reached:
+  - replace or supplement “Add Property” CTA with “Upgrade Account”
+  - do not create redirect confusion
+
+6. Counting logic
+- Decide and implement the correct counting rule:
+  - count published ads only
+  OR
+  - count all created ads except deleted ones
+- Choose the safest business rule and explain it clearly in the report.
+- Apply the same logic consistently in backend and frontend.
+
+7. Data/model design
+Implement this in a scalable SaaS-ready way.
+Possible approaches:
+- derive count from properties table
+- or introduce plan/usage fields if needed
+But do NOT overengineer.
+Keep it simple, safe, and extendable.
+
+8. Upgrade prompt
+When free limit is reached, show a clear Arabic message like:
+"لقد استخدمت الإعلانات التجريبية المجانية. للمتابعة، يجب ترقية حسابك إلى مالك أو وسيط."
+
+Also provide upgrade CTA buttons for:
+- Upgrade to Owner
+- Upgrade to Broker
+
+9. No broken UX
+- No blank pages
+- No silent failure
+- No unclear permission errors
+- No misleading “you have permission” while backend rejects without explanation
+
+==================================================
+DELIVERABLES
+==================================================
+
+After implementation, report clearly:
+- how the 2-ad limit is enforced
+- what counting rule was chosen
+- which files were changed
+- how frontend displays remaining trial ads
+- what happens exactly after the second ad
+- how the upgrade prompt works
+- whether the solution is ready to extend later into subscription plans

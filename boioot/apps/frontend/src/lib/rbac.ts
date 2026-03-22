@@ -297,6 +297,12 @@ export const PLATFORM_ROLE_PERMISSIONS: Record<string, string[]> = {
   Broker: [
     "properties.create",
   ],
+  // User (مستخدم عادي): free-trial tier — can create up to 2 personal listings (all-time).
+  // Backend enforces the hard limit of 2; frontend shows trial usage + upgrade prompt.
+  // After 2 ads the backend returns 403 with a clear Arabic upgrade message.
+  User: [
+    "properties.create",
+  ],
   // Agent: can view and edit their own listings (no create/delete in platform dashboard).
   // "agents.view" used as a lightweight marker so navigation/summary logic can detect
   // platform management participants without relying on the role string.

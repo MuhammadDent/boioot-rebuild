@@ -453,24 +453,36 @@ public class PropertyService : IPropertyService
         _                      => 2
     };
 
-    public async Task<(int used, int limit)> GetMonthlyListingStatsAsync(
+    public async Task<(int used, int limit, bool isFreeTrial)> GetMonthlyListingStatsAsync(
         Guid userId, string userRole, CancellationToken ct = default)
     {
-        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var ownerIdStr = userId.ToString();
+
+        // ── Free-trial tier (User role) ────────────────────────────────────────
+        // Counting rule: ALL non-deleted personal listings (all-time, not monthly).
+        // Rationale: prevents gaming by deleting ads and re-posting to reset the counter.
+        if (userRole == RoleNames.User)
+        {
+            var used = await _context.Properties
+                .CountAsync(p => !p.IsDeleted && p.OwnerId == ownerIdStr, ct);
+            return (used, 2, true);
+        }
+
+        // ── Standard monthly limit (Owner, Broker, CompanyOwner, Admin, etc.) ──
+        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var userCompanyIds = await _context.Agents
             .Where(a => a.UserId == userId && a.CompanyId != null)
             .Select(a => a.CompanyId!.Value)
             .ToListAsync(ct);
 
-        var used = await _context.Properties
+        var monthlyUsed = await _context.Properties
             .CountAsync(p => !p.IsDeleted && p.CreatedAt >= startOfMonth && (
                 p.OwnerId == ownerIdStr ||
                 userCompanyIds.Contains(p.CompanyId)
             ), ct);
 
-        return (used, GetMonthlyLimit(userRole));
+        return (monthlyUsed, GetMonthlyLimit(userRole), false);
     }
 
     public async Task<PropertyResponse> CreateUserListingAsync(
@@ -488,13 +500,28 @@ public class PropertyService : IPropertyService
         }
         // acctId == null → allow
 
-        // ── فحص الحد الشهري (النظام القديم) ─────────────────────────────
-        var (used, limit) = await GetMonthlyListingStatsAsync(userId, userRole, ct);
-
-        if (used >= limit)
-            throw new BoiootException(
-                $"لقد وصلت إلى الحد الأقصى من الإعلانات هذا الشهر ({limit} إعلانات). يرجى ترقية عضويتك لإضافة المزيد.",
-                429);
+        // ── Free-trial gate (User role — all-time, not monthly) ──────────────
+        // Regular users get exactly 2 ads total as a free trial.
+        // Counting is all-time to prevent gaming by delete-and-repost.
+        if (userRole == RoleNames.User)
+        {
+            var ownerIdStr = userId.ToString();
+            var totalPosted = await _context.Properties
+                .CountAsync(p => !p.IsDeleted && p.OwnerId == ownerIdStr, ct);
+            if (totalPosted >= 2)
+                throw new BoiootException(
+                    "انتهت إعلاناتك التجريبية المجانية. يرجى ترقية حسابك إلى مالك أو وسيط للمتابعة.",
+                    403);
+        }
+        else
+        {
+            // ── Monthly limit (Owner, Broker, etc.) ──────────────────────────
+            var (used, limit, _) = await GetMonthlyListingStatsAsync(userId, userRole, ct);
+            if (used >= limit)
+                throw new BoiootException(
+                    $"لقد وصلت إلى الحد الأقصى من الإعلانات هذا الشهر ({limit} إعلانات). يرجى ترقية عضويتك لإضافة المزيد.",
+                    429);
+        }
 
         // ── Audit: resolve creator's company (if any) ────────────────────────
         // Personal listings have no "company posting" context, but we still
