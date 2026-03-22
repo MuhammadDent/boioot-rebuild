@@ -68,7 +68,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner));
 
     options.AddPolicy("AdminOrCompanyOwnerOrAgent", policy =>
-        policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Agent));
+        policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Agent, RoleNames.Broker));
 
     options.AddPolicy("BrokerOrCompanyOwner", policy =>
         policy.RequireRole(RoleNames.Broker, RoleNames.CompanyOwner, RoleNames.Admin));

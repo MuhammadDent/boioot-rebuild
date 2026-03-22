@@ -11,7 +11,7 @@ import type { CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
 
 export default function NewPropertyPage() {
   const { user, isLoading } = useProtectedRoute({
-    allowedRoles: ["Admin", "CompanyOwner"],
+    allowedRoles: ["Admin", "CompanyOwner", "Broker"],
   });
 
   const router = useRouter();
