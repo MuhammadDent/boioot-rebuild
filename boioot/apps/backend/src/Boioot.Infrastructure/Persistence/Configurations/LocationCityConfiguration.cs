@@ -11,8 +11,9 @@ public class LocationCityConfiguration : IEntityTypeConfiguration<LocationCity>
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Name).IsRequired().HasMaxLength(200);
         builder.Property(c => c.NormalizedName).IsRequired().HasMaxLength(200).HasDefaultValue("");
-        builder.Property(c => c.Province).HasMaxLength(200);
-        // Uniqueness by (Province, NormalizedName) is enforced via raw SQL index in Program.cs
-        // to handle existing databases that predate this schema change.
+        builder.Property(c => c.Province).HasMaxLength(200).HasDefaultValue("");
+        builder.Property(c => c.IsActive).IsRequired().HasDefaultValue(true);
+        // Unique index (Province, NormalizedName) is enforced via raw SQL in Program.cs
+        // to work on both fresh and migrated databases.
     }
 }

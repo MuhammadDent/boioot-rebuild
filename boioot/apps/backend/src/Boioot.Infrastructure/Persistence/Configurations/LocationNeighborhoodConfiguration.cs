@@ -12,7 +12,8 @@ public class LocationNeighborhoodConfiguration : IEntityTypeConfiguration<Locati
         builder.Property(n => n.Name).IsRequired().HasMaxLength(200);
         builder.Property(n => n.NormalizedName).IsRequired().HasMaxLength(200).HasDefaultValue("");
         builder.Property(n => n.City).IsRequired().HasMaxLength(200);
-        // Uniqueness by (City, NormalizedName) is enforced via raw SQL index in Program.cs
-        // to handle existing databases that predate this schema change.
+        builder.Property(n => n.IsActive).IsRequired().HasDefaultValue(true);
+        // Unique index (City, NormalizedName) is enforced via raw SQL in Program.cs
+        // to work on both fresh and migrated databases.
     }
 }

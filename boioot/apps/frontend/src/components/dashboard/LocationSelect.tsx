@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { api } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -10,10 +11,16 @@ interface LocationOption {
   name: string;
 }
 
-interface LocationCreateResult {
+interface LocationSuggestion {
+  id: string;
+  name: string;
+  parentName?: string;
+}
+
+interface LocationApiResult {
   status: "created" | "exists" | "similar";
-  item?: { id: string; name: string; province?: string; city?: string } | null;
-  suggestion?: { id: string; name: string; province?: string; city?: string } | null;
+  item?: { id: string; name: string; parentName?: string } | null;
+  suggestions: LocationSuggestion[];
 }
 
 interface ProvinceSelectProps {
@@ -41,7 +48,7 @@ interface NeighborhoodSelectProps {
   disabled?: boolean;
 }
 
-// ─── Shared styles ────────────────────────────────────────────────────────────
+// ─── Shared inline styles ─────────────────────────────────────────────────────
 
 const addBtnStyle: React.CSSProperties = {
   display: "flex",
@@ -61,85 +68,268 @@ const addBtnStyle: React.CSSProperties = {
   lineHeight: 1,
 };
 
-const inlineFormStyle: React.CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "0.5rem",
-  marginTop: "0.4rem",
-  alignItems: "center",
-};
+// ─── AddLocationModal ─────────────────────────────────────────────────────────
+// Single reusable modal for adding provinces, cities, and neighborhoods.
 
-const confirmBtnStyle: React.CSSProperties = {
-  padding: "0.35rem 0.75rem",
-  borderRadius: "6px",
-  border: "none",
-  background: "#2E7D32",
-  color: "#fff",
-  fontWeight: 600,
-  fontSize: "0.85rem",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};
+interface AddLocationModalProps {
+  open: boolean;
+  title: string;
+  placeholder: string;
+  saving: boolean;
+  addError: string;
+  suggestions: LocationSuggestion[];
+  newName: string;
+  onNameChange: (v: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onUseSuggestion: (s: LocationSuggestion) => void;
+  onForceAdd: () => void;
+}
 
-const cancelBtnStyle: React.CSSProperties = {
-  padding: "0.35rem 0.75rem",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-  background: "transparent",
-  fontSize: "0.85rem",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};
+function AddLocationModal({
+  open,
+  title,
+  placeholder,
+  saving,
+  addError,
+  suggestions,
+  newName,
+  onNameChange,
+  onSave,
+  onCancel,
+  onUseSuggestion,
+  onForceAdd,
+}: AddLocationModalProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hasSuggestions = suggestions.length > 0;
 
-const suggestionBoxStyle: React.CSSProperties = {
-  marginTop: "0.5rem",
-  padding: "0.6rem 0.85rem",
-  borderRadius: "8px",
-  background: "#FFF8E1",
-  border: "1px solid #FFD54F",
-  fontSize: "0.88rem",
-  color: "#5D4037",
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "0.5rem",
-  alignItems: "center",
-};
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 60);
+    }
+  }, [open]);
 
-const useSuggBtnStyle: React.CSSProperties = {
-  padding: "0.3rem 0.65rem",
-  borderRadius: "6px",
-  border: "none",
-  background: "#F57F17",
-  color: "#fff",
-  fontWeight: 600,
-  fontSize: "0.8rem",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); onSave(); }
+    if (e.key === "Escape") { onCancel(); }
+  }
 
-const forceAddBtnStyle: React.CSSProperties = {
-  padding: "0.3rem 0.65rem",
-  borderRadius: "6px",
-  border: "1px solid #bbb",
-  background: "transparent",
-  fontSize: "0.8rem",
-  cursor: "pointer",
-  whiteSpace: "nowrap",
-};
+  if (!open) return null;
+
+  const modal = (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.45)",
+        direction: "rtl",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: "14px",
+          padding: "1.75rem 1.5rem 1.5rem",
+          width: "min(96vw, 400px)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.22)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            color: "#1a1a1a",
+          }}
+        >
+          {title}
+        </h3>
+
+        <input
+          ref={inputRef}
+          className="form-input"
+          placeholder={placeholder}
+          value={newName}
+          onChange={(e) => onNameChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={saving}
+          maxLength={100}
+          style={{ width: "100%", boxSizing: "border-box" }}
+        />
+
+        {addError && (
+          <p style={{ margin: 0, color: "#c62828", fontSize: "0.85rem" }}>
+            {addError}
+          </p>
+        )}
+
+        {hasSuggestions && (
+          <div
+            style={{
+              padding: "0.75rem",
+              borderRadius: "10px",
+              background: "#FFF8E1",
+              border: "1px solid #FFD54F",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.55rem",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.88rem",
+                fontWeight: 600,
+                color: "#5D4037",
+              }}
+            >
+              هل تقصد أحد هذه الأسماء؟
+            </p>
+
+            {suggestions.map((s) => (
+              <div
+                key={s.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "#4E342E",
+                    fontWeight: 600,
+                  }}
+                >
+                  {s.name}
+                </span>
+                <button
+                  type="button"
+                  style={{
+                    padding: "0.28rem 0.7rem",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: "#F57F17",
+                    color: "#fff",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                  onClick={() => onUseSuggestion(s)}
+                >
+                  نعم، استخدمه
+                </button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              style={{
+                alignSelf: "flex-start",
+                marginTop: "0.25rem",
+                padding: "0.3rem 0.75rem",
+                borderRadius: "6px",
+                border: "1px solid #bbb",
+                background: "transparent",
+                fontSize: "0.82rem",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+              onClick={onForceAdd}
+              disabled={saving}
+            >
+              لا، أضف اسماً جديداً
+            </button>
+          </div>
+        )}
+
+        {!hasSuggestions && (
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              style={{
+                padding: "0.45rem 1.1rem",
+                borderRadius: "7px",
+                border: "none",
+                background: "#2E7D32",
+                color: "#fff",
+                fontWeight: 600,
+                fontSize: "0.9rem",
+                cursor: "pointer",
+              }}
+              onClick={onSave}
+              disabled={saving}
+            >
+              {saving ? "جارٍ الحفظ..." : "حفظ"}
+            </button>
+            <button
+              type="button"
+              style={{
+                padding: "0.45rem 1.1rem",
+                borderRadius: "7px",
+                border: "1px solid #ccc",
+                background: "transparent",
+                fontSize: "0.9rem",
+                cursor: "pointer",
+              }}
+              onClick={onCancel}
+              disabled={saving}
+            >
+              إلغاء
+            </button>
+          </div>
+        )}
+
+        {hasSuggestions && (
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              style={{
+                padding: "0.4rem 0.9rem",
+                borderRadius: "7px",
+                border: "1px solid #ccc",
+                background: "transparent",
+                fontSize: "0.88rem",
+                cursor: "pointer",
+              }}
+              onClick={onCancel}
+              disabled={saving}
+            >
+              إلغاء
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (typeof window === "undefined") return null;
+  return createPortal(modal, document.body);
+}
 
 // ─── ProvinceSelect ───────────────────────────────────────────────────────────
 
 export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSelectProps) {
   const [provinces, setProvinces] = useState<string[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState("");
-  const [suggestion, setSuggestion] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
 
   useEffect(() => { fetchProvinces(); }, []);
-  useEffect(() => { if (adding) inputRef.current?.focus(); }, [adding]);
 
   async function fetchProvinces() {
     try {
@@ -148,19 +338,28 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
     } catch { /* silent */ }
   }
 
-  function resetAddForm() {
-    setAdding(false);
+  function openModal() {
     setNewName("");
     setAddError("");
-    setSuggestion(null);
+    setSuggestions([]);
+    setModalOpen(true);
   }
 
-  async function handleAdd(forceCreate = false) {
+  function closeModal() {
+    setModalOpen(false);
+    setNewName("");
+    setAddError("");
+    setSuggestions([]);
+  }
+
+  const handleAdd = useCallback(async (forceCreate = false) => {
     const name = newName.trim();
     if (!name) { setAddError("اسم المحافظة مطلوب"); return; }
-    setSaving(true); setAddError(""); setSuggestion(null);
+    setSaving(true);
+    setAddError("");
+    setSuggestions([]);
     try {
-      const result = await api.post<LocationCreateResult>(
+      const result = await api.post<LocationApiResult>(
         "/locations/cities",
         { name, province: name, forceCreate }
       );
@@ -168,27 +367,19 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
         const finalName = result.item?.name ?? name;
         await fetchProvinces();
         onChange(finalName);
-        resetAddForm();
-      } else if (result.status === "similar" && result.suggestion) {
-        setSuggestion(result.suggestion.name);
-        setSaving(false);
-        return;
+        closeModal();
+      } else if (result.status === "similar") {
+        setSuggestions(result.suggestions ?? []);
       }
     } catch {
       setAddError("تعذّر إضافة المحافظة — حاول مجدداً");
     } finally { setSaving(false); }
-  }
+  }, [newName, onChange]);
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
-    if (e.key === "Escape") { resetAddForm(); }
-  }
-
-  async function handleUseSuggestion() {
-    if (!suggestion) return;
+  async function handleUseSuggestion(s: LocationSuggestion) {
     await fetchProvinces();
-    onChange(suggestion);
-    resetAddForm();
+    onChange(s.name);
+    closeModal();
   }
 
   return (
@@ -212,66 +403,26 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
           title="إضافة محافظة جديدة"
           style={addBtnStyle}
           disabled={disabled}
-          onClick={() => { setAdding(true); setAddError(""); setNewName(""); setSuggestion(null); }}
+          onClick={openModal}
         >
           +
         </button>
       </div>
 
-      {adding && (
-        <div style={inlineFormStyle}>
-          <input
-            ref={inputRef}
-            className="form-input"
-            style={{ width: "100%", fontSize: "0.9rem" }}
-            placeholder="اكتب اسم المحافظة الجديدة..."
-            value={newName}
-            onChange={(e) => { setNewName(e.target.value); setSuggestion(null); }}
-            onKeyDown={handleKeyDown}
-            disabled={saving}
-            maxLength={100}
-          />
-          <button
-            type="button"
-            style={confirmBtnStyle}
-            onClick={() => handleAdd(false)}
-            disabled={saving}
-          >
-            {saving ? "..." : "حفظ"}
-          </button>
-          <button
-            type="button"
-            style={cancelBtnStyle}
-            onClick={resetAddForm}
-            disabled={saving}
-          >
-            إلغاء
-          </button>
-        </div>
-      )}
-
-      {suggestion && (
-        <div style={suggestionBoxStyle}>
-          <span>هل تقصد: <strong>{suggestion}</strong>؟</span>
-          <button
-            type="button"
-            style={useSuggBtnStyle}
-            onClick={handleUseSuggestion}
-          >
-            نعم، استخدمه
-          </button>
-          <button
-            type="button"
-            style={forceAddBtnStyle}
-            onClick={() => handleAdd(true)}
-            disabled={saving}
-          >
-            لا، أضف جديداً
-          </button>
-        </div>
-      )}
-
-      {addError && <p className="form-error">{addError}</p>}
+      <AddLocationModal
+        open={modalOpen}
+        title="إضافة محافظة جديدة"
+        placeholder="اكتب اسم المحافظة..."
+        saving={saving}
+        addError={addError}
+        suggestions={suggestions}
+        newName={newName}
+        onNameChange={(v) => { setNewName(v); setSuggestions([]); setAddError(""); }}
+        onSave={() => handleAdd(false)}
+        onCancel={closeModal}
+        onUseSuggestion={handleUseSuggestion}
+        onForceAdd={() => handleAdd(true)}
+      />
     </div>
   );
 }
@@ -288,15 +439,13 @@ export function CitySelect({
   disabled,
 }: CitySelectProps) {
   const [cities, setCities] = useState<LocationOption[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState("");
-  const [suggestion, setSuggestion] = useState<{ id: string; name: string } | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
 
   useEffect(() => { fetchCities(province); }, [province]);
-  useEffect(() => { if (adding) inputRef.current?.focus(); }, [adding]);
 
   async function fetchCities(prov?: string) {
     try {
@@ -308,19 +457,28 @@ export function CitySelect({
     } catch { /* silent */ }
   }
 
-  function resetAddForm() {
-    setAdding(false);
+  function openModal() {
     setNewName("");
     setAddError("");
-    setSuggestion(null);
+    setSuggestions([]);
+    setModalOpen(true);
   }
 
-  async function handleAdd(forceCreate = false) {
+  function closeModal() {
+    setModalOpen(false);
+    setNewName("");
+    setAddError("");
+    setSuggestions([]);
+  }
+
+  const handleAdd = useCallback(async (forceCreate = false) => {
     const name = newName.trim();
     if (!name) { setAddError("اسم المدينة مطلوب"); return; }
-    setSaving(true); setAddError(""); setSuggestion(null);
+    setSaving(true);
+    setAddError("");
+    setSuggestions([]);
     try {
-      const result = await api.post<LocationCreateResult>(
+      const result = await api.post<LocationApiResult>(
         "/locations/cities",
         { name, province: province ?? "", forceCreate }
       );
@@ -328,27 +486,19 @@ export function CitySelect({
         const finalName = result.item?.name ?? name;
         await fetchCities(province);
         onChange(finalName);
-        resetAddForm();
-      } else if (result.status === "similar" && result.suggestion) {
-        setSuggestion({ id: result.suggestion.id, name: result.suggestion.name });
-        setSaving(false);
-        return;
+        closeModal();
+      } else if (result.status === "similar") {
+        setSuggestions(result.suggestions ?? []);
       }
     } catch {
       setAddError("تعذّر إضافة المدينة — حاول مجدداً");
     } finally { setSaving(false); }
-  }
+  }, [newName, province, onChange]);
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
-    if (e.key === "Escape") { resetAddForm(); }
-  }
-
-  async function handleUseSuggestion() {
-    if (!suggestion) return;
+  async function handleUseSuggestion(s: LocationSuggestion) {
     await fetchCities(province);
-    onChange(suggestion.name);
-    resetAddForm();
+    onChange(s.name);
+    closeModal();
   }
 
   return (
@@ -378,66 +528,27 @@ export function CitySelect({
           title="إضافة مدينة جديدة"
           style={addBtnStyle}
           disabled={disabled}
-          onClick={() => { setAdding(true); setAddError(""); setNewName(""); setSuggestion(null); }}
+          onClick={openModal}
         >
           +
         </button>
       </div>
 
-      {adding && (
-        <div style={inlineFormStyle}>
-          <input
-            ref={inputRef}
-            className="form-input"
-            style={{ width: "100%", fontSize: "0.9rem" }}
-            placeholder="اكتب اسم المدينة الجديدة..."
-            value={newName}
-            onChange={(e) => { setNewName(e.target.value); setSuggestion(null); }}
-            onKeyDown={handleKeyDown}
-            disabled={saving}
-            maxLength={100}
-          />
-          <button
-            type="button"
-            style={confirmBtnStyle}
-            onClick={() => handleAdd(false)}
-            disabled={saving}
-          >
-            {saving ? "..." : "حفظ"}
-          </button>
-          <button
-            type="button"
-            style={cancelBtnStyle}
-            onClick={resetAddForm}
-            disabled={saving}
-          >
-            إلغاء
-          </button>
-        </div>
-      )}
+      <AddLocationModal
+        open={modalOpen}
+        title="إضافة مدينة جديدة"
+        placeholder="اكتب اسم المدينة..."
+        saving={saving}
+        addError={addError}
+        suggestions={suggestions}
+        newName={newName}
+        onNameChange={(v) => { setNewName(v); setSuggestions([]); setAddError(""); }}
+        onSave={() => handleAdd(false)}
+        onCancel={closeModal}
+        onUseSuggestion={handleUseSuggestion}
+        onForceAdd={() => handleAdd(true)}
+      />
 
-      {suggestion && (
-        <div style={suggestionBoxStyle}>
-          <span>هل تقصد: <strong>{suggestion.name}</strong>؟</span>
-          <button
-            type="button"
-            style={useSuggBtnStyle}
-            onClick={handleUseSuggestion}
-          >
-            نعم، استخدمه
-          </button>
-          <button
-            type="button"
-            style={forceAddBtnStyle}
-            onClick={() => handleAdd(true)}
-            disabled={saving}
-          >
-            لا، أضف جديداً
-          </button>
-        </div>
-      )}
-
-      {addError && <p className="form-error">{addError}</p>}
       {error && <p className="form-error">{error}</p>}
     </div>
   );
@@ -453,12 +564,11 @@ export function NeighborhoodSelect({
   disabled,
 }: NeighborhoodSelectProps) {
   const [neighborhoods, setNeighborhoods] = useState<LocationOption[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState("");
-  const [suggestion, setSuggestion] = useState<{ id: string; name: string } | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
 
   useEffect(() => {
     if (city) {
@@ -467,10 +577,6 @@ export function NeighborhoodSelect({
       setNeighborhoods([]);
     }
   }, [city]);
-
-  useEffect(() => {
-    if (adding) inputRef.current?.focus();
-  }, [adding]);
 
   async function fetchNeighborhoods(cityName: string) {
     try {
@@ -481,20 +587,29 @@ export function NeighborhoodSelect({
     } catch { /* silent */ }
   }
 
-  function resetAddForm() {
-    setAdding(false);
+  function openModal() {
     setNewName("");
     setAddError("");
-    setSuggestion(null);
+    setSuggestions([]);
+    setModalOpen(true);
   }
 
-  async function handleAdd(forceCreate = false) {
+  function closeModal() {
+    setModalOpen(false);
+    setNewName("");
+    setAddError("");
+    setSuggestions([]);
+  }
+
+  const handleAdd = useCallback(async (forceCreate = false) => {
     const name = newName.trim();
     if (!name) { setAddError("اسم الحي مطلوب"); return; }
     if (!city) { setAddError("اختر المدينة أولاً"); return; }
-    setSaving(true); setAddError(""); setSuggestion(null);
+    setSaving(true);
+    setAddError("");
+    setSuggestions([]);
     try {
-      const result = await api.post<LocationCreateResult>(
+      const result = await api.post<LocationApiResult>(
         "/locations/neighborhoods",
         { name, city, forceCreate }
       );
@@ -502,27 +617,19 @@ export function NeighborhoodSelect({
         const finalName = result.item?.name ?? name;
         await fetchNeighborhoods(city);
         onChange(finalName);
-        resetAddForm();
-      } else if (result.status === "similar" && result.suggestion) {
-        setSuggestion({ id: result.suggestion.id, name: result.suggestion.name });
-        setSaving(false);
-        return;
+        closeModal();
+      } else if (result.status === "similar") {
+        setSuggestions(result.suggestions ?? []);
       }
     } catch {
       setAddError("تعذّر إضافة الحي — حاول مجدداً");
     } finally { setSaving(false); }
-  }
+  }, [newName, city, onChange]);
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
-    if (e.key === "Escape") { resetAddForm(); }
-  }
-
-  async function handleUseSuggestion() {
-    if (!suggestion) return;
+  async function handleUseSuggestion(s: LocationSuggestion) {
     await fetchNeighborhoods(city);
-    onChange(suggestion.name);
-    resetAddForm();
+    onChange(s.name);
+    closeModal();
   }
 
   return (
@@ -554,66 +661,26 @@ export function NeighborhoodSelect({
             cursor: !city ? "not-allowed" : "pointer",
           }}
           disabled={disabled || !city}
-          onClick={() => { setAdding(true); setAddError(""); setNewName(""); setSuggestion(null); }}
+          onClick={openModal}
         >
           +
         </button>
       </div>
 
-      {adding && (
-        <div style={inlineFormStyle}>
-          <input
-            ref={inputRef}
-            className="form-input"
-            style={{ width: "100%", fontSize: "0.9rem" }}
-            placeholder="اكتب اسم الحي الجديد..."
-            value={newName}
-            onChange={(e) => { setNewName(e.target.value); setSuggestion(null); }}
-            onKeyDown={handleKeyDown}
-            disabled={saving}
-            maxLength={100}
-          />
-          <button
-            type="button"
-            style={confirmBtnStyle}
-            onClick={() => handleAdd(false)}
-            disabled={saving}
-          >
-            {saving ? "..." : "حفظ"}
-          </button>
-          <button
-            type="button"
-            style={cancelBtnStyle}
-            onClick={resetAddForm}
-            disabled={saving}
-          >
-            إلغاء
-          </button>
-        </div>
-      )}
-
-      {suggestion && (
-        <div style={suggestionBoxStyle}>
-          <span>هل تقصد: <strong>{suggestion.name}</strong>؟</span>
-          <button
-            type="button"
-            style={useSuggBtnStyle}
-            onClick={handleUseSuggestion}
-          >
-            نعم، استخدمه
-          </button>
-          <button
-            type="button"
-            style={forceAddBtnStyle}
-            onClick={() => handleAdd(true)}
-            disabled={saving}
-          >
-            لا، أضف جديداً
-          </button>
-        </div>
-      )}
-
-      {addError && <p className="form-error">{addError}</p>}
+      <AddLocationModal
+        open={modalOpen}
+        title="إضافة حي جديد"
+        placeholder="اكتب اسم الحي..."
+        saving={saving}
+        addError={addError}
+        suggestions={suggestions}
+        newName={newName}
+        onNameChange={(v) => { setNewName(v); setSuggestions([]); setAddError(""); }}
+        onSave={() => handleAdd(false)}
+        onCancel={closeModal}
+        onUseSuggestion={handleUseSuggestion}
+        onForceAdd={() => handleAdd(true)}
+      />
     </div>
   );
 }

@@ -1,5 +1,4 @@
-using Boioot.Domain.Entities;
-using Boioot.Infrastructure.Features.Locations;
+using Boioot.Application.Features.Locations.Interfaces;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,11 +9,13 @@ namespace Boioot.Api.Controllers;
 [Route("api/locations")]
 public class LocationsController : BaseController
 {
-    private readonly BoiootDbContext _db;
+    private readonly BoiootDbContext          _db;
+    private readonly ILocationMasterService   _locationService;
 
-    public LocationsController(BoiootDbContext db)
+    public LocationsController(BoiootDbContext db, ILocationMasterService locationService)
     {
-        _db = db;
+        _db              = db;
+        _locationService = locationService;
     }
 
     // ─── Provinces ─────────────────────────────────────────────────────────────
@@ -24,11 +25,12 @@ public class LocationsController : BaseController
     public async Task<IActionResult> GetProvinces(CancellationToken ct = default)
     {
         var provinces = await _db.LocationCities
-            .Where(c => !string.IsNullOrEmpty(c.Province))
+            .Where(c => c.IsActive && !string.IsNullOrEmpty(c.Province))
             .Select(c => c.Province)
             .Distinct()
             .OrderBy(p => p)
             .ToListAsync(ct);
+
         return Ok(provinces);
     }
 
@@ -36,9 +38,16 @@ public class LocationsController : BaseController
 
     [HttpGet("cities")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetCities([FromQuery] string? province, CancellationToken ct = default)
+    public async Task<IActionResult> GetCities(
+        [FromQuery] string? province,
+        [FromQuery] bool    includeInactive = false,
+        CancellationToken   ct = default)
     {
         var query = _db.LocationCities.AsQueryable();
+
+        if (!includeInactive)
+            query = query.Where(c => c.IsActive);
+
         if (!string.IsNullOrWhiteSpace(province))
             query = query.Where(c => c.Province == province);
 
@@ -46,101 +55,58 @@ public class LocationsController : BaseController
             .OrderBy(c => c.Name)
             .Select(c => new { c.Id, c.Name, c.Province })
             .ToListAsync(ct);
+
         return Ok(cities);
     }
 
     /// <summary>
-    /// Add a city with Arabic normalization and smart duplicate / similarity detection.
+    /// POST /api/locations/cities
     ///
+    /// Delegates all creation logic to <see cref="ILocationMasterService"/>.
     /// Response shape:
-    ///   { status: "created"|"exists"|"similar", item: {...}, suggestion?: {...} }
-    ///
-    /// - "created"  → new city saved; item = the new city
-    /// - "exists"   → strict duplicate found; item = the existing city
-    /// - "similar"  → soft-normalized match found; item = null; suggestion = the similar city
+    ///   { status: "created"|"exists"|"similar",
+    ///     item: {...} | null,
+    ///     suggestions: [...] }          ← always an array (empty unless status="similar")
     /// </summary>
     [HttpPost("cities")]
     [Authorize]
-    public async Task<IActionResult> AddCity([FromBody] AddCityRequest req, CancellationToken ct = default)
+    public async Task<IActionResult> AddCity(
+        [FromBody] AddCityRequest req,
+        CancellationToken ct = default)
     {
-        var rawName  = req.Name?.Trim();
-        var province = req.Province?.Trim() ?? string.Empty;
-
-        if (string.IsNullOrEmpty(rawName))
+        if (string.IsNullOrWhiteSpace(req.Name))
             return BadRequest(new { error = "اسم المدينة مطلوب" });
-
-        var displayName    = rawName;
-        var normalizedName = ArabicNormalizer.Normalize(rawName);
-
-        // ── 1. Strict duplicate check ────────────────────────────────────────────
-        var strictDup = await _db.LocationCities
-            .Where(c => c.Province == province && c.NormalizedName == normalizedName)
-            .Select(c => new CityDto(c.Id, c.Name, c.Province))
-            .FirstOrDefaultAsync(ct);
-
-        if (strictDup is not null)
-            return Ok(new LocationCreateResult("exists", strictDup, null));
-
-        // ── 2. Soft similarity check (skip if user forced create) ────────────────
-        if (req.ForceCreate != true)
-        {
-            var softKey = ArabicNormalizer.SoftNormalize(rawName);
-
-            var siblings = await _db.LocationCities
-                .Where(c => c.Province == province)
-                .Select(c => new { c.Id, c.Name, c.Province, c.NormalizedName })
-                .ToListAsync(ct);
-
-            CityDto? suggestion = null;
-            foreach (var sibling in siblings)
-            {
-                var sibSoft = ArabicNormalizer.SoftNormalize(sibling.NormalizedName);
-                if (sibSoft == softKey)
-                {
-                    suggestion = new CityDto(sibling.Id, sibling.Name, sibling.Province);
-                    break;
-                }
-            }
-
-            if (suggestion is not null)
-                return Ok(new LocationCreateResult("similar", null, suggestion));
-        }
-
-        // ── 3. Create new city ───────────────────────────────────────────────────
-        var city = new LocationCity
-        {
-            Name           = displayName,
-            NormalizedName = normalizedName,
-            Province       = province,
-        };
-        _db.LocationCities.Add(city);
 
         try
         {
-            await _db.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException)
-        {
-            // Unique index violation — race condition; return the existing one
-            var race = await _db.LocationCities
-                .Where(c => c.Province == province && c.NormalizedName == normalizedName)
-                .Select(c => new CityDto(c.Id, c.Name, c.Province))
-                .FirstOrDefaultAsync(ct);
-            if (race is not null)
-                return Ok(new LocationCreateResult("exists", race, null));
-            throw;
-        }
+            var result = await _locationService.AddCityAsync(
+                req.Name,
+                req.Province ?? string.Empty,
+                req.ForceCreate ?? false,
+                ct);
 
-        return Ok(new LocationCreateResult("created", new CityDto(city.Id, city.Name, city.Province), null));
+            return Ok(new LocationApiResult(result.Status, result.Item, result.Suggestions));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     // ─── Neighborhoods ─────────────────────────────────────────────────────────
 
     [HttpGet("neighborhoods")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetNeighborhoods([FromQuery] string? city, CancellationToken ct = default)
+    public async Task<IActionResult> GetNeighborhoods(
+        [FromQuery] string? city,
+        [FromQuery] bool    includeInactive = false,
+        CancellationToken   ct = default)
     {
         var query = _db.LocationNeighborhoods.AsQueryable();
+
+        if (!includeInactive)
+            query = query.Where(n => n.IsActive);
+
         if (!string.IsNullOrWhiteSpace(city))
             query = query.Where(n => n.City == city);
 
@@ -148,90 +114,58 @@ public class LocationsController : BaseController
             .OrderBy(n => n.Name)
             .Select(n => new { n.Id, n.Name, n.City })
             .ToListAsync(ct);
+
         return Ok(neighborhoods);
     }
 
     /// <summary>
-    /// Add a neighborhood with Arabic normalization and smart duplicate / similarity detection.
+    /// POST /api/locations/neighborhoods
     ///
-    /// Response shape:
-    ///   { status: "created"|"exists"|"similar", item: {...}, suggestion?: {...} }
+    /// Response shape identical to POST /cities.
     /// </summary>
     [HttpPost("neighborhoods")]
     [Authorize]
-    public async Task<IActionResult> AddNeighborhood([FromBody] AddNeighborhoodRequest req, CancellationToken ct = default)
+    public async Task<IActionResult> AddNeighborhood(
+        [FromBody] AddNeighborhoodRequest req,
+        CancellationToken ct = default)
     {
-        var rawName = req.Name?.Trim();
-        var city    = req.City?.Trim();
-
-        if (string.IsNullOrEmpty(rawName))
+        if (string.IsNullOrWhiteSpace(req.Name))
             return BadRequest(new { error = "اسم الحي مطلوب" });
-        if (string.IsNullOrEmpty(city))
+        if (string.IsNullOrWhiteSpace(req.City))
             return BadRequest(new { error = "اسم المدينة مطلوب" });
-
-        var displayName    = rawName;
-        var normalizedName = ArabicNormalizer.Normalize(rawName);
-
-        // ── 1. Strict duplicate check ────────────────────────────────────────────
-        var strictDup = await _db.LocationNeighborhoods
-            .Where(n => n.City == city && n.NormalizedName == normalizedName)
-            .Select(n => new NeighborhoodDto(n.Id, n.Name, n.City))
-            .FirstOrDefaultAsync(ct);
-
-        if (strictDup is not null)
-            return Ok(new LocationCreateResult("exists", strictDup, null));
-
-        // ── 2. Soft similarity check (skip if user forced create) ────────────────
-        if (req.ForceCreate != true)
-        {
-            var softKey = ArabicNormalizer.SoftNormalize(rawName);
-
-            var siblings = await _db.LocationNeighborhoods
-                .Where(n => n.City == city)
-                .Select(n => new { n.Id, n.Name, n.City, n.NormalizedName })
-                .ToListAsync(ct);
-
-            NeighborhoodDto? suggestion = null;
-            foreach (var sibling in siblings)
-            {
-                var sibSoft = ArabicNormalizer.SoftNormalize(sibling.NormalizedName);
-                if (sibSoft == softKey)
-                {
-                    suggestion = new NeighborhoodDto(sibling.Id, sibling.Name, sibling.City);
-                    break;
-                }
-            }
-
-            if (suggestion is not null)
-                return Ok(new LocationCreateResult("similar", null, suggestion));
-        }
-
-        // ── 3. Create new neighborhood ───────────────────────────────────────────
-        var neighborhood = new LocationNeighborhood
-        {
-            Name           = displayName,
-            NormalizedName = normalizedName,
-            City           = city,
-        };
-        _db.LocationNeighborhoods.Add(neighborhood);
 
         try
         {
-            await _db.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException)
-        {
-            var race = await _db.LocationNeighborhoods
-                .Where(n => n.City == city && n.NormalizedName == normalizedName)
-                .Select(n => new NeighborhoodDto(n.Id, n.Name, n.City))
-                .FirstOrDefaultAsync(ct);
-            if (race is not null)
-                return Ok(new LocationCreateResult("exists", race, null));
-            throw;
-        }
+            var result = await _locationService.AddNeighborhoodAsync(
+                req.Name,
+                req.City,
+                req.ForceCreate ?? false,
+                ct);
 
-        return Ok(new LocationCreateResult("created",
-            new NeighborhoodDto(neighborhood.Id, neighborhood.Name, neighborhood.City), null));
+            return Ok(new LocationApiResult(result.Status, result.Item, result.Suggestions));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // ─── Duplicate report (admin-only) ─────────────────────────────────────────
+
+    [HttpGet("duplicates/cities")]
+    [Authorize(Policy = "Admin")]
+    public async Task<IActionResult> GetDuplicateCities(CancellationToken ct = default)
+    {
+        var groups = await _locationService.DetectDuplicateCitiesAsync(ct);
+        return Ok(groups);
+    }
+
+    [HttpGet("duplicates/neighborhoods")]
+    [Authorize(Policy = "Admin")]
+    public async Task<IActionResult> GetDuplicateNeighborhoods(CancellationToken ct = default)
+    {
+        var groups = await _locationService.DetectDuplicateNeighborhoodsAsync(ct);
+        return Ok(groups);
     }
 
     // ─── Property Location Options (derived from actual property data) ──────────
@@ -241,7 +175,7 @@ public class LocationsController : BaseController
     public async Task<IActionResult> GetPropertyOptions(
         [FromQuery] string? province,
         [FromQuery] string? city,
-        CancellationToken ct = default)
+        CancellationToken   ct = default)
     {
         var baseQuery = _db.Properties
             .IgnoreQueryFilters()
@@ -285,19 +219,19 @@ public class LocationsController : BaseController
     }
 }
 
-// ─── DTOs and records ──────────────────────────────────────────────────────────
+// ─── Request / Response DTOs ───────────────────────────────────────────────────
 
 public record AddCityRequest(string? Name, string? Province, bool? ForceCreate);
 public record AddNeighborhoodRequest(string? Name, string? City, bool? ForceCreate);
 
-public record CityDto(Guid Id, string Name, string Province);
-public record NeighborhoodDto(Guid Id, string Name, string City);
-
 /// <summary>
-/// Structured result returned from POST /cities and POST /neighborhoods.
+/// Unified response for POST /cities and POST /neighborhoods.
 ///
-/// status:     "created" | "exists" | "similar"
-/// item:       the saved or found location (null when status = "similar")
-/// suggestion: a nearby similar entry (only when status = "similar")
+/// status:      "created" | "exists" | "similar"
+/// item:        the saved or found location (null only when status = "similar")
+/// suggestions: similar candidates — empty list unless status = "similar"
 /// </summary>
-public record LocationCreateResult(string Status, object? Item, object? Suggestion);
+public record LocationApiResult(
+    string                          Status,
+    LocationItemDto?                Item,
+    IReadOnlyList<LocationItemDto>  Suggestions);

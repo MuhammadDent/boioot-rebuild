@@ -247,6 +247,13 @@ using (var scope = app.Services.CreateScope())
         }
         catch { /* already exists */ }
 
+        // ── Location IsActive column ──────────────────────────────────────────────
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE LocationCities ADD COLUMN IsActive INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* column already exists */ }
+
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE LocationNeighborhoods ADD COLUMN IsActive INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* column already exists */ }
+
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN ProfileImageUrl TEXT"); }
         catch { /* column already exists */ }
 

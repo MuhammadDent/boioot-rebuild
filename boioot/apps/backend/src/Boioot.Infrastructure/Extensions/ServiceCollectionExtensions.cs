@@ -5,6 +5,7 @@ using Boioot.Application.Features.Admin.Interfaces;
 using Boioot.Application.Features.AgentManagement.Interfaces;
 using Boioot.Application.Features.Auth.Interfaces;
 using Boioot.Application.Features.Blog.Interfaces;
+using Boioot.Application.Features.Locations.Interfaces;
 using Boioot.Application.Features.Onboarding.Interfaces;
 using Boioot.Application.Features.BuyerRequests.Interfaces;
 using Boioot.Application.Features.Dashboard.Interfaces;
@@ -24,6 +25,7 @@ using Boioot.Infrastructure.Features.Onboarding;
 using Boioot.Infrastructure.Features.Rbac;
 using Boioot.Infrastructure.Features.Billing;
 using Boioot.Infrastructure.Features.Blog;
+using Boioot.Infrastructure.Features.Locations;
 using Boioot.Infrastructure.Features.BuyerRequests;
 using Boioot.Infrastructure.Features.Dashboard;
 using Boioot.Infrastructure.Features.Favorites;
@@ -71,6 +73,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISubscriptionService, SubscriptionService>();
         services.AddScoped<IBlogSlugService, BlogSlugService>();
         services.AddScoped<IBlogService, BlogService>();
+        services.AddScoped<ILocationMasterService, LocationMasterService>();
 
         // ── Billing providers ──────────────────────────────────────────────────
         // Both registered as IBillingProvider — BillingService injects IEnumerable<IBillingProvider>
