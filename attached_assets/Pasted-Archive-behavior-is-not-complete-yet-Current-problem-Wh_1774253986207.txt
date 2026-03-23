@@ -1,0 +1,85 @@
+Archive behavior is not complete yet.
+
+Current problem:
+When I click "Archive", the plan does not disappear from the plans list.
+It only seems to change status, but remains visible in the default list, which causes confusion and clutter.
+
+We need to fix archive UX and list filtering behavior.
+
+==================================================
+GOAL
+==================================================
+
+Make archived plans disappear from the default plans list immediately after archiving.
+
+==================================================
+REQUIRED BEHAVIOR
+==================================================
+
+1) Default plans list must show ONLY active/non-archived plans.
+
+2) When admin clicks "Archive" and confirms:
+- archive the plan successfully
+- remove it immediately from the current visible list
+- update the plans count
+- show a success toast in Arabic
+
+3) Archived plans should still be accessible through a separate filter/tab, such as:
+- الكل
+- النشطة
+- المؤرشفة
+
+OR at minimum:
+- active only by default
+- with an option to show archived plans
+
+==================================================
+BACKEND CHECK
+==================================================
+
+Verify archive logic:
+- if archive means isActive = false, then list endpoint must support filtering
+- do not return archived plans in the default active list
+- optionally add query param:
+  includeArchived=false by default
+
+Example:
+GET /plans -> only active plans
+GET /plans?includeArchived=true -> all plans
+
+==================================================
+FRONTEND CHECK
+==================================================
+
+1) After archive success:
+- update local state correctly
+OR refetch list correctly
+
+2) Remove the archived item from visible cards immediately.
+
+3) Update header count to reflect only active plans in default view.
+
+4) If archived plans are shown in a separate filter, label them clearly.
+
+==================================================
+UI / UX
+==================================================
+
+Add a clear filtering control near the plans page header:
+- النشطة
+- المؤرشفة
+- الكل
+
+Default selected tab: النشطة
+
+==================================================
+IMPORTANT
+==================================================
+
+Archiving should reduce clutter.
+The default admin view should NOT keep archived plans mixed with active plans.
+
+Please implement this behavior and explain:
+1) what archive currently does
+2) why the plan stayed visible
+3) what you changed in backend and frontend

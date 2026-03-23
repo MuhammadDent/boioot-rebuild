@@ -9,6 +9,21 @@ import { adminApi } from "@/features/admin/api";
 import { normalizeError } from "@/lib/api";
 import type { AdminPlanSummary, AdminPlanDetail, AdminPlanPricingEntry, PlanLimitItem, PlanFeatureItem } from "@/types";
 
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function Toast({ msg, type }: { msg: string; type: "ok" | "err" }) {
+  return (
+    <div style={{
+      position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)",
+      zIndex: 9999, padding: "0.75rem 1.5rem", borderRadius: 10,
+      background: type === "ok" ? "#166534" : "#991b1b",
+      color: "#fff", fontWeight: 600, fontSize: "0.9rem",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.25)", whiteSpace: "nowrap",
+    }}>
+      {msg}
+    </div>
+  );
+}
+
 // ── Feature group labels ───────────────────────────────────────────────────────
 
 const FEATURE_GROUP_LABELS: Record<string, string> = {
@@ -993,6 +1008,19 @@ export default function AdminPlansPage() {
   const [fetching, setFetching]   = useState(true);
   const [fetchError, setFetchError] = useState("");
 
+  const [activeFilter, setActiveFilter] = useState<"active" | "archived" | "all">("active");
+
+  const [toastMsg,  setToastMsg]  = useState("");
+  const [toastType, setToastType] = useState<"ok" | "err">("ok");
+  const [toastKey,  setToastKey]  = useState(0);
+
+  const showToast = useCallback((msg: string, type: "ok" | "err" = "ok") => {
+    setToastMsg(msg);
+    setToastType(type);
+    setToastKey(k => k + 1);
+    setTimeout(() => setToastMsg(""), 3500);
+  }, []);
+
   const [editTarget, setEditTarget]     = useState<AdminPlanDetail | null | undefined>(undefined);
   const [modalOpen, setModalOpen]       = useState(false);
   const [detailLoading, setDetailLoading] = useState<string | null>(null);
@@ -1047,6 +1075,7 @@ export default function AdminPlansPage() {
       await adminApi.deletePlan(id);
       setPlans(prev => prev.map(p => p.id === id ? { ...p, isActive: false } : p));
       setDeleteId(null);
+      showToast("تمت أرشفة الخطة بنجاح");
     } catch (e) { setDeleteError(normalizeError(e)); }
     finally { setDeleteLoading(false); }
   }
@@ -1060,7 +1089,14 @@ export default function AdminPlansPage() {
     finally { setDuplicating(null); }
   }
 
-  const sorted = [...plans].sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
+  const sorted   = [...plans].sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
+  const filtered = sorted.filter(p =>
+    activeFilter === "all"      ? true :
+    activeFilter === "active"   ? p.isActive :
+    /* archived */                !p.isActive
+  );
+  const activeCount   = plans.filter(p =>  p.isActive).length;
+  const archivedCount = plans.filter(p => !p.isActive).length;
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-background, #f9f9f9)", padding: "2rem 1rem" }}>
@@ -1072,7 +1108,11 @@ export default function AdminPlansPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
               <h1 style={{ fontSize: "1.4rem", fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>إدارة خطط الاشتراك</h1>
-              <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{plans.length} خطة</p>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                {activeFilter === "active"   ? `${activeCount} خطة نشطة` :
+                 activeFilter === "archived" ? `${archivedCount} خطة مؤرشفة` :
+                 `${plans.length} خطة (${activeCount} نشطة · ${archivedCount} مؤرشفة)`}
+              </p>
             </div>
             <div style={{ display: "flex", gap: "0.6rem", flexShrink: 0 }}>
               <a
@@ -1092,14 +1132,41 @@ export default function AdminPlansPage() {
 
         {(fetchError || actionError) && <InlineBanner message={fetchError || actionError} />}
 
+        {/* ── Filter Tabs ── */}
+        {!fetching && (
+          <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1rem", borderBottom: "2px solid var(--color-border, #e5e7eb)", paddingBottom: "0" }}>
+            {(["active", "archived", "all"] as const).map(tab => {
+              const label = tab === "active" ? `النشطة (${activeCount})` : tab === "archived" ? `المؤرشفة (${archivedCount})` : `الكل (${plans.length})`;
+              const isSelected = activeFilter === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveFilter(tab)}
+                  style={{
+                    padding: "0.45rem 1.1rem", fontSize: "0.85rem", fontWeight: isSelected ? 700 : 500,
+                    border: "none", background: "none", cursor: "pointer",
+                    borderBottom: isSelected ? "2.5px solid var(--color-primary, #2563eb)" : "2.5px solid transparent",
+                    color: isSelected ? "var(--color-primary, #2563eb)" : "var(--color-text-secondary)",
+                    marginBottom: "-2px", transition: "color 0.15s",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {fetching && <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>جاري التحميل...</div>}
 
-        {!fetching && plans.length === 0 && (
-          <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>لا توجد خطط بعد. أنشئ أول خطة!</div>
+        {!fetching && filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>
+            {activeFilter === "archived" ? "لا توجد خطط مؤرشفة." : activeFilter === "active" ? "لا توجد خطط نشطة. أنشئ أول خطة!" : "لا توجد خطط بعد. أنشئ أول خطة!"}
+          </div>
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {sorted.map(plan => {
+          {filtered.map(plan => {
             const isLoadingThis = detailLoading === plan.id;
             const monthlyPrice  = plan.basePriceMonthly === 0 ? "مجاني" : `${plan.basePriceMonthly.toLocaleString("ar-SY")} ل.س/شهر`;
             const yearlyPrice   = plan.basePriceYearly  === 0 ? null     : `${plan.basePriceYearly.toLocaleString("ar-SY")} ل.س/سنة`;
@@ -1231,6 +1298,9 @@ export default function AdminPlansPage() {
           onSaved={(updated) => handleSaved(updated)}
         />
       )}
+
+      {/* ── Toast ── */}
+      {toastMsg && <Toast msg={toastMsg} type={toastType} key={toastKey} />}
     </div>
   );
 }
