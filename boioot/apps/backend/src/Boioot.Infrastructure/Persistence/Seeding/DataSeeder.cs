@@ -18,9 +18,9 @@ public class DataSeeder
         IConfiguration configuration,
         ILogger<DataSeeder> logger)
     {
-        _context = context;
+        _context       = context;
         _configuration = configuration;
-        _logger = logger;
+        _logger        = logger;
     }
 
     public async Task SeedAsync()
@@ -39,7 +39,6 @@ public class DataSeeder
 
         var amenities = new List<PropertyAmenity>
         {
-            // ── داخلية ──
             new() { Key = "Balcony",         Label = "شرفة",           GroupAr = "داخلية", Order = 1  },
             new() { Key = "Elevator",        Label = "مصعد",           GroupAr = "داخلية", Order = 2  },
             new() { Key = "CentralAC",       Label = "تكييف مركزي",    GroupAr = "داخلية", Order = 3  },
@@ -53,13 +52,11 @@ public class DataSeeder
             new() { Key = "Basement",        Label = "قبو",            GroupAr = "داخلية", Order = 11 },
             new() { Key = "Roof",            Label = "روف / سطح",      GroupAr = "داخلية", Order = 12 },
             new() { Key = "Duplex",          Label = "دوبلكس",         GroupAr = "داخلية", Order = 13 },
-            // ── خارجية ──
             new() { Key = "Parking",         Label = "موقف سيارة",     GroupAr = "خارجية", Order = 1  },
             new() { Key = "Security",        Label = "حراسة أمنية",    GroupAr = "خارجية", Order = 2  },
             new() { Key = "Garden",          Label = "حديقة",          GroupAr = "خارجية", Order = 3  },
             new() { Key = "Pool",            Label = "مسبح",           GroupAr = "خارجية", Order = 4  },
             new() { Key = "Gym",             Label = "صالة رياضية",    GroupAr = "خارجية", Order = 5  },
-            // ── موقع ──
             new() { Key = "SeaView",         Label = "إطلالة بحرية",   GroupAr = "موقع",   Order = 1  },
             new() { Key = "NearMosque",      Label = "قرب مسجد",       GroupAr = "موقع",   Order = 2  },
             new() { Key = "NearSchool",      Label = "قرب مدرسة",      GroupAr = "موقع",   Order = 3  },
@@ -74,7 +71,7 @@ public class DataSeeder
 
     private async Task SeedAdminUserAsync()
     {
-        var adminEmail = _configuration["AdminSeed:Email"];
+        var adminEmail    = _configuration["AdminSeed:Email"];
         var adminPassword = _configuration["AdminSeed:Password"];
         var adminFullName = _configuration["AdminSeed:FullName"] ?? "مدير النظام";
 
@@ -98,11 +95,11 @@ public class DataSeeder
 
         var admin = new User
         {
-            FullName = adminFullName,
-            Email = emailLower,
+            FullName     = adminFullName,
+            Email        = emailLower,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
-            Role = UserRole.Admin,
-            IsActive = true
+            Role         = UserRole.Admin,
+            IsActive     = true
         };
 
         _context.Users.Add(admin);
@@ -120,12 +117,29 @@ public class DataSeeder
 
         var emailLower = adminEmail.ToLowerInvariant();
 
-        await _context.Database.ExecuteSqlRawAsync(@"
-            INSERT OR IGNORE INTO UserRoles (UserId, RoleId)
-            SELECT u.Id, r.Id
-            FROM   Users u, Roles r
-            WHERE  u.Email = {0} AND r.Name = 'Admin'",
-            emailLower);
+        var admin = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Email == emailLower && u.Role == UserRole.Admin);
+
+        if (admin is null) return;
+
+        var adminRole = await _context.RbacRoles
+            .FirstOrDefaultAsync(r => r.Name == "Admin");
+
+        if (adminRole is null) return;
+
+        var alreadyAssigned = await _context.RbacUserRoles
+            .AnyAsync(ur => ur.UserId == admin.Id && ur.RoleId == adminRole.Id);
+
+        if (!alreadyAssigned)
+        {
+            _context.RbacUserRoles.Add(new RbacUserRole
+            {
+                UserId = admin.Id,
+                RoleId = adminRole.Id,
+            });
+            await _context.SaveChangesAsync();
+        }
 
         var permCount = await _context.RbacRoles
             .Where(r => r.Name == "Admin")
@@ -159,12 +173,9 @@ public class DataSeeder
             ("ريف دمشق",   "ريف دمشق"),
         };
 
-        var existing = await _context.LocationCities
-            .Select(c => c.Name)
-            .ToListAsync();
-
+        var existing    = await _context.LocationCities.Select(c => c.Name).ToListAsync();
         var existingSet = new HashSet<string>(existing);
-        int added = 0;
+        int added       = 0;
 
         foreach (var (name, province) in defaults)
         {
@@ -192,326 +203,290 @@ public class DataSeeder
     }
 
     // ── Dynamic RBAC — Phase 1 seed ───────────────────────────────────────────
-    //
-    // Seeds:
-    //   Roles      — Admin, CompanyOwner, Broker, Agent
-    //   Permissions — all permission keys listed in the task spec
-    //   RolePermissions — role → permission mapping per task spec
-    //   UserRoles  — NOT seeded here; assigned when users register/change role
-    //
-    // Safe to call multiple times — uses INSERT OR IGNORE.
-    // Does NOT touch the existing auth flow (User.Role enum / JWT generation).
 
     private async Task SeedRbacAsync()
     {
-        // ── 1. Roles ──────────────────────────────────────────────────────────
+        await SeedRbacRolesAsync();
+        await SeedRbacPermissionsAsync();
+        await SeedRbacRolePermissionsAsync();
+    }
 
-        var roleNames = new[]
-        {
-            "Admin",
-            "AdminManager",
-            "CustomerSupport",
-            "TechnicalSupport",
-            "ContentEditor",
-            "SeoSpecialist",
-            "MarketingStaff",
-            "CompanyOwner",
-            "Broker",
-            "Agent",
-            "Owner",
-            "User",
-        };
+    private static readonly string[] RoleNames =
+    [
+        "Admin", "AdminManager", "CustomerSupport", "TechnicalSupport",
+        "ContentEditor", "SeoSpecialist", "MarketingStaff",
+        "CompanyOwner", "Broker", "Agent", "Owner", "User",
+    ];
 
-        var now = DateTime.UtcNow.ToString("o"); // ISO 8601
+    private static readonly string[] PermissionKeys =
+    [
+        "properties.view", "properties.create", "properties.edit", "properties.delete",
+        "projects.view",   "projects.create",   "projects.edit",   "projects.delete",
+        "agents.view",     "agents.manage",
+        "users.view",      "users.edit",         "users.disable",
+        "staff.view",      "staff.create",        "staff.edit",      "staff.disable",
+        "roles.view",      "roles.manage",
+        "companies.view",  "companies.edit",
+        "requests.view",   "requests.create",     "requests.assign", "requests.edit",
+        "dashboard.view",
+        "blog.view",       "blog.create",         "blog.edit",       "blog.publish",
+        "blog.delete",     "blog.seo.manage",
+        "seo.settings.manage",
+        "marketing.view",  "marketing.manage",
+        "settings.view",   "settings.manage",
+        "billing.view",    "billing.manage",
+    ];
 
-        foreach (var name in roleNames)
-        {
-            await _context.Database.ExecuteSqlRawAsync(
-                "INSERT OR IGNORE INTO Roles (Id, Name, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {2})",
-                Guid.NewGuid().ToString("D").ToUpperInvariant(), name, now);
-        }
+    private static readonly Dictionary<string, string[]> RolePermissionMapping = new()
+    {
+        ["Admin"] = PermissionKeys,
 
-        // ── 2. Permissions ────────────────────────────────────────────────────
-
-        var permissionKeys = new[]
-        {
-            // Properties
-            "properties.view",
-            "properties.create",
-            "properties.edit",
-            "properties.delete",
-            // Projects
-            "projects.view",
-            "projects.create",
-            "projects.edit",
-            "projects.delete",
-            // Agents
-            "agents.view",
-            "agents.manage",
-            // Users
-            "users.view",
-            "users.edit",
-            "users.disable",
-            // Staff
-            "staff.view",
-            "staff.create",
-            "staff.edit",
-            "staff.disable",
-            // Roles
+        ["AdminManager"] =
+        [
+            "users.view", "users.edit", "users.disable",
+            "staff.view", "staff.create", "staff.edit",
             "roles.view",
-            "roles.manage",
-            // Companies
-            "companies.view",
-            "companies.edit",
-            // Requests
-            "requests.view",
-            "requests.create",
-            "requests.assign",
-            "requests.edit",
-            // Dashboard
-            "dashboard.view",
-            // Blog
-            "blog.view",
-            "blog.create",
-            "blog.edit",
-            "blog.publish",
-            "blog.delete",
-            "blog.seo.manage",
-            // SEO
-            "seo.settings.manage",
-            // Marketing
-            "marketing.view",
-            "marketing.manage",
-            // Settings
-            "settings.view",
-            "settings.manage",
-            // Billing
+            "properties.view", "properties.edit",
+            "projects.view", "projects.edit",
+            "requests.view", "requests.assign", "requests.edit",
+            "companies.view", "companies.edit",
+            "blog.view", "blog.create", "blog.edit", "blog.publish",
+            "blog.seo.manage", "seo.settings.manage",
+            "settings.view", "settings.manage",
             "billing.view",
-            "billing.manage",
-        };
+        ],
 
-        foreach (var key in permissionKeys)
+        ["CustomerSupport"] =
+        [
+            "users.view", "properties.view", "projects.view",
+            "requests.view", "requests.assign", "requests.edit",
+            "companies.view", "blog.view",
+        ],
+
+        ["TechnicalSupport"] =
+        [
+            "users.view", "users.edit",
+            "properties.view", "properties.edit",
+            "projects.view", "requests.view",
+            "companies.view", "settings.view",
+        ],
+
+        ["ContentEditor"] = [ "blog.view", "blog.create", "blog.edit" ],
+
+        ["SeoSpecialist"] = [ "blog.view", "blog.edit", "blog.seo.manage", "seo.settings.manage" ],
+
+        ["MarketingStaff"] = [ "marketing.view", "marketing.manage", "blog.view" ],
+
+        ["CompanyOwner"] =
+        [
+            "properties.view", "properties.create", "properties.edit", "properties.delete",
+            "projects.view", "projects.create", "projects.edit", "projects.delete",
+            "agents.view", "agents.manage",
+            "requests.view", "requests.create",
+            "dashboard.view",
+        ],
+
+        ["Owner"]  = [ "properties.view", "properties.create" ],
+        ["Broker"] = [ "properties.view", "properties.create" ],
+        ["Agent"]  = [ "agents.view", "properties.view" ],
+    };
+
+    private async Task SeedRbacRolesAsync()
+    {
+        var existingRoleNames = (await _context.RbacRoles
+            .Select(r => r.Name)
+            .ToListAsync()).ToHashSet();
+
+        var newRoles = RoleNames
+            .Where(name => !existingRoleNames.Contains(name))
+            .Select(name => new RbacRole { Name = name })
+            .ToList();
+
+        if (newRoles.Count > 0)
         {
-            await _context.Database.ExecuteSqlRawAsync(
-                "INSERT OR IGNORE INTO Permissions (Id, Key, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {2})",
-                Guid.NewGuid().ToString("D").ToUpperInvariant(), key, now);
+            _context.RbacRoles.AddRange(newRoles);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("[RBAC] Seeded {Count} new roles.", newRoles.Count);
         }
+    }
 
-        // ── 3. Role → Permission mapping ──────────────────────────────────────
+    private async Task SeedRbacPermissionsAsync()
+    {
+        var existingKeys = (await _context.RbacPermissions
+            .Select(p => p.Key)
+            .ToListAsync()).ToHashSet();
 
-        var mapping = new Dictionary<string, string[]>
+        var newPerms = PermissionKeys
+            .Where(key => !existingKeys.Contains(key))
+            .Select(key => new RbacPermission { Key = key })
+            .ToList();
+
+        if (newPerms.Count > 0)
         {
-            ["Admin"] = permissionKeys, // All permissions
+            _context.RbacPermissions.AddRange(newPerms);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("[RBAC] Seeded {Count} new permissions.", newPerms.Count);
+        }
+    }
 
-            ["AdminManager"] = new[]
-            {
-                "users.view", "users.edit", "users.disable",
-                "staff.view", "staff.create", "staff.edit",
-                "roles.view",
-                "properties.view", "properties.edit",
-                "projects.view", "projects.edit",
-                "requests.view", "requests.assign", "requests.edit",
-                "companies.view", "companies.edit",
-                "blog.view", "blog.create", "blog.edit", "blog.publish",
-                "blog.seo.manage", "seo.settings.manage",
-                "settings.view", "settings.manage",
-                "billing.view",
-            },
+    private async Task SeedRbacRolePermissionsAsync()
+    {
+        var roles = await _context.RbacRoles
+            .ToDictionaryAsync(r => r.Name, r => r.Id);
 
-            ["CustomerSupport"] = new[]
-            {
-                "users.view",
-                "properties.view",
-                "projects.view",
-                "requests.view", "requests.assign", "requests.edit",
-                "companies.view",
-                "blog.view",
-            },
+        var permissions = await _context.RbacPermissions
+            .ToDictionaryAsync(p => p.Key, p => p.Id);
 
-            ["TechnicalSupport"] = new[]
-            {
-                "users.view", "users.edit",
-                "properties.view", "properties.edit",
-                "projects.view",
-                "requests.view",
-                "companies.view",
-                "settings.view",
-            },
+        var existingList = await _context.RbacRolePermissions
+            .Select(rp => new { rp.RoleId, rp.PermissionId })
+            .ToListAsync();
 
-            ["ContentEditor"] = new[]
-            {
-                "blog.view", "blog.create", "blog.edit",
-            },
+        var existingSet = existingList
+            .Select(rp => (rp.RoleId, rp.PermissionId))
+            .ToHashSet();
 
-            ["SeoSpecialist"] = new[]
-            {
-                "blog.view", "blog.edit",
-                "blog.seo.manage", "seo.settings.manage",
-            },
+        var toAdd = new List<RbacRolePermission>();
 
-            ["MarketingStaff"] = new[]
-            {
-                "marketing.view", "marketing.manage",
-                "blog.view",
-            },
-
-            // ── Platform roles ────────────────────────────────────────────────
-            // Note: platform users (Owner, Broker, CompanyOwner) authenticate
-            // via JWT role claim, NOT via DB RBAC permission claims.
-            // These entries seed the permission definitions for consistency
-            // and for any future admin-panel overrides, not for JWT claim generation.
-            // Backend policies for platform users use RequireRole(), not permissions.
-            // Frontend reads PLATFORM_ROLE_PERMISSIONS in lib/rbac.ts for UI gating.
-            ["CompanyOwner"] = new[]
-            {
-                "properties.view", "properties.create", "properties.edit", "properties.delete",
-                "projects.view", "projects.create", "projects.edit", "projects.delete",
-                "agents.view", "agents.manage",
-                "requests.view", "requests.create",
-                "dashboard.view",
-            },
-
-            // Owner (مالك عقار): creates personal listings via POST /api/properties/post.
-            ["Owner"] = new[]
-            {
-                "properties.view", "properties.create",
-            },
-
-            // Broker: creates personal listings only. Does NOT manage agents.
-            ["Broker"] = new[]
-            {
-                "properties.view", "properties.create",
-            },
-
-            ["Agent"] = new[]
-            {
-                "agents.view",
-                "properties.view",
-            },
-        };
-
-        foreach (var (roleName, perms) in mapping)
+        foreach (var (roleName, permKeys) in RolePermissionMapping)
         {
-            foreach (var permKey in perms)
+            if (!roles.TryGetValue(roleName, out var roleId)) continue;
+
+            foreach (var permKey in permKeys)
             {
-                await _context.Database.ExecuteSqlRawAsync(@"
-                    INSERT OR IGNORE INTO RolePermissions (RoleId, PermissionId)
-                    SELECT r.Id, p.Id
-                    FROM   Roles r, Permissions p
-                    WHERE  r.Name = {0} AND p.Key = {1}",
-                    roleName, permKey);
+                if (!permissions.TryGetValue(permKey, out var permId)) continue;
+                if (existingSet.Contains((roleId, permId))) continue;
+
+                toAdd.Add(new RbacRolePermission
+                {
+                    RoleId       = roleId,
+                    PermissionId = permId,
+                });
             }
         }
 
+        if (toAdd.Count > 0)
+        {
+            _context.RbacRolePermissions.AddRange(toAdd);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("[RBAC] Seeded {Count} new role-permission mappings.", toAdd.Count);
+        }
+
         _logger.LogInformation("Dynamic RBAC seed complete: {RoleCount} roles, {PermCount} permissions",
-            roleNames.Length, permissionKeys.Length);
+            RoleNames.Length, PermissionKeys.Length);
     }
 
     // ── Sample properties ─────────────────────────────────────────────────────
+
     private async Task SeedSamplePropertiesAsync()
     {
-        var hasProperties = await _context.Set<Boioot.Domain.Entities.Property>()
-            .IgnoreQueryFilters().AnyAsync();
+        var hasProperties = await _context.Set<Property>()
+            .IgnoreQueryFilters()
+            .AnyAsync();
         if (hasProperties) return;
 
-        var now = DateTime.UtcNow.ToString("o");
-        var companyId = "00000000-0000-0000-0000-000000000001";
+        var companyId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
         var properties = new[]
         {
-            new
+            new Property
             {
-                Id = "11111111-0000-0000-0000-000000000001",
-                Title = "شقة فاخرة في المزة",
+                Id          = Guid.Parse("11111111-0000-0000-0000-000000000001"),
+                Title       = "شقة فاخرة في المزة",
                 Description = "شقة واسعة بإطلالة رائعة في حي المزة الراقي، تتميز بتشطيبات عالية الجودة وموقع متميز قريب من جميع الخدمات.",
-                Type = "Apartment",
+                Type        = PropertyType.Apartment,
                 ListingType = "Sale",
-                Price = 85000000m,
-                Area = 175m,
-                Bedrooms = 3,
-                Bathrooms = 2,
-                Province = "دمشق",
-                City = "دمشق",
-                Neighborhood = "المزة"
+                Status      = PropertyStatus.Available,
+                Price       = 85_000_000m,
+                Currency    = "SYP",
+                Area        = 175m,
+                Bedrooms    = 3,
+                Bathrooms   = 2,
+                Province    = "دمشق",
+                City        = "دمشق",
+                Neighborhood= "المزة",
+                CompanyId   = companyId,
+                PaymentType = "OneTime",
             },
-            new
+            new Property
             {
-                Id = "11111111-0000-0000-0000-000000000002",
-                Title = "فيلا مميزة في يلدا",
+                Id          = Guid.Parse("11111111-0000-0000-0000-000000000002"),
+                Title       = "فيلا مميزة في يلدا",
                 Description = "فيلا مستقلة ذات طابقين مع حديقة خاصة ومسبح، مناسبة للعائلات الكبيرة.",
-                Type = "Villa",
+                Type        = PropertyType.Villa,
                 ListingType = "Sale",
-                Price = 350000000m,
-                Area = 400m,
-                Bedrooms = 5,
-                Bathrooms = 4,
-                Province = "ريف دمشق",
-                City = "دمشق",
-                Neighborhood = "يلدا"
+                Status      = PropertyStatus.Available,
+                Price       = 350_000_000m,
+                Currency    = "SYP",
+                Area        = 400m,
+                Bedrooms    = 5,
+                Bathrooms   = 4,
+                Province    = "ريف دمشق",
+                City        = "دمشق",
+                Neighborhood= "يلدا",
+                CompanyId   = companyId,
+                PaymentType = "OneTime",
             },
-            new
+            new Property
             {
-                Id = "11111111-0000-0000-0000-000000000003",
-                Title = "مكتب تجاري في وسط المدينة",
+                Id          = Guid.Parse("11111111-0000-0000-0000-000000000003"),
+                Title       = "مكتب تجاري في وسط المدينة",
                 Description = "مكتب مجهز بالكامل في موقع تجاري مركزي، مناسب للشركات والمكاتب الاحترافية.",
-                Type = "Office",
+                Type        = PropertyType.Office,
                 ListingType = "Rent",
-                Price = 500000m,
-                Area = 80m,
-                Bedrooms = 0,
-                Bathrooms = 1,
-                Province = "دمشق",
-                City = "دمشق",
-                Neighborhood = "البرامكة"
+                Status      = PropertyStatus.Available,
+                Price       = 500_000m,
+                Currency    = "SYP",
+                Area        = 80m,
+                Bedrooms    = 0,
+                Bathrooms   = 1,
+                Province    = "دمشق",
+                City        = "دمشق",
+                Neighborhood= "البرامكة",
+                CompanyId   = companyId,
+                PaymentType = "OneTime",
             },
-            new
+            new Property
             {
-                Id = "11111111-0000-0000-0000-000000000004",
-                Title = "أرض سكنية في جرمانا",
+                Id          = Guid.Parse("11111111-0000-0000-0000-000000000004"),
+                Title       = "أرض سكنية في جرمانا",
                 Description = "أرض سكنية مستوية في منطقة جرمانا، جاهزة للبناء الفوري مع كامل الوثائق.",
-                Type = "Land",
+                Type        = PropertyType.Land,
                 ListingType = "Sale",
-                Price = 120000000m,
-                Area = 500m,
-                Bedrooms = 0,
-                Bathrooms = 0,
-                Province = "ريف دمشق",
-                City = "جرمانا",
-                Neighborhood = "جرمانا"
+                Status      = PropertyStatus.Available,
+                Price       = 120_000_000m,
+                Currency    = "SYP",
+                Area        = 500m,
+                Bedrooms    = 0,
+                Bathrooms   = 0,
+                Province    = "ريف دمشق",
+                City        = "جرمانا",
+                Neighborhood= "جرمانا",
+                CompanyId   = companyId,
+                PaymentType = "OneTime",
             },
-            new
+            new Property
             {
-                Id = "11111111-0000-0000-0000-000000000005",
-                Title = "شقة للإيجار في كفرسوسة",
+                Id          = Guid.Parse("11111111-0000-0000-0000-000000000005"),
+                Title       = "شقة للإيجار في كفرسوسة",
                 Description = "شقة مفروشة بالكامل في كفرسوسة، مناسبة للعائلات والأفراد.",
-                Type = "Apartment",
+                Type        = PropertyType.Apartment,
                 ListingType = "Rent",
-                Price = 800000m,
-                Area = 120m,
-                Bedrooms = 2,
-                Bathrooms = 1,
-                Province = "دمشق",
-                City = "دمشق",
-                Neighborhood = "كفرسوسة"
+                Status      = PropertyStatus.Available,
+                Price       = 800_000m,
+                Currency    = "SYP",
+                Area        = 120m,
+                Bedrooms    = 2,
+                Bathrooms   = 1,
+                Province    = "دمشق",
+                City        = "دمشق",
+                Neighborhood= "كفرسوسة",
+                CompanyId   = companyId,
+                PaymentType = "OneTime",
             },
         };
 
-        foreach (var p in properties)
-        {
-            await _context.Database.ExecuteSqlRawAsync(@"
-                INSERT OR IGNORE INTO Properties
-                    (Id, Title, Description, Type, ListingType, Status, Price, Currency,
-                     Area, Bedrooms, Bathrooms, Province, City, Neighborhood,
-                     IsDeleted, PaymentType, HasCommission, ViewCount, CompanyId, CreatedAt, UpdatedAt)
-                VALUES
-                    ({0},{1},{2},{3},{4},'Available',{5},'SYP',
-                     {6},{7},{8},{9},{10},{11},
-                     0,'OneTime',0,0,{12},{13},{13})",
-                p.Id, p.Title, p.Description, p.Type, p.ListingType, p.Price,
-                p.Area, p.Bedrooms, p.Bathrooms, p.Province, p.City, p.Neighborhood,
-                companyId, now);
-        }
-
-        _logger.LogInformation("Sample properties seeded");
+        _context.Properties.AddRange(properties);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Sample properties seeded.");
     }
 }

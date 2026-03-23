@@ -113,6 +113,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationService, LoggingNotificationService>();
 
         services.AddScoped<DataSeeder>();
+        services.AddScoped<PlanCatalogSeeder>();
+        services.AddScoped<DatabaseStartupService>();
+        services.AddScoped<SchemaEvolutionService>();
         services.AddScoped<RbacRepository>();
 
         return services;
