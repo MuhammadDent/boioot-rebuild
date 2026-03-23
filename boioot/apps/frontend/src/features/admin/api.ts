@@ -360,6 +360,8 @@ export const adminApi = {
     basePriceMonthly: number;
     basePriceYearly: number;
     applicableAccountType?: string;
+    planCategory?: string;
+    billingMode?: string;
     displayOrder?: number;
     badgeText?: string;
     planColor?: string;

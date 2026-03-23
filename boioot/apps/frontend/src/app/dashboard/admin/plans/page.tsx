@@ -495,11 +495,13 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           basePriceMonthly:       parseFloat(priceMonthly) || 0,
           basePriceYearly:        parseFloat(priceYearly)  || 0,
           applicableAccountType:  applicableAccountType || undefined,
+          planCategory:           planCategory || undefined,
+          billingMode,
           badgeText:              badgeText.trim() || undefined,
           planColor:              planColor.trim() || undefined,
           hasTrial,
-          trialDays:              parseInt(trialDays) || 0,
-          requiresPaymentForTrial,
+          trialDays:              hasTrial ? (parseInt(trialDays) || 0) : 0,
+          requiresPaymentForTrial: hasTrial ? requiresPaymentForTrial : false,
           isDefaultForNewUsers,
           availableForSelfSignup,
           requiresAdminApproval,
@@ -524,8 +526,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           badgeText:              badgeText.trim() || undefined,
           planColor:              planColor.trim() || undefined,
           hasTrial,
-          trialDays:              parseInt(trialDays) || 0,
-          requiresPaymentForTrial,
+          trialDays:               hasTrial ? (parseInt(trialDays) || 0) : 0,
+          requiresPaymentForTrial: hasTrial ? requiresPaymentForTrial : false,
           isDefaultForNewUsers,
           availableForSelfSignup,
           requiresAdminApproval,
@@ -993,7 +995,7 @@ export default function AdminPlansPage() {
 
   const [editTarget, setEditTarget]     = useState<AdminPlanDetail | null | undefined>(undefined);
   const [modalOpen, setModalOpen]       = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
 
   const [deleteId, setDeleteId]         = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -1019,13 +1021,13 @@ export default function AdminPlansPage() {
   if (isLoading || !user) return null;
 
   async function handleOpenEdit(id: string) {
-    setDetailLoading(true); setActionError("");
+    setDetailLoading(id); setActionError("");
     try {
       const detail = await adminApi.getPlanDetail(id);
       setEditTarget(detail);
       setModalOpen(true);
     } catch (e) { setActionError(normalizeError(e)); }
-    finally { setDetailLoading(false); }
+    finally { setDetailLoading(null); }
   }
 
   function handleOpenCreate() { setEditTarget(null); setModalOpen(true); }
@@ -1075,7 +1077,7 @@ export default function AdminPlansPage() {
             <div style={{ display: "flex", gap: "0.6rem", flexShrink: 0 }}>
               <a
                 href="/dashboard/admin/plan-catalog"
-                style={{ display: "inline-flex", alignItems: "center", padding: "0.4rem 1rem", borderRadius: 8, fontSize: "0.85rem", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.75)", textDecoration: "none", background: "rgba(255,255,255,0.05)" }}>
+                style={{ display: "inline-flex", alignItems: "center", padding: "0.4rem 1rem", borderRadius: 8, fontSize: "0.85rem", border: "1.5px solid var(--color-border, #e5e7eb)", color: "var(--color-text-secondary)", textDecoration: "none", background: "#ffffff" }}>
                 كتالوج الميزات والحدود
               </a>
               <button
@@ -1097,18 +1099,31 @@ export default function AdminPlansPage() {
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {sorted.map(plan => (
+          {sorted.map(plan => {
+            const isLoadingThis = detailLoading === plan.id;
+            const monthlyPrice  = plan.basePriceMonthly === 0 ? "مجاني" : `${plan.basePriceMonthly.toLocaleString("ar-SY")} ل.س/شهر`;
+            const yearlyPrice   = plan.basePriceYearly  === 0 ? null     : `${plan.basePriceYearly.toLocaleString("ar-SY")} ل.س/سنة`;
+            return (
             <div key={plan.id} className="form-card" style={{ padding: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.35rem" }}>
+                  {plan.planColor && (
+                    <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: plan.planColor, flexShrink: 0 }} />
+                  )}
                   <span style={{ fontWeight: 700, fontSize: "1rem" }}>{plan.name}</span>
+                  {plan.code && <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{plan.code}</span>}
                   <span className={plan.isActive ? "badge badge-green" : "badge badge-red"}>{plan.isActive ? "نشطة" : "معطلة"}</span>
                   <span className={plan.isPublic ? "badge badge-blue" : "badge badge-gray"}>{plan.isPublic ? "عامة" : "مخفية"}</span>
                   {plan.isRecommended && <span className="badge badge-yellow">⭐ موصى بها</span>}
+                  {plan.hasTrial && <span className="badge badge-green">🎁 تجريبية {plan.trialDays}ي</span>}
                   {plan.planCategory && <span className="badge badge-gray">{plan.planCategory === "Individual" ? "أفراد" : plan.planCategory === "Business" ? "أعمال" : plan.planCategory}</span>}
                 </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", marginBottom: "0.25rem" }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.95rem", color: plan.planColor || "var(--color-primary, #2563eb)" }}>{monthlyPrice}</span>
+                  {yearlyPrice && <span style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>{yearlyPrice}</span>}
+                </div>
                 {plan.description && <p style={{ margin: "0 0 0.4rem", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{plan.description}</p>}
-                <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
+                <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
                   ترتيب: {plan.displayOrder}
                   &nbsp;·&nbsp;رتبة: {plan.rank}
                   &nbsp;·&nbsp;{plan.billingMode === "InternalOnly" ? "داخلي" : plan.billingMode === "StripeOnly" ? "Stripe" : "هجين"}
@@ -1118,10 +1133,10 @@ export default function AdminPlansPage() {
                 <button
                   className="btn"
                   style={{ padding: "0.4rem 1rem", fontSize: "0.85rem" }}
-                  disabled={detailLoading}
+                  disabled={isLoadingThis || !!detailLoading}
                   onClick={() => handleOpenEdit(plan.id)}
                 >
-                  {detailLoading ? "..." : "تعديل"}
+                  {isLoadingThis ? "..." : "تعديل"}
                 </button>
                 <button
                   className="btn"
@@ -1140,7 +1155,8 @@ export default function AdminPlansPage() {
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

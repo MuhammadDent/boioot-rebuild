@@ -27,6 +27,10 @@ public class CreatePlanRequest
     [MaxLength(20)]
     public string? PlanColor               { get; set; }
 
+    public string? PlanCategory            { get; set; }
+
+    public string  BillingMode             { get; set; } = "InternalOnly";
+
     // ── Trial ──────────────────────────────────────────────────────────────
     public bool    HasTrial                { get; set; } = false;
     public int     TrialDays               { get; set; } = 0;

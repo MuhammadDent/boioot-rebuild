@@ -139,8 +139,10 @@ public class AdminPlanService : IAdminPlanService
             BasePriceYearly         = request.BasePriceYearly,
             ApplicableAccountType   = accountType,
             DisplayOrder            = request.DisplayOrder,
-            BadgeText               = string.IsNullOrWhiteSpace(request.BadgeText) ? null : request.BadgeText.Trim(),
-            PlanColor               = string.IsNullOrWhiteSpace(request.PlanColor)  ? null : request.PlanColor.Trim(),
+            BadgeText               = string.IsNullOrWhiteSpace(request.BadgeText)    ? null : request.BadgeText.Trim(),
+            PlanColor               = string.IsNullOrWhiteSpace(request.PlanColor)    ? null : request.PlanColor.Trim(),
+            PlanCategory            = string.IsNullOrWhiteSpace(request.PlanCategory) ? null : request.PlanCategory.Trim(),
+            BillingMode             = string.IsNullOrWhiteSpace(request.BillingMode)  ? "InternalOnly" : request.BillingMode.Trim(),
             IsActive                = true,
             // Trial
             HasTrial                = request.HasTrial,
