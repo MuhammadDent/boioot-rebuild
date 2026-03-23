@@ -1,0 +1,134 @@
+We need to fix a real admin/backoffice issue in Boioot.
+
+PROBLEM
+Admin can view property details, change status, and delete the property,
+but cannot fully edit the property/listing from the admin dashboard.
+
+This is a system problem.
+A system administrator must be able to edit any property/listing from admin backoffice.
+
+GOAL
+Implement full property edit capability for Admin from the admin dashboard
+without breaking the existing owner/agent property edit flow.
+
+REQUIREMENTS
+
+1) ADMIN MUST BE ABLE TO EDIT ANY PROPERTY
+- From admin property details modal/page, add a clear professional action:
+  - "تعديل العقار" / "Edit Property"
+- This action must open a full edit screen or drawer using the same validated form logic used in normal property editing, but in admin mode.
+- Admin must be able to edit:
+  - title
+  - description
+  - property type
+  - listing type
+  - category
+  - price
+  - area
+  - city / district / location fields
+  - features / amenities
+  - advertiser / company relation if allowed by current architecture
+  - images
+  - publish/status fields if intended
+  - SEO fields if property has them
+  - any structured metadata currently supported by the listing model
+
+2) KEEP AUTHORIZATION CLEAN
+- Do NOT use frontend-only bypass.
+- Backend must explicitly allow Admin/SystemAdmin/Backoffice roles with proper permission to update any property.
+- Keep ownership rules for normal users:
+  - owner/agent can edit only their own listings
+  - admin can edit any listing
+- Authorization must be permission-based where possible, not hardcoded in UI only.
+
+3) BACKEND FIX
+Review and fix the update property endpoint/service:
+- Check whether admin requests are currently blocked by:
+  - ownership check
+  - tenant/company scoping issue
+  - missing role/permission mapping
+  - DTO validation mismatch
+  - route mismatch
+- Refactor update logic so it supports:
+  - Self-edit mode for listing owner
+  - Admin-edit mode for system admin
+- Ensure server-side validation remains intact.
+- Do not weaken security.
+
+4) FRONTEND FIX
+In admin property details modal/page:
+- Add a visible "Edit Property" button.
+- Clicking it should navigate to:
+  - a dedicated admin edit page
+  OR
+  - open a full edit modal/drawer
+- Reuse the existing property form component if possible.
+- If current form is tightly coupled to owner dashboard, refactor it into reusable shared form logic:
+  - PropertyForm
+  - PropertyFormFields
+  - PropertyImagesManager
+  - PropertyFeaturesSection
+  - LocationSection
+- Then use the same form in:
+  - user edit flow
+  - admin edit flow
+
+5) IMAGES MUST BE EDITABLE
+Admin must be able to:
+- see existing property images
+- remove images
+- upload additional images
+- reorder images if feature exists
+- keep current images when saving unless explicitly removed
+
+6) STATUS / SAVE UX
+- Save button must clearly show loading state
+- Show success toast on successful update
+- Show proper error toast if update fails
+- Refresh property details after save
+- Admin list and detail view must reflect updated data immediately
+
+7) AUDIT / TRACKING
+If the system has audit fields:
+- preserve CreatedBy / CreatedAt
+- update ModifiedBy / ModifiedAt properly
+- when admin edits a listing, store that it was edited by admin
+- do not corrupt ownership metadata
+
+8) DO NOT BREAK EXISTING FLOWS
+Must not break:
+- owner listing edit
+- agent listing edit
+- property creation
+- property approval/status change
+- property deletion
+- SQLite support
+- SQL Server support if dual-provider mode exists
+
+9) DEBUG THE ROOT CAUSE
+Please inspect and report the exact reason why admin editing currently fails.
+Examples:
+- edit button missing only in UI
+- route not wired
+- endpoint blocked by ownership check
+- admin permissions not seeded
+- form not reusable in admin layout
+- update DTO incompatible with admin data
+Do not guess — verify in code.
+
+10) DELIVERABLES
+Provide:
+A) exact root cause
+B) files changed
+C) backend authorization fix
+D) frontend admin edit implementation
+E) confirmation that normal user edit flow still works
+F) confirmation that admin can now edit any property end-to-end
+
+IMPORTANT RULES
+- Do not do a superficial patch
+- Do not add fake frontend-only access
+- Do not break RBAC architecture
+- Keep solution SaaS-ready and clean
+- Reuse components where possible
+- Keep Arabic UI labels consistent and professional

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import { adminApi } from "@/features/admin/api";
 import { normalizeError } from "@/lib/api";
 import { PROPERTY_STATUS_BADGE } from "@/features/admin/constants";
@@ -170,6 +171,8 @@ function PropertyCard({ property, onClick }: { property: PropertyResponse; onCli
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminPropertiesPage() {
+  const router = useRouter();
+
   // Data
   const [allProperties, setAllProperties] = useState<PropertyResponse[]>([]);
   const [fetching,      setFetching]      = useState(true);
@@ -587,6 +590,7 @@ export default function AdminPropertiesPage() {
         onClose={() => setSelected(null)}
         onStatusChange={handleStatusChange}
         onDelete={handleDelete}
+        onEdit={(id) => router.push(`/dashboard/admin/properties/${id}/edit`)}
         actionLoading={actionLoading}
       />
     </div>

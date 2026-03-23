@@ -30,12 +30,14 @@ export function PropertyDetailModal({
   onClose,
   onStatusChange,
   onDelete,
+  onEdit,
   actionLoading,
 }: {
   property: PropertyResponse | null;
   onClose: () => void;
   onStatusChange: (id: string, status: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onEdit: (id: string) => void;
   actionLoading: boolean;
 }) {
   const [pendingStatus, setPendingStatus]       = useState("");
@@ -230,6 +232,46 @@ export function PropertyDetailModal({
 
         {/* ── Actions ── */}
         <div style={{ padding: "0 1.5rem 1.5rem" }}>
+
+          {/* Edit button — primary CTA */}
+          {!confirmDelete && (
+            <div style={{ marginBottom: "1rem" }}>
+              <button
+                onClick={() => { onClose(); onEdit(property.id); }}
+                disabled={actionLoading}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  width: "100%",
+                  padding: "0.6rem 1.25rem",
+                  borderRadius: 8,
+                  border: "none",
+                  backgroundColor: "#1d4ed8",
+                  color: "#fff",
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  cursor: actionLoading ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                  justifyContent: "center",
+                  transition: "background-color 0.15s",
+                }}
+                onMouseEnter={e => { if (!actionLoading) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1e40af"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1d4ed8"; }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                تعديل العقار
+              </button>
+            </div>
+          )}
+
+          {/* Divider */}
+          {!confirmDelete && (
+            <div style={{ height: 1, backgroundColor: "#f1f5f9", marginBottom: "1rem" }} />
+          )}
 
           {/* Status change */}
           {!confirmDelete && (
