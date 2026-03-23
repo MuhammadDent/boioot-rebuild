@@ -9,10 +9,11 @@ import { subscriptionApi } from "@/features/subscription/api";
 import { normalizeError } from "@/lib/api";
 import BillingToggle, { type BillingCycle } from "@/components/pricing/BillingToggle";
 import PricingCard from "@/components/pricing/PricingCard";
+import PricingComparisonTable from "@/components/pricing/PricingComparisonTable";
 import UpgradeModal from "@/components/pricing/UpgradeModal";
 import Spinner from "@/components/ui/Spinner";
 
-// ── Plan grouping (data-driven by planCategory field) ─────────────────────────
+// ── Plan grouping ─────────────────────────────────────────────────────────────
 
 function filterByCategory(plans: PublicPricingItem[], category: string) {
   return plans.filter((p) => p.planCategory === category);
@@ -28,6 +29,129 @@ function SectionLabel({ label }: { label: string }) {
         {label}
       </span>
       <div style={{ flex: 1, height: 1, background: "var(--color-border)" }} />
+    </div>
+  );
+}
+
+// ── Upgrade trigger banner ────────────────────────────────────────────────────
+
+function UpgradeBanner({
+  currentSub,
+  onDismiss,
+  onScrollToPlans,
+}: {
+  currentSub: CurrentSubscriptionResponse;
+  onDismiss: () => void;
+  onScrollToPlans: () => void;
+}) {
+  const isFreePlan = currentSub.priceAmount === 0;
+
+  if (!isFreePlan) return null;
+
+  return (
+    <div style={{
+      background:    "linear-gradient(135deg, #fff7ed 0%, #fff3cd 100%)",
+      border:        "1.5px solid #f59e0b",
+      borderRadius:  "var(--radius-lg)",
+      padding:       "1rem 1.25rem",
+      marginBottom:  "2rem",
+      display:       "flex",
+      alignItems:    "center",
+      gap:           "1rem",
+      flexWrap:      "wrap",
+    }}>
+      <span style={{ fontSize: "1.5rem" }}>🔒</span>
+      <div style={{ flex: 1, minWidth: "200px" }}>
+        <p style={{ margin: 0, fontWeight: 700, fontSize: "0.95rem", color: "#92400e" }}>
+          وصلت للحد — قم بالترقية للاستمرار
+        </p>
+        <p style={{ margin: "0.2rem 0 0", fontSize: "0.82rem", color: "#b45309" }}>
+          أنت على الباقة المجانية. قم بالترقية للحصول على المزيد من الإعلانات والميزات.
+        </p>
+      </div>
+      <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+        <button
+          suppressHydrationWarning
+          type="button"
+          onClick={onScrollToPlans}
+          style={{
+            padding:      "0.5rem 1.1rem",
+            borderRadius: "var(--radius-md)",
+            border:       "none",
+            background:   "#d97706",
+            color:        "#fff",
+            fontSize:     "0.88rem",
+            fontWeight:   700,
+            cursor:       "pointer",
+          }}
+        >
+          ترقية الآن ↑
+        </button>
+        <button
+          suppressHydrationWarning
+          type="button"
+          onClick={onDismiss}
+          style={{
+            padding:      "0.5rem 0.75rem",
+            borderRadius: "var(--radius-md)",
+            border:       "1px solid #f59e0b",
+            background:   "transparent",
+            color:        "#92400e",
+            fontSize:     "0.82rem",
+            cursor:       "pointer",
+          }}
+        >
+          إغلاق
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Annual saving callout ─────────────────────────────────────────────────────
+
+function AnnualSavingCallout({ saving, cycle, onSwitch }: { saving: number; cycle: BillingCycle; onSwitch: () => void }) {
+  if (cycle === "Yearly" || saving <= 0) return null;
+
+  return (
+    <div style={{
+      background:     "linear-gradient(135deg, #f0fdf4, #dcfce7)",
+      border:         "1.5px solid #bbf7d0",
+      borderRadius:   "var(--radius-lg)",
+      padding:        "0.9rem 1.25rem",
+      marginBottom:   "2rem",
+      display:        "flex",
+      alignItems:     "center",
+      gap:            "1rem",
+      flexWrap:       "wrap",
+    }}>
+      <span style={{ fontSize: "1.4rem" }}>💰</span>
+      <div style={{ flex: 1, minWidth: "200px" }}>
+        <p style={{ margin: 0, fontWeight: 800, fontSize: "0.95rem", color: "#166534" }}>
+          وفّر {saving}% عند الاشتراك السنوي
+        </p>
+        <p style={{ margin: "0.15rem 0 0", fontSize: "0.82rem", color: "#15803d" }}>
+          الأسعار السنوية أرخص — ادفع مرة واحدة وانسَ القلق طوال العام
+        </p>
+      </div>
+      <button
+        suppressHydrationWarning
+        type="button"
+        onClick={onSwitch}
+        style={{
+          padding:      "0.5rem 1.1rem",
+          borderRadius: "var(--radius-md)",
+          border:       "none",
+          background:   "var(--color-primary)",
+          color:        "#fff",
+          fontSize:     "0.88rem",
+          fontWeight:   700,
+          cursor:       "pointer",
+          flexShrink:   0,
+        }}
+      >
+        عرض الأسعار السنوية
+      </button>
     </div>
   );
 }
@@ -68,13 +192,13 @@ export default function PricingPage() {
   const [plansError,    setPlansError]    = useState("");
   const [cycle,         setCycle]         = useState<BillingCycle>("Monthly");
 
-  // Current subscription (null = unauthenticated or no account)
   const [currentSub,    setCurrentSub]    = useState<CurrentSubscriptionResponse | null>(null);
 
-  // Upgrade-intent modal state
   const [intent,          setIntent]          = useState<UpgradeIntentResponse | null>(null);
   const [modalPricingId,  setModalPricingId]  = useState<string>("");
   const [intentLoading,   setIntentLoading]   = useState(false);
+
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // ── Fetch public plans ──────────────────────────────────────────────────────
 
@@ -85,15 +209,10 @@ export default function PricingPage() {
       .finally(() => setPlansLoading(false));
   }, []);
 
-  // ── Fetch current subscription (best-effort — silently ignore 401) ──────────
-
   useEffect(() => {
     subscriptionApi.getCurrent()
       .then(setCurrentSub)
-      .catch(() => {
-        // 401 = not logged in, 204 = no account → both map to null
-        setCurrentSub(null);
-      });
+      .catch(() => setCurrentSub(null));
   }, []);
 
   // ── Handle upgrade-intent click ─────────────────────────────────────────────
@@ -105,15 +224,17 @@ export default function PricingPage() {
       setModalPricingId(pricingId);
       setIntent(result);
     } catch {
-      // Silently ignore; the button just resets
+      // Silently ignore
     } finally {
       setIntentLoading(false);
     }
   }, []);
 
-  // ── Derived ─────────────────────────────────────────────────────────────────
-  // Plans are pre-sorted by DisplayOrder from the backend.
-  // Group by planCategory; plans with no category appear in "other".
+  function scrollToPlans() {
+    document.getElementById("plans-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ── Derived ──────────────────────────────────────────────────────────────────
 
   const individualPlans   = filterByCategory(plans, "Individual");
   const professionalPlans = filterByCategory(plans, "Business");
@@ -147,6 +268,8 @@ export default function PricingPage() {
     isLoadingIntent:     intentLoading,
   };
 
+  const showBanner = !bannerDismissed && currentSub !== null && currentSub.priceAmount === 0;
+
   return (
     <main style={{ background: "var(--color-background)" }}>
 
@@ -164,21 +287,27 @@ export default function PricingPage() {
           باقات مرنة تناسب أصحاب العقارات والوكلاء والشركات — وفّر أكثر مع الاشتراك السنوي
         </p>
 
-        {/* Logged-in plan indicator */}
         {currentSub && (
-          <p style={{
-            fontSize:   "0.88rem",
-            opacity:    0.9,
-            marginBottom: "1rem",
-            marginTop:  "-0.5rem",
+          <div style={{
+            display:       "inline-flex",
+            alignItems:    "center",
+            gap:           "0.5rem",
+            background:    "rgba(255,255,255,0.15)",
+            borderRadius:  "999px",
+            padding:       "0.35rem 1rem",
+            fontSize:      "0.88rem",
+            marginBottom:  "1.25rem",
+            backdropFilter: "blur(4px)",
           }}>
-            باقتك الحالية: <strong>{currentSub.planName}</strong>
-            {" — "}
-            {currentSub.billingCycle === "Yearly" ? "سنوي" : "شهري"}
-          </p>
+            <span>👤</span>
+            <span>
+              باقتك الحالية: <strong>{currentSub.planName}</strong>
+              {" — "}
+              {currentSub.billingCycle === "Yearly" ? "سنوي" : "شهري"}
+            </span>
+          </div>
         )}
 
-        {/* BillingToggle */}
         <div style={{ display: "flex", justifyContent: "center", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.15))" }}>
           <div style={{ background: "#fff", borderRadius: "999px", padding: "0.2rem" }}>
             <BillingToggle cycle={cycle} onChange={setCycle} yearlySavingPct={avgSaving} />
@@ -187,8 +316,10 @@ export default function PricingPage() {
       </section>
 
       {/* ── Plans ── */}
-      <section style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "2.5rem 1.5rem 4rem" }}>
-
+      <section
+        id="plans-section"
+        style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "2.5rem 1.5rem 4rem" }}
+      >
         {plansLoading && <Spinner />}
 
         {plansError && (
@@ -210,36 +341,61 @@ export default function PricingPage() {
         )}
 
         {!plansLoading && !plansError && plans.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "3.5rem" }}>
-
-            {individualPlans.length > 0 && (
-              <div>
-                <SectionLabel label="باقات الأفراد" />
-                <PlansGrid plans={individualPlans} {...gridProps} />
-              </div>
+          <>
+            {/* ── Task 3: Upgrade trigger banner ── */}
+            {showBanner && currentSub && (
+              <UpgradeBanner
+                currentSub={currentSub}
+                onDismiss={() => setBannerDismissed(true)}
+                onScrollToPlans={scrollToPlans}
+              />
             )}
 
-            {professionalPlans.length > 0 && (
-              <div>
-                <SectionLabel label="باقات المكاتب والمحترفين" />
-                <PlansGrid plans={professionalPlans} {...gridProps} />
-              </div>
-            )}
+            {/* ── Task 4: Annual saving callout ── */}
+            <AnnualSavingCallout
+              saving={avgSaving}
+              cycle={cycle}
+              onSwitch={() => setCycle("Yearly")}
+            />
 
-            {developerPlans.length > 0 && (
-              <div>
-                <SectionLabel label="باقات شركات التطوير" />
-                <PlansGrid plans={developerPlans} {...gridProps} />
-              </div>
-            )}
+            {/* ── Plan groups ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "3.5rem" }}>
 
-            {otherPlans.length > 0 && (
-              <div>
-                <SectionLabel label="باقات أخرى" />
-                <PlansGrid plans={otherPlans} {...gridProps} />
-              </div>
-            )}
-          </div>
+              {individualPlans.length > 0 && (
+                <div>
+                  <SectionLabel label="باقات الأفراد" />
+                  <PlansGrid plans={individualPlans} {...gridProps} />
+                </div>
+              )}
+
+              {professionalPlans.length > 0 && (
+                <div>
+                  <SectionLabel label="باقات المكاتب والمحترفين" />
+                  <PlansGrid plans={professionalPlans} {...gridProps} />
+                </div>
+              )}
+
+              {developerPlans.length > 0 && (
+                <div>
+                  <SectionLabel label="باقات شركات التطوير" />
+                  <PlansGrid plans={developerPlans} {...gridProps} />
+                </div>
+              )}
+
+              {otherPlans.length > 0 && (
+                <div>
+                  <SectionLabel label="باقات أخرى" />
+                  <PlansGrid plans={otherPlans} {...gridProps} />
+                </div>
+              )}
+            </div>
+
+            {/* ── Task 2: Comparison table ── */}
+            <PricingComparisonTable
+              plans={plans}
+              currentSubscription={currentSub}
+            />
+          </>
         )}
       </section>
 

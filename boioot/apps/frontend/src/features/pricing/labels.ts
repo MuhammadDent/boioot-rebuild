@@ -1,16 +1,20 @@
 // ── Limit key → Arabic label + icon ──────────────────────────────────────────
 export const LIMIT_LABELS: Record<string, string> = {
-  max_active_listings:    "عدد الإعلانات",
-  max_agents:             "عدد الوسطاء",
-  max_projects:           "عدد المشاريع",
+  max_active_listings:    "الإعلانات النشطة",
+  max_agents:             "الوسطاء",
+  max_projects:           "المشاريع",
+  max_project_units:      "وحدات المشروع",
   max_images_per_listing: "الصور لكل إعلان",
+  max_featured_slots:     "الإعلانات المميزة",
 };
 
 export const LIMIT_ICONS: Record<string, string> = {
   max_active_listings:    "📢",
   max_agents:             "👤",
   max_projects:           "🏗",
+  max_project_units:      "🏢",
   max_images_per_listing: "🖼",
+  max_featured_slots:     "⭐",
 };
 
 // ── Feature key → Arabic label + icon ────────────────────────────────────────
@@ -20,6 +24,10 @@ export const FEATURE_LABELS: Record<string, string> = {
   whatsapp_contact:    "دعم واتساب",
   verified_badge:      "حساب موثّق",
   priority_support:    "دعم سريع",
+  project_management:  "إدارة المشاريع",
+  video_upload:        "رفع فيديو",
+  multiple_photos:     "صور متعددة",
+  homepage_exposure:   "ظهور في الرئيسية",
 };
 
 export const FEATURE_ICONS: Record<string, string> = {
@@ -28,6 +36,10 @@ export const FEATURE_ICONS: Record<string, string> = {
   whatsapp_contact:    "📱",
   verified_badge:      "✅",
   priority_support:    "⚡",
+  project_management:  "🏗",
+  video_upload:        "🎬",
+  multiple_photos:     "🖼",
+  homepage_exposure:   "🏠",
 };
 
 // ── Billing cycle labels ──────────────────────────────────────────────────────

@@ -74,9 +74,10 @@ export default function PricingCard({
   onUpgradeIntent,
   isLoadingIntent,
 }: PricingCardProps) {
-  const isPopular  = plan.isRecommended;
+  const isBest     = plan.isRecommended;
   const { kind, pricingId } = resolveCta(plan, cycle, currentSubscription);
   const isCurrent  = kind === "current";
+  const isUpgrade  = kind === "upgrade";
 
   const entry = plan.pricing.find((p) => p.billingCycle === cycle)
     ?? plan.pricing.find((p) => p.billingCycle === "Monthly")
@@ -98,55 +99,62 @@ export default function PricingCard({
     onUpgradeIntent(pricingId, plan.planName);
   }
 
+  // ── Card border/shadow/scale by tier ─────────────────────────────────────
+  const cardBorder = isBest
+    ? "2px solid #047857"
+    : isCurrent
+      ? "2px solid var(--color-primary)"
+      : "1px solid var(--color-border)";
+
+  const cardShadow = isBest
+    ? "0 16px 48px rgba(4,120,87,0.22)"
+    : isCurrent
+      ? "0 8px 32px rgba(46,125,50,0.13)"
+      : "var(--shadow-md)";
+
+  const cardScale = isBest ? "scale(1.04)" : "scale(1)";
+
   return (
     <div style={{
       position:      "relative",
       background:    isCurrent ? "var(--color-primary-subtle)" : "var(--color-surface)",
-      border:        isPopular
-        ? "2px solid var(--color-primary)"
-        : isCurrent
-          ? "2px solid var(--color-primary)"
-          : "1px solid var(--color-border)",
+      border:        cardBorder,
       borderRadius:  "var(--radius-lg)",
       padding:       "2rem 1.6rem",
       display:       "flex",
       flexDirection: "column",
       gap:           "1.25rem",
-      boxShadow:     isPopular
-        ? "0 12px 40px rgba(46,125,50,0.18)"
-        : isCurrent
-          ? "0 8px 32px rgba(46,125,50,0.13)"
-          : "var(--shadow-md)",
-      transform:     isPopular ? "scale(1.03)" : "scale(1)",
+      boxShadow:     cardShadow,
+      transform:     cardScale,
       transition:    "transform 0.2s, box-shadow 0.2s",
-      zIndex:        isPopular ? 1 : 0,
+      zIndex:        isBest ? 1 : 0,
     }}>
 
       {/* ── Top badge ── */}
-      {isPopular && !isCurrent && (
+      {isBest && !isCurrent && (
         <div style={{
           position:     "absolute",
-          top:          -14,
+          top:          -15,
           right:        "50%",
           transform:    "translateX(50%)",
-          background:   "linear-gradient(135deg, var(--color-primary-dark), var(--color-primary))",
+          background:   "linear-gradient(135deg, #047857, #059669)",
           color:        "#fff",
-          fontSize:     "0.75rem",
-          fontWeight:   800,
-          padding:      "0.28rem 1rem",
+          fontSize:     "0.78rem",
+          fontWeight:   900,
+          padding:      "0.3rem 1.1rem",
           borderRadius: 20,
           whiteSpace:   "nowrap",
-          letterSpacing: "0.03em",
-          boxShadow:    "0 2px 8px rgba(46,125,50,0.35)",
+          letterSpacing: "0.04em",
+          boxShadow:    "0 3px 12px rgba(4,120,87,0.45)",
         }}>
-          ⭐ الأكثر شيوعاً
+          🏆 الأفضل
         </div>
       )}
 
       {isCurrent && (
         <div style={{
           position:     "absolute",
-          top:          -14,
+          top:          -15,
           right:        "50%",
           transform:    "translateX(50%)",
           background:   "var(--color-primary)",
@@ -190,11 +198,30 @@ export default function PricingCard({
         )}
       </div>
 
+      {/* ── "You're on this plan" label ── */}
+      {isCurrent && (
+        <div style={{
+          display:      "flex",
+          alignItems:   "center",
+          gap:          "0.4rem",
+          background:   "var(--color-primary-subtle)",
+          border:       "1px solid var(--color-primary)",
+          borderRadius: 8,
+          padding:      "0.5rem 0.75rem",
+          fontSize:     "0.82rem",
+          fontWeight:   600,
+          color:        "var(--color-primary)",
+        }}>
+          <span style={{ fontSize: "1rem" }}>👤</span>
+          أنت تستخدم هذه الباقة حالياً
+        </div>
+      )}
+
       {/* ── Price block ── */}
       <div style={{
-        borderTop:    "1px solid var(--color-border)",
-        paddingTop:   "1rem",
-        borderBottom: "1px solid var(--color-border)",
+        borderTop:     "1px solid var(--color-border)",
+        paddingTop:    "1rem",
+        borderBottom:  "1px solid var(--color-border)",
         paddingBottom: "1rem",
       }}>
         {isFree ? (
@@ -208,7 +235,6 @@ export default function PricingCard({
           </>
         ) : (
           <>
-            {/* Main price */}
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
               <span style={{ fontSize: "2.2rem", fontWeight: 900, color: "var(--color-text-primary)", lineHeight: 1 }}>
                 {entry?.priceAmount.toLocaleString("ar-SY")}
@@ -218,20 +244,17 @@ export default function PricingCard({
               </span>
             </div>
 
-            {/* Cycle + discount */}
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.3rem", flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
                 {cycle === "Monthly" ? "/ شهرياً" : "/ سنوياً"}
               </span>
 
-              {/* Yearly: show monthly equivalent */}
               {cycle === "Yearly" && yearlyEntry && (
                 <span style={{ fontSize: "0.76rem", color: "var(--color-text-muted)" }}>
                   ({Math.round(yearlyEntry.priceAmount / 12).toLocaleString("ar-SY")} {yearlyEntry.currencyCode} / شهر)
                 </span>
               )}
 
-              {/* Monthly: nudge toward yearly if saving exists */}
               {cycle === "Monthly" && saving > 0 && yearlyEntry && (
                 <span style={{
                   background:   "#fff7ed",
@@ -246,7 +269,6 @@ export default function PricingCard({
                 </span>
               )}
 
-              {/* Yearly: show actual saving badge */}
               {cycle === "Yearly" && saving > 0 && (
                 <span style={{
                   background:   "var(--color-primary)",
@@ -292,26 +314,26 @@ export default function PricingCard({
           onClick={handleClick}
           disabled={isDisabled}
           style={{
-            width:        "100%",
-            padding:      "0.8rem 1rem",
-            borderRadius: "var(--radius-md)",
-            border:       ctaStyle.border ?? "none",
-            background:   ctaStyle.bg,
-            color:        ctaStyle.color,
-            cursor:       isCurrent ? "default" : isLoadingIntent ? "wait" : "pointer",
-            fontFamily:   "inherit",
-            fontSize:     "0.97rem",
-            fontWeight:   700,
-            transition:   "opacity 0.2s, transform 0.15s",
-            opacity:      isLoadingIntent && !isCurrent ? 0.65 : 1,
+            width:         "100%",
+            padding:       "0.8rem 1rem",
+            borderRadius:  "var(--radius-md)",
+            border:        ctaStyle.border ?? "none",
+            background:    isBest && !isCurrent ? "#047857" : ctaStyle.bg,
+            color:         isBest && !isCurrent ? "#fff"    : ctaStyle.color,
+            cursor:        isCurrent ? "default" : isLoadingIntent ? "wait" : "pointer",
+            fontFamily:    "inherit",
+            fontSize:      "0.97rem",
+            fontWeight:    700,
+            transition:    "opacity 0.2s, transform 0.15s",
+            opacity:       isLoadingIntent && !isCurrent ? 0.65 : 1,
             letterSpacing: "0.01em",
+            boxShadow:     isBest && !isCurrent ? "0 4px 14px rgba(4,120,87,0.35)" : undefined,
           }}
         >
           {isLoadingIntent && !isCurrent ? "جارٍ التحميل..." : CTA_LABEL[kind]}
         </button>
 
-        {/* Upgrade nudge for authenticated users on lower plans */}
-        {kind === "upgrade" && (
+        {isUpgrade && (
           <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--color-text-muted)", margin: "0.5rem 0 0" }}>
             يمكنك الترقية في أي وقت بدون فقدان بياناتك
           </p>
