@@ -342,24 +342,6 @@ export default function AdminPropertiesPage() {
   return (
     <div style={{ padding: "1.25rem 1.5rem", maxWidth: 960, margin: "0 auto" }}>
 
-      {/* ── DEBUG BLOCK (temporary) ─────────────────────────────────────── */}
-      {process.env.NODE_ENV !== "production" && (
-        <div style={{
-          backgroundColor: "#fefce8", border: "1px solid #fde047",
-          borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1rem",
-          fontSize: "0.78rem", fontFamily: "monospace", color: "#713f12",
-        }}>
-          <strong>DEBUG:</strong>{" "}
-          rawProperties={allProperties.length} |{" "}
-          governorateOptions={provinceOptions.length} [{provinceOptions.join(", ")}] |{" "}
-          cityOptions={cityOptions.length} [{cityOptions.join(", ")}] |{" "}
-          districtOptions={neighborhoodOptions.length} [{neighborhoodOptions.join(", ")}] |{" "}
-          selectedGovernorate=&quot;{provinceFilter}&quot; |{" "}
-          selectedCity=&quot;{cityFilter}&quot; |{" "}
-          selectedDistrict=&quot;{neighborFilter}&quot;
-        </div>
-      )}
-
       {/* Title */}
       <div style={{ marginBottom: "1.25rem" }}>
         <h1 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#0f172a" }}>إدارة العقارات</h1>

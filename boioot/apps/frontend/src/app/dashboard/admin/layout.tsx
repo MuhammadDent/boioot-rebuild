@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminToolbar from "@/components/admin/AdminToolbar";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -13,12 +14,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Close sidebar on route change
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
 
-  // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
     if (sidebarOpen) {
       document.body.style.overflow = "hidden";
@@ -50,37 +49,43 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (isLoading) return null;
 
   return (
-    <div className="admin-layout">
-      {/* ── Hamburger button (mobile only, visible via CSS) ── */}
-      <button
-        className="admin-hamburger"
-        onClick={() => setSidebarOpen(true)}
-        aria-label="فتح القائمة"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </button>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      {/* ── Top toolbar ── */}
+      <AdminToolbar />
 
-      {/* ── Overlay (mobile only) ── */}
-      <div
-        className={`admin-overlay${sidebarOpen ? " open" : ""}`}
-        onClick={() => setSidebarOpen(false)}
-        aria-hidden="true"
-      />
+      {/* ── Body: sidebar + content ── */}
+      <div className="admin-layout">
+        {/* Hamburger button (mobile only, visible via CSS) */}
+        <button
+          className="admin-hamburger"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="فتح القائمة"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
 
-      {/* ── Sidebar ── */}
-      <AdminSidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+        {/* Overlay (mobile only) */}
+        <div
+          className={`admin-overlay${sidebarOpen ? " open" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
 
-      {/* ── Main content ── */}
-      <main style={{ flex: 1, minWidth: 0, overflowX: "hidden" }}>
-        {children}
-      </main>
+        {/* Sidebar */}
+        <AdminSidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
+
+        {/* Main content */}
+        <main style={{ flex: 1, minWidth: 0, overflowX: "hidden" }}>
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

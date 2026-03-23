@@ -143,7 +143,7 @@ a {
 
 .admin-layout {
   display: flex;
-  min-height: calc(100vh - 86px);
+  flex: 1;
   background-color: #f8fafc;
   align-items: stretch;
 }
@@ -153,8 +153,8 @@ a {
   width: 250px;
   flex-shrink: 0;
   position: sticky;
-  top: 86px;
-  height: calc(100vh - 86px);
+  top: 52px;
+  height: calc(100vh - 52px);
   overflow-y: auto;
   z-index: 50;
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
@@ -178,7 +178,7 @@ a {
 .admin-hamburger {
   display: none;
   position: fixed;
-  top: 96px;
+  top: 62px;
   left: 14px;
   z-index: 140;
   align-items: center;
@@ -197,11 +197,6 @@ a {
 }
 
 @media (max-width: 768px) {
-  /* Full-width content on mobile */
-  .admin-layout {
-    min-height: calc(100vh - 60px);
-  }
-
   /* Sidebar becomes a fixed right-side drawer */
   .admin-sidebar {
     position: fixed !important;
