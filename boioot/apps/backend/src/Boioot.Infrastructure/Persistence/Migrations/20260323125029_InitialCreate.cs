@@ -19,11 +19,30 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 oldClrType: typeof(bool),
                 oldType: "INTEGER");
 
-            migrationBuilder.Sql(
-                "CREATE INDEX IF NOT EXISTS \"IX_Notifications_CreatedAt\" ON \"Notifications\" (\"CreatedAt\")");
+            // Cross-provider index creation:
+            // SQLite — use IF NOT EXISTS because old EnsureCreated() runs may have
+            //          already created these indexes on existing databases.
+            // SQL Server (and others) — fresh schema via migrations, use standard CreateIndex.
+            if (ActiveProvider == "Microsoft.EntityFrameworkCore.Sqlite")
+            {
+                migrationBuilder.Sql(
+                    "CREATE INDEX IF NOT EXISTS \"IX_Notifications_CreatedAt\" ON \"Notifications\" (\"CreatedAt\")");
 
-            migrationBuilder.Sql(
-                "CREATE INDEX IF NOT EXISTS \"IX_Notifications_UserId_IsRead\" ON \"Notifications\" (\"UserId\", \"IsRead\")");
+                migrationBuilder.Sql(
+                    "CREATE INDEX IF NOT EXISTS \"IX_Notifications_UserId_IsRead\" ON \"Notifications\" (\"UserId\", \"IsRead\")");
+            }
+            else
+            {
+                migrationBuilder.CreateIndex(
+                    name: "IX_Notifications_CreatedAt",
+                    table: "Notifications",
+                    column: "CreatedAt");
+
+                migrationBuilder.CreateIndex(
+                    name: "IX_Notifications_UserId_IsRead",
+                    table: "Notifications",
+                    columns: new[] { "UserId", "IsRead" });
+            }
         }
 
         /// <inheritdoc />

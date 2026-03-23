@@ -57,12 +57,14 @@ public sealed class DatabaseStartupService
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
+    private bool IsSqlite =>
+        _db.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) ?? false;
+
     private async Task<bool> MigrationsHistoryExistsAsync(CancellationToken ct)
     {
         try
         {
-            var isSqlite = _db.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) ?? false;
-            string sql = isSqlite
+            string sql = IsSqlite
                 ? "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'"
                 : "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory'";
 
@@ -86,8 +88,7 @@ public sealed class DatabaseStartupService
     {
         try
         {
-            var isSqlite = _db.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) ?? false;
-            string sql = isSqlite
+            string sql = IsSqlite
                 ? "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Users'"
                 : "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Users'";
 
@@ -111,14 +112,26 @@ public sealed class DatabaseStartupService
     {
         try
         {
-            await _db.Database.ExecuteSqlRawAsync(
-                """
-                CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
-                    MigrationId    TEXT NOT NULL,
-                    ProductVersion TEXT NOT NULL,
-                    PRIMARY KEY (MigrationId)
-                )
-                """, ct);
+            // SQLite:     CREATE TABLE IF NOT EXISTS ... (TEXT types, no length)
+            // SQL Server: IF OBJECT_ID(...) IS NULL CREATE TABLE ... (NVARCHAR with lengths)
+            string sql = IsSqlite
+                ? """
+                  CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
+                      MigrationId    TEXT NOT NULL,
+                      ProductVersion TEXT NOT NULL,
+                      PRIMARY KEY (MigrationId)
+                  )
+                  """
+                : """
+                  IF OBJECT_ID('__EFMigrationsHistory', 'U') IS NULL
+                  CREATE TABLE __EFMigrationsHistory (
+                      MigrationId    NVARCHAR(150) NOT NULL,
+                      ProductVersion NVARCHAR(32)  NOT NULL,
+                      CONSTRAINT PK___EFMigrationsHistory PRIMARY KEY (MigrationId)
+                  )
+                  """;
+
+            await _db.Database.ExecuteSqlRawAsync(sql, ct);
             _log.LogInformation("Created __EFMigrationsHistory table.");
         }
         catch (Exception ex)
@@ -131,11 +144,23 @@ public sealed class DatabaseStartupService
     {
         try
         {
-            await _db.Database.ExecuteSqlRawAsync(
-                $"""
-                INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion)
-                VALUES ('{InitialMigrationId}', '{EfProductVersion}')
-                """, ct);
+            // SQLite:     INSERT OR IGNORE (conflict-safe upsert)
+            // SQL Server: IF NOT EXISTS ... INSERT (same idempotency, ANSI SQL)
+            string sql = IsSqlite
+                ? $"""
+                   INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+                   VALUES ('{InitialMigrationId}', '{EfProductVersion}')
+                   """
+                : $"""
+                   IF NOT EXISTS (
+                       SELECT 1 FROM __EFMigrationsHistory
+                       WHERE MigrationId = '{InitialMigrationId}'
+                   )
+                   INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+                   VALUES ('{InitialMigrationId}', '{EfProductVersion}')
+                   """;
+
+            await _db.Database.ExecuteSqlRawAsync(sql, ct);
             _log.LogInformation("Injected InitialSchema into __EFMigrationsHistory.");
         }
         catch (Exception ex)

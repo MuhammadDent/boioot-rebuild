@@ -55,21 +55,27 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         // ── Database provider ─────────────────────────────────────────────────
-        // Read from config: Database:Provider = "SQLite" (default) | "SqlServer"
-        // To switch to SQL Server:
-        //   1. Add package: Microsoft.EntityFrameworkCore.SqlServer
-        //   2. Set Database:Provider = SqlServer in appsettings.json
-        //   3. Replace UseSqlite with options.UseSqlServer(connStr) below
-        //   4. Run EF Core migrations (see migration plan in MIGRATION.md)
+        // Switch between providers via config only:
+        //
+        //   appsettings.json:
+        //     "Database": { "Provider": "SQLite" }        ← default
+        //     "Database": { "Provider": "SqlServer" }     ← SQL Server
+        //
+        //   Connection strings (appsettings.json → ConnectionStrings):
+        //     "DefaultConnection"    — used when Provider = SQLite
+        //     "SqlServerConnection"  — used when Provider = SqlServer
+        //                             (falls back to DefaultConnection if not set)
         var dbProvider = configuration["Database:Provider"] ?? "SQLite";
-        var connStr    = configuration.GetConnectionString("DefaultConnection");
+
+        var connStr = dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase)
+            ? (configuration.GetConnectionString("SqlServerConnection")
+               ?? configuration.GetConnectionString("DefaultConnection"))
+            : configuration.GetConnectionString("DefaultConnection");
 
         services.AddDbContext<BoiootDbContext>(options =>
         {
             if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
-                throw new NotSupportedException(
-                    "SQL Server provider is configured but the SqlServer EF Core package is not yet " +
-                    "installed. Add Microsoft.EntityFrameworkCore.SqlServer and remove this guard.");
+                options.UseSqlServer(connStr);
             else
                 options.UseSqlite(connStr);
         });

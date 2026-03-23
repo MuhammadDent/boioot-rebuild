@@ -34,6 +34,15 @@ public sealed class SchemaEvolutionService
     {
         _log.LogInformation("Applying schema evolution patches...");
 
+        // All ALTER TABLE patches use SQLite DDL syntax (TEXT / INTEGER / REAL types,
+        // ADD COLUMN keyword, partial indexes with WHERE).  On SQL Server and other
+        // providers, the full schema is created by EF Core Migrations — no patching needed.
+        if (!_isSqlite)
+        {
+            _log.LogInformation("Non-SQLite provider detected — skipping legacy schema patches (handled by EF migrations).");
+            return;
+        }
+
         await ApplyPropertyPatchesAsync(ct);
         await ApplyLocationPatchesAsync(ct);
         await ApplyUserPatchesAsync(ct);
@@ -50,11 +59,8 @@ public sealed class SchemaEvolutionService
         await ApplyFeatureDefinitionPatchesAsync(ct);
         await ApplyPlanFeaturePatchesAsync(ct);
 
-        if (_isSqlite)
-        {
-            await ApplySqliteIndexPatchesAsync(ct);
-            await ApplyWalCheckpointAsync(ct);
-        }
+        await ApplySqliteIndexPatchesAsync(ct);
+        await ApplyWalCheckpointAsync(ct);
 
         _log.LogInformation("Schema evolution patches complete.");
     }
