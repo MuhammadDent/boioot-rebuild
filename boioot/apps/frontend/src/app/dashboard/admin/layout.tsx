@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminToolbar from "@/components/admin/AdminToolbar";
+import AdminBreadcrumb from "@/components/admin/AdminBreadcrumb";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -82,7 +83,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
 
         {/* Main content */}
-        <main style={{ flex: 1, minWidth: 0, overflowX: "hidden" }}>
+        <main style={{ flex: 1, minWidth: 0, overflowX: "hidden", display: "flex", flexDirection: "column" }}>
+          <AdminBreadcrumb />
           {children}
         </main>
       </div>

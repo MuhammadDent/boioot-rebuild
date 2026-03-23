@@ -1,0 +1,175 @@
+We are restructuring the Admin (Backoffice) architecture of a SaaS real estate platform.
+
+IMPORTANT:
+- Do NOT break existing functionality
+- Do NOT remove any API endpoints
+- Do NOT change database schema
+- This task is ONLY about UI structure + logical grouping + routing cleanup
+
+==================================================
+GOAL
+==================================================
+
+Eliminate duplication between:
+- System Settings
+- Admin Dashboard
+
+And apply a clean SaaS architecture:
+
+1) System Configuration (Static / Rarely changes)
+2) Operations (Daily management)
+
+==================================================
+CURRENT PROBLEM
+==================================================
+
+Some operational modules are incorrectly placed under "System Settings", such as:
+- Subscription Requests
+- Invoices
+
+This creates:
+- UX confusion
+- Duplicate responsibilities
+- Poor scalability
+
+==================================================
+TARGET STRUCTURE
+==================================================
+
+Create a clean sidebar structure:
+
+--------------------------------------------------
+1) Dashboard
+--------------------------------------------------
+- Overview (stats / KPIs)
+
+--------------------------------------------------
+2) Operations (NEW SECTION)
+--------------------------------------------------
+
+Create a new section called:
+
+"الإدارة" (Operations / Management)
+
+Move the following modules INTO this section:
+
+- طلبات الاشتراك (Subscription Requests)
+- الفواتير (Invoices)
+- المستخدمون (Users)
+- الشركات (Companies)
+- الوسطاء (Agents)
+- العقارات (Listings)
+- المشاريع (Projects)
+
+IMPORTANT:
+These are dynamic / daily operations.
+
+--------------------------------------------------
+3) System Configuration
+--------------------------------------------------
+
+Rename "إعدادات النظام" → "إعدادات المنصة"
+
+Keep ONLY:
+
+- خطط الاشتراك (Plans)
+- كتالوج الخطط (Plans Catalog)
+- أنواع العقارات (Property Types)
+- أنواع الإعلانات (Listing Types)
+- أنواع الملكية (Ownership Types)
+- مقاطع الصفحات (Page Sections)
+- General Settings (if exists)
+
+IMPORTANT:
+These are static configurations.
+
+REMOVE from this section:
+- Invoices
+- Subscription Requests
+
+--------------------------------------------------
+4) Access & Permissions
+--------------------------------------------------
+
+Keep as separate section:
+
+- إدارة الفريق (Staff)
+- الأدوار والصلاحيات (Roles & Permissions)
+
+==================================================
+UI REQUIREMENTS
+==================================================
+
+1) Sidebar grouping:
+- Add visual separators between sections
+- Each section has a title
+
+Example:
+
+--- لوحة التحكم ---
+--- الإدارة ---
+--- إعدادات المنصة ---
+--- الصلاحيات ---
+
+2) Icons:
+- Use consistent icon system (lucide/react-icons)
+- Each section has a clear icon
+
+3) Active state:
+- Highlight active page properly
+- No duplicated routes
+
+4) Routing:
+- Ensure all moved pages still work
+- Update sidebar links only (NOT backend routes)
+
+==================================================
+CLEANUP TASKS
+==================================================
+
+- Remove duplicate menu items
+- Ensure no page appears in two places
+- Keep URL structure unchanged if possible
+- Fix any broken navigation
+
+==================================================
+EXTRA (IMPORTANT UX IMPROVEMENT)
+==================================================
+
+Add breadcrumb at top:
+
+Example:
+لوحة التحكم > الإدارة > الفواتير
+
+==================================================
+VALIDATION CHECKLIST
+==================================================
+
+After implementation, verify:
+
+- All pages still open correctly
+- No 404 errors
+- Sidebar reflects new structure
+- No duplicated items
+- System Settings contains ONLY configuration
+
+==================================================
+FINAL RESULT
+==================================================
+
+A clean, scalable SaaS admin panel:
+
+- No duplication
+- Clear separation (Config vs Operations)
+- Professional enterprise structure
+
+==================================================
+DO NOT:
+==================================================
+
+- Do NOT modify business logic
+- Do NOT change APIs
+- Do NOT touch database
+- Do NOT remove features
+
+Only restructure UI + navigation
