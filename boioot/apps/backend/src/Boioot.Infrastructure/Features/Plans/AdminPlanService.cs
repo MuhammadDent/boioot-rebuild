@@ -21,21 +21,95 @@ public class AdminPlanService : IAdminPlanService
     }
 
     // ── GetAllPlansAsync ──────────────────────────────────────────────────────
-    // Loads limits + features so MapToSummary can populate the denormalized
-    // commercial indicator fields (listingsLimit, hasAnalytics, etc.)
+    // Uses a safe join-projection approach for limits + features.
+    // We deliberately do NOT use Include/ThenInclude because some junction
+    // table rows may have invalid (non-hex) GUID values in their Id column,
+    // which causes SqliteValueReader.GetGuid() to throw FormatException.
+    // By projecting only the columns we need (Key, Value, IsEnabled) EF never
+    // reads the junction-table Id columns at all → completely safe.
     public async Task<List<PlanSummaryResponse>> GetAllPlansAsync(CancellationToken ct = default)
     {
         var plans = await _db.Set<Plan>()
             .IgnoreQueryFilters()
-            .Include(p => p.PlanLimits)
-                .ThenInclude(pl => pl.LimitDefinition)
-            .Include(p => p.PlanFeatures)
-                .ThenInclude(pf => pf.FeatureDefinition)
             .OrderBy(p => p.DisplayOrder)
             .ThenBy(p => p.CreatedAt)
             .ToListAsync(ct);
 
-        return plans.Select(MapToSummary).ToList();
+        if (plans.Count == 0) return [];
+
+        var planIds = plans.Select(p => p.Id).ToHashSet();
+
+        // Reads only (SubscriptionPlanId, Key, Value) — never reads PlanLimit.Id
+        var limitPairs = await (
+            from pl in _db.Set<PlanLimit>()
+            where planIds.Contains(pl.SubscriptionPlanId)
+            join ld in _db.Set<LimitDefinition>() on pl.LimitDefinitionId equals ld.Id
+            select new { PlanId = pl.SubscriptionPlanId, ld.Key, pl.Value }
+        ).ToListAsync(ct);
+
+        // Reads only (SubscriptionPlanId, Key, IsEnabled) — never reads PlanFeature.Id
+        var featurePairs = await (
+            from pf in _db.Set<PlanFeature>()
+            where planIds.Contains(pf.SubscriptionPlanId)
+            join fd in _db.Set<FeatureDefinition>() on pf.FeatureDefinitionId equals fd.Id
+            select new { PlanId = pf.SubscriptionPlanId, fd.Key, pf.IsEnabled }
+        ).ToListAsync(ct);
+
+        var limitsByPlan   = limitPairs  .GroupBy(x => x.PlanId).ToDictionary(g => g.Key, g => g.ToList());
+        var featuresByPlan = featurePairs.GroupBy(x => x.PlanId).ToDictionary(g => g.Key, g => g.ToList());
+
+        return plans.Select(p =>
+        {
+            var lims  = limitsByPlan  .TryGetValue(p.Id, out var l) ? l : [];
+            var feats = featuresByPlan.TryGetValue(p.Id, out var f) ? f : [];
+
+            int    LimitVal(string key)  => (int)(lims .FirstOrDefault(x => x.Key == key)?.Value ?? 0);
+            bool   FeatEnabled(string key) => feats.Any(x => x.Key == key && x.IsEnabled);
+
+            return new PlanSummaryResponse
+            {
+                Id                      = p.Id,
+                Name                    = p.Name,
+                Code                    = p.Code,
+                Description             = p.Description,
+                IsActive                = p.IsActive,
+                BasePriceMonthly        = p.BasePriceMonthly,
+                BasePriceYearly         = p.BasePriceYearly,
+                ApplicableAccountType   = p.ApplicableAccountType?.ToString(),
+                CreatedAt               = p.CreatedAt,
+                DisplayOrder            = p.DisplayOrder,
+                IsPublic                = p.IsPublic,
+                IsRecommended           = p.IsRecommended,
+                PlanCategory            = p.PlanCategory,
+                BillingMode             = p.BillingMode,
+                Rank                    = p.Rank,
+                BadgeText               = p.BadgeText,
+                PlanColor               = p.PlanColor,
+                HasTrial                = p.HasTrial,
+                TrialDays               = p.TrialDays,
+                RequiresPaymentForTrial = p.RequiresPaymentForTrial,
+                IsDefaultForNewUsers    = p.IsDefaultForNewUsers,
+                AvailableForSelfSignup  = p.AvailableForSelfSignup,
+                RequiresAdminApproval   = p.RequiresAdminApproval,
+                AllowAddOns             = p.AllowAddOns,
+                AllowUpgrade            = p.AllowUpgrade,
+                AllowDowngrade          = p.AllowDowngrade,
+                AutoDowngradeOnExpiry   = p.AutoDowngradeOnExpiry,
+                // ── Key Limits ──────────────────────────────────────────────
+                ListingsLimit    = LimitVal("max_active_listings"),
+                AgentsLimit      = LimitVal("max_agents"),
+                ProjectsLimit    = LimitVal("max_projects"),
+                ImagesPerListing = LimitVal("max_images_per_listing"),
+                FeaturedSlots    = LimitVal("max_featured_slots"),
+                // ── Feature Indicators ───────────────────────────────────────
+                HasAnalytics        = FeatEnabled("analytics_dashboard"),
+                HasFeaturedListings = FeatEnabled("featured_listings"),
+                HasProjectMgmt      = FeatEnabled("project_management"),
+                HasWhatsApp         = FeatEnabled("whatsapp_contact"),
+                HasVerifiedBadge    = FeatEnabled("verified_badge"),
+                HasPrioritySupport  = FeatEnabled("priority_support"),
+            };
+        }).ToList();
     }
 
     // ── GetPlanDetailAsync ────────────────────────────────────────────────────

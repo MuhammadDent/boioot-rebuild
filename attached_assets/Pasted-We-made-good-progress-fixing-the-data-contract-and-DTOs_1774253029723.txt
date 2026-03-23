@@ -1,0 +1,108 @@
+We made good progress fixing the data contract and DTOs.
+
+However, we now have a critical issue:
+
+The plans page shows:
+"Internal Server Error" and no plans are returned.
+
+==================================================
+GOAL
+==================================================
+
+Fix the backend error in GetAllPlansAsync and ensure the plans list loads correctly.
+
+==================================================
+TASK 1 — DEBUG THE ERROR
+==================================================
+
+1) Check backend logs and identify the exact exception:
+- NullReferenceException?
+- Mapping error?
+- Invalid cast?
+- Missing DB column?
+
+Print the exact error stack trace.
+
+==================================================
+TASK 2 — VERIFY DATABASE STATE
+==================================================
+
+Check if database schema matches the new model:
+
+- PlanCategory column exists?
+- BillingMode column exists?
+- Trial fields exist?
+- PlanLimits table is populated?
+- PlanFeatures table is populated?
+
+If migrations are missing, apply them.
+
+==================================================
+TASK 3 — FIX GetAllPlansAsync
+==================================================
+
+Ensure query is correct:
+
+- Include PlanLimits
+- Include PlanFeatures
+
+Example:
+Include(p => p.PlanLimits)
+Include(p => p.PlanFeatures)
+
+Ensure no null collections.
+
+==================================================
+TASK 4 — FIX MAPPING TO AdminPlanSummary
+==================================================
+
+Ensure mapping handles null safely:
+
+- if limits == null → return default values
+- if features == null → return false flags
+
+Example:
+listingsLimit = plan.PlanLimits?.FirstOrDefault(...)?.Value ?? 0
+
+==================================================
+TASK 5 — VERIFY API RESPONSE
+==================================================
+
+Test GET /plans endpoint:
+
+- Should return list of plans
+- Should include:
+  - pricing
+  - limits summary
+  - feature indicators
+
+No null breaking fields.
+
+==================================================
+TASK 6 — FRONTEND SAFETY
+==================================================
+
+Ensure frontend:
+
+- handles empty array safely
+- handles missing fields safely
+- does not crash if limits/features missing
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+- Plans page loads without error
+- Plans are visible again
+- Cards show real data (price, limits, features)
+
+==================================================
+DELIVERABLE
+==================================================
+
+Provide:
+
+1) Root cause of the error
+2) Fix applied
+3) Updated query and mapping
+4) Sample API response after fix
