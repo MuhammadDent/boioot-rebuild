@@ -101,6 +101,7 @@ export default function PropertyCard({ property, initialIsFavorited = false }: P
 
       {/* Heart button — outside <Link> (<a>) to satisfy HTML5 interactive-content rule */}
       <button
+        suppressHydrationWarning
         type="button"
         onClick={handleFavorite}
         title={isFavorited ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}

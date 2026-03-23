@@ -300,6 +300,8 @@ export default function HomePage() {
       <div style={{ background: "#fff", borderBottom: "1px solid #e8ede8", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
           <button
+            suppressHydrationWarning
+            type="button"
             style={{
               ...arrowBtnStyle,
               opacity: canScrollPrev ? 1 : 0.35,
@@ -331,7 +333,9 @@ export default function HomePage() {
           >
             {LISTING_TABS.map((tab, i) => (
               <button
+                suppressHydrationWarning
                 key={i}
+                type="button"
                 role="tab"
                 aria-selected={i === activeTab}
                 onClick={() => setActiveTab(i)}
@@ -356,6 +360,8 @@ export default function HomePage() {
           </div>
 
           <button
+            suppressHydrationWarning
+            type="button"
             style={{
               ...arrowBtnStyle,
               opacity: canScrollNext ? 1 : 0.35,
@@ -413,11 +419,30 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-        <button onClick={() => goSlide((slideIndex - 1 + SLIDES.length) % SLIDES.length)} style={sliderArrowStyle("right")} aria-label="السابق">→</button>
-        <button onClick={() => goSlide((slideIndex + 1) % SLIDES.length)} style={sliderArrowStyle("left")} aria-label="التالي">←</button>
+        <button
+          suppressHydrationWarning
+          type="button"
+          onClick={() => goSlide((slideIndex - 1 + SLIDES.length) % SLIDES.length)}
+          style={sliderArrowStyle("right")}
+          aria-label="السابق"
+        >→</button>
+        <button
+          suppressHydrationWarning
+          type="button"
+          onClick={() => goSlide((slideIndex + 1) % SLIDES.length)}
+          style={sliderArrowStyle("left")}
+          aria-label="التالي"
+        >←</button>
         <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8 }}>
           {SLIDES.map((_, i) => (
-            <button key={i} onClick={() => goSlide(i)} style={{ width: i === slideIndex ? 24 : 10, height: 10, borderRadius: 999, border: "none", background: i === slideIndex ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer", padding: 0, transition: "all 0.3s" }} aria-label={`الشريحة ${i + 1}`} />
+            <button
+              suppressHydrationWarning
+              key={i}
+              type="button"
+              onClick={() => goSlide(i)}
+              style={{ width: i === slideIndex ? 24 : 10, height: 10, borderRadius: 999, border: "none", background: i === slideIndex ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer", padding: 0, transition: "all 0.3s" }}
+              aria-label={`الشريحة ${i + 1}`}
+            />
           ))}
         </div>
       </div>
@@ -442,6 +467,8 @@ export default function HomePage() {
 
         {/* ── Mobile filter toggle ── */}
         <button
+          suppressHydrationWarning
+          type="button"
           className="home-filter-toggle"
           onClick={() => setShowFilter((v) => !v)}
         >
@@ -483,7 +510,12 @@ export default function HomePage() {
               </div>
               {hasNext && (
                 <div style={{ textAlign: "center" }}>
-                  <button onClick={loadMore} style={{ padding: "0.65rem 2.5rem", border: "1px solid var(--color-primary)", borderRadius: 8, color: "var(--color-primary)", background: "#fff", fontFamily: "var(--font-arabic)", fontSize: "0.95rem", cursor: "pointer", fontWeight: 600 }}>
+                  <button
+                    suppressHydrationWarning
+                    type="button"
+                    onClick={loadMore}
+                    style={{ padding: "0.65rem 2.5rem", border: "1px solid var(--color-primary)", borderRadius: 8, color: "var(--color-primary)", background: "#fff", fontFamily: "var(--font-arabic)", fontSize: "0.95rem", cursor: "pointer", fontWeight: 600 }}
+                  >
                     عرض المزيد
                   </button>
                 </div>
@@ -589,6 +621,8 @@ export default function HomePage() {
           {/* أزرار التطبيق والإعادة */}
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
             <button
+              suppressHydrationWarning
+              type="button"
               onClick={applyFilters}
               style={{ flex: 1, padding: "0.6rem", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, fontFamily: "var(--font-arabic)", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
             >
@@ -596,6 +630,8 @@ export default function HomePage() {
               تطبيق الفلاتر
             </button>
             <button
+              suppressHydrationWarning
+              type="button"
               onClick={resetFilters}
               style={{ flex: 1, padding: "0.6rem", background: "#f5f5f5", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontFamily: "var(--font-arabic)", fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
             >
@@ -635,7 +671,9 @@ function PillGroup({ options, value, onChange }: {
         const active = opt.value === value;
         return (
           <button
+            suppressHydrationWarning
             key={String(opt.value)}
+            type="button"
             onClick={() => onChange(opt.value)}
             style={{
               padding: "0.25rem 0.65rem",

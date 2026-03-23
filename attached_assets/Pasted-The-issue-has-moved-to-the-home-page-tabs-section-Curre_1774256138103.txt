@@ -1,0 +1,98 @@
+The issue has moved to the home page tabs section.
+
+Current error is now in:
+src/app/(public)/(home)/page.tsx
+
+The overlay points to the LISTING_TABS.map(...) block at the <button> line.
+
+==================================================
+IMPORTANT
+==================================================
+
+Do not treat this only as an extension/fdprocessedid issue.
+
+The actual problem may still be broken JSX or unstable render structure in the tabs block.
+
+We need to fully stabilize this section.
+
+==================================================
+TASK 1 — REWRITE THE LISTING_TABS BLOCK
+==================================================
+
+Find the block that looks like:
+
+{LISTING_TABS.map((tab, i) => (
+  <button ...
+))}
+
+Rewrite the whole tabs rendering block into clean, valid, stable JSX.
+
+Use a safe structure like this:
+
+<div role="tablist" className="listing-tabs">
+  {LISTING_TABS.map((tab, i) => (
+    <button
+      key={i}
+      type="button"
+      role="tab"
+      aria-selected={i === activeTab}
+      className={i === activeTab ? "tab active" : "tab"}
+      onClick={() => setActiveTab(i)}
+      suppressHydrationWarning
+    >
+      {tab.label}
+    </button>
+  ))}
+</div>
+
+==================================================
+TASK 2 — VERIFY SURROUNDING JSX
+==================================================
+
+Inspect at least 20 lines before and after this block for:
+- missing parentheses
+- missing closing tags
+- broken fragments
+- invalid nesting
+- duplicated half-deleted markup
+- invalid conditional rendering
+
+==================================================
+TASK 3 — STABILIZE SSR/CLIENT OUTPUT
+==================================================
+
+Make sure this tabs block does NOT depend on:
+- window
+- Date.now()
+- Math.random()
+- browser-only state during first render
+
+The initial server render and client render must produce the same structure.
+
+==================================================
+TASK 4 — EXTENSION DEFENSE
+==================================================
+
+If browser extensions are injecting attributes like fdprocessedid into buttons/inputs/selects,
+add suppressHydrationWarning only where necessary,
+but do NOT use this as a substitute for fixing broken JSX.
+
+==================================================
+TASK 5 — VERIFY
+==================================================
+
+After the fix:
+1) home page loads without overlay error
+2) tabs render correctly
+3) no JSX compile issue
+4) hydration warning is gone or reduced to harmless extension-only behavior
+5) MainHeader and home page both render correctly
+
+==================================================
+DELIVERABLE
+==================================================
+
+Explain:
+1) was the root cause broken JSX or extension mismatch or both?
+2) what exact block was rewritten?
+3) whether page.tsx now renders safely
