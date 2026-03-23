@@ -573,6 +573,18 @@ export interface AdminPlanSummary {
   rank: number;
   badgeText?: string;
   planColor?: string;
+  // Trial
+  hasTrial: boolean;
+  trialDays: number;
+  requiresPaymentForTrial: boolean;
+  // Business rules
+  isDefaultForNewUsers: boolean;
+  availableForSelfSignup: boolean;
+  requiresAdminApproval: boolean;
+  allowAddOns: boolean;
+  allowUpgrade: boolean;
+  allowDowngrade: boolean;
+  autoDowngradeOnExpiry: boolean;
 }
 
 export interface AdminPlanDetail extends AdminPlanSummary {

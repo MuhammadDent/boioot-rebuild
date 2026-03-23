@@ -1051,6 +1051,43 @@ using (var scope = app.Services.CreateScope())
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN PlanColor TEXT"); }
         catch { /* already exists */ }
 
+        // Plans — Trial fields
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN HasTrial INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN TrialDays INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN RequiresPaymentForTrial INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* already exists */ }
+
+        // Plans — Business rules
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN IsDefaultForNewUsers INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN AvailableForSelfSignup INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN RequiresAdminApproval INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN AllowAddOns INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN AllowUpgrade INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN AllowDowngrade INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* already exists */ }
+        try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Plans ADD COLUMN AutoDowngradeOnExpiry INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* already exists */ }
+
+        // ── Purge orphaned PlanFeature/PlanLimit rows globally ─────────────────
+        // Seed data may have inserted junction rows referencing Definition IDs that
+        // were never created (INSERT OR IGNORE skipped them due to Key uniqueness).
+        // These orphaned rows cause FK violations in EF's SaveChangesAsync.
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "DELETE FROM PlanFeatures WHERE FeatureDefinitionId NOT IN (SELECT Id FROM FeatureDefinitions)");
+            await db.Database.ExecuteSqlRawAsync(
+                "DELETE FROM PlanLimits WHERE LimitDefinitionId NOT IN (SELECT Id FROM LimitDefinitions)");
+        }
+        catch { /* ignore if tables don't exist yet */ }
+
         // Subscriptions.AutoRenew — whether the subscription auto-renews
         try { await db.Database.ExecuteSqlRawAsync("ALTER TABLE Subscriptions ADD COLUMN AutoRenew INTEGER NOT NULL DEFAULT 1"); }
         catch { /* already exists */ }

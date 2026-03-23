@@ -363,6 +363,16 @@ export const adminApi = {
     displayOrder?: number;
     badgeText?: string;
     planColor?: string;
+    hasTrial?: boolean;
+    trialDays?: number;
+    requiresPaymentForTrial?: boolean;
+    isDefaultForNewUsers?: boolean;
+    availableForSelfSignup?: boolean;
+    requiresAdminApproval?: boolean;
+    allowAddOns?: boolean;
+    allowUpgrade?: boolean;
+    allowDowngrade?: boolean;
+    autoDowngradeOnExpiry?: boolean;
   }): Promise<AdminPlanDetail> {
     return api.post("/admin/plans", payload);
   },
@@ -382,13 +392,28 @@ export const adminApi = {
     billingMode: string;
     badgeText?: string;
     planColor?: string;
+    hasTrial?: boolean;
+    trialDays?: number;
+    requiresPaymentForTrial?: boolean;
+    isDefaultForNewUsers?: boolean;
+    availableForSelfSignup?: boolean;
+    requiresAdminApproval?: boolean;
+    allowAddOns?: boolean;
+    allowUpgrade?: boolean;
+    allowDowngrade?: boolean;
+    autoDowngradeOnExpiry?: boolean;
   }): Promise<AdminPlanDetail> {
     return api.put(`/admin/plans/${id}`, payload);
   },
 
-  /** DELETE /api/admin/plans/{id} */
+  /** DELETE /api/admin/plans/{id} — soft archive */
   deletePlan(id: string): Promise<void> {
     return api.delete(`/admin/plans/${id}`);
+  },
+
+  /** POST /api/admin/plans/{id}/duplicate */
+  duplicatePlan(id: string): Promise<AdminPlanDetail> {
+    return api.post(`/admin/plans/${id}/duplicate`, {});
   },
 
   /** PUT /api/admin/plans/{id}/limits/{limitKey} */

@@ -450,6 +450,20 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [limits, setLimits]     = useState<PlanLimitItem[]>(plan?.limits ?? []);
   const [features, setFeatures] = useState<PlanFeatureItem[]>(plan?.features ?? []);
 
+  // ── Trial ──────────────────────────────────────────────────────────────────
+  const [hasTrial, setHasTrial]                           = useState(plan?.hasTrial ?? false);
+  const [trialDays, setTrialDays]                         = useState(String(plan?.trialDays ?? 0));
+  const [requiresPaymentForTrial, setRequiresPaymentForTrial] = useState(plan?.requiresPaymentForTrial ?? false);
+
+  // ── Business Rules ─────────────────────────────────────────────────────────
+  const [isDefaultForNewUsers, setIsDefaultForNewUsers]   = useState(plan?.isDefaultForNewUsers ?? false);
+  const [availableForSelfSignup, setAvailableForSelfSignup] = useState(plan?.availableForSelfSignup ?? true);
+  const [requiresAdminApproval, setRequiresAdminApproval] = useState(plan?.requiresAdminApproval ?? false);
+  const [allowAddOns, setAllowAddOns]                     = useState(plan?.allowAddOns ?? false);
+  const [allowUpgrade, setAllowUpgrade]                   = useState(plan?.allowUpgrade ?? true);
+  const [allowDowngrade, setAllowDowngrade]               = useState(plan?.allowDowngrade ?? true);
+  const [autoDowngradeOnExpiry, setAutoDowngradeOnExpiry] = useState(plan?.autoDowngradeOnExpiry ?? true);
+
   const [pricing, setPricing]               = useState<AdminPlanPricingEntry[]>([]);
   const [pricingLoading, setPricingLoading] = useState(false);
   const [showAddPricing, setShowAddPricing] = useState(false);
@@ -476,29 +490,49 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       let result: AdminPlanDetail;
       if (isNew) {
         result = await adminApi.createPlan({
-          name:                 name.trim(),
-          description:          description.trim() || undefined,
-          basePriceMonthly:     parseFloat(priceMonthly) || 0,
-          basePriceYearly:      parseFloat(priceYearly)  || 0,
-          applicableAccountType: applicableAccountType || undefined,
-          badgeText:            badgeText.trim() || undefined,
-          planColor:            planColor.trim() || undefined,
+          name:                   name.trim(),
+          description:            description.trim() || undefined,
+          basePriceMonthly:       parseFloat(priceMonthly) || 0,
+          basePriceYearly:        parseFloat(priceYearly)  || 0,
+          applicableAccountType:  applicableAccountType || undefined,
+          badgeText:              badgeText.trim() || undefined,
+          planColor:              planColor.trim() || undefined,
+          hasTrial,
+          trialDays:              parseInt(trialDays) || 0,
+          requiresPaymentForTrial,
+          isDefaultForNewUsers,
+          availableForSelfSignup,
+          requiresAdminApproval,
+          allowAddOns,
+          allowUpgrade,
+          allowDowngrade,
+          autoDowngradeOnExpiry,
         });
       } else {
         result = await adminApi.updatePlan(plan!.id, {
-          name:                 name.trim(),
-          description:          description.trim() || undefined,
-          basePriceMonthly:     parseFloat(priceMonthly) || 0,
-          basePriceYearly:      parseFloat(priceYearly)  || 0,
+          name:                   name.trim(),
+          description:            description.trim() || undefined,
+          basePriceMonthly:       parseFloat(priceMonthly) || 0,
+          basePriceYearly:        parseFloat(priceYearly)  || 0,
           isActive,
-          applicableAccountType: applicableAccountType || undefined,
-          displayOrder:         parseInt(displayOrder) || 0,
+          applicableAccountType:  applicableAccountType || undefined,
+          displayOrder:           parseInt(displayOrder) || 0,
           isPublic,
           isRecommended,
-          planCategory:         planCategory || undefined,
+          planCategory:           planCategory || undefined,
           billingMode,
-          badgeText:            badgeText.trim() || undefined,
-          planColor:            planColor.trim() || undefined,
+          badgeText:              badgeText.trim() || undefined,
+          planColor:              planColor.trim() || undefined,
+          hasTrial,
+          trialDays:              parseInt(trialDays) || 0,
+          requiresPaymentForTrial,
+          isDefaultForNewUsers,
+          availableForSelfSignup,
+          requiresAdminApproval,
+          allowAddOns,
+          allowUpgrade,
+          allowDowngrade,
+          autoDowngradeOnExpiry,
         });
       }
       setLimits(result.limits);
@@ -726,6 +760,78 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
               </CollapsibleSection>
             )}
 
+            {/* ── Section 4: Trial Settings ── */}
+            <CollapsibleSection title="إعدادات الفترة التجريبية" icon="🎁" defaultOpen={false}>
+              <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>يوفّر فترة تجريبية</label>
+                  <ToggleSwitch checked={hasTrial} onChange={setHasTrial} disabled={saving} />
+                </div>
+                {hasTrial && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>يتطلب طريقة دفع للتجربة</label>
+                    <ToggleSwitch checked={requiresPaymentForTrial} onChange={setRequiresPaymentForTrial} disabled={saving} />
+                  </div>
+                )}
+              </div>
+              {hasTrial && (
+                <div style={{ maxWidth: 220 }}>
+                  <label style={labelStyle}>عدد أيام التجربة المجانية</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={trialDays}
+                    onChange={e => setTrialDays(e.target.value)}
+                    style={inputStyle}
+                    placeholder="مثال: 14"
+                  />
+                </div>
+              )}
+              {!hasTrial && (
+                <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>
+                  فعّل هذا الخيار لمنح المشتركين الجدد فترة تجريبية مجانية قبل الدفع.
+                </p>
+              )}
+            </CollapsibleSection>
+
+            {/* ── Section 5: Business Rules ── */}
+            <CollapsibleSection title="قواعد الاشتراك التجاري" icon="⚙️" defaultOpen={false}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 2.5rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>الخطة الافتراضية للمستخدمين الجدد</label>
+                  <ToggleSwitch checked={isDefaultForNewUsers} onChange={setIsDefaultForNewUsers} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>متاحة للتسجيل الذاتي</label>
+                  <ToggleSwitch checked={availableForSelfSignup} onChange={setAvailableForSelfSignup} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تتطلب موافقة الإدارة</label>
+                  <ToggleSwitch checked={requiresAdminApproval} onChange={setRequiresAdminApproval} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تسمح بالإضافات (Add-ons)</label>
+                  <ToggleSwitch checked={allowAddOns} onChange={setAllowAddOns} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تسمح بالترقية</label>
+                  <ToggleSwitch checked={allowUpgrade} onChange={setAllowUpgrade} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تسمح بالتخفيض</label>
+                  <ToggleSwitch checked={allowDowngrade} onChange={setAllowDowngrade} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تخفيض تلقائي عند الانتهاء</label>
+                  <ToggleSwitch checked={autoDowngradeOnExpiry} onChange={setAutoDowngradeOnExpiry} disabled={saving} />
+                </div>
+              </div>
+              <p style={{ margin: "0.75rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                هذه الإعدادات تحدد كيف تتصرف المنصة مع مشتركي هذه الخطة تجارياً.
+              </p>
+            </CollapsibleSection>
+
             {/* ── Save Button ── */}
             <button
               type="submit"
@@ -893,6 +999,8 @@ export default function AdminPlansPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError]   = useState("");
 
+  const [duplicating, setDuplicating]   = useState<string | null>(null);
+
   const [actionError, setActionError] = useState("");
 
   const load = useCallback(async () => {
@@ -935,10 +1043,19 @@ export default function AdminPlansPage() {
     setDeleteLoading(true); setDeleteError("");
     try {
       await adminApi.deletePlan(id);
-      setPlans(prev => prev.filter(p => p.id !== id));
+      setPlans(prev => prev.map(p => p.id === id ? { ...p, isActive: false } : p));
       setDeleteId(null);
     } catch (e) { setDeleteError(normalizeError(e)); }
     finally { setDeleteLoading(false); }
+  }
+
+  async function handleDuplicate(id: string) {
+    setDuplicating(id); setActionError("");
+    try {
+      const copy = await adminApi.duplicatePlan(id);
+      setPlans(prev => [...prev, copy]);
+    } catch (e) { setActionError(normalizeError(e)); }
+    finally { setDuplicating(null); }
   }
 
   const sorted = [...plans].sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
@@ -998,15 +1115,28 @@ export default function AdminPlansPage() {
                 </p>
               </div>
               <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-                <button className="btn" style={{ padding: "0.4rem 1rem", fontSize: "0.85rem" }} disabled={detailLoading} onClick={() => handleOpenEdit(plan.id)}>
+                <button
+                  className="btn"
+                  style={{ padding: "0.4rem 1rem", fontSize: "0.85rem" }}
+                  disabled={detailLoading}
+                  onClick={() => handleOpenEdit(plan.id)}
+                >
                   {detailLoading ? "..." : "تعديل"}
+                </button>
+                <button
+                  className="btn"
+                  style={{ padding: "0.4rem 1rem", fontSize: "0.85rem", opacity: duplicating === plan.id ? 0.5 : 1 }}
+                  disabled={duplicating === plan.id}
+                  onClick={() => handleDuplicate(plan.id)}
+                >
+                  {duplicating === plan.id ? "..." : "نسخ"}
                 </button>
                 <button
                   className="btn"
                   style={{ padding: "0.4rem 1rem", fontSize: "0.85rem", border: "1.5px solid var(--color-error)", color: "var(--color-error)", backgroundColor: "transparent" }}
                   onClick={() => { setDeleteId(plan.id); setDeleteError(""); }}
                 >
-                  حذف
+                  أرشفة
                 </button>
               </div>
             </div>
@@ -1014,18 +1144,30 @@ export default function AdminPlansPage() {
         </div>
       </div>
 
-      {/* ── Delete Confirmation ── */}
+      {/* ── Archive Confirmation ── */}
       {deleteId && (
         <div style={{ position: "fixed", inset: 0, zIndex: 2000, backgroundColor: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
           <div style={{ background: "#ffffff", borderRadius: 12, padding: "2rem", maxWidth: 440, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
-            <h3 style={{ margin: "0 0 0.75rem" }}>تأكيد الحذف</h3>
-            <p style={{ color: "var(--color-text-secondary)", marginBottom: "1rem" }}>سيتم تعطيل هذه الخطة. لا يمكن حذف خطة لها مشتركون نشطون.</p>
+            <h3 style={{ margin: "0 0 0.75rem" }}>تأكيد الأرشفة</h3>
+            <p style={{ color: "var(--color-text-secondary)", marginBottom: "1rem" }}>سيتم إخفاء هذه الخطة وتعطيلها. لا يمكن أرشفة خطة لها مشتركون نشطون. يمكن إعادة تفعيلها لاحقاً من خلال التعديل.</p>
             {deleteError && <p style={{ color: "var(--color-error)", fontSize: "0.9rem", marginBottom: "1rem" }}>{deleteError}</p>}
             <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button className="btn btn-primary" style={{ flex: 1, background: "var(--color-error, #dc2626)", borderColor: "var(--color-error, #dc2626)" }} disabled={deleteLoading} onClick={() => handleDelete(deleteId)}>
-                {deleteLoading ? "جاري الحذف..." : "تأكيد الحذف"}
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1, background: "var(--color-error, #dc2626)", borderColor: "var(--color-error, #dc2626)" }}
+                disabled={deleteLoading}
+                onClick={() => handleDelete(deleteId)}
+              >
+                {deleteLoading ? "جاري الأرشفة..." : "تأكيد الأرشفة"}
               </button>
-              <button className="btn" style={{ flex: 1 }} disabled={deleteLoading} onClick={() => { setDeleteId(null); setDeleteError(""); }}>إلغاء</button>
+              <button
+                className="btn"
+                style={{ flex: 1 }}
+                disabled={deleteLoading}
+                onClick={() => { setDeleteId(null); setDeleteError(""); }}
+              >
+                إلغاء
+              </button>
             </div>
           </div>
         </div>

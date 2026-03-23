@@ -52,6 +52,38 @@ public class Plan : BaseEntity
     /// <summary>Base yearly price before any discounts or add-ons.</summary>
     public decimal BasePriceYearly { get; set; } = 0;
 
+    // ── Trial ─────────────────────────────────────────────────────
+    /// <summary>Whether this plan offers a free trial period.</summary>
+    public bool HasTrial { get; set; } = false;
+
+    /// <summary>Number of trial days (0 if HasTrial = false).</summary>
+    public int TrialDays { get; set; } = 0;
+
+    /// <summary>Whether a payment method must be entered to start the trial.</summary>
+    public bool RequiresPaymentForTrial { get; set; } = false;
+
+    // ── Business Rules ────────────────────────────────────────────
+    /// <summary>When true, new accounts are placed on this plan automatically.</summary>
+    public bool IsDefaultForNewUsers { get; set; } = false;
+
+    /// <summary>When true, users can sign up for this plan without admin intervention.</summary>
+    public bool AvailableForSelfSignup { get; set; } = true;
+
+    /// <summary>When true, an admin must approve before the plan becomes active.</summary>
+    public bool RequiresAdminApproval { get; set; } = false;
+
+    /// <summary>Whether the account can purchase plan add-ons.</summary>
+    public bool AllowAddOns { get; set; } = false;
+
+    /// <summary>Whether subscribers can upgrade to a higher plan.</summary>
+    public bool AllowUpgrade { get; set; } = true;
+
+    /// <summary>Whether subscribers can downgrade to a lower plan.</summary>
+    public bool AllowDowngrade { get; set; } = true;
+
+    /// <summary>When true, the account is automatically downgraded on subscription expiry.</summary>
+    public bool AutoDowngradeOnExpiry { get; set; } = true;
+
     // ── Display ───────────────────────────────────────────────────
     /// <summary>JSON TEXT array of marketing feature strings shown on the pricing page.</summary>
     public string? Features { get; set; }

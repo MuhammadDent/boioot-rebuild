@@ -33,6 +33,30 @@ public class AdminPlanService : IAdminPlanService
     // ── GetPlanDetailAsync ────────────────────────────────────────────────────
     public async Task<PlanDetailResponse> GetPlanDetailAsync(Guid planId, CancellationToken ct = default)
     {
+        // ── Step 1: Purge orphaned junction rows (FK safety) ─────────────────
+        // These can arise when seed data references FeatureDefinition/LimitDefinition
+        // IDs that were never inserted (INSERT OR IGNORE skipped them due to Key uniqueness).
+        // EF's change tracker turns orphaned rows into FK violations on SaveChanges.
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                @"DELETE FROM PlanFeatures
+                  WHERE SubscriptionPlanId = {0}
+                    AND FeatureDefinitionId NOT IN (SELECT Id FROM FeatureDefinitions)",
+                planId);
+
+            await _db.Database.ExecuteSqlRawAsync(
+                @"DELETE FROM PlanLimits
+                  WHERE SubscriptionPlanId = {0}
+                    AND LimitDefinitionId NOT IN (SELECT Id FROM LimitDefinitions)",
+                planId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Orphan cleanup skipped for plan {PlanId}: {Msg}", planId, ex.Message);
+        }
+
+        // ── Step 2: Load plan with navigation properties ──────────────────────
         var plan = await _db.Set<Plan>()
             .IgnoreQueryFilters()
             .Include(p => p.PlanLimits)
@@ -42,7 +66,7 @@ public class AdminPlanService : IAdminPlanService
             .FirstOrDefaultAsync(p => p.Id == planId, ct)
             ?? throw new BoiootException("الخطة غير موجودة", 404);
 
-        // Auto-ensure rows exist for every active definition (idempotent)
+        // ── Step 3: Auto-ensure rows exist for every active definition ────────
         bool dirty = false;
 
         var allLimitDefs = await _db.Set<LimitDefinition>()
@@ -77,7 +101,16 @@ public class AdminPlanService : IAdminPlanService
 
         if (dirty)
         {
-            await _db.SaveChangesAsync(ct);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Auto-populate SaveChanges skipped for plan {PlanId}: {Msg}", planId, ex.Message);
+                _db.ChangeTracker.Clear();
+            }
+
             plan = await _db.Set<Plan>()
                 .IgnoreQueryFilters()
                 .Include(p => p.PlanLimits)
@@ -100,15 +133,27 @@ public class AdminPlanService : IAdminPlanService
 
         var plan = new Plan
         {
-            Name                 = request.Name.Trim(),
-            Description          = request.Description?.Trim(),
-            BasePriceMonthly     = request.BasePriceMonthly,
-            BasePriceYearly      = request.BasePriceYearly,
-            ApplicableAccountType = accountType,
-            DisplayOrder         = request.DisplayOrder,
-            BadgeText            = string.IsNullOrWhiteSpace(request.BadgeText) ? null : request.BadgeText.Trim(),
-            PlanColor            = string.IsNullOrWhiteSpace(request.PlanColor)  ? null : request.PlanColor.Trim(),
-            IsActive             = true
+            Name                    = request.Name.Trim(),
+            Description             = request.Description?.Trim(),
+            BasePriceMonthly        = request.BasePriceMonthly,
+            BasePriceYearly         = request.BasePriceYearly,
+            ApplicableAccountType   = accountType,
+            DisplayOrder            = request.DisplayOrder,
+            BadgeText               = string.IsNullOrWhiteSpace(request.BadgeText) ? null : request.BadgeText.Trim(),
+            PlanColor               = string.IsNullOrWhiteSpace(request.PlanColor)  ? null : request.PlanColor.Trim(),
+            IsActive                = true,
+            // Trial
+            HasTrial                = request.HasTrial,
+            TrialDays               = request.TrialDays,
+            RequiresPaymentForTrial = request.RequiresPaymentForTrial,
+            // Business rules
+            IsDefaultForNewUsers    = request.IsDefaultForNewUsers,
+            AvailableForSelfSignup  = request.AvailableForSelfSignup,
+            RequiresAdminApproval   = request.RequiresAdminApproval,
+            AllowAddOns             = request.AllowAddOns,
+            AllowUpgrade            = request.AllowUpgrade,
+            AllowDowngrade          = request.AllowDowngrade,
+            AutoDowngradeOnExpiry   = request.AutoDowngradeOnExpiry,
         };
 
         _db.Set<Plan>().Add(plan);
@@ -165,19 +210,31 @@ public class AdminPlanService : IAdminPlanService
             Enum.TryParse<AccountType>(request.ApplicableAccountType, out var at))
             accountType = at;
 
-        plan.Name                 = request.Name.Trim();
-        plan.Description          = request.Description?.Trim();
-        plan.BasePriceMonthly     = request.BasePriceMonthly;
-        plan.BasePriceYearly      = request.BasePriceYearly;
-        plan.IsActive             = request.IsActive;
-        plan.ApplicableAccountType = accountType;
-        plan.DisplayOrder         = request.DisplayOrder;
-        plan.IsPublic             = request.IsPublic;
-        plan.IsRecommended        = request.IsRecommended;
-        plan.PlanCategory         = request.PlanCategory?.Trim();
-        plan.BillingMode          = request.BillingMode;
-        plan.BadgeText            = string.IsNullOrWhiteSpace(request.BadgeText) ? null : request.BadgeText.Trim();
-        plan.PlanColor            = string.IsNullOrWhiteSpace(request.PlanColor)  ? null : request.PlanColor.Trim();
+        plan.Name                    = request.Name.Trim();
+        plan.Description             = request.Description?.Trim();
+        plan.BasePriceMonthly        = request.BasePriceMonthly;
+        plan.BasePriceYearly         = request.BasePriceYearly;
+        plan.IsActive                = request.IsActive;
+        plan.ApplicableAccountType   = accountType;
+        plan.DisplayOrder            = request.DisplayOrder;
+        plan.IsPublic                = request.IsPublic;
+        plan.IsRecommended           = request.IsRecommended;
+        plan.PlanCategory            = request.PlanCategory?.Trim();
+        plan.BillingMode             = request.BillingMode;
+        plan.BadgeText               = string.IsNullOrWhiteSpace(request.BadgeText) ? null : request.BadgeText.Trim();
+        plan.PlanColor               = string.IsNullOrWhiteSpace(request.PlanColor)  ? null : request.PlanColor.Trim();
+        // Trial
+        plan.HasTrial                = request.HasTrial;
+        plan.TrialDays               = request.TrialDays;
+        plan.RequiresPaymentForTrial = request.RequiresPaymentForTrial;
+        // Business rules
+        plan.IsDefaultForNewUsers    = request.IsDefaultForNewUsers;
+        plan.AvailableForSelfSignup  = request.AvailableForSelfSignup;
+        plan.RequiresAdminApproval   = request.RequiresAdminApproval;
+        plan.AllowAddOns             = request.AllowAddOns;
+        plan.AllowUpgrade            = request.AllowUpgrade;
+        plan.AllowDowngrade          = request.AllowDowngrade;
+        plan.AutoDowngradeOnExpiry   = request.AutoDowngradeOnExpiry;
 
         await _db.SaveChangesAsync(ct);
 
@@ -199,12 +256,83 @@ public class AdminPlanService : IAdminPlanService
 
         if (hasActiveSubscriptions)
             throw new BoiootException(
-                "لا يمكن حذف الخطة — يوجد حسابات مشتركة بها حالياً", 409);
+                "لا يمكن أرشفة الخطة — يوجد حسابات مشتركة بها حالياً", 409);
 
         plan.IsActive = false;
         await _db.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Plan soft-deleted: {PlanId}", planId);
+        _logger.LogInformation("Plan archived: {PlanId}", planId);
+    }
+
+    // ── DuplicatePlanAsync ────────────────────────────────────────────────────
+    public async Task<PlanDetailResponse> DuplicatePlanAsync(Guid sourcePlanId, CancellationToken ct = default)
+    {
+        var source = await _db.Set<Plan>()
+            .IgnoreQueryFilters()
+            .Include(p => p.PlanLimits)
+            .Include(p => p.PlanFeatures)
+            .FirstOrDefaultAsync(p => p.Id == sourcePlanId, ct)
+            ?? throw new BoiootException("الخطة المصدر غير موجودة", 404);
+
+        var copy = new Plan
+        {
+            Name                    = $"{source.Name} (نسخة)",
+            Code                    = null,
+            Description             = source.Description,
+            BasePriceMonthly        = source.BasePriceMonthly,
+            BasePriceYearly         = source.BasePriceYearly,
+            ApplicableAccountType   = source.ApplicableAccountType,
+            DisplayOrder            = source.DisplayOrder + 1,
+            BadgeText               = source.BadgeText,
+            PlanColor               = source.PlanColor,
+            IsActive                = false,
+            IsPublic                = false,
+            IsRecommended           = false,
+            PlanCategory            = source.PlanCategory,
+            BillingMode             = source.BillingMode,
+            Rank                    = source.Rank,
+            HasTrial                = source.HasTrial,
+            TrialDays               = source.TrialDays,
+            RequiresPaymentForTrial = source.RequiresPaymentForTrial,
+            IsDefaultForNewUsers    = false,
+            AvailableForSelfSignup  = source.AvailableForSelfSignup,
+            RequiresAdminApproval   = source.RequiresAdminApproval,
+            AllowAddOns             = source.AllowAddOns,
+            AllowUpgrade            = source.AllowUpgrade,
+            AllowDowngrade          = source.AllowDowngrade,
+            AutoDowngradeOnExpiry   = source.AutoDowngradeOnExpiry,
+        };
+
+        _db.Set<Plan>().Add(copy);
+        await _db.SaveChangesAsync(ct);
+
+        // Copy limits
+        foreach (var srcLimit in source.PlanLimits)
+        {
+            _db.Set<PlanLimit>().Add(new PlanLimit
+            {
+                SubscriptionPlanId = copy.Id,
+                LimitDefinitionId  = srcLimit.LimitDefinitionId,
+                Value              = srcLimit.Value
+            });
+        }
+
+        // Copy features
+        foreach (var srcFeat in source.PlanFeatures)
+        {
+            _db.Set<PlanFeature>().Add(new PlanFeature
+            {
+                SubscriptionPlanId  = copy.Id,
+                FeatureDefinitionId = srcFeat.FeatureDefinitionId,
+                IsEnabled           = srcFeat.IsEnabled
+            });
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Plan duplicated: {SourceId} → {CopyId}", sourcePlanId, copy.Id);
+
+        return await GetPlanDetailAsync(copy.Id, ct);
     }
 
     // ── SetLimitAsync ─────────────────────────────────────────────────────────
@@ -298,45 +426,66 @@ public class AdminPlanService : IAdminPlanService
     // ── Mapping helpers ───────────────────────────────────────────────────────
     private static PlanSummaryResponse MapToSummary(Plan p) => new()
     {
-        Id                   = p.Id,
-        Name                 = p.Name,
-        Code                 = p.Code,
-        Description          = p.Description,
-        IsActive             = p.IsActive,
-        BasePriceMonthly     = p.BasePriceMonthly,
-        BasePriceYearly      = p.BasePriceYearly,
-        ApplicableAccountType = p.ApplicableAccountType?.ToString(),
-        CreatedAt            = p.CreatedAt,
-        DisplayOrder         = p.DisplayOrder,
-        IsPublic             = p.IsPublic,
-        IsRecommended        = p.IsRecommended,
-        PlanCategory         = p.PlanCategory,
-        BillingMode          = p.BillingMode,
-        Rank                 = p.Rank,
-        BadgeText            = p.BadgeText,
-        PlanColor            = p.PlanColor,
+        Id                      = p.Id,
+        Name                    = p.Name,
+        Code                    = p.Code,
+        Description             = p.Description,
+        IsActive                = p.IsActive,
+        BasePriceMonthly        = p.BasePriceMonthly,
+        BasePriceYearly         = p.BasePriceYearly,
+        ApplicableAccountType   = p.ApplicableAccountType?.ToString(),
+        CreatedAt               = p.CreatedAt,
+        DisplayOrder            = p.DisplayOrder,
+        IsPublic                = p.IsPublic,
+        IsRecommended           = p.IsRecommended,
+        PlanCategory            = p.PlanCategory,
+        BillingMode             = p.BillingMode,
+        Rank                    = p.Rank,
+        BadgeText               = p.BadgeText,
+        PlanColor               = p.PlanColor,
+        HasTrial                = p.HasTrial,
+        TrialDays               = p.TrialDays,
+        RequiresPaymentForTrial = p.RequiresPaymentForTrial,
+        IsDefaultForNewUsers    = p.IsDefaultForNewUsers,
+        AvailableForSelfSignup  = p.AvailableForSelfSignup,
+        RequiresAdminApproval   = p.RequiresAdminApproval,
+        AllowAddOns             = p.AllowAddOns,
+        AllowUpgrade            = p.AllowUpgrade,
+        AllowDowngrade          = p.AllowDowngrade,
+        AutoDowngradeOnExpiry   = p.AutoDowngradeOnExpiry,
     };
 
     private static PlanDetailResponse MapToDetail(Plan p) => new()
     {
-        Id                   = p.Id,
-        Name                 = p.Name,
-        Code                 = p.Code,
-        Description          = p.Description,
-        IsActive             = p.IsActive,
-        BasePriceMonthly     = p.BasePriceMonthly,
-        BasePriceYearly      = p.BasePriceYearly,
-        ApplicableAccountType = p.ApplicableAccountType?.ToString(),
-        CreatedAt            = p.CreatedAt,
-        DisplayOrder         = p.DisplayOrder,
-        IsPublic             = p.IsPublic,
-        IsRecommended        = p.IsRecommended,
-        PlanCategory         = p.PlanCategory,
-        BillingMode          = p.BillingMode,
-        Rank                 = p.Rank,
-        BadgeText            = p.BadgeText,
-        PlanColor            = p.PlanColor,
+        Id                      = p.Id,
+        Name                    = p.Name,
+        Code                    = p.Code,
+        Description             = p.Description,
+        IsActive                = p.IsActive,
+        BasePriceMonthly        = p.BasePriceMonthly,
+        BasePriceYearly         = p.BasePriceYearly,
+        ApplicableAccountType   = p.ApplicableAccountType?.ToString(),
+        CreatedAt               = p.CreatedAt,
+        DisplayOrder            = p.DisplayOrder,
+        IsPublic                = p.IsPublic,
+        IsRecommended           = p.IsRecommended,
+        PlanCategory            = p.PlanCategory,
+        BillingMode             = p.BillingMode,
+        Rank                    = p.Rank,
+        BadgeText               = p.BadgeText,
+        PlanColor               = p.PlanColor,
+        HasTrial                = p.HasTrial,
+        TrialDays               = p.TrialDays,
+        RequiresPaymentForTrial = p.RequiresPaymentForTrial,
+        IsDefaultForNewUsers    = p.IsDefaultForNewUsers,
+        AvailableForSelfSignup  = p.AvailableForSelfSignup,
+        RequiresAdminApproval   = p.RequiresAdminApproval,
+        AllowAddOns             = p.AllowAddOns,
+        AllowUpgrade            = p.AllowUpgrade,
+        AllowDowngrade          = p.AllowDowngrade,
+        AutoDowngradeOnExpiry   = p.AutoDowngradeOnExpiry,
         Limits = p.PlanLimits
+            .Where(pl => pl.LimitDefinition != null)
             .OrderBy(pl => pl.LimitDefinition.Key)
             .Select(pl => new PlanLimitItem
             {
@@ -347,6 +496,7 @@ public class AdminPlanService : IAdminPlanService
                 Value             = pl.Value
             }).ToList(),
         Features = p.PlanFeatures
+            .Where(pf => pf.FeatureDefinition != null)
             .OrderBy(pf => pf.FeatureDefinition.FeatureGroup)
             .ThenBy(pf => pf.FeatureDefinition.Key)
             .Select(pf => new PlanFeatureItem

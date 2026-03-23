@@ -53,12 +53,20 @@ public class AdminPlanController : BaseController
         return Ok(result);
     }
 
-    /// <summary>DELETE /api/admin/plans/{id} — soft-delete (deactivate)</summary>
+    /// <summary>DELETE /api/admin/plans/{id} — archive (soft-delete)</summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await _plans.DeletePlanAsync(id, ct);
         return NoContent();
+    }
+
+    /// <summary>POST /api/admin/plans/{id}/duplicate — copy plan with all limits + features</summary>
+    [HttpPost("{id:guid}/duplicate")]
+    public async Task<IActionResult> Duplicate(Guid id, CancellationToken ct)
+    {
+        var result = await _plans.DuplicatePlanAsync(id, ct);
+        return Created($"/api/admin/plans/{result.Id}", result);
     }
 
     /// <summary>PUT /api/admin/plans/{id}/limits/{limitKey} — set a limit value</summary>

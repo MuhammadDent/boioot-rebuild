@@ -15,6 +15,9 @@ public interface IAdminPlanService
     /// <summary>Soft-deletes the plan by setting IsActive = false.</summary>
     Task DeletePlanAsync(Guid planId, CancellationToken ct = default);
 
+    /// <summary>Creates a full copy of the plan (limits + features). New plan starts as inactive/private.</summary>
+    Task<PlanDetailResponse> DuplicatePlanAsync(Guid sourcePlanId, CancellationToken ct = default);
+
     /// <summary>Set or update the value for a named limit on a plan. Creates the row if missing.</summary>
     Task<PlanLimitItem> SetLimitAsync(Guid planId, string limitKey, decimal value, CancellationToken ct = default);
 
