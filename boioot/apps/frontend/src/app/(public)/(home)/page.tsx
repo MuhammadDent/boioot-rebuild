@@ -102,10 +102,6 @@ export default function HomePage() {
   const { isAuthenticated } = useAuth();
   const { cities } = useCities();
 
-  // Mounted guard (prevents browser-extension attribute injection from causing SSR mismatches)
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
   // Slider
   const [slideIndex, setSlideIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -303,30 +299,29 @@ export default function HomePage() {
       {/* ── LISTING TYPE BAR ─────────────────────────────────────────────────── */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e8ede8", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "0 1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          {mounted && (
-            <button
-              type="button"
-              style={{
-                ...arrowBtnStyle,
-                opacity: canScrollPrev ? 1 : 0.35,
-                cursor: canScrollPrev ? "pointer" : "default",
-                background: hoveredArrow === "prev" && canScrollPrev ? "#e8f5e9" : "#fff",
-                boxShadow: hoveredArrow === "prev" && canScrollPrev
-                  ? "0 2px 8px rgba(74,103,65,0.18)"
-                  : arrowBtnStyle.boxShadow,
-                transform: hoveredArrow === "prev" && canScrollPrev ? "scale(1.08)" : "scale(1)",
-              }}
-              onClick={() => canScrollPrev && scrollTabs("prev")}
-              onMouseEnter={() => setHoveredArrow("prev")}
-              onMouseLeave={() => setHoveredArrow(null)}
-              disabled={!canScrollPrev}
-              aria-disabled={!canScrollPrev}
-              aria-label="التبويبات السابقة"
-              aria-controls="tabs-scroll-bar"
-            >
-              <span aria-hidden="true">→</span>
-            </button>
-          )}
+          <button
+            suppressHydrationWarning
+            type="button"
+            style={{
+              ...arrowBtnStyle,
+              opacity: canScrollPrev ? 1 : 0.35,
+              cursor: canScrollPrev ? "pointer" : "default",
+              background: hoveredArrow === "prev" && canScrollPrev ? "#e8f5e9" : "#fff",
+              boxShadow: hoveredArrow === "prev" && canScrollPrev
+                ? "0 2px 8px rgba(74,103,65,0.18)"
+                : arrowBtnStyle.boxShadow,
+              transform: hoveredArrow === "prev" && canScrollPrev ? "scale(1.08)" : "scale(1)",
+            }}
+            onClick={() => canScrollPrev && scrollTabs("prev")}
+            onMouseEnter={() => setHoveredArrow("prev")}
+            onMouseLeave={() => setHoveredArrow(null)}
+            disabled={!canScrollPrev}
+            aria-disabled={!canScrollPrev}
+            aria-label="التبويبات السابقة"
+            aria-controls="tabs-scroll-bar"
+          >
+            <span aria-hidden="true">→</span>
+          </button>
 
           <div
             id="tabs-scroll-bar"
@@ -336,8 +331,9 @@ export default function HomePage() {
             onScroll={updateScrollBtns}
             style={{ display: "flex", gap: "0.45rem", overflowX: "auto", padding: "0.75rem 0.25rem", flex: 1, scrollbarWidth: "none" }}
           >
-            {mounted && LISTING_TABS.map((tab, i) => (
+            {LISTING_TABS.map((tab, i) => (
               <button
+                suppressHydrationWarning
                 key={i}
                 type="button"
                 role="tab"
@@ -363,30 +359,29 @@ export default function HomePage() {
             ))}
           </div>
 
-          {mounted && (
-            <button
-              type="button"
-              style={{
-                ...arrowBtnStyle,
-                opacity: canScrollNext ? 1 : 0.35,
-                cursor: canScrollNext ? "pointer" : "default",
-                background: hoveredArrow === "next" && canScrollNext ? "#e8f5e9" : "#fff",
-                boxShadow: hoveredArrow === "next" && canScrollNext
-                  ? "0 2px 8px rgba(74,103,65,0.18)"
-                  : arrowBtnStyle.boxShadow,
-                transform: hoveredArrow === "next" && canScrollNext ? "scale(1.08)" : "scale(1)",
-              }}
-              onClick={() => canScrollNext && scrollTabs("next")}
-              onMouseEnter={() => setHoveredArrow("next")}
-              onMouseLeave={() => setHoveredArrow(null)}
-              disabled={!canScrollNext}
-              aria-disabled={!canScrollNext}
-              aria-label="التبويبات التالية"
-              aria-controls="tabs-scroll-bar"
-            >
-              <span aria-hidden="true">←</span>
-            </button>
-          )}
+          <button
+            suppressHydrationWarning
+            type="button"
+            style={{
+              ...arrowBtnStyle,
+              opacity: canScrollNext ? 1 : 0.35,
+              cursor: canScrollNext ? "pointer" : "default",
+              background: hoveredArrow === "next" && canScrollNext ? "#e8f5e9" : "#fff",
+              boxShadow: hoveredArrow === "next" && canScrollNext
+                ? "0 2px 8px rgba(74,103,65,0.18)"
+                : arrowBtnStyle.boxShadow,
+              transform: hoveredArrow === "next" && canScrollNext ? "scale(1.08)" : "scale(1)",
+            }}
+            onClick={() => canScrollNext && scrollTabs("next")}
+            onMouseEnter={() => setHoveredArrow("next")}
+            onMouseLeave={() => setHoveredArrow(null)}
+            disabled={!canScrollNext}
+            aria-disabled={!canScrollNext}
+            aria-label="التبويبات التالية"
+            aria-controls="tabs-scroll-bar"
+          >
+            <span aria-hidden="true">←</span>
+          </button>
         </div>
       </div>
 
@@ -424,33 +419,32 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-        {mounted && (
-          <>
+        <button
+          suppressHydrationWarning
+          type="button"
+          onClick={() => goSlide((slideIndex - 1 + SLIDES.length) % SLIDES.length)}
+          style={sliderArrowStyle("right")}
+          aria-label="السابق"
+        >→</button>
+        <button
+          suppressHydrationWarning
+          type="button"
+          onClick={() => goSlide((slideIndex + 1) % SLIDES.length)}
+          style={sliderArrowStyle("left")}
+          aria-label="التالي"
+        >←</button>
+        <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8 }}>
+          {SLIDES.map((_, i) => (
             <button
+              suppressHydrationWarning
+              key={i}
               type="button"
-              onClick={() => goSlide((slideIndex - 1 + SLIDES.length) % SLIDES.length)}
-              style={sliderArrowStyle("right")}
-              aria-label="السابق"
-            >→</button>
-            <button
-              type="button"
-              onClick={() => goSlide((slideIndex + 1) % SLIDES.length)}
-              style={sliderArrowStyle("left")}
-              aria-label="التالي"
-            >←</button>
-            <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8 }}>
-              {SLIDES.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => goSlide(i)}
-                  style={{ width: i === slideIndex ? 24 : 10, height: 10, borderRadius: 999, border: "none", background: i === slideIndex ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer", padding: 0, transition: "all 0.3s" }}
-                  aria-label={`الشريحة ${i + 1}`}
-                />
-              ))}
-            </div>
-          </>
-        )}
+              onClick={() => goSlide(i)}
+              style={{ width: i === slideIndex ? 24 : 10, height: 10, borderRadius: 999, border: "none", background: i === slideIndex ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer", padding: 0, transition: "all 0.3s" }}
+              aria-label={`الشريحة ${i + 1}`}
+            />
+          ))}
+        </div>
       </div>
 
       {/* ── SEARCH BAR ───────────────────────────────────────────────────────── */}
@@ -472,16 +466,15 @@ export default function HomePage() {
       <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "1.5rem 1.25rem" }} className="home-main-wrap">
 
         {/* ── Mobile filter toggle ── */}
-        {mounted && (
-          <button
-            type="button"
-            className="home-filter-toggle"
-            onClick={() => setShowFilter((v) => !v)}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
-            {showFilter ? "إخفاء الفلتر" : "فلتر البحث"}
-          </button>
-        )}
+        <button
+          suppressHydrationWarning
+          type="button"
+          className="home-filter-toggle"
+          onClick={() => setShowFilter((v) => !v)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+          {showFilter ? "إخفاء الفلتر" : "فلتر البحث"}
+        </button>
 
         <div className="home-main-layout">
         {/* ── LISTINGS ── */}
@@ -624,27 +617,27 @@ export default function HomePage() {
             />
           </FilterSection>
 
-          {/* أزرار التطبيق والإعادة — client-only: لا تُصيَّر على الـ server لتجنب تعارض الـ extensions */}
-          {mounted && (
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-              <button
-                type="button"
-                onClick={applyFilters}
-                style={{ flex: 1, padding: "0.6rem", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, fontFamily: "var(--font-arabic)", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                تطبيق الفلاتر
-              </button>
-              <button
-                type="button"
-                onClick={resetFilters}
-                style={{ flex: 1, padding: "0.6rem", background: "#f5f5f5", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontFamily: "var(--font-arabic)", fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.46"/></svg>
-                إعادة تعيين
-              </button>
-            </div>
-          )}
+          {/* أزرار التطبيق والإعادة */}
+          <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+            <button
+              suppressHydrationWarning
+              type="button"
+              onClick={applyFilters}
+              style={{ flex: 1, padding: "0.6rem", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, fontFamily: "var(--font-arabic)", fontSize: "0.9rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              تطبيق الفلاتر
+            </button>
+            <button
+              suppressHydrationWarning
+              type="button"
+              onClick={resetFilters}
+              style={{ flex: 1, padding: "0.6rem", background: "#f5f5f5", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontFamily: "var(--font-arabic)", fontSize: "0.9rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.46"/></svg>
+              إعادة تعيين
+            </button>
+          </div>
 
         </aside>
         </div>{/* home-main-layout */}
