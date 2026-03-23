@@ -99,33 +99,23 @@ export default function MainHeader() {
         <div className="main-hdr__actions">
 
           {/* CTA buttons — always visible */}
-          <button
-            type="button"
-            onClick={() => guardHref("/post-ad")}
-            className="home-cta-primary"
-          >
-            <span
-              className="home-cta-primary__icon"
-              aria-hidden="true"
+          <div className="cta-buttons">
+            <button
+              type="button"
+              onClick={() => guardHref("/post-ad")}
+              className="home-cta-primary"
             >
-              +
-            </span>
-            <span>أضف إعلانك</span>
-          </button>
+              + أضف إعلان
+            </button>
 
-          <button
-            type="button"
-            onClick={() => guardHref("/dashboard/my-requests/new")}
-            className="home-cta-secondary"
-          >
-            <span
-              className="home-cta-secondary__icon"
-              aria-hidden="true"
+            <button
+              type="button"
+              onClick={() => guardHref("/post-request")}
+              className="home-cta-secondary"
             >
-              +
-            </span>
-            <span>أضف طلب</span>
-          </button>
+              + أضف طلب
+            </button>
+          </div>
 
           {/* Auth strip */}
           {!isLoading && isAuthenticated && (
