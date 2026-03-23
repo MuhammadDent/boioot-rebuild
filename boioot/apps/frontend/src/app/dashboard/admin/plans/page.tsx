@@ -374,16 +374,19 @@ function PlanPreviewCard({
 }) {
   const accent = planColor.trim() || "#2e7d32";
   const price  = parseFloat(basePriceMonthly);
-  const top6   = enabledFeatures.filter(f => f.isEnabled).slice(0, 6);
 
-  const listingLimit = limits?.find(l => l.key === "max_active_listings");
-  const imagesLimit  = limits?.find(l => l.key === "max_images_per_listing");
-  const featuredLimit = limits?.find(l => l.key === "max_featured_slots");
-  const limitsChips = [
-    listingLimit  ? (listingLimit.value  === -1 ? "∞ إعلان"      : `${listingLimit.value} إعلان`)      : null,
-    imagesLimit   ? (imagesLimit.value   === -1 ? "∞ صورة"        : `${imagesLimit.value} صورة`)        : null,
-    featuredLimit ? (featuredLimit.value === -1 ? "∞ مميز"        : `${featuredLimit.value} مميز`)       : null,
-  ].filter(Boolean) as string[];
+  // Limit helpers
+  const lv = (key: string) => limits?.find(l => l.key === key)?.value ?? 0;
+  const lbl = (val: number, unit: string) => val === 0 ? null : val === -1 ? `∞ ${unit}` : `${val} ${unit}`;
+
+  const listingChip  = lbl(lv("max_active_listings"),     "إعلان");
+  const imagesChip   = lbl(lv("max_images_per_listing"),  "صورة");
+  const featuredChip = lbl(lv("max_featured_slots"),       "مميز");
+  const agentsChip   = lbl(lv("max_agents"),               "وسيط");
+  const limitsChips  = [listingChip, imagesChip, agentsChip, featuredChip].filter(Boolean) as string[];
+
+  // Show ALL features with ✔ / ✗
+  const allFeatures = enabledFeatures.slice(0, 8);
 
   return (
     <div style={{ border: `2px solid ${accent}`, borderRadius: 14, padding: "1.25rem", background: "#fff", maxWidth: 270, margin: "0 auto", position: "relative", fontFamily: "inherit" }}>
@@ -406,32 +409,123 @@ function PlanPreviewCard({
       <p style={{ margin: "0 0 0.6rem", fontSize: "1.25rem", fontWeight: 800, color: accent }}>
         {price === 0 ? "مجاني" : `${price.toLocaleString("ar-SY")} ل.س / شهر`}
       </p>
+
+      {/* ── Limit chips ── */}
       {limitsChips.length > 0 && (
         <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
           {limitsChips.map(chip => (
-            <span
-              key={chip}
-              style={{ background: accent + "18", color: accent, borderRadius: 20, padding: "0.15rem 0.6rem", fontSize: "0.72rem", fontWeight: 700 }}
-            >
+            <span key={chip} style={{ background: accent + "18", color: accent, borderRadius: 20, padding: "0.15rem 0.6rem", fontSize: "0.72rem", fontWeight: 700 }}>
               {chip}
             </span>
           ))}
         </div>
       )}
-      {top6.length > 0 ? (
+
+      {/* ── Features with ✔ / ✗ ── */}
+      {allFeatures.length > 0 ? (
         <ul style={{ margin: "0 0 0.8rem", padding: 0, listStyle: "none" }}>
-          {top6.map(f => (
-            <li key={f.key} style={{ fontSize: "0.8rem", color: "#444", padding: "0.18rem 0", display: "flex", gap: "0.4rem", alignItems: "center" }}>
-              <span style={{ color: accent, fontWeight: 700, fontSize: "0.75rem" }}>{f.icon || "✓"}</span>
-              <span>{f.name}</span>
+          {allFeatures.map(f => (
+            <li key={f.key} style={{ fontSize: "0.8rem", padding: "0.2rem 0", display: "flex", gap: "0.45rem", alignItems: "center", color: f.isEnabled ? "#1e293b" : "#94a3b8" }}>
+              <span style={{ fontWeight: 700, fontSize: "0.75rem", flexShrink: 0, color: f.isEnabled ? "#059669" : "#cbd5e1" }}>
+                {f.isEnabled ? "✔" : "✗"}
+              </span>
+              <span style={{ textDecoration: f.isEnabled ? "none" : "none" }}>{f.icon ? `${f.icon} ` : ""}{f.name}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p style={{ fontSize: "0.8rem", color: "#bbb", marginBottom: "0.8rem" }}>لا توجد ميزات مفعّلة بعد</p>
+        <p style={{ fontSize: "0.8rem", color: "#bbb", marginBottom: "0.8rem" }}>لا توجد ميزات مضافة بعد</p>
       )}
+
       <div style={{ background: accent, color: "#fff", borderRadius: 8, padding: "0.5rem", textAlign: "center", fontSize: "0.82rem", fontWeight: 600 }}>
         اشترك الآن
+      </div>
+    </div>
+  );
+}
+
+// ── PlanComparisonTable ─────────────────────────────────────────────────────────
+
+function limitCell(val: number) {
+  if (val === 0) return { text: "✗", color: "#cbd5e1", weight: 400 };
+  if (val === -1) return { text: "∞", color: "#059669", weight: 700 };
+  return { text: String(val), color: "#1e293b", weight: 600 };
+}
+
+function boolCell(v: boolean) {
+  return v
+    ? { text: "✔", color: "#059669", weight: 700 }
+    : { text: "✗", color: "#cbd5e1", weight: 400 };
+}
+
+function PlanComparisonTable({ plans }: { plans: AdminPlanSummary[] }) {
+  const active = plans.filter(p => p.isActive && p.isPublic).sort((a, b) => a.displayOrder - b.displayOrder);
+  if (active.length === 0) return null;
+
+  type Row = { label: string; icon: string; cell: (p: AdminPlanSummary) => { text: string; color: string; weight: number } };
+  const ROWS: Row[] = [
+    { label: "الإعلانات النشطة",     icon: "🏠", cell: p => limitCell(p.listingsLimit) },
+    { label: "صور لكل إعلان",        icon: "📸", cell: p => limitCell(p.imagesPerListing) },
+    { label: "الوسطاء",               icon: "👤", cell: p => limitCell(p.agentsLimit) },
+    { label: "المشاريع",              icon: "🏗", cell: p => limitCell(p.projectsLimit) },
+    { label: "إعلانات مميزة (Boost)", icon: "⭐", cell: p => limitCell(p.featuredSlots) },
+    { label: "لوحة التحليلات",        icon: "📊", cell: p => boolCell(p.hasAnalytics) },
+    { label: "الإعلانات المميزة",     icon: "✨", cell: p => boolCell(p.hasFeaturedListings) },
+    { label: "إدارة المشاريع",        icon: "🏗", cell: p => boolCell(p.hasProjectMgmt) },
+    { label: "تواصل واتساب",         icon: "💬", cell: p => boolCell(p.hasWhatsApp) },
+    { label: "شارة موثق",            icon: "✅", cell: p => boolCell(p.hasVerifiedBadge) },
+    { label: "دعم فني أولوية",       icon: "🛠", cell: p => boolCell(p.hasPrioritySupport) },
+  ];
+
+  const thBase: React.CSSProperties = { padding: "0.55rem 0.85rem", fontWeight: 700, fontSize: "0.78rem", color: "#475569", borderBottom: "2px solid #e2e8f0", textAlign: "center", whiteSpace: "nowrap" };
+  const tdLabel: React.CSSProperties = { padding: "0.5rem 0.85rem", fontSize: "0.82rem", color: "#334155", borderBottom: "1px solid #f1f5f9", textAlign: "right", whiteSpace: "nowrap" };
+  const tdCell: React.CSSProperties = { padding: "0.5rem 0.85rem", textAlign: "center", borderBottom: "1px solid #f1f5f9" };
+
+  return (
+    <div style={{ backgroundColor: "#fff", border: "1px solid #e8ecf0", borderRadius: 14, overflow: "hidden", marginTop: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <div style={{ padding: "0.9rem 1.1rem", borderBottom: "1px solid #e8ecf0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e293b" }}>مقارنة الخطط</span>
+          <span style={{ fontSize: "0.75rem", color: "#94a3b8", marginRight: "0.6rem" }}>الخطط العامة النشطة فقط</span>
+        </div>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
+          <thead>
+            <tr style={{ backgroundColor: "#f8fafc" }}>
+              <th style={{ ...thBase, textAlign: "right", minWidth: 160 }}>المزايا والحدود</th>
+              {active.map(p => (
+                <th key={p.id} style={{ ...thBase, minWidth: 110 }}>
+                  {p.planColor && <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: p.planColor, marginLeft: "0.3rem", verticalAlign: "middle" }} />}
+                  {p.name}
+                  {p.isRecommended && <div style={{ fontSize: "0.62rem", color: "#d97706", fontWeight: 700 }}>⭐ موصى بها</div>}
+                  <div style={{ fontSize: "0.7rem", color: p.planColor || "#2563eb", fontWeight: 700, marginTop: "0.1rem" }}>
+                    {p.basePriceMonthly === 0 ? "مجاني" : `${p.basePriceMonthly.toLocaleString("ar-SY")} ل.س`}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {ROWS.map((row, i) => (
+              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#ffffff" : "#fafafa" }}>
+                <td style={tdLabel}>
+                  <span style={{ marginLeft: "0.35rem" }}>{row.icon}</span>{row.label}
+                </td>
+                {active.map(p => {
+                  const c = row.cell(p);
+                  return (
+                    <td key={p.id} style={tdCell}>
+                      <span style={{ fontWeight: c.weight, color: c.color, fontSize: c.text === "✔" || c.text === "✗" ? "1rem" : "0.88rem" }}>
+                        {c.text}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -913,6 +1007,29 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
               count={limits.length}
               defaultOpen={false}
             >
+              {/* ── Tier Preset Quick-Fill ── */}
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.85rem", padding: "0.6rem 0.75rem", background: "var(--color-bg-secondary, #f9fafb)", borderRadius: 8, alignItems: "center" }}>
+                <span style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: 600, flexShrink: 0 }}>تعبئة سريعة:</span>
+                {(([
+                  { label: "Starter", vals: { max_active_listings: 2,  max_images_per_listing: 5,  max_featured_slots: 0,  max_agents: 1, max_projects: 0 } },
+                  { label: "Pro",     vals: { max_active_listings: 20, max_images_per_listing: 20, max_featured_slots: 3,  max_agents: 5, max_projects: 3 } },
+                  { label: "Premium", vals: { max_active_listings: -1, max_images_per_listing: 50, max_featured_slots: -1, max_agents: -1, max_projects: -1 } },
+                ]) as { label: string; vals: Record<string, number> }[]).map(preset => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    style={{ padding: "0.25rem 0.7rem", borderRadius: 6, border: "1.5px solid var(--color-border, #e5e7eb)", background: "#ffffff", fontSize: "0.76rem", fontWeight: 600, cursor: "pointer", color: "var(--color-text-primary, #1e293b)" }}
+                    onClick={() => {
+                      Object.entries(preset.vals).forEach(([key, val]) => {
+                        handleLimitChange(key, String(val));
+                      });
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8", marginRight: "auto" }}>‑1 = غير محدود</span>
+              </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {limits.map(lim => (
                   <LimitRow
@@ -1259,6 +1376,12 @@ export default function AdminPlansPage() {
             );
           })}
         </div>
+
+        {/* ── Plan Comparison Table ── */}
+        {!fetching && plans.length > 0 && (
+          <PlanComparisonTable plans={plans} />
+        )}
+
       </div>
 
       {/* ── Archive Confirmation ── */}

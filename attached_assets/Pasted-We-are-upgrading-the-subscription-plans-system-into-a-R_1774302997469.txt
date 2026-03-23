@@ -1,0 +1,151 @@
+We are upgrading the subscription plans system into a REAL SaaS pricing engine.
+
+IMPORTANT:
+- Do NOT break existing plans
+- Do NOT change API contracts
+- Extend UI and data model logically
+
+==================================================
+GOAL
+==================================================
+
+Transform plans from:
+
+"Name + Price"
+
+Into:
+
+"Full SaaS Product Definition"
+
+==================================================
+TASK 1 — ADD LIMITS SECTION
+==================================================
+
+Add new section in plan form:
+
+"Limits / القيود"
+
+Fields:
+
+- maxListings (عدد الإعلانات)
+- maxRequests (عدد الطلبات)
+- maxImagesPerListing (عدد الصور)
+- maxProjects (عدد المشاريع)
+- maxAgents (عدد الوسطاء)
+- maxMessages (عدد الرسائل)
+
+Support:
+- Number OR Unlimited
+
+==================================================
+TASK 2 — ADD FEATURES SECTION
+==================================================
+
+Add toggles:
+
+"Features / المميزات"
+
+- canUploadVideo
+- hasAnalyticsDashboard
+- hasPrioritySupport
+- hasFeaturedListings
+- hasHomepageExposure
+- hasVerifiedBadge
+
+UI:
+Toggle switches (ON/OFF)
+
+==================================================
+TASK 3 — ADD BOOST SETTINGS
+==================================================
+
+"Boost / التميز"
+
+- listingPriority (low / medium / high)
+- searchRankingBoost (0 → 100)
+- homepageSlots (number)
+
+==================================================
+TASK 4 — DISPLAY IN UI (CRITICAL)
+==================================================
+
+In plan cards:
+
+Show:
+
+- ✔️ 50 إعلان
+- ✔️ 10 صور لكل إعلان
+- ✔️ دعم فني أولوية
+- ✔️ رفع فيديو
+- ❌ لوحة تحليلات
+
+Use:
+- Green = available
+- Gray = not included
+
+==================================================
+TASK 5 — PLAN COMPARISON TABLE
+==================================================
+
+Create comparison table:
+
+Columns:
+- Basic
+- Pro
+- Premium
+
+Rows:
+- Listings
+- Images
+- Video
+- Analytics
+- Support
+
+==================================================
+TASK 6 — ENFORCEMENT (FRONTEND ONLY)
+==================================================
+
+When user exceeds limit:
+
+- Show warning
+- Block action
+- Suggest upgrade
+
+Example:
+"لقد وصلت الحد الأقصى من الإعلانات — قم بالترقية"
+
+==================================================
+TASK 7 — DEFAULT VALUES
+==================================================
+
+Starter:
+- 2 listings
+- no video
+- no analytics
+
+Pro:
+- 20 listings
+- video enabled
+- analytics basic
+
+Premium:
+- unlimited
+- all features
+
+==================================================
+FINAL RESULT
+==================================================
+
+Plans become:
+
+- Clear
+- Sellable
+- Comparable
+- Valuable
+
+==================================================
+DO NOT:
+==================================================
+
+- Do NOT remove existing fields
+- Do NOT break system
