@@ -15,14 +15,14 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "BlogCategories",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Slug = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    SortOrder = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Name = table.Column<string>(maxLength: 200, nullable: false),
+                    Slug = table.Column<string>(maxLength: 200, nullable: false),
+                    Description = table.Column<string>(maxLength: 1000, nullable: true),
+                    IsActive = table.Column<bool>(nullable: false),
+                    SortOrder = table.Column<int>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -33,14 +33,14 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "BlogSeoSettings",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SiteName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    DefaultPostSeoTitleTemplate = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    DefaultPostSeoDescriptionTemplate = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: false),
-                    DefaultBlogListSeoTitle = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
-                    DefaultBlogListSeoDescription = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: false),
-                    DefaultOgTitleTemplate = table.Column<string>(type: "TEXT", nullable: false),
-                    DefaultOgDescriptionTemplate = table.Column<string>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    SiteName = table.Column<string>(maxLength: 200, nullable: false),
+                    DefaultPostSeoTitleTemplate = table.Column<string>(maxLength: 500, nullable: false),
+                    DefaultPostSeoDescriptionTemplate = table.Column<string>(maxLength: 1000, nullable: false),
+                    DefaultBlogListSeoTitle = table.Column<string>(maxLength: 300, nullable: false),
+                    DefaultBlogListSeoDescription = table.Column<string>(maxLength: 1000, nullable: false),
+                    DefaultOgTitleTemplate = table.Column<string>(nullable: false),
+                    DefaultOgDescriptionTemplate = table.Column<string>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -51,25 +51,25 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Companies",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    LogoUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                    Phone = table.Column<string>(type: "TEXT", maxLength: 30, nullable: true),
-                    Email = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    Address = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                    Province = table.Column<string>(type: "TEXT", nullable: true),
-                    City = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    Neighborhood = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
-                    WhatsApp = table.Column<string>(type: "TEXT", maxLength: 30, nullable: true),
-                    Latitude = table.Column<double>(type: "REAL", nullable: true),
-                    Longitude = table.Column<double>(type: "REAL", nullable: true),
-                    CompanyType = table.Column<string>(type: "TEXT", nullable: false),
-                    IsProfileComplete = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsVerified = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Name = table.Column<string>(maxLength: 200, nullable: false),
+                    LogoUrl = table.Column<string>(maxLength: 500, nullable: true),
+                    Description = table.Column<string>(maxLength: 2000, nullable: true),
+                    Phone = table.Column<string>(maxLength: 30, nullable: true),
+                    Email = table.Column<string>(maxLength: 200, nullable: true),
+                    Address = table.Column<string>(maxLength: 300, nullable: true),
+                    Province = table.Column<string>(nullable: true),
+                    City = table.Column<string>(maxLength: 100, nullable: true),
+                    Neighborhood = table.Column<string>(maxLength: 150, nullable: true),
+                    WhatsApp = table.Column<string>(maxLength: 30, nullable: true),
+                    Latitude = table.Column<double>(nullable: true),
+                    Longitude = table.Column<double>(nullable: true),
+                    CompanyType = table.Column<string>(nullable: false),
+                    IsProfileComplete = table.Column<bool>(nullable: false),
+                    IsVerified = table.Column<bool>(nullable: false),
+                    IsDeleted = table.Column<bool>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -80,15 +80,15 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "FeatureDefinitions",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Key = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    FeatureGroup = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    Icon = table.Column<string>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Key = table.Column<string>(maxLength: 100, nullable: false),
+                    Name = table.Column<string>(maxLength: 200, nullable: false),
+                    Description = table.Column<string>(maxLength: 500, nullable: true),
+                    FeatureGroup = table.Column<string>(maxLength: 100, nullable: true),
+                    Icon = table.Column<string>(nullable: true),
+                    IsActive = table.Column<bool>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -99,16 +99,16 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "LimitDefinitions",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Key = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    Unit = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    ValueType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false, defaultValue: "integer"),
-                    AppliesToScope = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Key = table.Column<string>(maxLength: 100, nullable: false),
+                    Name = table.Column<string>(maxLength: 200, nullable: false),
+                    Description = table.Column<string>(maxLength: 500, nullable: true),
+                    Unit = table.Column<string>(maxLength: 50, nullable: true),
+                    ValueType = table.Column<string>(maxLength: 50, nullable: false, defaultValue: "integer"),
+                    AppliesToScope = table.Column<string>(maxLength: 100, nullable: true),
+                    IsActive = table.Column<bool>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -119,13 +119,13 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "LocationCities",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    NormalizedName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false, defaultValue: ""),
-                    Province = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false, defaultValue: ""),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Name = table.Column<string>(maxLength: 200, nullable: false),
+                    NormalizedName = table.Column<string>(maxLength: 200, nullable: false, defaultValue: ""),
+                    Province = table.Column<string>(maxLength: 200, nullable: false, defaultValue: ""),
+                    IsActive = table.Column<bool>(nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -136,13 +136,13 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "LocationNeighborhoods",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    NormalizedName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false, defaultValue: ""),
-                    City = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Name = table.Column<string>(maxLength: 200, nullable: false),
+                    NormalizedName = table.Column<string>(maxLength: 200, nullable: false, defaultValue: ""),
+                    City = table.Column<string>(maxLength: 200, nullable: false),
+                    IsActive = table.Column<bool>(nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -153,13 +153,13 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "OwnershipTypeConfigs",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    Value = table.Column<string>(type: "TEXT", nullable: false),
-                    Label = table.Column<string>(type: "TEXT", nullable: false),
-                    Order = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<string>(nullable: false),
+                    Value = table.Column<string>(nullable: false),
+                    Label = table.Column<string>(nullable: false),
+                    Order = table.Column<int>(nullable: false),
+                    IsActive = table.Column<bool>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -170,10 +170,10 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Permissions",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Key = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Key = table.Column<string>(maxLength: 200, nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -184,42 +184,42 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Plans",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Code = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    ApplicableAccountType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    ListingLimit = table.Column<int>(type: "INTEGER", nullable: false),
-                    ProjectLimit = table.Column<int>(type: "INTEGER", nullable: false),
-                    AgentLimit = table.Column<int>(type: "INTEGER", nullable: false),
-                    FeaturedSlots = table.Column<int>(type: "INTEGER", nullable: false),
-                    ImageLimitPerListing = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 5),
-                    VideoAllowed = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
-                    AnalyticsAccess = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
+                    Id = table.Column<Guid>(nullable: false),
+                    Name = table.Column<string>(maxLength: 100, nullable: false),
+                    Code = table.Column<string>(maxLength: 100, nullable: true),
+                    Description = table.Column<string>(maxLength: 500, nullable: true),
+                    ApplicableAccountType = table.Column<string>(maxLength: 50, nullable: true),
+                    ListingLimit = table.Column<int>(nullable: false),
+                    ProjectLimit = table.Column<int>(nullable: false),
+                    AgentLimit = table.Column<int>(nullable: false),
+                    FeaturedSlots = table.Column<int>(nullable: false),
+                    ImageLimitPerListing = table.Column<int>(nullable: false, defaultValue: 5),
+                    VideoAllowed = table.Column<bool>(nullable: false, defaultValue: false),
+                    AnalyticsAccess = table.Column<bool>(nullable: false, defaultValue: false),
                     PriceMonthly = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PriceYearly = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    HasTrial = table.Column<bool>(type: "INTEGER", nullable: false),
-                    TrialDays = table.Column<int>(type: "INTEGER", nullable: false),
-                    RequiresPaymentForTrial = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsDefaultForNewUsers = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AvailableForSelfSignup = table.Column<bool>(type: "INTEGER", nullable: false),
-                    RequiresAdminApproval = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AllowAddOns = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AllowUpgrade = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AllowDowngrade = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AutoDowngradeOnExpiry = table.Column<bool>(type: "INTEGER", nullable: false),
-                    Features = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    Rank = table.Column<int>(type: "INTEGER", nullable: false),
-                    DisplayOrder = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsPublic = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsRecommended = table.Column<bool>(type: "INTEGER", nullable: false),
-                    PlanCategory = table.Column<string>(type: "TEXT", nullable: true),
-                    BillingMode = table.Column<string>(type: "TEXT", nullable: false),
-                    BadgeText = table.Column<string>(type: "TEXT", nullable: true),
-                    PlanColor = table.Column<string>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    HasTrial = table.Column<bool>(nullable: false),
+                    TrialDays = table.Column<int>(nullable: false),
+                    RequiresPaymentForTrial = table.Column<bool>(nullable: false),
+                    IsDefaultForNewUsers = table.Column<bool>(nullable: false),
+                    AvailableForSelfSignup = table.Column<bool>(nullable: false),
+                    RequiresAdminApproval = table.Column<bool>(nullable: false),
+                    AllowAddOns = table.Column<bool>(nullable: false),
+                    AllowUpgrade = table.Column<bool>(nullable: false),
+                    AllowDowngrade = table.Column<bool>(nullable: false),
+                    AutoDowngradeOnExpiry = table.Column<bool>(nullable: false),
+                    Features = table.Column<string>(maxLength: 2000, nullable: true),
+                    IsActive = table.Column<bool>(nullable: false),
+                    Rank = table.Column<int>(nullable: false),
+                    DisplayOrder = table.Column<int>(nullable: false),
+                    IsPublic = table.Column<bool>(nullable: false),
+                    IsRecommended = table.Column<bool>(nullable: false),
+                    PlanCategory = table.Column<string>(nullable: true),
+                    BillingMode = table.Column<string>(nullable: false),
+                    BadgeText = table.Column<string>(nullable: true),
+                    PlanColor = table.Column<string>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -230,14 +230,14 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "PropertyAmenities",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Key = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Label = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    GroupAr = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false, defaultValue: ""),
-                    Order = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Key = table.Column<string>(maxLength: 100, nullable: false),
+                    Label = table.Column<string>(maxLength: 200, nullable: false),
+                    GroupAr = table.Column<string>(maxLength: 100, nullable: false, defaultValue: ""),
+                    Order = table.Column<int>(nullable: false, defaultValue: 0),
+                    IsActive = table.Column<bool>(nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -248,13 +248,13 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "PropertyListingTypes",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Value = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Label = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Order = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Value = table.Column<string>(maxLength: 100, nullable: false),
+                    Label = table.Column<string>(maxLength: 200, nullable: false),
+                    Order = table.Column<int>(nullable: false, defaultValue: 0),
+                    IsActive = table.Column<bool>(nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -265,14 +265,14 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "PropertyTypeConfigs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Value = table.Column<string>(type: "TEXT", nullable: false),
-                    Label = table.Column<string>(type: "TEXT", nullable: false),
-                    Icon = table.Column<string>(type: "TEXT", nullable: false),
-                    Order = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Value = table.Column<string>(nullable: false),
+                    Label = table.Column<string>(nullable: false),
+                    Icon = table.Column<string>(nullable: false),
+                    Order = table.Column<int>(nullable: false),
+                    IsActive = table.Column<bool>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -283,10 +283,10 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Roles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Name = table.Column<string>(maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -297,19 +297,19 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserCode = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    FullName = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
-                    Email = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Phone = table.Column<string>(type: "TEXT", maxLength: 30, nullable: true),
-                    PasswordHash = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    Role = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false),
-                    ProfileImageUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    TrialListingsUsed = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    UserCode = table.Column<string>(maxLength: 20, nullable: false),
+                    FullName = table.Column<string>(maxLength: 150, nullable: false),
+                    Email = table.Column<string>(maxLength: 200, nullable: false),
+                    Phone = table.Column<string>(maxLength: 30, nullable: true),
+                    PasswordHash = table.Column<string>(maxLength: 500, nullable: false),
+                    Role = table.Column<string>(maxLength: 50, nullable: false),
+                    IsActive = table.Column<bool>(nullable: false),
+                    IsDeleted = table.Column<bool>(nullable: false),
+                    ProfileImageUrl = table.Column<string>(nullable: true),
+                    TrialListingsUsed = table.Column<int>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -320,22 +320,22 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Projects",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 3000, nullable: true),
-                    Status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    City = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Province = table.Column<string>(type: "TEXT", nullable: true),
-                    Address = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                    Latitude = table.Column<double>(type: "REAL", nullable: true),
-                    Longitude = table.Column<double>(type: "REAL", nullable: true),
+                    Id = table.Column<Guid>(nullable: false),
+                    Title = table.Column<string>(maxLength: 300, nullable: false),
+                    Description = table.Column<string>(maxLength: 3000, nullable: true),
+                    Status = table.Column<string>(maxLength: 50, nullable: false),
+                    City = table.Column<string>(maxLength: 100, nullable: false),
+                    Province = table.Column<string>(nullable: true),
+                    Address = table.Column<string>(maxLength: 300, nullable: true),
+                    Latitude = table.Column<double>(nullable: true),
+                    Longitude = table.Column<double>(nullable: true),
                     StartingPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    DeliveryDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsPublished = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
-                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CompanyId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    DeliveryDate = table.Column<DateTime>(nullable: true),
+                    IsPublished = table.Column<bool>(nullable: false, defaultValue: false),
+                    IsDeleted = table.Column<bool>(nullable: false),
+                    CompanyId = table.Column<Guid>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -352,12 +352,12 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "PlanFeatures",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SubscriptionPlanId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    FeatureDefinitionId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    SubscriptionPlanId = table.Column<Guid>(nullable: false),
+                    FeatureDefinitionId = table.Column<Guid>(nullable: false),
+                    IsEnabled = table.Column<bool>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -380,12 +380,12 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "PlanLimits",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SubscriptionPlanId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    LimitDefinitionId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(nullable: false),
+                    SubscriptionPlanId = table.Column<Guid>(nullable: false),
+                    LimitDefinitionId = table.Column<Guid>(nullable: false),
                     Value = table.Column<decimal>(type: "decimal(18,4)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -408,17 +408,17 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "PlanPricings",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PlanId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    BillingCycle = table.Column<string>(type: "TEXT", nullable: false),
-                    PriceAmount = table.Column<decimal>(type: "TEXT", nullable: false),
-                    CurrencyCode = table.Column<string>(type: "TEXT", nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsPublic = table.Column<bool>(type: "INTEGER", nullable: false),
-                    ExternalProvider = table.Column<string>(type: "TEXT", nullable: true),
-                    ExternalPriceId = table.Column<string>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    PlanId = table.Column<Guid>(nullable: false),
+                    BillingCycle = table.Column<string>(nullable: false),
+                    PriceAmount = table.Column<decimal>(nullable: false),
+                    CurrencyCode = table.Column<string>(nullable: false),
+                    IsActive = table.Column<bool>(nullable: false),
+                    IsPublic = table.Column<bool>(nullable: false),
+                    ExternalProvider = table.Column<string>(nullable: true),
+                    ExternalPriceId = table.Column<string>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -435,8 +435,8 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "RolePermissions",
                 columns: table => new
                 {
-                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PermissionId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    RoleId = table.Column<Guid>(nullable: false),
+                    PermissionId = table.Column<Guid>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -459,15 +459,15 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Accounts",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    AccountType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    CreatedByUserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PrimaryAdminUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    PlanId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Name = table.Column<string>(maxLength: 200, nullable: false),
+                    AccountType = table.Column<string>(maxLength: 50, nullable: false),
+                    CreatedByUserId = table.Column<Guid>(nullable: false),
+                    PrimaryAdminUserId = table.Column<Guid>(nullable: true),
+                    PlanId = table.Column<Guid>(nullable: true),
+                    IsActive = table.Column<bool>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -496,13 +496,13 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Agents",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CompanyId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    BrokerId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    Bio = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
+                    CompanyId = table.Column<Guid>(nullable: true),
+                    BrokerId = table.Column<Guid>(nullable: true),
+                    Bio = table.Column<string>(maxLength: 1000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -525,33 +525,33 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "BlogPosts",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    Slug = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    Excerpt = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    Content = table.Column<string>(type: "TEXT", nullable: false),
-                    CoverImageUrl = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                    CoverImageAlt = table.Column<string>(type: "TEXT", nullable: true),
-                    Tags = table.Column<string>(type: "TEXT", nullable: true),
-                    Status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    PublishedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    IsFeatured = table.Column<bool>(type: "INTEGER", nullable: false),
-                    SeoTitle = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    SeoDescription = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    SeoTitleMode = table.Column<string>(type: "TEXT", nullable: false),
-                    SeoDescriptionMode = table.Column<string>(type: "TEXT", nullable: false),
-                    SeoMode = table.Column<string>(type: "TEXT", nullable: false),
-                    SlugMode = table.Column<string>(type: "TEXT", nullable: false),
-                    OgTitle = table.Column<string>(type: "TEXT", nullable: true),
-                    OgDescription = table.Column<string>(type: "TEXT", nullable: true),
-                    ReadTimeMinutes = table.Column<int>(type: "INTEGER", nullable: true),
-                    ViewCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedByUserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UpdatedByUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    PublishedByUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Title = table.Column<string>(maxLength: 500, nullable: false),
+                    Slug = table.Column<string>(maxLength: 500, nullable: false),
+                    Excerpt = table.Column<string>(maxLength: 1000, nullable: true),
+                    Content = table.Column<string>(nullable: false),
+                    CoverImageUrl = table.Column<string>(maxLength: 2000, nullable: true),
+                    CoverImageAlt = table.Column<string>(nullable: true),
+                    Tags = table.Column<string>(nullable: true),
+                    Status = table.Column<string>(maxLength: 50, nullable: false),
+                    PublishedAt = table.Column<DateTime>(nullable: true),
+                    IsFeatured = table.Column<bool>(nullable: false),
+                    SeoTitle = table.Column<string>(maxLength: 500, nullable: true),
+                    SeoDescription = table.Column<string>(maxLength: 1000, nullable: true),
+                    SeoTitleMode = table.Column<string>(nullable: false),
+                    SeoDescriptionMode = table.Column<string>(nullable: false),
+                    SeoMode = table.Column<string>(nullable: false),
+                    SlugMode = table.Column<string>(nullable: false),
+                    OgTitle = table.Column<string>(nullable: true),
+                    OgDescription = table.Column<string>(nullable: true),
+                    ReadTimeMinutes = table.Column<int>(nullable: true),
+                    ViewCount = table.Column<int>(nullable: false),
+                    IsDeleted = table.Column<bool>(nullable: false),
+                    CreatedByUserId = table.Column<Guid>(nullable: false),
+                    UpdatedByUserId = table.Column<Guid>(nullable: true),
+                    PublishedByUserId = table.Column<Guid>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -580,16 +580,16 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "BuyerRequests",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", nullable: false),
-                    PropertyType = table.Column<string>(type: "TEXT", nullable: false),
-                    Description = table.Column<string>(type: "TEXT", nullable: false),
-                    City = table.Column<string>(type: "TEXT", nullable: true),
-                    Neighborhood = table.Column<string>(type: "TEXT", nullable: true),
-                    IsPublished = table.Column<bool>(type: "INTEGER", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Title = table.Column<string>(nullable: false),
+                    PropertyType = table.Column<string>(nullable: false),
+                    Description = table.Column<string>(nullable: false),
+                    City = table.Column<string>(nullable: true),
+                    Neighborhood = table.Column<string>(nullable: true),
+                    IsPublished = table.Column<bool>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -606,16 +606,16 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Notifications",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Type = table.Column<string>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", nullable: false),
-                    Body = table.Column<string>(type: "TEXT", nullable: false),
-                    IsRead = table.Column<bool>(type: "INTEGER", nullable: false),
-                    RelatedEntityId = table.Column<string>(type: "TEXT", nullable: true),
-                    RelatedEntityType = table.Column<string>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
+                    Type = table.Column<string>(nullable: false),
+                    Title = table.Column<string>(nullable: false),
+                    Body = table.Column<string>(nullable: false),
+                    IsRead = table.Column<bool>(nullable: false),
+                    RelatedEntityId = table.Column<string>(nullable: true),
+                    RelatedEntityType = table.Column<string>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -632,14 +632,14 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Reviews",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ReviewerId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TargetType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    TargetId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Rating = table.Column<int>(type: "INTEGER", nullable: false),
-                    Comment = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    ReviewerId = table.Column<Guid>(nullable: false),
+                    TargetType = table.Column<string>(maxLength: 50, nullable: false),
+                    TargetId = table.Column<Guid>(nullable: false),
+                    Rating = table.Column<int>(nullable: false),
+                    Comment = table.Column<string>(maxLength: 1000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -657,8 +657,8 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "UserRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    UserId = table.Column<Guid>(nullable: false),
+                    RoleId = table.Column<Guid>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -681,13 +681,13 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "ProjectImages",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ImageUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    IsPrimary = table.Column<bool>(type: "INTEGER", nullable: false),
-                    Order = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    ProjectId = table.Column<Guid>(nullable: false),
+                    ImageUrl = table.Column<string>(maxLength: 500, nullable: false),
+                    IsPrimary = table.Column<bool>(nullable: false),
+                    Order = table.Column<int>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -704,23 +704,23 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Invoices",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PlanPricingId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Amount = table.Column<decimal>(type: "TEXT", nullable: false),
-                    Currency = table.Column<string>(type: "TEXT", nullable: false),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    ProviderName = table.Column<string>(type: "TEXT", nullable: false),
-                    ExternalRef = table.Column<string>(type: "TEXT", nullable: true),
-                    StripeSessionUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    AdminNote = table.Column<string>(type: "TEXT", nullable: true),
-                    ExpiresAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    ApprovedBy = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ApprovedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    RejectedBy = table.Column<Guid>(type: "TEXT", nullable: true),
-                    RejectedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
+                    PlanPricingId = table.Column<Guid>(nullable: false),
+                    Amount = table.Column<decimal>(nullable: false),
+                    Currency = table.Column<string>(nullable: false),
+                    Status = table.Column<int>(nullable: false),
+                    ProviderName = table.Column<string>(nullable: false),
+                    ExternalRef = table.Column<string>(nullable: true),
+                    StripeSessionUrl = table.Column<string>(nullable: true),
+                    AdminNote = table.Column<string>(nullable: true),
+                    ExpiresAt = table.Column<DateTime>(nullable: true),
+                    ApprovedBy = table.Column<Guid>(nullable: true),
+                    ApprovedAt = table.Column<DateTime>(nullable: true),
+                    RejectedBy = table.Column<Guid>(nullable: true),
+                    RejectedAt = table.Column<DateTime>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -743,12 +743,12 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "AccountUsers",
                 columns: table => new
                 {
-                    AccountId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OrganizationUserRole = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    IsPrimary = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    JoinedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    AccountId = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
+                    OrganizationUserRole = table.Column<string>(maxLength: 50, nullable: false),
+                    IsPrimary = table.Column<bool>(nullable: false),
+                    IsActive = table.Column<bool>(nullable: false),
+                    JoinedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -771,30 +771,30 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "SubscriptionPaymentRequests",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AccountId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RequestedPlanId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RequestedPricingId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    BillingCycle = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    Amount = table.Column<decimal>(type: "TEXT", precision: 18, scale: 4, nullable: false),
-                    Currency = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
-                    PaymentMethod = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    PaymentFlowType = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    ReceiptImageUrl = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                    ReceiptFileName = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                    CustomerNote = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    SalesRepresentativeName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    SalesRepresentativeId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    Status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    ReviewedByUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ReviewNote = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    ExternalPaymentReference = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    ReviewedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    ActivatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    CompletedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    AccountId = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
+                    RequestedPlanId = table.Column<Guid>(nullable: false),
+                    RequestedPricingId = table.Column<Guid>(nullable: true),
+                    BillingCycle = table.Column<string>(maxLength: 20, nullable: false),
+                    Amount = table.Column<decimal>(precision: 18, scale: 4, nullable: false),
+                    Currency = table.Column<string>(maxLength: 10, nullable: false),
+                    PaymentMethod = table.Column<string>(maxLength: 50, nullable: false),
+                    PaymentFlowType = table.Column<string>(maxLength: 20, nullable: false),
+                    ReceiptImageUrl = table.Column<string>(maxLength: 2000, nullable: true),
+                    ReceiptFileName = table.Column<string>(maxLength: 300, nullable: true),
+                    CustomerNote = table.Column<string>(maxLength: 1000, nullable: true),
+                    SalesRepresentativeName = table.Column<string>(maxLength: 200, nullable: true),
+                    SalesRepresentativeId = table.Column<Guid>(nullable: true),
+                    Status = table.Column<string>(maxLength: 50, nullable: false),
+                    ReviewedByUserId = table.Column<Guid>(nullable: true),
+                    ReviewNote = table.Column<string>(maxLength: 1000, nullable: true),
+                    ExternalPaymentReference = table.Column<string>(maxLength: 500, nullable: true),
+                    ReviewedAt = table.Column<DateTime>(nullable: true),
+                    ActivatedAt = table.Column<DateTime>(nullable: true),
+                    CompletedAt = table.Column<DateTime>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -817,18 +817,18 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Subscriptions",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AccountId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PlanId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    StartDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    EndDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    PaymentRef = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    PricingId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AutoRenew = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    AccountId = table.Column<Guid>(nullable: false),
+                    PlanId = table.Column<Guid>(nullable: false),
+                    Status = table.Column<string>(maxLength: 50, nullable: false),
+                    StartDate = table.Column<DateTime>(nullable: false),
+                    EndDate = table.Column<DateTime>(nullable: true),
+                    PaymentRef = table.Column<string>(maxLength: 200, nullable: true),
+                    PricingId = table.Column<Guid>(nullable: true),
+                    IsActive = table.Column<bool>(nullable: false),
+                    AutoRenew = table.Column<bool>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -851,45 +851,45 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Properties",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 3000, nullable: true),
-                    Type = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    ListingType = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    Id = table.Column<Guid>(nullable: false),
+                    Title = table.Column<string>(maxLength: 300, nullable: false),
+                    Description = table.Column<string>(maxLength: 3000, nullable: true),
+                    Type = table.Column<string>(maxLength: 50, nullable: false),
+                    ListingType = table.Column<string>(maxLength: 100, nullable: false),
+                    Status = table.Column<string>(maxLength: 50, nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Currency = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false, defaultValue: "SYP"),
+                    Currency = table.Column<string>(maxLength: 10, nullable: false, defaultValue: "SYP"),
                     Area = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    Bedrooms = table.Column<int>(type: "INTEGER", nullable: true),
-                    Bathrooms = table.Column<int>(type: "INTEGER", nullable: true),
-                    HallsCount = table.Column<int>(type: "INTEGER", nullable: true),
-                    Province = table.Column<string>(type: "TEXT", nullable: true),
-                    Neighborhood = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
-                    Address = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                    City = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Latitude = table.Column<double>(type: "REAL", nullable: true),
-                    Longitude = table.Column<double>(type: "REAL", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "INTEGER", nullable: false),
-                    PaymentType = table.Column<string>(type: "TEXT", nullable: false),
-                    InstallmentsCount = table.Column<int>(type: "INTEGER", nullable: true),
-                    HasCommission = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CommissionType = table.Column<string>(type: "TEXT", nullable: true),
-                    CommissionValue = table.Column<decimal>(type: "TEXT", nullable: true),
-                    OwnershipType = table.Column<string>(type: "TEXT", nullable: true),
-                    Floor = table.Column<string>(type: "TEXT", nullable: true),
-                    PropertyAge = table.Column<int>(type: "INTEGER", nullable: true),
-                    Features = table.Column<string>(type: "TEXT", nullable: true),
-                    VideoUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    CompanyId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AgentId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    OwnerId = table.Column<string>(type: "TEXT", nullable: true),
-                    AccountId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CreatedByUserId = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedByRole = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedByCompanyId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ViewCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Bedrooms = table.Column<int>(nullable: true),
+                    Bathrooms = table.Column<int>(nullable: true),
+                    HallsCount = table.Column<int>(nullable: true),
+                    Province = table.Column<string>(nullable: true),
+                    Neighborhood = table.Column<string>(maxLength: 150, nullable: true),
+                    Address = table.Column<string>(maxLength: 300, nullable: true),
+                    City = table.Column<string>(maxLength: 100, nullable: false),
+                    Latitude = table.Column<double>(nullable: true),
+                    Longitude = table.Column<double>(nullable: true),
+                    IsDeleted = table.Column<bool>(nullable: false),
+                    PaymentType = table.Column<string>(nullable: false),
+                    InstallmentsCount = table.Column<int>(nullable: true),
+                    HasCommission = table.Column<bool>(nullable: false),
+                    CommissionType = table.Column<string>(nullable: true),
+                    CommissionValue = table.Column<decimal>(nullable: true),
+                    OwnershipType = table.Column<string>(nullable: true),
+                    Floor = table.Column<string>(nullable: true),
+                    PropertyAge = table.Column<int>(nullable: true),
+                    Features = table.Column<string>(nullable: true),
+                    VideoUrl = table.Column<string>(nullable: true),
+                    CompanyId = table.Column<Guid>(nullable: false),
+                    AgentId = table.Column<Guid>(nullable: true),
+                    OwnerId = table.Column<string>(nullable: true),
+                    AccountId = table.Column<Guid>(nullable: true),
+                    CreatedByUserId = table.Column<string>(nullable: false),
+                    CreatedByRole = table.Column<string>(nullable: false),
+                    CreatedByCompanyId = table.Column<Guid>(nullable: true),
+                    ViewCount = table.Column<int>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -912,8 +912,8 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "BlogPostCategories",
                 columns: table => new
                 {
-                    BlogPostId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    BlogCategoryId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    BlogPostId = table.Column<Guid>(nullable: false),
+                    BlogCategoryId = table.Column<Guid>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -936,12 +936,12 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "BuyerRequestComments",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Content = table.Column<string>(type: "TEXT", nullable: false),
-                    BuyerRequestId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Content = table.Column<string>(nullable: false),
+                    BuyerRequestId = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -964,12 +964,12 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "PaymentProofs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    InvoiceId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ImageUrl = table.Column<string>(type: "TEXT", nullable: false),
-                    Notes = table.Column<string>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    InvoiceId = table.Column<Guid>(nullable: false),
+                    ImageUrl = table.Column<string>(nullable: false),
+                    Notes = table.Column<string>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -986,14 +986,14 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Conversations",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    User1Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    User2Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PropertyId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    LastMessageAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    User1Id = table.Column<Guid>(nullable: false),
+                    User2Id = table.Column<Guid>(nullable: false),
+                    PropertyId = table.Column<Guid>(nullable: true),
+                    ProjectId = table.Column<Guid>(nullable: true),
+                    LastMessageAt = table.Column<DateTime>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1028,11 +1028,11 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Favorites",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PropertyId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    UserId = table.Column<Guid>(nullable: false),
+                    PropertyId = table.Column<Guid>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1055,8 +1055,8 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "PropertyAmenitySelections",
                 columns: table => new
                 {
-                    PropertyId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AmenityId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    PropertyId = table.Column<Guid>(nullable: false),
+                    AmenityId = table.Column<Guid>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1079,13 +1079,13 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "PropertyImages",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    PropertyId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ImageUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    IsPrimary = table.Column<bool>(type: "INTEGER", nullable: false),
-                    Order = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    PropertyId = table.Column<Guid>(nullable: false),
+                    ImageUrl = table.Column<string>(maxLength: 500, nullable: false),
+                    IsPrimary = table.Column<bool>(nullable: false),
+                    Order = table.Column<int>(nullable: false),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1102,17 +1102,17 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Requests",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Phone = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    Email = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
-                    Message = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                    Status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    PropertyId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    Name = table.Column<string>(maxLength: 200, nullable: false),
+                    Phone = table.Column<string>(maxLength: 50, nullable: false),
+                    Email = table.Column<string>(maxLength: 200, nullable: true),
+                    Message = table.Column<string>(maxLength: 2000, nullable: true),
+                    Status = table.Column<string>(maxLength: 50, nullable: false),
+                    PropertyId = table.Column<Guid>(nullable: true),
+                    ProjectId = table.Column<Guid>(nullable: true),
+                    UserId = table.Column<Guid>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1140,15 +1140,15 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "Messages",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ConversationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SenderId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Content = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
-                    IsRead = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AttachmentData = table.Column<string>(type: "TEXT", nullable: true),
-                    AttachmentName = table.Column<string>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(nullable: false),
+                    ConversationId = table.Column<Guid>(nullable: false),
+                    SenderId = table.Column<Guid>(nullable: false),
+                    Content = table.Column<string>(maxLength: 2000, nullable: false),
+                    IsRead = table.Column<bool>(nullable: false),
+                    AttachmentData = table.Column<string>(nullable: true),
+                    AttachmentName = table.Column<string>(nullable: true),
+                    CreatedAt = table.Column<DateTime>(nullable: false),
+                    UpdatedAt = table.Column<DateTime>(nullable: false)
                 },
                 constraints: table =>
                 {

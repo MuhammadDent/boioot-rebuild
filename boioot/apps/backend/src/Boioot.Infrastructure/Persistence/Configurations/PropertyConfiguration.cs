@@ -18,6 +18,7 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.Property(p => p.Price).HasColumnType("decimal(18,2)");
         builder.Property(p => p.Currency).HasMaxLength(10).HasDefaultValue("SYP").IsRequired();
         builder.Property(p => p.Area).HasColumnType("decimal(10,2)");
+        builder.Property(p => p.CommissionValue).HasPrecision(18, 4);
         builder.Property(p => p.Neighborhood).HasMaxLength(150);
         builder.Property(p => p.Address).HasMaxLength(300);
         builder.Property(p => p.City).IsRequired().HasMaxLength(100);

@@ -20,36 +20,27 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Account", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("AccountType")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("CreatedByUserId");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
-                    b.Property<Guid?>("PlanId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("PlanId");
 
-                    b.Property<Guid?>("PrimaryAdminUserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("PrimaryAdminUserId");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -66,25 +57,19 @@ namespace Boioot.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Boioot.Domain.Entities.AccountUser", b =>
                 {
-                    b.Property<Guid>("AccountId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("AccountId");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("UserId");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsPrimary");
 
-                    b.Property<DateTime>("JoinedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("JoinedAt");
 
                     b.Property<string>("OrganizationUserRole")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
                     b.HasKey("AccountId", "UserId");
 
@@ -96,27 +81,20 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Agent", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("Bio")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(1000);
 
-                    b.Property<Guid?>("BrokerId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("BrokerId");
 
-                    b.Property<Guid?>("CompanyId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("CompanyId");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("UserId");
 
                     b.HasKey("Id");
 
@@ -131,34 +109,26 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.BlogCategory", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(1000);
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<string>("Slug")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("SortOrder");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -173,101 +143,74 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.BlogPost", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<string>("CoverImageAlt")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("CoverImageAlt");
 
                     b.Property<string>("CoverImageUrl")
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(2000);
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("CreatedByUserId");
 
                     b.Property<string>("Excerpt")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(1000);
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsDeleted");
 
-                    b.Property<bool>("IsFeatured")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsFeatured");
 
-                    b.Property<string>("OgDescription")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("OgDescription");
 
-                    b.Property<string>("OgTitle")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("OgTitle");
 
-                    b.Property<DateTime?>("PublishedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("PublishedAt");
 
-                    b.Property<Guid?>("PublishedByUserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("PublishedByUserId");
 
-                    b.Property<int?>("ReadTimeMinutes")
-                        .HasColumnType("INTEGER");
+                    b.Property<int?>("ReadTimeMinutes");
 
                     b.Property<string>("SeoDescription")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(1000);
 
                     b.Property<string>("SeoDescriptionMode")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("SeoMode")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("SeoTitle")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
                     b.Property<string>("SeoTitleMode")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("Slug")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
                     b.Property<string>("SlugMode")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<string>("Tags")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Tags");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid?>("UpdatedByUserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("UpdatedByUserId");
 
-                    b.Property<int>("ViewCount")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("ViewCount");
 
                     b.HasKey("Id");
 
@@ -291,11 +234,9 @@ namespace Boioot.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Boioot.Domain.Entities.BlogPostCategory", b =>
                 {
-                    b.Property<Guid>("BlogPostId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("BlogPostId");
 
-                    b.Property<Guid>("BlogCategoryId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("BlogCategoryId");
 
                     b.HasKey("BlogPostId", "BlogCategoryId");
 
@@ -307,41 +248,33 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.BlogSeoSettings", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("DefaultBlogListSeoDescription")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(1000);
 
                     b.Property<string>("DefaultBlogListSeoTitle")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(300);
 
                     b.Property<string>("DefaultOgDescriptionTemplate")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("DefaultOgTitleTemplate")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("DefaultPostSeoDescriptionTemplate")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(1000);
 
                     b.Property<string>("DefaultPostSeoTitleTemplate")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
                     b.Property<string>("SiteName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.HasKey("Id");
 
@@ -351,38 +284,28 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.BuyerRequest", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<string>("City")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("City");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<bool>("IsPublished")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsPublished");
 
-                    b.Property<string>("Neighborhood")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Neighborhood");
 
                     b.Property<string>("PropertyType")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("UserId");
 
                     b.HasKey("Id");
 
@@ -394,24 +317,18 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.BuyerRequestComment", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<Guid>("BuyerRequestId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("BuyerRequestId");
 
                     b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("UserId");
 
                     b.HasKey("Id");
 
@@ -425,73 +342,54 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Company", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("Address")
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(300);
 
                     b.Property<string>("City")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
                     b.Property<string>("CompanyType")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(2000);
 
                     b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsDeleted");
 
-                    b.Property<bool>("IsProfileComplete")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsProfileComplete");
 
-                    b.Property<bool>("IsVerified")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsVerified");
 
-                    b.Property<double?>("Latitude")
-                        .HasColumnType("REAL");
+                    b.Property<double?>("Latitude");
 
                     b.Property<string>("LogoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
-                    b.Property<double?>("Longitude")
-                        .HasColumnType("REAL");
+                    b.Property<double?>("Longitude");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<string>("Neighborhood")
-                        .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(150);
 
                     b.Property<string>("Phone")
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(30);
 
-                    b.Property<string>("Province")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Province");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.Property<string>("WhatsApp")
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(30);
 
                     b.HasKey("Id");
 
@@ -501,29 +399,21 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Conversation", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<DateTime?>("LastMessageAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("LastMessageAt");
 
-                    b.Property<Guid?>("ProjectId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("ProjectId");
 
-                    b.Property<Guid?>("PropertyId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("PropertyId");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid>("User1Id")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("User1Id");
 
-                    b.Property<Guid>("User2Id")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("User2Id");
 
                     b.HasKey("Id");
 
@@ -543,20 +433,15 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Favorite", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<Guid>("PropertyId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("PropertyId");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("UserId");
 
                     b.HasKey("Id");
 
@@ -570,38 +455,29 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.FeatureDefinition", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
                     b.Property<string>("FeatureGroup")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
-                    b.Property<string>("Icon")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Icon");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
                     b.Property<string>("Key")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -616,58 +492,42 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Invoice", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<string>("AdminNote")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("AdminNote");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("TEXT");
+                        .HasPrecision(18, 4);
 
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("ApprovedAt");
 
-                    b.Property<Guid?>("ApprovedBy")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("ApprovedBy");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<DateTime?>("ExpiresAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("ExpiresAt");
 
-                    b.Property<string>("ExternalRef")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("ExternalRef");
 
-                    b.Property<Guid>("PlanPricingId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("PlanPricingId");
 
                     b.Property<string>("ProviderName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<DateTime?>("RejectedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("RejectedAt");
 
-                    b.Property<Guid?>("RejectedBy")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("RejectedBy");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("Status");
 
-                    b.Property<string>("StripeSessionUrl")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("StripeSessionUrl");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("UserId");
 
                     b.HasKey("Id");
 
@@ -681,45 +541,35 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.LimitDefinition", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("AppliesToScope")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
                     b.Property<string>("Key")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<string>("Unit")
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.Property<string>("ValueType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT")
                         .HasDefaultValue("integer");
 
                     b.HasKey("Id");
@@ -735,38 +585,31 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.LocationCity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT")
                         .HasDefaultValue("");
 
                     b.Property<string>("Province")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT")
                         .HasDefaultValue("");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -776,36 +619,29 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.LocationNeighborhood", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("City")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT")
                         .HasDefaultValue("");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -815,34 +651,25 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Message", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<string>("AttachmentData")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("AttachmentData");
 
-                    b.Property<string>("AttachmentName")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("AttachmentName");
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(2000);
 
-                    b.Property<Guid>("ConversationId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("ConversationId");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsRead");
 
-                    b.Property<Guid>("SenderId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("SenderId");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -856,45 +683,35 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Notification", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(2000);
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<bool>("IsRead")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(false);
 
                     b.Property<string>("RelatedEntityId")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
                     b.Property<string>("RelatedEntityType")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(300);
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("UserId");
 
                     b.HasKey("Id");
 
@@ -910,28 +727,21 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.OwnershipTypeConfig", b =>
                 {
                     b.Property<string>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
                     b.Property<string>("Label")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("Order");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.Property<string>("Value")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.HasKey("Id");
 
@@ -941,24 +751,18 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.PaymentProof", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<Guid>("InvoiceId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("InvoiceId");
 
-                    b.Property<string>("Notes")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Notes");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -971,38 +775,28 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Plan", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<int>("AgentLimit")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("AgentLimit");
 
-                    b.Property<bool>("AllowAddOns")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("AllowAddOns");
 
-                    b.Property<bool>("AllowDowngrade")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("AllowDowngrade");
 
-                    b.Property<bool>("AllowUpgrade")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("AllowUpgrade");
 
                     b.Property<bool>("AnalyticsAccess")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(false);
 
                     b.Property<string>("ApplicableAccountType")
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<bool>("AutoDowngradeOnExpiry")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("AutoDowngradeOnExpiry");
 
-                    b.Property<bool>("AvailableForSelfSignup")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("AvailableForSelfSignup");
 
-                    b.Property<string>("BadgeText")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("BadgeText");
 
                     b.Property<decimal>("BasePriceMonthly")
                         .HasColumnType("decimal(18,2)")
@@ -1013,85 +807,61 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                         .HasColumnName("PriceYearly");
 
                     b.Property<string>("BillingMode")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("Code")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("DisplayOrder");
 
-                    b.Property<int>("FeaturedSlots")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("FeaturedSlots");
 
                     b.Property<string>("Features")
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(2000);
 
-                    b.Property<bool>("HasTrial")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("HasTrial");
 
                     b.Property<int>("ImageLimitPerListing")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(5);
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
-                    b.Property<bool>("IsDefaultForNewUsers")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsDefaultForNewUsers");
 
-                    b.Property<bool>("IsPublic")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsPublic");
 
-                    b.Property<bool>("IsRecommended")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsRecommended");
 
-                    b.Property<int>("ListingLimit")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("ListingLimit");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
-                    b.Property<string>("PlanCategory")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("PlanCategory");
 
-                    b.Property<string>("PlanColor")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("PlanColor");
 
-                    b.Property<int>("ProjectLimit")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("ProjectLimit");
 
-                    b.Property<int>("Rank")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("Rank");
 
-                    b.Property<bool>("RequiresAdminApproval")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("RequiresAdminApproval");
 
-                    b.Property<bool>("RequiresPaymentForTrial")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("RequiresPaymentForTrial");
 
-                    b.Property<int>("TrialDays")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("TrialDays");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.Property<bool>("VideoAllowed")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(false);
 
                     b.HasKey("Id");
@@ -1111,23 +881,17 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.PlanFeature", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<Guid>("FeatureDefinitionId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("FeatureDefinitionId");
 
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsEnabled");
 
-                    b.Property<Guid>("SubscriptionPlanId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("SubscriptionPlanId");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1144,20 +908,15 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.PlanLimit", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<Guid>("LimitDefinitionId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("LimitDefinitionId");
 
-                    b.Property<Guid>("SubscriptionPlanId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("SubscriptionPlanId");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.Property<decimal>("Value")
                         .HasColumnType("decimal(18,4)");
@@ -1177,40 +936,30 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.PlanPricing", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("BillingCycle")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("CurrencyCode")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<string>("ExternalPriceId")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("ExternalPriceId");
 
-                    b.Property<string>("ExternalProvider")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("ExternalProvider");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
-                    b.Property<bool>("IsPublic")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsPublic");
 
-                    b.Property<Guid>("PlanId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("PlanId");
 
                     b.Property<decimal>("PriceAmount")
-                        .HasColumnType("TEXT");
+                        .HasPrecision(18, 4);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1222,63 +971,48 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Project", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("Address")
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(300);
 
                     b.Property<string>("City")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
-                    b.Property<Guid>("CompanyId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("CompanyId");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<DateTime?>("DeliveryDate")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("DeliveryDate");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(3000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(3000);
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsDeleted");
 
                     b.Property<bool>("IsPublished")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(false);
 
-                    b.Property<double?>("Latitude")
-                        .HasColumnType("REAL");
+                    b.Property<double?>("Latitude");
 
-                    b.Property<double?>("Longitude")
-                        .HasColumnType("REAL");
+                    b.Property<double?>("Longitude");
 
-                    b.Property<string>("Province")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Province");
 
                     b.Property<decimal?>("StartingPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(300);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1298,28 +1032,21 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.ProjectImage", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsPrimary");
 
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("Order");
 
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("ProjectId");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1331,142 +1058,106 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Property", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<Guid?>("AccountId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("AccountId");
 
                     b.Property<string>("Address")
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(300);
 
-                    b.Property<Guid?>("AgentId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("AgentId");
 
                     b.Property<decimal>("Area")
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<int?>("Bathrooms")
-                        .HasColumnType("INTEGER");
+                    b.Property<int?>("Bathrooms");
 
-                    b.Property<int?>("Bedrooms")
-                        .HasColumnType("INTEGER");
+                    b.Property<int?>("Bedrooms");
 
                     b.Property<string>("City")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
-                    b.Property<string>("CommissionType")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("CommissionType");
 
                     b.Property<decimal?>("CommissionValue")
-                        .HasColumnType("TEXT");
+                        .HasPrecision(18, 4);
 
-                    b.Property<Guid>("CompanyId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("CompanyId");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<Guid?>("CreatedByCompanyId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("CreatedByCompanyId");
 
                     b.Property<string>("CreatedByRole")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("CreatedByUserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<string>("Currency")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(10)
-                        .HasColumnType("TEXT")
                         .HasDefaultValue("SYP");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(3000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(3000);
 
-                    b.Property<string>("Features")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Features");
 
-                    b.Property<string>("Floor")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Floor");
 
-                    b.Property<int?>("HallsCount")
-                        .HasColumnType("INTEGER");
+                    b.Property<int?>("HallsCount");
 
-                    b.Property<bool>("HasCommission")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("HasCommission");
 
-                    b.Property<int?>("InstallmentsCount")
-                        .HasColumnType("INTEGER");
+                    b.Property<int?>("InstallmentsCount");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsDeleted");
 
-                    b.Property<double?>("Latitude")
-                        .HasColumnType("REAL");
+                    b.Property<double?>("Latitude");
 
                     b.Property<string>("ListingType")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
-                    b.Property<double?>("Longitude")
-                        .HasColumnType("REAL");
+                    b.Property<double?>("Longitude");
 
                     b.Property<string>("Neighborhood")
-                        .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(150);
 
-                    b.Property<string>("OwnerId")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("OwnerId");
 
-                    b.Property<string>("OwnershipType")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("OwnershipType");
 
                     b.Property<string>("PaymentType")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("PropertyAge")
-                        .HasColumnType("INTEGER");
+                    b.Property<int?>("PropertyAge");
 
-                    b.Property<string>("Province")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("Province");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(300);
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<string>("VideoUrl")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("VideoUrl");
 
-                    b.Property<int>("ViewCount")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("ViewCount");
 
                     b.HasKey("Id");
 
@@ -1490,41 +1181,33 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.PropertyAmenity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("GroupAr")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT")
                         .HasDefaultValue("");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
                     b.Property<string>("Key")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
                     b.Property<string>("Label")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<int>("Order")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(0);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1540,11 +1223,9 @@ namespace Boioot.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Boioot.Domain.Entities.PropertyAmenitySelection", b =>
                 {
-                    b.Property<Guid>("PropertyId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("PropertyId");
 
-                    b.Property<Guid>("AmenityId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("AmenityId");
 
                     b.HasKey("PropertyId", "AmenityId");
 
@@ -1558,28 +1239,21 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.PropertyImage", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsPrimary");
 
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("Order");
 
-                    b.Property<Guid>("PropertyId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("PropertyId");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1591,34 +1265,27 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.PropertyListingType", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 
                     b.Property<string>("Label")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<int>("Order")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
                         .HasDefaultValue(0);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.Property<string>("Value")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
                     b.HasKey("Id");
 
@@ -1631,32 +1298,24 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.PropertyTypeConfig", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Icon")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
                     b.Property<string>("Label")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("Order");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.Property<string>("Value")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                        .IsRequired();
 
                     b.HasKey("Id");
 
@@ -1666,19 +1325,15 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.RbacPermission", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Key")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1691,19 +1346,15 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.RbacRole", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(100);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1715,11 +1366,9 @@ namespace Boioot.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Boioot.Domain.Entities.RbacRolePermission", b =>
                 {
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("RoleId");
 
-                    b.Property<Guid>("PermissionId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("PermissionId");
 
                     b.HasKey("RoleId", "PermissionId");
 
@@ -1730,11 +1379,9 @@ namespace Boioot.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Boioot.Domain.Entities.RbacUserRole", b =>
                 {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("UserId");
 
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("RoleId");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -1746,46 +1393,35 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Request", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<string>("Message")
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(2000);
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<string>("Phone")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<Guid?>("ProjectId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("ProjectId");
 
-                    b.Property<Guid?>("PropertyId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("PropertyId");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("UserId");
 
                     b.HasKey("Id");
 
@@ -1805,32 +1441,24 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Review", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
                     b.Property<string>("Comment")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(1000);
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<int>("Rating")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("Rating");
 
-                    b.Property<Guid>("ReviewerId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("ReviewerId");
 
-                    b.Property<Guid>("TargetId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("TargetId");
 
                     b.Property<string>("TargetType")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1847,44 +1475,32 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.Subscription", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<Guid>("AccountId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("AccountId");
 
-                    b.Property<bool>("AutoRenew")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("AutoRenew");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("EndDate");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
                     b.Property<string>("PaymentRef")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
-                    b.Property<Guid>("PlanId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("PlanId");
 
-                    b.Property<Guid?>("PricingId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("PricingId");
 
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("StartDate");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.HasKey("Id");
 
@@ -1904,94 +1520,70 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.SubscriptionPaymentRequest", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<Guid>("AccountId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("AccountId");
 
-                    b.Property<DateTime?>("ActivatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("ActivatedAt");
 
                     b.Property<decimal>("Amount")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("TEXT");
+                        .HasPrecision(18, 4);
 
                     b.Property<string>("BillingCycle")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(20);
 
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("CompletedAt");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Currency")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(10);
 
                     b.Property<string>("CustomerNote")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(1000);
 
                     b.Property<string>("ExternalPaymentReference")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
                     b.Property<string>("PaymentFlowType")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(20);
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
                     b.Property<string>("ReceiptFileName")
-                        .HasMaxLength(300)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(300);
 
                     b.Property<string>("ReceiptImageUrl")
-                        .HasMaxLength(2000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(2000);
 
-                    b.Property<Guid>("RequestedPlanId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("RequestedPlanId");
 
-                    b.Property<Guid?>("RequestedPricingId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("RequestedPricingId");
 
                     b.Property<string>("ReviewNote")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(1000);
 
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime?>("ReviewedAt");
 
-                    b.Property<Guid?>("ReviewedByUserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("ReviewedByUserId");
 
-                    b.Property<Guid?>("SalesRepresentativeId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid?>("SalesRepresentativeId");
 
                     b.Property<string>("SalesRepresentativeName")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                    b.Property<Guid>("UserId");
 
                     b.HasKey("Id");
 
@@ -2013,55 +1605,42 @@ namespace Boioot.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Boioot.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("CreatedAt");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(200);
 
                     b.Property<string>("FullName")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(150);
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsActive");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
+                    b.Property<bool>("IsDeleted");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(500);
 
                     b.Property<string>("Phone")
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(30);
 
-                    b.Property<string>("ProfileImageUrl")
-                        .HasColumnType("TEXT");
+                    b.Property<string>("ProfileImageUrl");
 
                     b.Property<string>("Role")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(50);
 
-                    b.Property<int>("TrialListingsUsed")
-                        .HasColumnType("INTEGER");
+                    b.Property<int>("TrialListingsUsed");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
+                    b.Property<DateTime>("UpdatedAt");
 
                     b.Property<string>("UserCode")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
+                        .HasMaxLength(20);
 
                     b.HasKey("Id");
 

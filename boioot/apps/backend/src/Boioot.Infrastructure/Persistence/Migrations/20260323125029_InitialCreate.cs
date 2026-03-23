@@ -10,14 +10,28 @@ namespace Boioot.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterColumn<bool>(
-                name: "IsRead",
-                table: "Notifications",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false,
-                oldClrType: typeof(bool),
-                oldType: "INTEGER");
+            // AlterColumn for IsRead: adds DEFAULT false on SQLite; SQL Server uses BIT default.
+            // Provider-conditional to avoid embedding SQLite type strings on SQL Server.
+            if (ActiveProvider == "Microsoft.EntityFrameworkCore.Sqlite")
+            {
+                migrationBuilder.AlterColumn<bool>(
+                    name: "IsRead",
+                    table: "Notifications",
+                    type: "INTEGER",
+                    nullable: false,
+                    defaultValue: false,
+                    oldClrType: typeof(bool),
+                    oldType: "INTEGER");
+            }
+            else
+            {
+                migrationBuilder.AlterColumn<bool>(
+                    name: "IsRead",
+                    table: "Notifications",
+                    nullable: false,
+                    defaultValue: false,
+                    oldClrType: typeof(bool));
+            }
 
             // Cross-provider index creation:
             // SQLite — use IF NOT EXISTS because old EnsureCreated() runs may have
@@ -56,14 +70,26 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 name: "IX_Notifications_UserId_IsRead",
                 table: "Notifications");
 
-            migrationBuilder.AlterColumn<bool>(
-                name: "IsRead",
-                table: "Notifications",
-                type: "INTEGER",
-                nullable: false,
-                oldClrType: typeof(bool),
-                oldType: "INTEGER",
-                oldDefaultValue: false);
+            if (ActiveProvider == "Microsoft.EntityFrameworkCore.Sqlite")
+            {
+                migrationBuilder.AlterColumn<bool>(
+                    name: "IsRead",
+                    table: "Notifications",
+                    type: "INTEGER",
+                    nullable: false,
+                    oldClrType: typeof(bool),
+                    oldType: "INTEGER",
+                    oldDefaultValue: false);
+            }
+            else
+            {
+                migrationBuilder.AlterColumn<bool>(
+                    name: "IsRead",
+                    table: "Notifications",
+                    nullable: false,
+                    oldClrType: typeof(bool),
+                    oldDefaultValue: false);
+            }
         }
     }
 }
