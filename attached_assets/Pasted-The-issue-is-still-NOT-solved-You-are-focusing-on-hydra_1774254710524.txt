@@ -1,0 +1,85 @@
+The issue is still NOT solved.
+
+You are focusing on hydration/mounted logic, but the actual error shown in the overlay is still a JSX syntax/render error in:
+
+src/components/layout/MainHeader.tsx
+
+The error keeps pointing directly to the CTA buttons block at the <button> line.
+
+==================================================
+IMPORTANT
+==================================================
+
+Stop treating this as primarily a hydration issue.
+
+The root issue is still broken JSX structure in MainHeader around the CTA buttons section.
+
+Hydration mismatch is likely only a secondary symptom.
+
+==================================================
+TASK 1 — REWRITE THE CTA BLOCK COMPLETELY
+==================================================
+
+Do not patch the existing block line-by-line.
+
+Fully rewrite the entire CTA buttons section in MainHeader.tsx with clean valid JSX.
+
+Use this exact safe structure:
+
+<div className="cta-buttons">
+  <button
+    type="button"
+    onClick={() => guardHref("/post-ad")}
+    className="home-cta-primary"
+  >
+    + أضف إعلان
+  </button>
+
+  <button
+    type="button"
+    onClick={() => guardHref("/post-request")}
+    className="home-cta-secondary"
+  >
+    + أضف طلب
+  </button>
+</div>
+
+==================================================
+TASK 2 — VERIFY THE SURROUNDING JSX
+==================================================
+
+Inspect the code immediately before and after this block.
+
+Check for:
+- missing closing tags
+- broken fragments
+- missing parentheses in return
+- broken conditional rendering
+- duplicated or half-deleted button markup
+- invalid nesting
+
+Especially inspect 20 lines before and 20 lines after the CTA block.
+
+==================================================
+TASK 3 — IF NEEDED, REWRITE THE WHOLE RETURN SECTION
+==================================================
+
+If the surrounding JSX is messy, rewrite the whole relevant return block in MainHeader to a clean stable structure instead of trying to patch individual lines.
+
+==================================================
+TASK 4 — ONLY AFTER JSX IS CLEAN
+==================================================
+
+Then check whether any hydration warning still exists.
+
+If hydration warning disappears after JSX cleanup, confirm that JSX was the real root cause.
+
+==================================================
+DELIVERABLE
+==================================================
+
+Provide:
+1) the exact root cause
+2) whether the issue was JSX or hydration
+3) what block you rewrote
+4) confirmation that MainHeader now compiles without error

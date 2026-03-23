@@ -42,93 +42,99 @@ export default function PropertyCard({ property, initialIsFavorited = false }: P
   }
 
   return (
-    <Link href={`/properties/${property.id}`} style={{ textDecoration: "none" }}>
-      <article className="card property-card">
-        <div style={{ position: "relative" }}>
-          {mainImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={mainImage.imageUrl}
-              alt={property.title}
-              className="property-card__img"
-            />
-          ) : (
-            <div className="property-card__img-placeholder">🏠</div>
-          )}
-
-          {/* Heart button */}
-          <button
-            onClick={handleFavorite}
-            title={isFavorited ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
-            style={{
-              position: "absolute",
-              top: "0.55rem",
-              left: "0.55rem",
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              backgroundColor: "rgba(255,255,255,0.92)",
-              border: "none",
-              cursor: toggling ? "wait" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
-              transition: "transform 0.15s",
-              zIndex: 1,
-            }}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill={isFavorited ? "#ef4444" : "none"}
-              stroke={isFavorited ? "#ef4444" : "#94a3b8"}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="property-card__body">
-          <h3 className="property-card__title">{property.title}</h3>
-          <p className="property-card__price">{formatPrice(property.price, property.currency)}</p>
-          {property.description && (
-            <p style={{
-              fontSize: "0.8rem",
-              color: "var(--color-text-secondary)",
-              margin: "0.25rem 0 0.4rem",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              lineHeight: 1.5,
-            }}>
-              {property.description}
-            </p>
-          )}
-          <p className="property-card__city">📍 {property.city}</p>
-
-          <div className="property-card__tags">
-            {property.listingType && (
-              <span className="badge badge-green">
-                {LISTING_TYPE_LABELS[property.listingType] ?? property.listingType}
-              </span>
-            )}
-            {property.type && (
-              <span className="badge badge-gray">
-                {PROPERTY_TYPE_LABELS[property.type] ?? property.type}
-              </span>
-            )}
-            {property.area > 0 && (
-              <span className="badge badge-blue">{property.area} م²</span>
+    <div style={{ position: "relative" }}>
+      <Link
+        href={`/properties/${property.id}`}
+        style={{ textDecoration: "none", display: "block" }}
+      >
+        <article className="card property-card">
+          <div style={{ position: "relative" }}>
+            {mainImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mainImage.imageUrl}
+                alt={property.title}
+                className="property-card__img"
+              />
+            ) : (
+              <div className="property-card__img-placeholder">🏠</div>
             )}
           </div>
-        </div>
-      </article>
-    </Link>
+
+          <div className="property-card__body">
+            <h3 className="property-card__title">{property.title}</h3>
+            <p className="property-card__price">{formatPrice(property.price, property.currency)}</p>
+            {property.description && (
+              <p style={{
+                fontSize: "0.8rem",
+                color: "var(--color-text-secondary)",
+                margin: "0.25rem 0 0.4rem",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+                lineHeight: 1.5,
+              }}>
+                {property.description}
+              </p>
+            )}
+            <p className="property-card__city">📍 {property.city}</p>
+
+            <div className="property-card__tags">
+              {property.listingType && (
+                <span className="badge badge-green">
+                  {LISTING_TYPE_LABELS[property.listingType] ?? property.listingType}
+                </span>
+              )}
+              {property.type && (
+                <span className="badge badge-gray">
+                  {PROPERTY_TYPE_LABELS[property.type] ?? property.type}
+                </span>
+              )}
+              {property.area > 0 && (
+                <span className="badge badge-blue">{property.area} م²</span>
+              )}
+            </div>
+          </div>
+        </article>
+      </Link>
+
+      {/* Heart button — outside <Link> (<a>) to satisfy HTML5 interactive-content rule */}
+      <button
+        type="button"
+        onClick={handleFavorite}
+        title={isFavorited ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+        style={{
+          position: "absolute",
+          top: "0.55rem",
+          left: "0.55rem",
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          backgroundColor: "rgba(255,255,255,0.92)",
+          border: "none",
+          cursor: toggling ? "wait" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+          transition: "transform 0.15s",
+          zIndex: 2,
+        }}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill={isFavorited ? "#ef4444" : "none"}
+          stroke={isFavorited ? "#ef4444" : "#94a3b8"}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        </svg>
+      </button>
+    </div>
   );
 }

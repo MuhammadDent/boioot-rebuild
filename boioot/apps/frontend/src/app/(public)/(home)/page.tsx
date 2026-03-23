@@ -425,7 +425,11 @@ export default function HomePage() {
       {/* ── SEARCH BAR ───────────────────────────────────────────────────────── */}
       <div style={{ background: "#fff", borderBottom: "1px solid var(--color-border)", padding: "0.75rem 1.25rem" }}>
         <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", position: "relative" }}>
-          <input type="text" placeholder="ابحث في جميع الإعلانات..." value={search}
+          <input
+            suppressHydrationWarning
+            type="text"
+            placeholder="ابحث في جميع الإعلانات..."
+            value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ width: "100%", padding: "0.75rem 3rem 0.75rem 1rem", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: "0.97rem", fontFamily: "var(--font-arabic)", outline: "none", background: "#fafafa" }}
           />
