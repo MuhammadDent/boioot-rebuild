@@ -71,10 +71,10 @@ public class PropertyService : IPropertyService
             .FirstOrDefaultAsync(p => p.Id == id && p.Status != PropertyStatus.Inactive, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
 
-        // Increment view counter — parameterized to avoid string interpolation in SQL
-        await _context.Database.ExecuteSqlRawAsync(
-            "UPDATE Properties SET ViewCount = COALESCE(ViewCount, 0) + 1 WHERE Id = {0}",
-            id.ToString("D"));
+        // Atomic view counter increment — portable EF bulk update (no round-trip load)
+        await _context.Properties
+            .Where(p => p.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.ViewCount, p => p.ViewCount + 1), ct);
         property.ViewCount++;
 
         var response = MapToResponse(property);
@@ -584,9 +584,10 @@ public class PropertyService : IPropertyService
         // does not advance the counter. The counter is never decremented.
         if (userRole == RoleNames.User)
         {
-            await _context.Database.ExecuteSqlRawAsync(
-                "UPDATE Users SET TrialListingsUsed = TrialListingsUsed + 1 WHERE Id = {0}",
-                userId.ToString());
+            // Atomic counter increment — portable EF bulk update (no round-trip load)
+            await _context.Users
+                .Where(u => u.Id == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.TrialListingsUsed, u => u.TrialListingsUsed + 1), ct);
         }
 
         // Save images

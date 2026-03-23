@@ -136,24 +136,38 @@ public sealed class PlanCatalogSeeder
             _log.LogInformation("Seeded {Count} new FeatureDefinitions.", newFDs.Count);
         }
 
-        // Apply group + icon corrections (idempotent — runs every startup).
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE FeatureDefinitions SET FeatureGroup = 'marketing'     WHERE Key IN ('featured_listings', 'verified_badge', 'homepage_exposure');
-            UPDATE FeatureDefinitions SET FeatureGroup = 'content'       WHERE Key IN ('video_upload', 'multiple_photos');
-            UPDATE FeatureDefinitions SET FeatureGroup = 'business'      WHERE Key IN ('analytics_dashboard', 'project_management');
-            UPDATE FeatureDefinitions SET FeatureGroup = 'communication' WHERE Key = 'whatsapp_contact';
-            UPDATE FeatureDefinitions SET FeatureGroup = 'support'       WHERE Key = 'priority_support'", ct);
-
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE FeatureDefinitions SET Icon = '📊' WHERE Key = 'analytics_dashboard';
-            UPDATE FeatureDefinitions SET Icon = '🛠' WHERE Key = 'priority_support';
-            UPDATE FeatureDefinitions SET Icon = '⭐' WHERE Key = 'featured_listings';
-            UPDATE FeatureDefinitions SET Icon = '🏗' WHERE Key = 'project_management';
-            UPDATE FeatureDefinitions SET Icon = '🎥' WHERE Key = 'video_upload';
-            UPDATE FeatureDefinitions SET Icon = '📸' WHERE Key = 'multiple_photos';
-            UPDATE FeatureDefinitions SET Icon = '💬' WHERE Key = 'whatsapp_contact';
-            UPDATE FeatureDefinitions SET Icon = '✅' WHERE Key = 'verified_badge';
-            UPDATE FeatureDefinitions SET Icon = '🏠' WHERE Key = 'homepage_exposure'", ct);
+        // Apply group + icon corrections (idempotent — runs every startup, portable EF update).
+        var fds = await _ctx.FeatureDefinitions.ToListAsync(ct);
+        var fdGroupMap = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["featured_listings"]   = "marketing",
+            ["verified_badge"]      = "marketing",
+            ["homepage_exposure"]   = "marketing",
+            ["video_upload"]        = "content",
+            ["multiple_photos"]     = "content",
+            ["analytics_dashboard"] = "business",
+            ["project_management"]  = "business",
+            ["whatsapp_contact"]    = "communication",
+            ["priority_support"]    = "support",
+        };
+        var fdIconMap = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["analytics_dashboard"] = "📊",
+            ["priority_support"]    = "🛠",
+            ["featured_listings"]   = "⭐",
+            ["project_management"]  = "🏗",
+            ["video_upload"]        = "🎥",
+            ["multiple_photos"]     = "📸",
+            ["whatsapp_contact"]    = "💬",
+            ["verified_badge"]      = "✅",
+            ["homepage_exposure"]   = "🏠",
+        };
+        foreach (var fd in fds)
+        {
+            if (fdGroupMap.TryGetValue(fd.Key, out var group)) fd.FeatureGroup = group;
+            if (fdIconMap.TryGetValue(fd.Key, out var icon))   fd.Icon         = icon;
+        }
+        await _ctx.SaveChangesAsync(ct);
     }
 
     private static FeatureDefinition FD(string id, string key, string name,
@@ -226,11 +240,20 @@ public sealed class PlanCatalogSeeder
             _log.LogInformation("Seeded {Count} new PlanFeatures.", newPFs.Count);
         }
 
-        // Apply IsEnabled corrections (idempotent).
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE PlanFeatures SET IsEnabled = 1 WHERE Id = 'ce000001-0000-0000-0000-000000000000';
-            UPDATE PlanFeatures SET IsEnabled = 1 WHERE Id = 'ce000004-0000-0000-0000-000000000000';
-            UPDATE PlanFeatures SET IsEnabled = 0 WHERE Id = 'ce000006-0000-0000-0000-000000000000'", ct);
+        // Apply IsEnabled corrections (idempotent, portable EF change tracker).
+        var pfCorrections = new Dictionary<Guid, bool>
+        {
+            [Guid.Parse("ce000001-0000-0000-0000-000000000000")] = true,
+            [Guid.Parse("ce000004-0000-0000-0000-000000000000")] = true,
+            [Guid.Parse("ce000006-0000-0000-0000-000000000000")] = false,
+        };
+        var pfIds = pfCorrections.Keys.ToList();
+        var pfsToFix = await _ctx.PlanFeatures
+            .Where(pf => pfIds.Contains(pf.Id))
+            .ToListAsync(ct);
+        foreach (var pf in pfsToFix)
+            pf.IsEnabled = pfCorrections[pf.Id];
+        await _ctx.SaveChangesAsync(ct);
     }
 
     private static List<PlanFeature> BuildPlanFeatureCatalog()
@@ -503,93 +526,119 @@ public sealed class PlanCatalogSeeder
         };
     }
 
-    // ── Plan data corrections (idempotent UPDATEs) ────────────────────────────
+    // ── Plan data corrections (idempotent, portable EF change tracker) ──────────
 
     private async Task ApplyPlanCorrectionsAsync(CancellationToken ct)
     {
-        // Descriptions and metadata
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE Plans SET
-                ImageLimitPerListing  = 5,  VideoAllowed = 0, AnalyticsAccess = 0,
-                Description           = 'للمستخدمين الأفراد الذين يرغبون في نشر إعلانات محدودة',
-                ApplicableAccountType = 'Individual',
-                Features              = '[""2 إعلانات شهرياً"",""5 صور لكل إعلان"",""بحث وتصفح عادي""]'
-            WHERE Id = '00000001-0000-0000-0000-000000000000'", ct);
+        var allPlanIds = new List<Guid>
+        {
+            Guid.Parse("00000001-0000-0000-0000-000000000000"),
+            Guid.Parse("00000002-0000-0000-0000-000000000000"),
+            Guid.Parse("00000003-0000-0000-0000-000000000000"),
+            Guid.Parse("00000004-0000-0000-0000-000000000000"),
+            Guid.Parse("00000005-0000-0000-0000-000000000000"),
+            Guid.Parse("00000006-0000-0000-0000-000000000000"),
+            Guid.Parse("00000007-0000-0000-0000-000000000000"),
+            Guid.Parse("00000008-0000-0000-0000-000000000000"),
+            Guid.Parse("00000009-0000-0000-0000-000000000000"),
+            Guid.Parse("0000000a-0000-0000-0000-000000000000"),
+            Guid.Parse("0000000b-0000-0000-0000-000000000000"),
+        };
 
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE Plans SET
-                ImageLimitPerListing  = 10, VideoAllowed = 0, AnalyticsAccess = 0,
-                Description           = 'للمكاتب العقارية الصغيرة والوسيطة',
-                ApplicableAccountType = 'Office',
-                Features              = '[""5 إعلانات شهرياً"",""10 صور لكل إعلان"",""3 وكلاء"",""إعلان مميز واحد"",""دعم فني""]'
-            WHERE Id = '00000002-0000-0000-0000-000000000000'", ct);
+        var plans = await _ctx.Plans
+            .IgnoreQueryFilters()
+            .Where(p => allPlanIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, ct);
 
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE Plans SET
-                ImageLimitPerListing  = 20, VideoAllowed = 1, AnalyticsAccess = 1,
-                Description           = 'للمكاتب والشركات العقارية المتوسطة والكبيرة',
-                ApplicableAccountType = NULL,
-                Features              = '[""20 إعلاناً شهرياً"",""20 صورة لكل إعلان"",""رفع فيديو"",""10 وكلاء"",""5 إعلانات مميزة"",""لوحة إحصائيات"",""2 مشروع""]'
-            WHERE Id = '00000003-0000-0000-0000-000000000000'", ct);
+        void Apply(string id, Action<Plan> mutate)
+        {
+            if (plans.TryGetValue(Guid.Parse(id), out var plan)) mutate(plan);
+        }
 
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE Plans SET
-                ImageLimitPerListing  = -1, VideoAllowed = 1, AnalyticsAccess = 1,
-                Description           = 'للشركات الكبرى وشركات التطوير العقاري',
-                ApplicableAccountType = 'Company',
-                Features              = '[""إعلانات غير محدودة"",""صور غير محدودة"",""رفع فيديو"",""وكلاء غير محدودون"",""إعلانات مميزة 20"",""لوحة إحصائيات متقدمة"",""مشاريع غير محدودة"",""دعم أولوية""]'
-            WHERE Id = '00000004-0000-0000-0000-000000000000'", ct);
+        // ── Metadata descriptions ─────────────────────────────────────────────
+        Apply("00000001-0000-0000-0000-000000000000", p =>
+        {
+            p.ImageLimitPerListing  = 5;  p.VideoAllowed = false; p.AnalyticsAccess = false;
+            p.Description           = "للمستخدمين الأفراد الذين يرغبون في نشر إعلانات محدودة";
+            p.ApplicableAccountType = AccountType.Individual;
+            p.Features              = "[\"2 إعلانات شهرياً\",\"5 صور لكل إعلان\",\"بحث وتصفح عادي\"]";
+        });
+        Apply("00000002-0000-0000-0000-000000000000", p =>
+        {
+            p.ImageLimitPerListing  = 10; p.VideoAllowed = false; p.AnalyticsAccess = false;
+            p.Description           = "للمكاتب العقارية الصغيرة والوسيطة";
+            p.ApplicableAccountType = AccountType.Office;
+            p.Features              = "[\"5 إعلانات شهرياً\",\"10 صور لكل إعلان\",\"3 وكلاء\",\"إعلان مميز واحد\",\"دعم فني\"]";
+        });
+        Apply("00000003-0000-0000-0000-000000000000", p =>
+        {
+            p.ImageLimitPerListing  = 20; p.VideoAllowed = true; p.AnalyticsAccess = true;
+            p.Description           = "للمكاتب والشركات العقارية المتوسطة والكبيرة";
+            p.ApplicableAccountType = null;
+            p.Features              = "[\"20 إعلاناً شهرياً\",\"20 صورة لكل إعلان\",\"رفع فيديو\",\"10 وكلاء\",\"5 إعلانات مميزة\",\"لوحة إحصائيات\",\"2 مشروع\"]";
+        });
+        Apply("00000004-0000-0000-0000-000000000000", p =>
+        {
+            p.ImageLimitPerListing  = -1; p.VideoAllowed = true; p.AnalyticsAccess = true;
+            p.Description           = "للشركات الكبرى وشركات التطوير العقاري";
+            p.ApplicableAccountType = AccountType.Company;
+            p.Features              = "[\"إعلانات غير محدودة\",\"صور غير محدودة\",\"رفع فيديو\",\"وكلاء غير محدودون\",\"إعلانات مميزة 20\",\"لوحة إحصائيات متقدمة\",\"مشاريع غير محدودة\",\"دعم أولوية\"]";
+        });
+        Apply("0000000a-0000-0000-0000-000000000000", p =>
+        {
+            p.ImageLimitPerListing = 30; p.VideoAllowed = true; p.AnalyticsAccess = true;
+            p.Description          = "لشركات التطوير العقاري الناشئة — مشاريع متعددة وفرق عمل";
+        });
+        Apply("0000000b-0000-0000-0000-000000000000", p =>
+        {
+            p.ImageLimitPerListing = -1;  p.VideoAllowed = true; p.AnalyticsAccess = true;
+            p.IsRecommended        = true;
+            p.Description          = "لكبرى شركات التطوير العقاري — طاقة غير محدودة ودعم أولوية";
+        });
 
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE Plans SET
-                ImageLimitPerListing = 30, VideoAllowed = 1, AnalyticsAccess = 1,
-                Description = 'لشركات التطوير العقاري الناشئة — مشاريع متعددة وفرق عمل'
-            WHERE Id = '0000000a-0000-0000-0000-000000000000';
-            UPDATE Plans SET
-                ImageLimitPerListing = -1, VideoAllowed = 1, AnalyticsAccess = 1, IsRecommended = 1,
-                Description = 'لكبرى شركات التطوير العقاري — طاقة غير محدودة ودعم أولوية'
-            WHERE Id = '0000000b-0000-0000-0000-000000000000'", ct);
+        // ── Name corrections ──────────────────────────────────────────────────
+        Apply("00000006-0000-0000-0000-000000000000", p => { if (p.Name == "AgentPro")       p.Name = "BrokerPro"; });
+        Apply("00000007-0000-0000-0000-000000000000", p => { if (p.Name == "AgentPremium")   p.Name = "BrokerPremium"; });
+        Apply("00000009-0000-0000-0000-000000000000", p => { if (p.Name == "BusinessGrowth") p.Name = "OfficeGrowth"; });
 
-        // Name corrections (idempotent)
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE Plans SET Name = 'BrokerPro'     WHERE Id = '00000006-0000-0000-0000-000000000000' AND Name = 'AgentPro';
-            UPDATE Plans SET Name = 'BrokerPremium' WHERE Id = '00000007-0000-0000-0000-000000000000' AND Name = 'AgentPremium';
-            UPDATE Plans SET Name = 'OfficeGrowth'  WHERE Id = '00000009-0000-0000-0000-000000000000' AND Name = 'BusinessGrowth'", ct);
+        // ── ApplicableAccountType corrections ─────────────────────────────────
+        Apply("00000006-0000-0000-0000-000000000000", p => p.ApplicableAccountType = AccountType.Individual);
+        Apply("00000007-0000-0000-0000-000000000000", p => p.ApplicableAccountType = AccountType.Individual);
+        Apply("00000008-0000-0000-0000-000000000000", p => p.ApplicableAccountType = AccountType.Office);
+        Apply("00000009-0000-0000-0000-000000000000", p => p.ApplicableAccountType = AccountType.Office);
 
-        // ApplicableAccountType corrections
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE Plans SET ApplicableAccountType = 'Individual' WHERE Id = '00000006-0000-0000-0000-000000000000';
-            UPDATE Plans SET ApplicableAccountType = 'Individual' WHERE Id = '00000007-0000-0000-0000-000000000000';
-            UPDATE Plans SET ApplicableAccountType = 'Office'     WHERE Id = '00000008-0000-0000-0000-000000000000';
-            UPDATE Plans SET ApplicableAccountType = 'Office'     WHERE Id = '00000009-0000-0000-0000-000000000000'", ct);
+        // ── Rank / DisplayOrder / PlanCategory ───────────────────────────────
+        Apply("00000001-0000-0000-0000-000000000000", p => { p.Rank =  0; p.DisplayOrder =  1; p.PlanCategory = "Individual"; });
+        Apply("00000002-0000-0000-0000-000000000000", p => { p.Rank =  1; p.DisplayOrder =  2; p.PlanCategory = "Individual"; });
+        Apply("00000003-0000-0000-0000-000000000000", p => { p.Rank =  2; p.DisplayOrder =  3; p.PlanCategory = "Individual"; });
+        Apply("00000004-0000-0000-0000-000000000000", p => { p.Rank =  3; p.DisplayOrder =  4; p.PlanCategory = "Individual"; });
+        Apply("00000005-0000-0000-0000-000000000000", p => { p.Rank = 10; p.DisplayOrder =  0; p.PlanCategory = "Business";   });
+        Apply("00000006-0000-0000-0000-000000000000", p => { p.Rank = 11; p.DisplayOrder =  1; p.PlanCategory = "Business";   });
+        Apply("00000007-0000-0000-0000-000000000000", p => { p.Rank = 12; p.DisplayOrder =  2; p.PlanCategory = "Business";   });
+        Apply("00000008-0000-0000-0000-000000000000", p => { p.Rank = 13; p.DisplayOrder =  3; p.PlanCategory = "Business";   });
+        Apply("00000009-0000-0000-0000-000000000000", p => { p.Rank = 14; p.DisplayOrder =  4; p.PlanCategory = "Business";   });
+        Apply("0000000a-0000-0000-0000-000000000000", p => { p.Rank = 15; p.DisplayOrder = 15; p.PlanCategory = "Business";   });
+        Apply("0000000b-0000-0000-0000-000000000000", p => { p.Rank = 16; p.DisplayOrder = 16; p.PlanCategory = "Business";   });
 
-        // Rank + DisplayOrder + PlanCategory (idempotent)
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE Plans SET Rank = 0,  DisplayOrder = 1,  PlanCategory = 'Individual' WHERE Id = '00000001-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 1,  DisplayOrder = 2,  PlanCategory = 'Individual' WHERE Id = '00000002-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 2,  DisplayOrder = 3,  PlanCategory = 'Individual' WHERE Id = '00000003-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 3,  DisplayOrder = 4,  PlanCategory = 'Individual' WHERE Id = '00000004-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 10, DisplayOrder = 0,  PlanCategory = 'Business'   WHERE Id = '00000005-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 11, DisplayOrder = 1,  PlanCategory = 'Business'   WHERE Id = '00000006-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 12, DisplayOrder = 2,  PlanCategory = 'Business'   WHERE Id = '00000007-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 13, DisplayOrder = 3,  PlanCategory = 'Business'   WHERE Id = '00000008-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 14, DisplayOrder = 4,  PlanCategory = 'Business'   WHERE Id = '00000009-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 15, DisplayOrder = 15, PlanCategory = 'Business'   WHERE Id = '0000000a-0000-0000-0000-000000000000';
-            UPDATE Plans SET Rank = 16, DisplayOrder = 16, PlanCategory = 'Business'   WHERE Id = '0000000b-0000-0000-0000-000000000000'", ct);
+        // ── Code seeds (only if not already set by an admin) ─────────────────
+        var codeMap = new Dictionary<string, string>
+        {
+            ["00000001-0000-0000-0000-000000000000"] = "free_user",
+            ["00000002-0000-0000-0000-000000000000"] = "silver",
+            ["00000003-0000-0000-0000-000000000000"] = "gold",
+            ["00000004-0000-0000-0000-000000000000"] = "platinum",
+            ["00000005-0000-0000-0000-000000000000"] = "owner_pro",
+            ["00000006-0000-0000-0000-000000000000"] = "broker_pro",
+            ["00000007-0000-0000-0000-000000000000"] = "broker_premium",
+            ["00000008-0000-0000-0000-000000000000"] = "office_starter",
+            ["00000009-0000-0000-0000-000000000000"] = "office_growth",
+            ["0000000a-0000-0000-0000-000000000000"] = "developer_business",
+            ["0000000b-0000-0000-0000-000000000000"] = "developer_premium",
+        };
+        foreach (var (id, code) in codeMap)
+            Apply(id, p => { if (string.IsNullOrEmpty(p.Code)) p.Code = code; });
 
-        // Code seeds (idempotent — SET NULL-safe because Code is nullable)
-        await _ctx.Database.ExecuteSqlRawAsync(@"
-            UPDATE Plans SET Code = 'free_user'          WHERE Id = '00000001-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'silver'             WHERE Id = '00000002-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'gold'               WHERE Id = '00000003-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'platinum'           WHERE Id = '00000004-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'owner_pro'          WHERE Id = '00000005-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'broker_pro'         WHERE Id = '00000006-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'broker_premium'     WHERE Id = '00000007-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'office_starter'     WHERE Id = '00000008-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'office_growth'      WHERE Id = '00000009-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'developer_business' WHERE Id = '0000000a-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '');
-            UPDATE Plans SET Code = 'developer_premium'  WHERE Id = '0000000b-0000-0000-0000-000000000000' AND (Code IS NULL OR Code = '')", ct);
+        await _ctx.SaveChangesAsync(ct);
     }
 
     // ── BlogSeoSettings (singleton) ───────────────────────────────────────────

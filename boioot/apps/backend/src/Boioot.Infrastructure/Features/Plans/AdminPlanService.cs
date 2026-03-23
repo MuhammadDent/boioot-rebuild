@@ -115,20 +115,20 @@ public class AdminPlanService : IAdminPlanService
     // ── GetPlanDetailAsync ────────────────────────────────────────────────────
     public async Task<PlanDetailResponse> GetPlanDetailAsync(Guid planId, CancellationToken ct = default)
     {
-        // ── Step 1: Purge orphaned junction rows (FK safety) ─────────────────
+        // ── Step 1: Purge orphaned junction rows (FK safety, portable EF delete) ────
         try
         {
-            await _db.Database.ExecuteSqlRawAsync(
-                @"DELETE FROM PlanFeatures
-                  WHERE SubscriptionPlanId = {0}
-                    AND FeatureDefinitionId NOT IN (SELECT Id FROM FeatureDefinitions)",
-                planId);
+            var validFdIds = await _db.Set<FeatureDefinition>()
+                .Select(fd => fd.Id).ToListAsync(ct);
+            await _db.Set<PlanFeature>()
+                .Where(pf => pf.SubscriptionPlanId == planId && !validFdIds.Contains(pf.FeatureDefinitionId))
+                .ExecuteDeleteAsync(ct);
 
-            await _db.Database.ExecuteSqlRawAsync(
-                @"DELETE FROM PlanLimits
-                  WHERE SubscriptionPlanId = {0}
-                    AND LimitDefinitionId NOT IN (SELECT Id FROM LimitDefinitions)",
-                planId);
+            var validLdIds = await _db.Set<LimitDefinition>()
+                .Select(ld => ld.Id).ToListAsync(ct);
+            await _db.Set<PlanLimit>()
+                .Where(pl => pl.SubscriptionPlanId == planId && !validLdIds.Contains(pl.LimitDefinitionId))
+                .ExecuteDeleteAsync(ct);
         }
         catch (Exception ex)
         {
@@ -428,29 +428,32 @@ public class AdminPlanService : IAdminPlanService
             .FirstOrDefaultAsync(ld => ld.Key == limitKey && ld.IsActive, ct)
             ?? throw new BoiootException($"تعريف الحد '{limitKey}' غير موجود", 404);
 
-        // IMPORTANT: Pass Guid as string ("D" format = lowercase-with-hyphens).
-        // ExecuteSqlRawAsync with a Guid sends DbType.Guid → binary blob in
-        // Microsoft.Data.Sqlite, but EF Core stores Guid columns as TEXT.
-        // Passing .ToString() forces a TEXT parameter that matches stored values.
-        string planIdStr   = planId.ToString("D");
-        string limitDefStr = limitDef.Id.ToString("D");
+        // Use EF change tracker for upsert — avoids the DbType.Guid → binary blob
+        // issue that affected ExecuteSqlRawAsync on Microsoft.Data.Sqlite.
+        // EF Core's own parameterization converts Guid to TEXT correctly.
+        var existing = await _db.Set<PlanLimit>()
+            .FirstOrDefaultAsync(pl => pl.SubscriptionPlanId == planId && pl.LimitDefinitionId == limitDef.Id, ct);
 
-        // Try UPDATE first — never reads PlanLimit.Id column
-        int affected = await _db.Database.ExecuteSqlRawAsync(
-            "UPDATE PlanLimits SET Value = {0} WHERE SubscriptionPlanId = {1} AND LimitDefinitionId = {2}",
-            (decimal)value, planIdStr, limitDefStr);
-
-        if (affected == 0)
+        bool inserted;
+        if (existing is not null)
         {
-            // Row doesn't exist yet — INSERT with all NOT NULL columns
-            var now = DateTime.UtcNow;
-            await _db.Database.ExecuteSqlRawAsync(
-                "INSERT INTO PlanLimits (Id, SubscriptionPlanId, LimitDefinitionId, Value, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3}, {4}, {5})",
-                Guid.NewGuid().ToString("D"), planIdStr, limitDefStr, (decimal)value, now, now);
+            existing.Value = value;
+            inserted = false;
         }
+        else
+        {
+            _db.Set<PlanLimit>().Add(new PlanLimit
+            {
+                SubscriptionPlanId = planId,
+                LimitDefinitionId  = limitDef.Id,
+                Value              = value,
+            });
+            inserted = true;
+        }
+        await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation("SetLimit: plan={PlanId} key={Key} value={Value} (op={N})",
-            planId, limitKey, value, affected == 0 ? "inserted" : "updated");
+            planId, limitKey, value, inserted ? "inserted" : "updated");
 
         return new PlanLimitItem
         {
@@ -463,8 +466,6 @@ public class AdminPlanService : IAdminPlanService
     }
 
     // ── SetFeatureAsync ───────────────────────────────────────────────────────
-    // SAFE: uses raw SQL UPDATE/INSERT to avoid EF materialising PlanFeature.Id.
-    // Same root cause as SetLimitAsync — see comment above.
     public async Task<PlanFeatureItem> SetFeatureAsync(
         Guid planId, string featureKey, bool isEnabled, CancellationToken ct = default)
     {
@@ -478,31 +479,31 @@ public class AdminPlanService : IAdminPlanService
             .FirstOrDefaultAsync(fd => fd.Key == featureKey && fd.IsActive, ct)
             ?? throw new BoiootException($"تعريف الميزة '{featureKey}' غير موجود", 404);
 
-        // SQLite stores bool as 0/1
-        int boolVal = isEnabled ? 1 : 0;
+        // Use EF change tracker for upsert — avoids the DbType.Guid → binary blob
+        // issue that affected ExecuteSqlRawAsync on Microsoft.Data.Sqlite.
+        var existing = await _db.Set<PlanFeature>()
+            .FirstOrDefaultAsync(pf => pf.SubscriptionPlanId == planId && pf.FeatureDefinitionId == featureDef.Id, ct);
 
-        // IMPORTANT: Pass Guid as string ("D" format = lowercase-with-hyphens).
-        // Same reason as SetLimitAsync — DbType.Guid sends binary blob, but EF
-        // Core stores Guid columns as TEXT in SQLite. Must use .ToString("D").
-        string planIdStr      = planId.ToString("D");
-        string featureDefStr  = featureDef.Id.ToString("D");
-
-        // Try UPDATE first — never reads PlanFeature.Id column
-        int affected = await _db.Database.ExecuteSqlRawAsync(
-            "UPDATE PlanFeatures SET IsEnabled = {0} WHERE SubscriptionPlanId = {1} AND FeatureDefinitionId = {2}",
-            boolVal, planIdStr, featureDefStr);
-
-        if (affected == 0)
+        bool inserted;
+        if (existing is not null)
         {
-            // Row doesn't exist yet — INSERT with all NOT NULL columns
-            var now = DateTime.UtcNow;
-            await _db.Database.ExecuteSqlRawAsync(
-                "INSERT INTO PlanFeatures (Id, SubscriptionPlanId, FeatureDefinitionId, IsEnabled, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3}, {4}, {5})",
-                Guid.NewGuid().ToString("D"), planIdStr, featureDefStr, boolVal, now, now);
+            existing.IsEnabled = isEnabled;
+            inserted = false;
         }
+        else
+        {
+            _db.Set<PlanFeature>().Add(new PlanFeature
+            {
+                SubscriptionPlanId  = planId,
+                FeatureDefinitionId = featureDef.Id,
+                IsEnabled           = isEnabled,
+            });
+            inserted = true;
+        }
+        await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation("SetFeature: plan={PlanId} key={Key} enabled={IsEnabled} (op={N})",
-            planId, featureKey, isEnabled, affected == 0 ? "inserted" : "updated");
+            planId, featureKey, isEnabled, inserted ? "inserted" : "updated");
 
         return new PlanFeatureItem
         {
