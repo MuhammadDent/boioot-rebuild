@@ -501,7 +501,12 @@ export default function HomePage() {
 
           {/* قسم العقار */}
           <FilterSection label="قسم العقار">
-            <select value={draft.type} onChange={(e) => setDraftField("type", e.target.value)} style={selectStyle}>
+            <select
+              suppressHydrationWarning
+              value={draft.type}
+              onChange={(e) => setDraftField("type", e.target.value)}
+              style={selectStyle}
+            >
               <option value="">الكل</option>
               {Object.entries(PROPERTY_TYPE_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>{l}</option>
@@ -511,7 +516,12 @@ export default function HomePage() {
 
           {/* المدينة */}
           <FilterSection label="المدينة">
-            <select value={draft.city} onChange={(e) => { setDraftField("city", e.target.value); setDraftField("neighborhood", ""); }} style={selectStyle}>
+            <select
+              suppressHydrationWarning
+              value={draft.city}
+              onChange={(e) => { setDraftField("city", e.target.value); setDraftField("neighborhood", ""); }}
+              style={selectStyle}
+            >
               <option value="">الكل</option>
               {cities.map((c, i) => <option key={`city-${i}-${c}`} value={c}>{c}</option>)}
             </select>
@@ -520,6 +530,7 @@ export default function HomePage() {
           {/* الحي */}
           <FilterSection label="الحي">
             <select
+              suppressHydrationWarning
               value={draft.neighborhood}
               onChange={(e) => setDraftField("neighborhood", e.target.value)}
               disabled={!draft.city}
@@ -556,6 +567,7 @@ export default function HomePage() {
           {/* السعر */}
           <FilterSection label="السعر">
             <input
+              suppressHydrationWarning
               type="number"
               placeholder="السعر الأدنى"
               value={draft.minPrice}
@@ -564,6 +576,7 @@ export default function HomePage() {
               style={{ ...selectStyle, marginBottom: "0.4rem" }}
             />
             <input
+              suppressHydrationWarning
               type="number"
               placeholder="السعر الأقصى"
               value={draft.maxPrice}
