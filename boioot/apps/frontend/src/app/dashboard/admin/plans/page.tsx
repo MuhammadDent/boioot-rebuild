@@ -7,7 +7,7 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { adminApi } from "@/features/admin/api";
 import { normalizeError } from "@/lib/api";
-import type { AdminPlanDetail, AdminPlanPricingEntry, PlanLimitItem, PlanFeatureItem } from "@/types";
+import type { AdminPlanSummary, AdminPlanDetail, AdminPlanPricingEntry, PlanLimitItem, PlanFeatureItem } from "@/types";
 
 // ── Feature group labels ───────────────────────────────────────────────────────
 
@@ -551,7 +551,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   async function handleLimitChange(key: string, rawVal: string) {
     const planId = plan?.id;
     if (!planId) return;
-    const val = parseFloat(rawVal);
+    const val = parseInt(rawVal, 10);
     if (isNaN(val)) return;
     setLimitSaving(key); setError("");
     try {
@@ -989,7 +989,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
 export default function AdminPlansPage() {
   const { user, isLoading } = useProtectedRoute({ requiredPermission: "settings.manage" });
 
-  const [plans, setPlans]         = useState<AdminPlanDetail[]>([]);
+  const [plans, setPlans]         = useState<AdminPlanSummary[]>([]);
   const [fetching, setFetching]   = useState(true);
   const [fetchError, setFetchError] = useState("");
 
@@ -1009,7 +1009,7 @@ export default function AdminPlansPage() {
     setFetching(true); setFetchError("");
     try {
       const data = await adminApi.getPlans();
-      setPlans(data as AdminPlanDetail[]);
+      setPlans(data);
     } catch (e) { setFetchError(normalizeError(e)); }
     finally { setFetching(false); }
   }, []);
@@ -1123,11 +1123,45 @@ export default function AdminPlansPage() {
                   {yearlyPrice && <span style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>{yearlyPrice}</span>}
                 </div>
                 {plan.description && <p style={{ margin: "0 0 0.4rem", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{plan.description}</p>}
-                <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                <p style={{ margin: "0 0 0.35rem", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
                   ترتيب: {plan.displayOrder}
                   &nbsp;·&nbsp;رتبة: {plan.rank}
                   &nbsp;·&nbsp;{plan.billingMode === "InternalOnly" ? "داخلي" : plan.billingMode === "StripeOnly" ? "Stripe" : "هجين"}
                 </p>
+                {/* ── Key Commercial Data ── */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
+                  {plan.listingsLimit !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      🏠 {plan.listingsLimit === -1 ? "∞" : plan.listingsLimit} إعلان
+                    </span>
+                  )}
+                  {plan.agentsLimit !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      👤 {plan.agentsLimit === -1 ? "∞" : plan.agentsLimit} وكيل
+                    </span>
+                  )}
+                  {plan.projectsLimit !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      🏗 {plan.projectsLimit === -1 ? "∞" : plan.projectsLimit} مشروع
+                    </span>
+                  )}
+                  {plan.imagesPerListing !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      📸 {plan.imagesPerListing === -1 ? "∞" : plan.imagesPerListing} صورة
+                    </span>
+                  )}
+                  {plan.featuredSlots !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      ⭐ {plan.featuredSlots === -1 ? "∞" : plan.featuredSlots} مميز
+                    </span>
+                  )}
+                  {plan.hasAnalytics        && <span style={{ fontSize: "0.72rem", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#1d4ed8" }}>📊 تحليلات</span>}
+                  {plan.hasFeaturedListings && <span style={{ fontSize: "0.72rem", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#1d4ed8" }}>⭐ إعلانات مميزة</span>}
+                  {plan.hasProjectMgmt      && <span style={{ fontSize: "0.72rem", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#1d4ed8" }}>🏗 إدارة مشاريع</span>}
+                  {plan.hasWhatsApp         && <span style={{ fontSize: "0.72rem", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#15803d" }}>💬 واتساب</span>}
+                  {plan.hasVerifiedBadge    && <span style={{ fontSize: "0.72rem", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#15803d" }}>✅ شارة موثق</span>}
+                  {plan.hasPrioritySupport  && <span style={{ fontSize: "0.72rem", background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#7e22ce" }}>🛠 دعم أولوية</span>}
+                </div>
               </div>
               <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
                 <button

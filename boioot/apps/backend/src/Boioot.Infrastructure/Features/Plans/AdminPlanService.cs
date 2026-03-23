@@ -21,22 +21,27 @@ public class AdminPlanService : IAdminPlanService
     }
 
     // ── GetAllPlansAsync ──────────────────────────────────────────────────────
+    // Loads limits + features so MapToSummary can populate the denormalized
+    // commercial indicator fields (listingsLimit, hasAnalytics, etc.)
     public async Task<List<PlanSummaryResponse>> GetAllPlansAsync(CancellationToken ct = default)
     {
-        return await _db.Set<Plan>()
+        var plans = await _db.Set<Plan>()
             .IgnoreQueryFilters()
-            .OrderBy(p => p.CreatedAt)
-            .Select(p => MapToSummary(p))
+            .Include(p => p.PlanLimits)
+                .ThenInclude(pl => pl.LimitDefinition)
+            .Include(p => p.PlanFeatures)
+                .ThenInclude(pf => pf.FeatureDefinition)
+            .OrderBy(p => p.DisplayOrder)
+            .ThenBy(p => p.CreatedAt)
             .ToListAsync(ct);
+
+        return plans.Select(MapToSummary).ToList();
     }
 
     // ── GetPlanDetailAsync ────────────────────────────────────────────────────
     public async Task<PlanDetailResponse> GetPlanDetailAsync(Guid planId, CancellationToken ct = default)
     {
         // ── Step 1: Purge orphaned junction rows (FK safety) ─────────────────
-        // These can arise when seed data references FeatureDefinition/LimitDefinition
-        // IDs that were never inserted (INSERT OR IGNORE skipped them due to Key uniqueness).
-        // EF's change tracker turns orphaned rows into FK violations on SaveChanges.
         try
         {
             await _db.Database.ExecuteSqlRawAsync(
@@ -144,11 +149,9 @@ public class AdminPlanService : IAdminPlanService
             PlanCategory            = string.IsNullOrWhiteSpace(request.PlanCategory) ? null : request.PlanCategory.Trim(),
             BillingMode             = string.IsNullOrWhiteSpace(request.BillingMode)  ? "InternalOnly" : request.BillingMode.Trim(),
             IsActive                = true,
-            // Trial
             HasTrial                = request.HasTrial,
             TrialDays               = request.TrialDays,
             RequiresPaymentForTrial = request.RequiresPaymentForTrial,
-            // Business rules
             IsDefaultForNewUsers    = request.IsDefaultForNewUsers,
             AvailableForSelfSignup  = request.AvailableForSelfSignup,
             RequiresAdminApproval   = request.RequiresAdminApproval,
@@ -225,11 +228,9 @@ public class AdminPlanService : IAdminPlanService
         plan.BillingMode             = request.BillingMode;
         plan.BadgeText               = string.IsNullOrWhiteSpace(request.BadgeText) ? null : request.BadgeText.Trim();
         plan.PlanColor               = string.IsNullOrWhiteSpace(request.PlanColor)  ? null : request.PlanColor.Trim();
-        // Trial
         plan.HasTrial                = request.HasTrial;
         plan.TrialDays               = request.TrialDays;
         plan.RequiresPaymentForTrial = request.RequiresPaymentForTrial;
-        // Business rules
         plan.IsDefaultForNewUsers    = request.IsDefaultForNewUsers;
         plan.AvailableForSelfSignup  = request.AvailableForSelfSignup;
         plan.RequiresAdminApproval   = request.RequiresAdminApproval;
@@ -308,7 +309,6 @@ public class AdminPlanService : IAdminPlanService
         _db.Set<Plan>().Add(copy);
         await _db.SaveChangesAsync(ct);
 
-        // Copy limits
         foreach (var srcLimit in source.PlanLimits)
         {
             _db.Set<PlanLimit>().Add(new PlanLimit
@@ -319,7 +319,6 @@ public class AdminPlanService : IAdminPlanService
             });
         }
 
-        // Copy features
         foreach (var srcFeat in source.PlanFeatures)
         {
             _db.Set<PlanFeature>().Add(new PlanFeature
@@ -338,8 +337,10 @@ public class AdminPlanService : IAdminPlanService
     }
 
     // ── SetLimitAsync ─────────────────────────────────────────────────────────
+    // Value is always int (-1 = unlimited). PlanLimit.Value is stored as decimal
+    // in the DB entity for SQLite compatibility; we cast when reading.
     public async Task<PlanLimitItem> SetLimitAsync(
-        Guid planId, string limitKey, decimal value, CancellationToken ct = default)
+        Guid planId, string limitKey, int value, CancellationToken ct = default)
     {
         var planExists = await _db.Set<Plan>()
             .IgnoreQueryFilters()
@@ -377,7 +378,7 @@ public class AdminPlanService : IAdminPlanService
             Key               = limitDef.Key,
             Name              = limitDef.Name,
             Unit              = limitDef.Unit,
-            Value             = row.Value
+            Value             = (int)row.Value
         };
     }
 
@@ -426,6 +427,18 @@ public class AdminPlanService : IAdminPlanService
     }
 
     // ── Mapping helpers ───────────────────────────────────────────────────────
+
+    private static int LimitValue(Plan p, string key)
+    {
+        var row = p.PlanLimits
+            .FirstOrDefault(pl => pl.LimitDefinition?.Key == key);
+        return row is null ? 0 : (int)row.Value;
+    }
+
+    private static bool FeatureEnabled(Plan p, string key)
+        => p.PlanFeatures
+            .Any(pf => pf.FeatureDefinition?.Key == key && pf.IsEnabled);
+
     private static PlanSummaryResponse MapToSummary(Plan p) => new()
     {
         Id                      = p.Id,
@@ -455,6 +468,19 @@ public class AdminPlanService : IAdminPlanService
         AllowUpgrade            = p.AllowUpgrade,
         AllowDowngrade          = p.AllowDowngrade,
         AutoDowngradeOnExpiry   = p.AutoDowngradeOnExpiry,
+        // ── Key Limits ──────────────────────────────────────────────────────
+        ListingsLimit     = LimitValue(p, "max_active_listings"),
+        AgentsLimit       = LimitValue(p, "max_agents"),
+        ProjectsLimit     = LimitValue(p, "max_projects"),
+        ImagesPerListing  = LimitValue(p, "max_images_per_listing"),
+        FeaturedSlots     = LimitValue(p, "max_featured_slots"),
+        // ── Feature Indicators ───────────────────────────────────────────────
+        HasAnalytics        = FeatureEnabled(p, "analytics_dashboard"),
+        HasFeaturedListings = FeatureEnabled(p, "featured_listings"),
+        HasProjectMgmt      = FeatureEnabled(p, "project_management"),
+        HasWhatsApp         = FeatureEnabled(p, "whatsapp_contact"),
+        HasVerifiedBadge    = FeatureEnabled(p, "verified_badge"),
+        HasPrioritySupport  = FeatureEnabled(p, "priority_support"),
     };
 
     private static PlanDetailResponse MapToDetail(Plan p) => new()
@@ -486,6 +512,20 @@ public class AdminPlanService : IAdminPlanService
         AllowUpgrade            = p.AllowUpgrade,
         AllowDowngrade          = p.AllowDowngrade,
         AutoDowngradeOnExpiry   = p.AutoDowngradeOnExpiry,
+        // ── Key Limits (denormalized from PlanLimits) ────────────────────────
+        ListingsLimit     = LimitValue(p, "max_active_listings"),
+        AgentsLimit       = LimitValue(p, "max_agents"),
+        ProjectsLimit     = LimitValue(p, "max_projects"),
+        ImagesPerListing  = LimitValue(p, "max_images_per_listing"),
+        FeaturedSlots     = LimitValue(p, "max_featured_slots"),
+        // ── Feature Indicators (denormalized from PlanFeatures) ──────────────
+        HasAnalytics        = FeatureEnabled(p, "analytics_dashboard"),
+        HasFeaturedListings = FeatureEnabled(p, "featured_listings"),
+        HasProjectMgmt      = FeatureEnabled(p, "project_management"),
+        HasWhatsApp         = FeatureEnabled(p, "whatsapp_contact"),
+        HasVerifiedBadge    = FeatureEnabled(p, "verified_badge"),
+        HasPrioritySupport  = FeatureEnabled(p, "priority_support"),
+        // ── Full Limits + Features arrays ────────────────────────────────────
         Limits = p.PlanLimits
             .Where(pl => pl.LimitDefinition != null)
             .OrderBy(pl => pl.LimitDefinition.Key)
@@ -495,7 +535,7 @@ public class AdminPlanService : IAdminPlanService
                 Key               = pl.LimitDefinition.Key,
                 Name              = pl.LimitDefinition.Name,
                 Unit              = pl.LimitDefinition.Unit,
-                Value             = pl.Value
+                Value             = (int)pl.Value
             }).ToList(),
         Features = p.PlanFeatures
             .Where(pf => pf.FeatureDefinition != null)

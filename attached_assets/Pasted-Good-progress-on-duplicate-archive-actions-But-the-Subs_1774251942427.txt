@@ -1,0 +1,209 @@
+Good progress on duplicate/archive actions.
+
+But the Subscription Plans module is still incomplete from a product and admin usability perspective.
+
+We need to continue from the current implementation and fix the remaining gaps.
+
+==================================================
+MAIN PROBLEM
+==================================================
+
+The plans list and plan create/edit flows are still too shallow.
+
+Right now the cards mostly show:
+- name
+- short description
+- a few badges
+- sort order
+- actions
+
+This is NOT enough for a real SaaS plan management system.
+
+The admin must be able to understand a plan commercially at a glance.
+
+==================================================
+TASK 1 — IMPROVE PLANS LIST CARDS
+==================================================
+
+Redesign each plan card so it clearly shows the plan’s commercial meaning.
+
+Each card must display:
+
+1) Header
+- plan name
+- status badge
+- visibility badge
+- target account type badge
+- optional category badge
+
+2) Pricing summary
+- monthly price
+- yearly price
+- free/trial indicator if applicable
+
+3) Key limits summary
+Show the most important limits directly on the card:
+- listings limit
+- team members limit
+- projects limit
+- requests limit
+- featured listings limit (if > 0)
+
+If unlimited, show "غير محدود"
+
+4) Top enabled features
+Show top 3–5 features such as:
+- تحليلات متقدمة
+- إدارة فريق
+- مشاريع عقارية
+- واتساب
+- تمييز الإعلانات
+- دعم الإيجار اليومي
+
+5) Business hints
+Show compact indicators if relevant:
+- فترة تجريبية
+- الخطة الافتراضية
+- متاحة في صفحة الأسعار
+- تحتاج موافقة إدارية
+
+6) Actions
+Keep:
+- edit
+- duplicate
+- archive
+Add:
+- quick preview/details button if useful
+
+==================================================
+TASK 2 — COMPLETE PLAN FORM (CREATE + EDIT)
+==================================================
+
+Audit the shared PlanForm and make sure create/edit truly support all core plan fields.
+
+The form must include these sections clearly:
+
+1) Basic Info
+- name
+- internal code
+- descriptions
+- target account type
+- category
+- badges
+- color
+- status
+- public/private
+- default plan
+- sort order
+
+2) Pricing
+- free or paid
+- monthly price
+- yearly price
+- currency
+- trial support
+- trial days
+- yearly discount or savings hint
+
+3) Limits
+All major limits must be editable from the UI:
+- listings
+- requests
+- featured listings
+- pinned listings
+- images per listing
+- videos per listing
+- projects
+- units per project
+- team members
+- branches
+- leads
+- messages
+- alerts
+- listing duration
+
+Support unlimited toggles where appropriate.
+
+4) Features
+Boolean switches for major features:
+- can feature listings
+- can pin listings
+- can use analytics
+- can export reports
+- can manage team
+- can create company profile
+- can create agent profiles
+- can use WhatsApp integration
+- can use daily rental
+- can use projects module
+- can use lead distribution
+- can use SEO tools
+- can use priority support
+- can upload videos
+- can upload PDFs
+- can access advanced dashboard
+
+5) Business Rules
+- self signup availability
+- requires admin approval
+- trial only
+- allow add-ons
+- allow upgrade
+- allow downgrade
+- auto downgrade on expiry
+- publish requires moderation
+
+6) Preview
+Before save, show a clean Arabic summary of the plan.
+
+==================================================
+TASK 3 — EDIT MODE RELIABILITY
+==================================================
+
+Verify edit mode very carefully:
+- all existing values load correctly
+- limits load correctly
+- features load correctly
+- business rules load correctly
+- saving updates all groups correctly
+- no missing mappings
+- no silent resets to default values
+
+==================================================
+TASK 4 — ARABIC UX QUALITY
+==================================================
+
+Improve Arabic admin UX:
+- better Arabic labels
+- better Arabic help text
+- clearer empty states
+- cleaner field grouping
+- more professional commercial language
+
+Examples:
+- "عدد الإعلانات المسموح"
+- "عدد أعضاء الفريق"
+- "عدد المشاريع"
+- "المزايا الاحترافية"
+- "قواعد العمل"
+- "عرض الخطة في صفحة الأسعار"
+
+==================================================
+TASK 5 — FINAL QA
+==================================================
+
+After implementation, test these scenarios end-to-end:
+
+1) Create free trial plan with 2 listings only
+2) Create office plan with team members + analytics
+3) Create developer plan with projects + units
+4) Edit existing plan and verify all values remain correct
+5) Duplicate a plan and confirm copied limits/features/business rules
+6) Archive a plan and confirm it is no longer active/public as expected
+
+Then give me:
+1) what was missing before
+2) what you completed now
+3) what fields are now supported in create/edit
+4) what data is shown on the list cards now
+5) any remaining technical debt

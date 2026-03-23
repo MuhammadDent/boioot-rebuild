@@ -585,6 +585,19 @@ export interface AdminPlanSummary {
   allowUpgrade: boolean;
   allowDowngrade: boolean;
   autoDowngradeOnExpiry: boolean;
+  // Key Limits (denormalized — 0 = not set, -1 = unlimited)
+  listingsLimit: number;    // max_active_listings
+  agentsLimit: number;      // max_agents
+  projectsLimit: number;    // max_projects
+  imagesPerListing: number; // max_images_per_listing
+  featuredSlots: number;    // max_featured_slots
+  // Key Feature Indicators (denormalized)
+  hasAnalytics: boolean;        // analytics_dashboard
+  hasFeaturedListings: boolean; // featured_listings
+  hasProjectMgmt: boolean;      // project_management
+  hasWhatsApp: boolean;         // whatsapp_contact
+  hasVerifiedBadge: boolean;    // verified_badge
+  hasPrioritySupport: boolean;  // priority_support
 }
 
 export interface AdminPlanDetail extends AdminPlanSummary {
