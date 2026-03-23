@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
@@ -28,6 +29,9 @@ export default function MainHeader() {
   const router   = useRouter();
   const { isAuthenticated, isLoading, logout, user } = useAuth();
   const { openAuthModal } = useAuthGate();
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
@@ -117,8 +121,8 @@ export default function MainHeader() {
             </button>
           </div>
 
-          {/* Auth strip */}
-          {!isLoading && isAuthenticated && (
+          {/* Auth strip — mounted guard prevents SSR/client hydration mismatch */}
+          {mounted && !isLoading && isAuthenticated && (
             <>
               <MessagesIconBtn
                 isActivePage={onMessagesPage}
@@ -154,7 +158,7 @@ export default function MainHeader() {
             </>
           )}
 
-          {!isLoading && !isAuthenticated && (
+          {mounted && !isLoading && !isAuthenticated && (
             <>
               <MessagesIconBtn
                 isActivePage={false}
