@@ -1,23 +1,33 @@
-// ── Limit key → Arabic label override ────────────────────────────────────────
-// These override or supplement the labels coming from the backend,
-// providing richer frontend formatting.
+// ── Limit key → Arabic label + icon ──────────────────────────────────────────
 export const LIMIT_LABELS: Record<string, string> = {
-  max_active_listings: "إعلانات نشطة",
-  max_agents:          "وكلاء",
-  max_projects:        "مشاريع",
+  max_active_listings:    "عدد الإعلانات",
+  max_agents:             "عدد الوسطاء",
+  max_projects:           "عدد المشاريع",
+  max_images_per_listing: "الصور لكل إعلان",
 };
 
 export const LIMIT_ICONS: Record<string, string> = {
-  max_active_listings: "📋",
-  max_agents:          "👥",
-  max_projects:        "🏗️",
+  max_active_listings:    "📢",
+  max_agents:             "👤",
+  max_projects:           "🏗",
+  max_images_per_listing: "🖼",
 };
 
-// ── Feature key → Arabic label override ──────────────────────────────────────
+// ── Feature key → Arabic label + icon ────────────────────────────────────────
 export const FEATURE_LABELS: Record<string, string> = {
-  analytics_dashboard: "لوحة التحليلات",
-  priority_support:    "دعم ذو أولوية",
-  featured_listings:   "إعلانات مميزة",
+  featured_listings:   "ظهور مميز",
+  analytics_dashboard: "تحليلات",
+  whatsapp_contact:    "دعم واتساب",
+  verified_badge:      "حساب موثّق",
+  priority_support:    "دعم سريع",
+};
+
+export const FEATURE_ICONS: Record<string, string> = {
+  featured_listings:   "⭐",
+  analytics_dashboard: "📊",
+  whatsapp_contact:    "📱",
+  verified_badge:      "✅",
+  priority_support:    "⚡",
 };
 
 // ── Billing cycle labels ──────────────────────────────────────────────────────
@@ -27,24 +37,20 @@ export const BILLING_CYCLE_LABELS: Record<string, string> = {
 };
 
 // ── Highlighted plan ──────────────────────────────────────────────────────────
-/** The plan name shown with the "الأكثر شعبية" badge. */
 export const POPULAR_PLAN_NAME = "AgentPro";
 
 // ── Formatters ────────────────────────────────────────────────────────────────
-/** Format a limit value: -1 = unlimited, 0 = unavailable */
 export function formatLimitValue(value: number, unit: string | null): string {
-  if (value === -1) return "غير محدود";
+  if (value === -1) return "غير محدود ∞";
   if (value === 0)  return "غير متاح";
   return unit ? `${value} ${unit}` : String(value);
 }
 
-/** Format a price amount */
 export function formatPrice(amount: number, currency: string): string {
   if (amount === 0) return "مجاني";
   return `${amount.toLocaleString("ar-SY")} ${currency}`;
 }
 
-/** Yearly saving percentage vs monthly (rounded) */
 export function yearlySaving(monthly: number, yearlyTotal: number): number {
   if (!monthly) return 0;
   const effectiveMonthly = yearlyTotal / 12;

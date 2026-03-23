@@ -30,31 +30,31 @@ function resolveCta(
     return { kind: isFree ? "free_start" : "no_auth", pricingId: entry.pricingId };
   }
 
-  if (entry.pricingId === sub.pricingId) return { kind: "current",    pricingId: null };
+  if (entry.pricingId === sub.pricingId) return { kind: "current",      pricingId: null };
   if (plan.planId === sub.planId)         return { kind: "cycle_change", pricingId: entry.pricingId };
-  if (plan.rank > sub.rank)               return { kind: "upgrade",    pricingId: entry.pricingId };
-  if (plan.rank < sub.rank)               return { kind: "downgrade",  pricingId: entry.pricingId };
+  if (plan.rank > sub.rank)               return { kind: "upgrade",      pricingId: entry.pricingId };
+  if (plan.rank < sub.rank)               return { kind: "downgrade",    pricingId: entry.pricingId };
   return { kind: "start", pricingId: entry.pricingId };
 }
 
 const CTA_LABEL: Record<CtaKind, string> = {
-  current:      "الباقة الحالية ✓",
+  current:      "باقتك الحالية ✓",
   upgrade:      "ترقية ↑",
-  downgrade:    "تخفيض ↓",
+  downgrade:    "تخفيض",
   cycle_change: "تغيير دورة الفوترة",
   free_start:   "ابدأ مجاناً",
-  start:        "ابدأ الآن",
-  no_auth:      "ابدأ الآن",
+  start:        "اشترك الآن",
+  no_auth:      "اشترك الآن",
 };
 
 const CTA_STYLE: Record<CtaKind, { bg: string; color: string; border?: string; cursor?: string }> = {
-  current:      { bg: "var(--color-primary-subtle)", color: "var(--color-primary)",      border: "1.5px solid var(--color-primary)", cursor: "default" },
+  current:      { bg: "var(--color-primary-subtle)", color: "var(--color-primary)", border: "1.5px solid var(--color-primary)", cursor: "default" },
   upgrade:      { bg: "var(--color-primary)",         color: "#fff" },
-  downgrade:    { bg: "#fff3e0",                      color: "#e65100",                  border: "1.5px solid #e65100" },
-  cycle_change: { bg: "#e3f2fd",                      color: "#1565c0",                  border: "1.5px solid #1565c0" },
+  downgrade:    { bg: "#fff7ed",                      color: "#c2410c", border: "1.5px solid #fb923c" },
+  cycle_change: { bg: "#eff6ff",                      color: "#1d4ed8", border: "1.5px solid #93c5fd" },
   free_start:   { bg: "var(--color-primary)",         color: "#fff" },
-  start:        { bg: "transparent",                  color: "var(--color-primary)",     border: "1.5px solid var(--color-primary)" },
-  no_auth:      { bg: "transparent",                  color: "var(--color-primary)",     border: "1.5px solid var(--color-primary)" },
+  start:        { bg: "transparent",                  color: "var(--color-primary)", border: "1.5px solid var(--color-primary)" },
+  no_auth:      { bg: "transparent",                  color: "var(--color-primary)", border: "1.5px solid var(--color-primary)" },
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -89,12 +89,12 @@ export default function PricingCard({
     ? yearlySaving(monthlyEntry.priceAmount, yearlyEntry.priceAmount)
     : 0;
 
-  const isFree = entry?.priceAmount === 0;
-
-  const ctaStyle = CTA_STYLE[kind];
+  const isFree     = entry?.priceAmount === 0;
+  const ctaStyle   = CTA_STYLE[kind];
+  const isDisabled = isCurrent || isLoadingIntent;
 
   function handleClick() {
-    if (isCurrent || isLoadingIntent || !pricingId) return;
+    if (isDisabled || !pricingId) return;
     onUpgradeIntent(pricingId, plan.planName);
   }
 
@@ -112,97 +112,151 @@ export default function PricingCard({
       display:       "flex",
       flexDirection: "column",
       gap:           "1.25rem",
-      boxShadow:     isPopular || isCurrent ? "0 8px 32px rgba(46,125,50,0.13)" : "var(--shadow-md)",
+      boxShadow:     isPopular
+        ? "0 12px 40px rgba(46,125,50,0.18)"
+        : isCurrent
+          ? "0 8px 32px rgba(46,125,50,0.13)"
+          : "var(--shadow-md)",
+      transform:     isPopular ? "scale(1.03)" : "scale(1)",
       transition:    "transform 0.2s, box-shadow 0.2s",
+      zIndex:        isPopular ? 1 : 0,
     }}>
 
-      {/* Popular badge */}
+      {/* ── Top badge ── */}
       {isPopular && !isCurrent && (
         <div style={{
           position:     "absolute",
-          top:          "-1px",
-          right:        "1.5rem",
-          background:   "var(--color-primary)",
+          top:          -14,
+          right:        "50%",
+          transform:    "translateX(50%)",
+          background:   "linear-gradient(135deg, var(--color-primary-dark), var(--color-primary))",
           color:        "#fff",
           fontSize:     "0.75rem",
-          fontWeight:   700,
-          padding:      "0.25rem 0.85rem",
-          borderRadius: "0 0 8px 8px",
-          letterSpacing: "0.02em",
+          fontWeight:   800,
+          padding:      "0.28rem 1rem",
+          borderRadius: 20,
+          whiteSpace:   "nowrap",
+          letterSpacing: "0.03em",
+          boxShadow:    "0 2px 8px rgba(46,125,50,0.35)",
         }}>
-          ⭐ الأكثر شعبية
+          ⭐ الأكثر شيوعاً
         </div>
       )}
 
-      {/* Current plan badge */}
       {isCurrent && (
         <div style={{
           position:     "absolute",
-          top:          "-1px",
-          right:        "1.5rem",
+          top:          -14,
+          right:        "50%",
+          transform:    "translateX(50%)",
           background:   "var(--color-primary)",
           color:        "#fff",
           fontSize:     "0.75rem",
-          fontWeight:   700,
-          padding:      "0.25rem 0.85rem",
-          borderRadius: "0 0 8px 8px",
-          letterSpacing: "0.02em",
+          fontWeight:   800,
+          padding:      "0.28rem 1rem",
+          borderRadius: 20,
+          whiteSpace:   "nowrap",
+          boxShadow:    "0 2px 8px rgba(46,125,50,0.25)",
         }}>
           ✓ باقتك الحالية
         </div>
       )}
 
-      {/* Plan header */}
+      {/* ── Plan header ── */}
       <div>
+        {plan.planCategory && (
+          <p style={{ margin: "0 0 0.25rem", fontSize: "0.72rem", fontWeight: 600, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+            {plan.planCategory}
+          </p>
+        )}
         <h3 style={{
-          fontSize:   "1.2rem",
-          fontWeight: 800,
+          fontSize:   "1.25rem",
+          fontWeight: 900,
           color:      "var(--color-text-primary)",
           margin:     0,
+          lineHeight: 1.2,
         }}>
           {plan.planName}
         </h3>
         {plan.description && (
           <p style={{
-            fontSize:   "0.85rem",
+            fontSize:   "0.84rem",
             color:      "var(--color-text-secondary)",
-            margin:     "0.4rem 0 0",
-            lineHeight: 1.5,
+            margin:     "0.5rem 0 0",
+            lineHeight: 1.6,
           }}>
             {plan.description}
           </p>
         )}
       </div>
 
-      {/* Price */}
-      <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem" }}>
+      {/* ── Price block ── */}
+      <div style={{
+        borderTop:    "1px solid var(--color-border)",
+        paddingTop:   "1rem",
+        borderBottom: "1px solid var(--color-border)",
+        paddingBottom: "1rem",
+      }}>
         {isFree ? (
-          <div style={{ fontSize: "2rem", fontWeight: 800, color: "var(--color-primary)" }}>
-            مجاني
-          </div>
+          <>
+            <div style={{ fontSize: "2.2rem", fontWeight: 900, color: "var(--color-primary)", lineHeight: 1 }}>
+              مجاني
+            </div>
+            <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", margin: "0.3rem 0 0" }}>
+              بدون أي رسوم شهرية
+            </p>
+          </>
         ) : (
           <>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "0.3rem" }}>
-              <span style={{ fontSize: "2rem", fontWeight: 800, color: "var(--color-text-primary)" }}>
+            {/* Main price */}
+            <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
+              <span style={{ fontSize: "2.2rem", fontWeight: 900, color: "var(--color-text-primary)", lineHeight: 1 }}>
                 {entry?.priceAmount.toLocaleString("ar-SY")}
               </span>
-              <span style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", fontWeight: 600 }}>
+              <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--color-text-secondary)" }}>
                 {entry?.currencyCode}
               </span>
             </div>
-            <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginTop: "0.2rem" }}>
-              {cycle === "Monthly" ? "/ شهرياً" : "/ سنوياً"}
+
+            {/* Cycle + discount */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.3rem", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
+                {cycle === "Monthly" ? "/ شهرياً" : "/ سنوياً"}
+              </span>
+
+              {/* Yearly: show monthly equivalent */}
+              {cycle === "Yearly" && yearlyEntry && (
+                <span style={{ fontSize: "0.76rem", color: "var(--color-text-muted)" }}>
+                  ({Math.round(yearlyEntry.priceAmount / 12).toLocaleString("ar-SY")} {yearlyEntry.currencyCode} / شهر)
+                </span>
+              )}
+
+              {/* Monthly: nudge toward yearly if saving exists */}
+              {cycle === "Monthly" && saving > 0 && yearlyEntry && (
+                <span style={{
+                  background:   "#fff7ed",
+                  color:        "#c2410c",
+                  fontSize:     "0.72rem",
+                  fontWeight:   700,
+                  padding:      "0.1rem 0.45rem",
+                  borderRadius: "999px",
+                  border:       "1px solid #fed7aa",
+                }}>
+                  وفّر {saving}% سنوياً
+                </span>
+              )}
+
+              {/* Yearly: show actual saving badge */}
               {cycle === "Yearly" && saving > 0 && (
                 <span style={{
-                  marginRight:  "0.5rem",
-                  background:   "#ff7043",
+                  background:   "var(--color-primary)",
                   color:        "#fff",
                   fontSize:     "0.72rem",
                   fontWeight:   700,
-                  padding:      "0.1rem 0.4rem",
+                  padding:      "0.1rem 0.45rem",
                   borderRadius: "999px",
                 }}>
-                  وفر {saving}%
+                  وفّر {saving}%
                 </span>
               )}
             </div>
@@ -210,48 +264,58 @@ export default function PricingCard({
         )}
       </div>
 
-      {/* Limits */}
+      {/* ── Limits ── */}
       {plan.limits.length > 0 && (
         <div>
-          <p style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.6rem" }}>
+          <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 0.55rem" }}>
             الحدود
           </p>
           <LimitList limits={plan.limits} />
         </div>
       )}
 
-      {/* Features */}
+      {/* ── Features ── */}
       {plan.features.length > 0 && (
         <div>
-          <p style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.6rem" }}>
+          <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 0.55rem" }}>
             الميزات
           </p>
           <FeatureList features={plan.features} />
         </div>
       )}
 
-      {/* CTA */}
+      {/* ── CTA ── */}
       <div style={{ marginTop: "auto", paddingTop: "0.5rem" }}>
         <button
+          suppressHydrationWarning
+          type="button"
           onClick={handleClick}
-          disabled={isCurrent || isLoadingIntent}
+          disabled={isDisabled}
           style={{
             width:        "100%",
-            padding:      "0.7rem 1rem",
+            padding:      "0.8rem 1rem",
             borderRadius: "var(--radius-md)",
             border:       ctaStyle.border ?? "none",
             background:   ctaStyle.bg,
             color:        ctaStyle.color,
             cursor:       isCurrent ? "default" : isLoadingIntent ? "wait" : "pointer",
             fontFamily:   "inherit",
-            fontSize:     "0.95rem",
+            fontSize:     "0.97rem",
             fontWeight:   700,
-            transition:   "opacity 0.2s",
+            transition:   "opacity 0.2s, transform 0.15s",
             opacity:      isLoadingIntent && !isCurrent ? 0.65 : 1,
+            letterSpacing: "0.01em",
           }}
         >
           {isLoadingIntent && !isCurrent ? "جارٍ التحميل..." : CTA_LABEL[kind]}
         </button>
+
+        {/* Upgrade nudge for authenticated users on lower plans */}
+        {kind === "upgrade" && (
+          <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--color-text-muted)", margin: "0.5rem 0 0" }}>
+            يمكنك الترقية في أي وقت بدون فقدان بياناتك
+          </p>
+        )}
       </div>
     </div>
   );

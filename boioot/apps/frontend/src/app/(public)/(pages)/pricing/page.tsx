@@ -117,8 +117,9 @@ export default function PricingPage() {
 
   const individualPlans   = filterByCategory(plans, "Individual");
   const professionalPlans = filterByCategory(plans, "Business");
+  const developerPlans    = filterByCategory(plans, "Developer");
   const otherPlans        = plans.filter(
-    (p) => p.planCategory !== "Individual" && p.planCategory !== "Business"
+    (p) => !["Individual", "Business", "Developer"].includes(p.planCategory ?? "")
   );
 
   const avgSaving = plans.length
@@ -196,8 +197,20 @@ export default function PricingPage() {
           </div>
         )}
 
-        {!plansLoading && !plansError && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "3rem" }}>
+        {!plansLoading && !plansError && plans.length === 0 && (
+          <div style={{ textAlign: "center", padding: "4rem 1.5rem" }}>
+            <p style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📭</p>
+            <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "0.4rem" }}>
+              لا توجد خطط متاحة حالياً
+            </p>
+            <p style={{ fontSize: "0.88rem", color: "var(--color-text-secondary)" }}>
+              سيتم إضافة الخطط قريباً — تواصل معنا للاستفسار
+            </p>
+          </div>
+        )}
+
+        {!plansLoading && !plansError && plans.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "3.5rem" }}>
 
             {individualPlans.length > 0 && (
               <div>
@@ -208,8 +221,15 @@ export default function PricingPage() {
 
             {professionalPlans.length > 0 && (
               <div>
-                <SectionLabel label="باقات المحترفين والشركات" />
+                <SectionLabel label="باقات المكاتب والمحترفين" />
                 <PlansGrid plans={professionalPlans} {...gridProps} />
+              </div>
+            )}
+
+            {developerPlans.length > 0 && (
+              <div>
+                <SectionLabel label="باقات شركات التطوير" />
+                <PlansGrid plans={developerPlans} {...gridProps} />
               </div>
             )}
 
