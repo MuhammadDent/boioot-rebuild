@@ -428,20 +428,28 @@ public class AdminPlanService : IAdminPlanService
             .FirstOrDefaultAsync(ld => ld.Key == limitKey && ld.IsActive, ct)
             ?? throw new BoiootException($"تعريف الحد '{limitKey}' غير موجود", 404);
 
+        // IMPORTANT: Pass Guid as string ("D" format = lowercase-with-hyphens).
+        // ExecuteSqlRawAsync with a Guid sends DbType.Guid → binary blob in
+        // Microsoft.Data.Sqlite, but EF Core stores Guid columns as TEXT.
+        // Passing .ToString() forces a TEXT parameter that matches stored values.
+        string planIdStr   = planId.ToString("D");
+        string limitDefStr = limitDef.Id.ToString("D");
+
         // Try UPDATE first — never reads PlanLimit.Id column
         int affected = await _db.Database.ExecuteSqlRawAsync(
             "UPDATE PlanLimits SET Value = {0} WHERE SubscriptionPlanId = {1} AND LimitDefinitionId = {2}",
-            (decimal)value, planId, limitDef.Id);
+            (decimal)value, planIdStr, limitDefStr);
 
         if (affected == 0)
         {
-            // Row doesn't exist yet — INSERT without touching existing rows
+            // Row doesn't exist yet — INSERT with all NOT NULL columns
+            var now = DateTime.UtcNow;
             await _db.Database.ExecuteSqlRawAsync(
-                "INSERT INTO PlanLimits (Id, SubscriptionPlanId, LimitDefinitionId, Value) VALUES ({0}, {1}, {2}, {3})",
-                Guid.NewGuid(), planId, limitDef.Id, (decimal)value);
+                "INSERT INTO PlanLimits (Id, SubscriptionPlanId, LimitDefinitionId, Value, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3}, {4}, {5})",
+                Guid.NewGuid().ToString("D"), planIdStr, limitDefStr, (decimal)value, now, now);
         }
 
-        _logger.LogInformation("SetLimit: plan={PlanId} key={Key} value={Value} (affected={N})",
+        _logger.LogInformation("SetLimit: plan={PlanId} key={Key} value={Value} (op={N})",
             planId, limitKey, value, affected == 0 ? "inserted" : "updated");
 
         return new PlanLimitItem
@@ -473,20 +481,27 @@ public class AdminPlanService : IAdminPlanService
         // SQLite stores bool as 0/1
         int boolVal = isEnabled ? 1 : 0;
 
+        // IMPORTANT: Pass Guid as string ("D" format = lowercase-with-hyphens).
+        // Same reason as SetLimitAsync — DbType.Guid sends binary blob, but EF
+        // Core stores Guid columns as TEXT in SQLite. Must use .ToString("D").
+        string planIdStr      = planId.ToString("D");
+        string featureDefStr  = featureDef.Id.ToString("D");
+
         // Try UPDATE first — never reads PlanFeature.Id column
         int affected = await _db.Database.ExecuteSqlRawAsync(
             "UPDATE PlanFeatures SET IsEnabled = {0} WHERE SubscriptionPlanId = {1} AND FeatureDefinitionId = {2}",
-            boolVal, planId, featureDef.Id);
+            boolVal, planIdStr, featureDefStr);
 
         if (affected == 0)
         {
-            // Row doesn't exist yet — INSERT without touching existing rows
+            // Row doesn't exist yet — INSERT with all NOT NULL columns
+            var now = DateTime.UtcNow;
             await _db.Database.ExecuteSqlRawAsync(
-                "INSERT INTO PlanFeatures (Id, SubscriptionPlanId, FeatureDefinitionId, IsEnabled) VALUES ({0}, {1}, {2}, {3})",
-                Guid.NewGuid(), planId, featureDef.Id, boolVal);
+                "INSERT INTO PlanFeatures (Id, SubscriptionPlanId, FeatureDefinitionId, IsEnabled, CreatedAt, UpdatedAt) VALUES ({0}, {1}, {2}, {3}, {4}, {5})",
+                Guid.NewGuid().ToString("D"), planIdStr, featureDefStr, boolVal, now, now);
         }
 
-        _logger.LogInformation("SetFeature: plan={PlanId} key={Key} enabled={IsEnabled} (affected={N})",
+        _logger.LogInformation("SetFeature: plan={PlanId} key={Key} enabled={IsEnabled} (op={N})",
             planId, featureKey, isEnabled, affected == 0 ? "inserted" : "updated");
 
         return new PlanFeatureItem

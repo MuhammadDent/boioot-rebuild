@@ -1,0 +1,127 @@
+The issue is still NOT fixed.
+
+I am still getting:
+"حدث خطأ داخلي في الخادم"
+when editing and saving a plan.
+
+So we need a REAL end-to-end debug, not a theoretical fix.
+
+==================================================
+GOAL
+==================================================
+
+Find the exact failing point in the plan edit save flow and fix it completely.
+
+==================================================
+MANDATORY DEBUG STEPS
+==================================================
+
+Do NOT assume the issue is solved.
+Do NOT stop at code inspection only.
+
+You must debug the actual failing request end-to-end:
+
+1) Open the plan edit modal
+2) Change one feature toggle
+3) Change one numeric limit (example: images per listing)
+4) Click Save
+
+Then inspect ALL of the following:
+
+--------------------------------------------------
+A) FRONTEND NETWORK REQUEST
+--------------------------------------------------
+
+Capture the actual request in browser Network tab:
+- request URL
+- HTTP method
+- request payload/body
+- response status
+- response body
+
+Print the exact failing payload and exact backend response.
+
+--------------------------------------------------
+B) BACKEND LOGS / EXCEPTION
+--------------------------------------------------
+
+Read the backend console/logs at the moment of save.
+Print the exact exception:
+- exception type
+- message
+- stack trace
+- service/controller line
+
+No guessing.
+
+--------------------------------------------------
+C) TRACE THE SAVE FLOW
+--------------------------------------------------
+
+Trace the exact code path:
+
+Frontend:
+- submit handler
+- API client method
+- payload builder
+
+Backend:
+- controller action
+- DTO binding
+- service update method
+- feature update logic
+- limit update logic
+- save/transaction
+
+==================================================
+THINGS TO VERIFY
+==================================================
+
+1) Does the frontend send:
+- full plan payload?
+- only changed fields?
+- features array?
+- limits array?
+
+2) Does backend DTO receive the data correctly?
+
+3) Does any specific field break the save?
+Examples:
+- imagesPerListing
+- WhatsApp feature
+- planCategory
+- billingMode
+
+4) Is the failure happening in:
+- DTO binding
+- validation
+- feature update
+- limit update
+- SaveChanges
+- raw SQL
+- transaction commit
+
+==================================================
+REQUIRED FIX
+==================================================
+
+After identifying the exact failure point:
+
+1) Fix the real cause
+2) Re-test the SAME scenario
+3) Confirm that:
+- feature toggle saves
+- numeric limit saves
+- reopening the plan shows persisted values
+
+==================================================
+IMPORTANT
+==================================================
+
+Do not reply with “fixed” unless you provide:
+
+1) exact failing request payload
+2) exact exception/stack trace
+3) exact line/function that failed
+4) exact code fix applied
+5) proof that reloading the plan shows the saved change
