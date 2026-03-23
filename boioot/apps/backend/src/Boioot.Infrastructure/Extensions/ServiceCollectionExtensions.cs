@@ -54,8 +54,28 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        // ── Database provider ─────────────────────────────────────────────────
+        // Read from config: Database:Provider = "SQLite" (default) | "SqlServer"
+        // To switch to SQL Server:
+        //   1. Add package: Microsoft.EntityFrameworkCore.SqlServer
+        //   2. Set Database:Provider = SqlServer in appsettings.json
+        //   3. Replace UseSqlite with options.UseSqlServer(connStr) below
+        //   4. Run EF Core migrations (see migration plan in MIGRATION.md)
+        var dbProvider = configuration["Database:Provider"] ?? "SQLite";
+        var connStr    = configuration.GetConnectionString("DefaultConnection");
+
         services.AddDbContext<BoiootDbContext>(options =>
-            options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+        {
+            if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+                throw new NotSupportedException(
+                    "SQL Server provider is configured but the SqlServer EF Core package is not yet " +
+                    "installed. Add Microsoft.EntityFrameworkCore.SqlServer and remove this guard.");
+            else
+                options.UseSqlite(connStr);
+        });
+
+        // Expose the provider name so startup code can gate SQLite-specific SQL
+        services.AddSingleton<DbProviderInfo>(new DbProviderInfo(dbProvider));
 
         services.AddScoped<ICompanyOwnershipService, CompanyOwnershipService>();
         services.AddScoped<IAuthService, AuthService>();

@@ -880,17 +880,22 @@ using (var scope = app.Services.CreateScope())
         await db.Database.ExecuteSqlRawAsync(
             "CREATE INDEX IF NOT EXISTS ix_spr_created_at ON SubscriptionPaymentRequests(CreatedAt)");
 
-        // ── Force WAL checkpoint so ALL connections see schema changes ──────────
+        // ── Force WAL checkpoint (SQLite-only) so ALL connections see schema changes ──
         // After ALTER TABLE, WAL frames must be merged into the main DB file so that
         // connection-pool connections (opened before migrations ran) see new columns.
-        try
+        // PRAGMA wal_checkpoint is SQLite-specific — not available on SQL Server.
+        var isSqlite = db.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) ?? false;
+        if (isSqlite)
         {
-            await db.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(FULL)");
-            logger.LogInformation("WAL checkpoint completed — schema changes are visible to all connections");
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning("WAL checkpoint failed (non-fatal): {msg}", ex.Message);
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(FULL)");
+                logger.LogInformation("WAL checkpoint completed — schema changes are visible to all connections");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("WAL checkpoint failed (non-fatal): {msg}", ex.Message);
+            }
         }
 
         // Clear the ADO.NET connection pool so all future EF Core connections are fresh
@@ -1742,37 +1747,6 @@ using (var scope = app.Services.CreateScope())
 
         await seeder.SeedAsync();
 
-        // DIAGNOSTIC: verify OgDescription via raw ADO.NET (bypasses EF Core)
-        try
-        {
-            using var rawConn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=/home/runner/workspace/boioot/apps/backend/boioot.db;Pooling=False");
-            await rawConn.OpenAsync();
-
-            // Check PRAGMA table_info
-            using var pragma = rawConn.CreateCommand();
-            pragma.CommandText = "PRAGMA table_info(BlogPosts)";
-            var cols = new System.Text.StringBuilder();
-            using (var r = await pragma.ExecuteReaderAsync())
-                while (await r.ReadAsync()) cols.Append(r.GetString(1) + ",");
-            logger.LogInformation("DIAG PRAGMA columns: {cols}", cols.ToString());
-
-            // Direct SELECT
-            using var selectCmd = rawConn.CreateCommand();
-            selectCmd.CommandText = "SELECT OgDescription FROM BlogPosts LIMIT 0";
-            try
-            {
-                await selectCmd.ExecuteNonQueryAsync();
-                logger.LogInformation("DIAG RAW SELECT OgDescription: SUCCESS");
-            }
-            catch (Exception ex2)
-            {
-                logger.LogError("DIAG RAW SELECT OgDescription: FAILED — {msg}", ex2.Message);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError("DIAG raw connection failed: {msg}", ex.Message);
-        }
     }
     catch (Exception ex)
     {

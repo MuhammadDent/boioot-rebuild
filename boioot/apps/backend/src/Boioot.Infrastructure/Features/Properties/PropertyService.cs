@@ -71,9 +71,10 @@ public class PropertyService : IPropertyService
             .FirstOrDefaultAsync(p => p.Id == id && p.Status != PropertyStatus.Inactive, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
 
-        // Increment view counter
+        // Increment view counter — parameterized to avoid string interpolation in SQL
         await _context.Database.ExecuteSqlRawAsync(
-            $"UPDATE Properties SET ViewCount = COALESCE(ViewCount, 0) + 1 WHERE Id = '{id}'", ct);
+            "UPDATE Properties SET ViewCount = COALESCE(ViewCount, 0) + 1 WHERE Id = {0}",
+            id.ToString("D"));
         property.ViewCount++;
 
         var response = MapToResponse(property);
