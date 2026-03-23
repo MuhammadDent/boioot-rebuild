@@ -1,0 +1,84 @@
+The app now works, but the current solution is overusing suppressHydrationWarning everywhere.
+
+This is not acceptable as a long-term solution.
+
+==================================================
+GOAL
+==================================================
+
+Clean up hydration handling and remove unnecessary suppressHydrationWarning usage.
+
+==================================================
+TASK 1 — IDENTIFY REAL CAUSE
+==================================================
+
+Confirm that the hydration mismatch is caused by browser extensions injecting attributes like:
+fdprocessedid
+
+Verify that:
+- server HTML does NOT include this attribute
+- client DOM DOES include it
+
+==================================================
+TASK 2 — REMOVE GLOBAL SUPPRESSION
+==================================================
+
+Remove suppressHydrationWarning from:
+- all buttons
+- all inputs
+- all selects
+- tabs
+- sliders
+
+Keep it ONLY if absolutely necessary.
+
+==================================================
+TASK 3 — APPLY CORRECT STRATEGY
+==================================================
+
+Use ONE of the following proper solutions:
+
+OPTION A (Preferred):
+Wrap only dynamic or extension-affected UI inside a mounted guard:
+
+const [mounted, setMounted] = useState(false);
+
+useEffect(() => {
+  setMounted(true);
+}, []);
+
+if (!mounted) return null;
+
+OPTION B:
+Use suppressHydrationWarning ONLY on minimal specific elements proven to mismatch.
+
+==================================================
+TASK 4 — ENSURE STABLE SSR OUTPUT
+==================================================
+
+Verify that components do NOT use:
+- Date.now()
+- Math.random()
+- window during render
+
+Ensure SSR and client render the same structure.
+
+==================================================
+TASK 5 — VERIFY
+==================================================
+
+After cleanup:
+1) no console errors
+2) no hydration warning (except harmless extension cases)
+3) UI renders correctly
+4) codebase is clean and minimal
+
+==================================================
+DELIVERABLE
+==================================================
+
+Explain:
+1) what was the real root cause
+2) what suppressHydrationWarning was removed
+3) where it was kept (if any)
+4) why the final solution is correct
