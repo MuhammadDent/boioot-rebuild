@@ -1,0 +1,135 @@
+We are upgrading the Admin Dashboard to a TRUE SaaS decision-making system.
+
+IMPORTANT:
+- Do NOT change backend APIs
+- Do NOT modify database schema
+- Only compute from existing data
+
+==================================================
+GOAL
+==================================================
+
+Transform dashboard from:
+"Monitoring"
+
+Into:
+"Decision & Business Intelligence"
+
+==================================================
+TASK 1 — ADD BUSINESS KPIs (CRITICAL)
+==================================================
+
+Add new KPI cards:
+
+1) Revenue (if invoices exist)
+- Total revenue
+- Monthly revenue
+
+2) Conversion Rate
+- % of users who created listings
+- % of users who upgraded to paid plans
+
+3) Active vs Inactive Listings
+- Active listings count
+- Expired / inactive listings
+
+4) New vs Returning Users
+
+==================================================
+TASK 2 — SMART ALERTS SYSTEM
+==================================================
+
+Add alert cards at top:
+
+Examples:
+
+- "انخفاض الطلبات هذا الأسبوع بنسبة 20%"
+- "زيادة غير طبيعية في التسجيلات"
+- "عدد كبير من الإعلانات غير النشطة"
+
+Color system:
+- Red = problem
+- Yellow = warning
+- Green = good
+
+==================================================
+TASK 3 — ACTIONABLE ACTIVITY FEED
+==================================================
+
+Upgrade activity feed:
+
+Each item should include:
+
+- Title
+- Status badge
+- Quick action button
+
+Examples:
+
+- إعلان غير نشط → [تفعيل]
+- طلب جديد → [مراجعة]
+- مستخدم جديد → [عرض]
+
+==================================================
+TASK 4 — TIME FILTER
+==================================================
+
+Add global filter:
+
+- اليوم
+- آخر 7 أيام
+- آخر 30 يوم
+
+All KPIs + charts should react to this
+
+==================================================
+TASK 5 — TOP PERFORMERS
+==================================================
+
+Add section:
+
+- أفضل الإعلانات مشاهدة
+- أفضل الوسطاء أداء
+- أكثر المدن نشاطًا
+
+==================================================
+TASK 6 — EMPTY STATES UX
+==================================================
+
+If no data:
+
+- Show friendly message
+- Suggest action
+
+Example:
+"لا توجد إعلانات — ابدأ بإضافة إعلان جديد"
+
+==================================================
+TASK 7 — VISUAL POLISH
+==================================================
+
+- Use consistent card design
+- Use icons
+- Use spacing
+- Highlight important numbers
+
+==================================================
+FINAL RESULT
+==================================================
+
+Dashboard becomes:
+
+- Smart
+- Insight-driven
+- Actionable
+- Business-focused
+
+NOT just UI
+
+==================================================
+DO NOT:
+==================================================
+
+- Do NOT add new APIs
+- Do NOT modify database
+- Do NOT break existing UI
