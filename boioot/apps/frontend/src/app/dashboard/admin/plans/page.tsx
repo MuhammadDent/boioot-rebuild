@@ -99,7 +99,40 @@ const inputStyle: React.CSSProperties = {
 
 const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
 
-// ── LimitRow ───────────────────────────────────────────────────────────────────
+// ── Known catalog keys with Arabic labels ────────────────────────────────────
+
+const KNOWN_LIMITS: { key: string; icon: string; label: string }[] = [
+  { key: "max_active_listings",    icon: "🏠", label: "عدد الإعلانات النشطة" },
+  { key: "max_images_per_listing", icon: "📸", label: "عدد الصور لكل إعلان" },
+  { key: "max_videos_per_listing", icon: "🎬", label: "عدد الفيديوهات لكل إعلان" },
+  { key: "max_requests",           icon: "📨", label: "عدد الطلبات المستقبَلة" },
+  { key: "max_messages",           icon: "💬", label: "عدد المحادثات الداخلية" },
+  { key: "max_agents",             icon: "👤", label: "عدد الوسطاء" },
+  { key: "max_projects",           icon: "🏗", label: "عدد المشاريع" },
+  { key: "max_featured_slots",     icon: "⭐", label: "عدد الإعلانات المميزة (Boost)" },
+];
+
+const KNOWN_FEATURES: { key: string; icon: string; label: string; description: string }[] = [
+  { key: "video_upload",         icon: "🎬", label: "رفع فيديو",                        description: "السماح برفع مقاطع الفيديو ضمن الإعلان" },
+  { key: "analytics_dashboard",  icon: "📊", label: "لوحة التحليلات",                   description: "إحصاءات وتقارير مفصّلة لأداء الإعلانات" },
+  { key: "priority_support",     icon: "🛠", label: "دعم فني بأولوية",                  description: "استجابة أسرع من فريق الدعم" },
+  { key: "homepage_exposure",    icon: "🏠", label: "ظهور في الصفحة الرئيسية",          description: "عرض الإعلانات ضمن أقسام الصفحة الرئيسية" },
+  { key: "verified_badge",       icon: "✅", label: "شارة موثّق",                       description: "تمييز الملف الشخصي بشارة الموثوقية" },
+  { key: "search_priority",      icon: "🔍", label: "أولوية في نتائج البحث",            description: "ظهور الإعلانات في مقدمة نتائج البحث" },
+  { key: "whatsapp_contact",     icon: "💬", label: "زر واتساب مباشر",                  description: "تمكين زر التواصل عبر واتساب في الإعلان" },
+  { key: "team_management",      icon: "👥", label: "إدارة فريق / إضافة أعضاء",         description: "إضافة وسطاء وأعضاء ضمن الحساب التجاري" },
+  { key: "lead_insights",        icon: "📈", label: "تحليلات العملاء المحتملين",          description: "بيانات مفصّلة عن الطلبات والعملاء المحتملين" },
+  { key: "featured_listings",    icon: "✨", label: "إعلانات مميزة / ظهور متقدم",       description: "رفع الإعلانات لأقسام \"مميزة\" في الموقع" },
+  { key: "project_management",   icon: "🏗", label: "إدارة المشاريع",                   description: "إنشاء مشاريع عقارية متعددة الوحدات" },
+];
+
+const KNOWN_MARKETING: { key: string; icon: string; label: string; description: string }[] = [
+  { key: "listing_priority",     icon: "📌", label: "أولوية الإعلان",         description: "درجة الأولوية في خوارزمية الترتيب (0 = بلا أولوية)" },
+  { key: "search_ranking_boost", icon: "🔍", label: "تعزيز الظهور في البحث",  description: "معامل التعزيز في نتائج البحث (0 = لا تعزيز)" },
+  { key: "homepage_slots",       icon: "🏠", label: "خانات الصفحة الرئيسية", description: "عدد الخانات المخصصة في الصفحة الرئيسية" },
+];
+
+// ── LimitRow (generic fallback) ───────────────────────────────────────────────
 
 function LimitRow({ limit, saving, onSave }: { limit: PlanLimitItem; saving: boolean; onSave: (val: string) => void }) {
   const [val, setVal] = useState(String(limit.value));
@@ -113,6 +146,131 @@ function LimitRow({ limit, saving, onSave }: { limit: PlanLimitItem; saving: boo
       <button className="btn btn-primary" style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem" }} disabled={saving || val === String(limit.value)} onClick={() => onSave(val)}>
         {saving ? "..." : "حفظ"}
       </button>
+    </div>
+  );
+}
+
+// ── NamedLimitField ───────────────────────────────────────────────────────────
+
+function NamedLimitField({
+  icon, label, limitKey, limits, limitSaving, onSave,
+}: {
+  icon: string;
+  label: string;
+  limitKey: string;
+  limits: PlanLimitItem[];
+  limitSaving: string | null;
+  onSave: (key: string, val: string) => void;
+}) {
+  const item = limits.find(l => l.key === limitKey);
+  const [val, setVal] = useState(item ? String(item.value) : "0");
+
+  useEffect(() => {
+    if (item) setVal(String(item.value));
+  }, [item?.value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saving = limitSaving === limitKey;
+  const dirty  = item ? val !== String(item.value) : false;
+
+  if (!item) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
+        <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>لم يُعرَّف في كتالوج الحدود — أضفه أولاً من صفحة كتالوج الميزات</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#ffffff", border: "1.5px solid #e2e8f0" }}>
+      <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600 }}>{label}</p>
+        <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>
+          الحالي: <strong>{item.value === -1 ? "غير محدود ∞" : `${item.value}${item.unit ? ` ${item.unit}` : ""}`}</strong>
+        </p>
+      </div>
+      <input
+        type="number"
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        style={{ ...inputStyle, width: 76, textAlign: "center", padding: "0.35rem 0.5rem", margin: 0, flexShrink: 0 }}
+        disabled={saving}
+        min={-1}
+      />
+      <button
+        type="button"
+        title="تعيين غير محدود (∞)"
+        style={{ padding: "0.3rem 0.55rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: val === "-1" ? "#f0fdf4" : "#f8fafc", fontSize: "0.82rem", cursor: "pointer", flexShrink: 0, color: val === "-1" ? "#166534" : "#475569", fontWeight: 700 }}
+        disabled={saving}
+        onClick={() => { setVal("-1"); onSave(limitKey, "-1"); }}
+      >
+        ∞
+      </button>
+      <button
+        className="btn btn-primary"
+        style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem", flexShrink: 0 }}
+        disabled={saving || !dirty}
+        onClick={() => onSave(limitKey, val)}
+      >
+        {saving ? "..." : "حفظ"}
+      </button>
+    </div>
+  );
+}
+
+// ── NamedFeatureToggle ────────────────────────────────────────────────────────
+
+function NamedFeatureToggle({
+  icon, label, description, featureKey, features, featureSaving, onToggle,
+}: {
+  icon: string;
+  label: string;
+  description: string;
+  featureKey: string;
+  features: PlanFeatureItem[];
+  featureSaving: string | null;
+  onToggle: (key: string, val: boolean) => void;
+}) {
+  const item = features.find(f => f.key === featureKey);
+
+  if (!item) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
+        <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>لم تُعرَّف في كتالوج الميزات — أضفها أولاً من صفحة كتالوج الميزات</p>
+        </div>
+        <ToggleSwitch checked={false} onChange={() => {}} disabled={true} />
+      </div>
+    );
+  }
+
+  const saving = featureSaving === featureKey;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: item.isEnabled ? "#f0fdf4" : "#ffffff", border: `1.5px solid ${item.isEnabled ? "#86efac" : "#e2e8f0"}`, transition: "all 0.2s", opacity: saving ? 0.55 : 1 }}>
+      <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon || item.icon || "○"}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: item.isEnabled ? 600 : 400, color: item.isEnabled ? "#166534" : "#334155" }}>
+          {label}
+        </p>
+        {description && (
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>{description}</p>
+        )}
+      </div>
+      <span style={{ fontSize: "0.78rem", color: item.isEnabled ? "#16a34a" : "#94a3b8", fontWeight: 700, flexShrink: 0, minWidth: 44, textAlign: "center" }}>
+        {item.isEnabled ? "مفعّل" : "معطّل"}
+      </span>
+      <ToggleSwitch
+        checked={item.isEnabled}
+        onChange={(v) => onToggle(featureKey, v)}
+        disabled={saving}
+      />
     </div>
   );
 }
@@ -999,17 +1157,17 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
             </CollapsibleSection>
           )}
 
-          {/* ── Section 5: Limits (existing plans only) ── */}
-          {!isNew && limits.length > 0 && (
+          {/* ── Section 5: حدود الباقة ── */}
+          {!isNew && (
             <CollapsibleSection
-              title="الحدود الكمية"
-              icon="📊"
+              title="حدود الباقة"
+              icon="📦"
               count={limits.length}
-              defaultOpen={false}
+              defaultOpen={true}
             >
-              {/* ── Tier Preset Quick-Fill ── */}
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.85rem", padding: "0.6rem 0.75rem", background: "var(--color-bg-secondary, #f9fafb)", borderRadius: 8, alignItems: "center" }}>
-                <span style={{ fontSize: "0.74rem", color: "var(--color-text-secondary)", fontWeight: 600, flexShrink: 0 }}>تعبئة سريعة:</span>
+              {/* Quick-fill preset row */}
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem", padding: "0.55rem 0.75rem", background: "#f8fafc", borderRadius: 8, alignItems: "center", border: "1px solid #e2e8f0" }}>
+                <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 700, flexShrink: 0 }}>⚡ تعبئة سريعة:</span>
                 {(([
                   { label: "Starter", vals: { max_active_listings: 2,  max_images_per_listing: 5,  max_featured_slots: 0,  max_agents: 1, max_projects: 0 } },
                   { label: "Pro",     vals: { max_active_listings: 20, max_images_per_listing: 20, max_featured_slots: 3,  max_agents: 5, max_projects: 3 } },
@@ -1018,20 +1176,28 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                   <button
                     key={preset.label}
                     type="button"
-                    style={{ padding: "0.25rem 0.7rem", borderRadius: 6, border: "1.5px solid var(--color-border, #e5e7eb)", background: "#ffffff", fontSize: "0.76rem", fontWeight: 600, cursor: "pointer", color: "var(--color-text-primary, #1e293b)" }}
-                    onClick={() => {
-                      Object.entries(preset.vals).forEach(([key, val]) => {
-                        handleLimitChange(key, String(val));
-                      });
-                    }}
+                    style={{ padding: "0.25rem 0.7rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: "#ffffff", fontSize: "0.76rem", fontWeight: 600, cursor: "pointer", color: "#1e293b" }}
+                    onClick={() => { Object.entries(preset.vals).forEach(([k, v]) => handleLimitChange(k, String(v))); }}
                   >
                     {preset.label}
                   </button>
                 ))}
-                <span style={{ fontSize: "0.7rem", color: "#94a3b8", marginRight: "auto" }}>‑1 = غير محدود</span>
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8", marginRight: "auto" }}>القيمة ‑1 = غير محدود ∞</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {limits.map(lim => (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+                {KNOWN_LIMITS.map(kl => (
+                  <NamedLimitField
+                    key={kl.key}
+                    icon={kl.icon}
+                    label={kl.label}
+                    limitKey={kl.key}
+                    limits={limits}
+                    limitSaving={limitSaving}
+                    onSave={handleLimitChange}
+                  />
+                ))}
+                {/* Any limits not in KNOWN_LIMITS (fallback) */}
+                {limits.filter(l => !KNOWN_LIMITS.some(k => k.key === l.key)).map(lim => (
                   <LimitRow
                     key={lim.key}
                     limit={lim}
@@ -1040,52 +1206,87 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                   />
                 ))}
               </div>
-              <p style={{ margin: "0.5rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                استخدم ‑1 لتعيين الحد كـ &quot;غير محدود&quot;
-              </p>
+              {limits.length === 0 && (
+                <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "1rem 0" }}>
+                  لم تُحدَّد حدود بعد — تأكد من تعريف الحدود في كتالوج الحدود أولاً.
+                </p>
+              )}
             </CollapsibleSection>
           )}
 
-          {/* ── Section 6: Features grouped (existing plans only) ── */}
-          {!isNew && features.length > 0 && (
+          {/* ── Section 6: مميزات الباقة ── */}
+          {!isNew && (
             <CollapsibleSection
-              title="الميزات"
-              icon="⭐"
+              title="مميزات الباقة"
+              icon="✨"
               count={enabledCount}
-              defaultOpen={false}
+              defaultOpen={true}
             >
-              {Object.entries(featureGroups).map(([grp, feats]) => (
-                <div key={grp} style={{ marginBottom: "0.85rem" }}>
-                  <p style={{ margin: "0 0 0.4rem", fontSize: "0.73rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--color-text-secondary)" }}>
-                    {grp}
-                  </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                    {feats.map(feat => (
-                      <div
-                        key={feat.key}
-                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.75rem", borderRadius: 8, background: feat.isEnabled ? "#f0fdf4" : "var(--color-bg-secondary, #f9fafb)", border: feat.isEnabled ? "1px solid #bbf7d0" : "1px solid transparent", opacity: featureSaving === feat.key ? 0.55 : 1, transition: "all 0.18s" }}
-                      >
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
-                          {feat.icon && (
-                            <span style={{ fontSize: "1rem", marginTop: "0.05rem", flexShrink: 0 }}>{feat.icon}</span>
-                          )}
-                          <div>
-                            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: feat.isEnabled ? 600 : 400 }}>{feat.name}</p>
-                            {feat.description && (
-                              <p style={{ margin: 0, fontSize: "0.73rem", color: "var(--color-text-secondary)", lineHeight: 1.35 }}>{feat.description}</p>
-                            )}
-                          </div>
-                        </div>
-                        <ToggleSwitch
-                          checked={feat.isEnabled}
-                          onChange={(val) => handleFeatureToggle(feat.key, val)}
-                          disabled={featureSaving === feat.key}
-                        />
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+                {KNOWN_FEATURES.map(kf => (
+                  <NamedFeatureToggle
+                    key={kf.key}
+                    icon={kf.icon}
+                    label={kf.label}
+                    description={kf.description}
+                    featureKey={kf.key}
+                    features={features}
+                    featureSaving={featureSaving}
+                    onToggle={handleFeatureToggle}
+                  />
+                ))}
+                {/* Any features not in KNOWN_FEATURES (fallback) */}
+                {features.filter(f => !KNOWN_FEATURES.some(k => k.key === f.key)).map(feat => (
+                  <div
+                    key={feat.key}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.75rem", borderRadius: 8, background: feat.isEnabled ? "#f0fdf4" : "#f9fafb", border: feat.isEnabled ? "1px solid #bbf7d0" : "1px solid #e2e8f0", opacity: featureSaving === feat.key ? 0.55 : 1, transition: "all 0.18s" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
+                      {feat.icon && <span style={{ fontSize: "1rem", flexShrink: 0 }}>{feat.icon}</span>}
+                      <div>
+                        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: feat.isEnabled ? 600 : 400 }}>{feat.name}</p>
+                        {feat.description && <p style={{ margin: 0, fontSize: "0.73rem", color: "#64748b" }}>{feat.description}</p>}
                       </div>
-                    ))}
+                    </div>
+                    <ToggleSwitch
+                      checked={feat.isEnabled}
+                      onChange={(val) => handleFeatureToggle(feat.key, val)}
+                      disabled={featureSaving === feat.key}
+                    />
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              {features.length === 0 && (
+                <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "1rem 0" }}>
+                  لم تُحدَّد ميزات بعد — تأكد من تعريف الميزات في كتالوج الميزات أولاً.
+                </p>
+              )}
+            </CollapsibleSection>
+          )}
+
+          {/* ── Section 7: القيمة التسويقية للباقة ── */}
+          {!isNew && (
+            <CollapsibleSection
+              title="القيمة التسويقية للباقة"
+              icon="📈"
+              defaultOpen={true}
+            >
+              <p style={{ margin: "0 0 0.75rem", fontSize: "0.8rem", color: "#64748b", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 6, padding: "0.5rem 0.75rem" }}>
+                هذه الحقول تتطلب تعريف مسبق في <strong>كتالوج الحدود</strong> بنفس المفاتيح المذكورة. الحقول الرمادية غير معرَّفة في الكتالوج بعد.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+                {KNOWN_MARKETING.map(km => (
+                  <NamedLimitField
+                    key={km.key}
+                    icon={km.icon}
+                    label={km.label}
+                    limitKey={km.key}
+                    limits={limits}
+                    limitSaving={limitSaving}
+                    onSave={handleLimitChange}
+                  />
+                ))}
+              </div>
             </CollapsibleSection>
           )}
 
