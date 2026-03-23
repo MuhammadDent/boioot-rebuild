@@ -105,6 +105,7 @@ export default function MainHeader() {
           {/* CTA buttons — always visible */}
           <div className="cta-buttons">
             <button
+              suppressHydrationWarning
               type="button"
               onClick={() => guardHref("/post-ad")}
               className="home-cta-primary"
@@ -113,6 +114,7 @@ export default function MainHeader() {
             </button>
 
             <button
+              suppressHydrationWarning
               type="button"
               onClick={() => guardHref("/post-request")}
               className="home-cta-secondary"
