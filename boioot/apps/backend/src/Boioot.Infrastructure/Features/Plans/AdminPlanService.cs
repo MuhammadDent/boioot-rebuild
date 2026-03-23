@@ -411,8 +411,10 @@ public class AdminPlanService : IAdminPlanService
     }
 
     // ── SetLimitAsync ─────────────────────────────────────────────────────────
-    // Value is always int (-1 = unlimited). PlanLimit.Value is stored as decimal
-    // in the DB entity for SQLite compatibility; we cast when reading.
+    // SAFE: uses raw SQL UPDATE/INSERT to avoid EF materialising PlanLimit.Id.
+    // Reading PlanLimit.Id via EF fails for rows whose Id is stored as a
+    // non-hex string in SQLite (FormatException → 500). Raw SQL never touches
+    // the Id column on reads.
     public async Task<PlanLimitItem> SetLimitAsync(
         Guid planId, string limitKey, int value, CancellationToken ct = default)
     {
@@ -426,25 +428,21 @@ public class AdminPlanService : IAdminPlanService
             .FirstOrDefaultAsync(ld => ld.Key == limitKey && ld.IsActive, ct)
             ?? throw new BoiootException($"تعريف الحد '{limitKey}' غير موجود", 404);
 
-        var row = await _db.Set<PlanLimit>()
-            .FirstOrDefaultAsync(pl => pl.SubscriptionPlanId == planId
-                                    && pl.LimitDefinitionId  == limitDef.Id, ct);
-        if (row is null)
+        // Try UPDATE first — never reads PlanLimit.Id column
+        int affected = await _db.Database.ExecuteSqlRawAsync(
+            "UPDATE PlanLimits SET Value = {0} WHERE SubscriptionPlanId = {1} AND LimitDefinitionId = {2}",
+            (decimal)value, planId, limitDef.Id);
+
+        if (affected == 0)
         {
-            row = new PlanLimit
-            {
-                SubscriptionPlanId = planId,
-                LimitDefinitionId  = limitDef.Id,
-                Value              = value
-            };
-            _db.Set<PlanLimit>().Add(row);
-        }
-        else
-        {
-            row.Value = value;
+            // Row doesn't exist yet — INSERT without touching existing rows
+            await _db.Database.ExecuteSqlRawAsync(
+                "INSERT INTO PlanLimits (Id, SubscriptionPlanId, LimitDefinitionId, Value) VALUES ({0}, {1}, {2}, {3})",
+                Guid.NewGuid(), planId, limitDef.Id, (decimal)value);
         }
 
-        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("SetLimit: plan={PlanId} key={Key} value={Value} (affected={N})",
+            planId, limitKey, value, affected == 0 ? "inserted" : "updated");
 
         return new PlanLimitItem
         {
@@ -452,11 +450,13 @@ public class AdminPlanService : IAdminPlanService
             Key               = limitDef.Key,
             Name              = limitDef.Name,
             Unit              = limitDef.Unit,
-            Value             = (int)row.Value
+            Value             = value
         };
     }
 
     // ── SetFeatureAsync ───────────────────────────────────────────────────────
+    // SAFE: uses raw SQL UPDATE/INSERT to avoid EF materialising PlanFeature.Id.
+    // Same root cause as SetLimitAsync — see comment above.
     public async Task<PlanFeatureItem> SetFeatureAsync(
         Guid planId, string featureKey, bool isEnabled, CancellationToken ct = default)
     {
@@ -470,33 +470,34 @@ public class AdminPlanService : IAdminPlanService
             .FirstOrDefaultAsync(fd => fd.Key == featureKey && fd.IsActive, ct)
             ?? throw new BoiootException($"تعريف الميزة '{featureKey}' غير موجود", 404);
 
-        var row = await _db.Set<PlanFeature>()
-            .FirstOrDefaultAsync(pf => pf.SubscriptionPlanId  == planId
-                                    && pf.FeatureDefinitionId == featureDef.Id, ct);
-        if (row is null)
+        // SQLite stores bool as 0/1
+        int boolVal = isEnabled ? 1 : 0;
+
+        // Try UPDATE first — never reads PlanFeature.Id column
+        int affected = await _db.Database.ExecuteSqlRawAsync(
+            "UPDATE PlanFeatures SET IsEnabled = {0} WHERE SubscriptionPlanId = {1} AND FeatureDefinitionId = {2}",
+            boolVal, planId, featureDef.Id);
+
+        if (affected == 0)
         {
-            row = new PlanFeature
-            {
-                SubscriptionPlanId  = planId,
-                FeatureDefinitionId = featureDef.Id,
-                IsEnabled           = isEnabled
-            };
-            _db.Set<PlanFeature>().Add(row);
-        }
-        else
-        {
-            row.IsEnabled = isEnabled;
+            // Row doesn't exist yet — INSERT without touching existing rows
+            await _db.Database.ExecuteSqlRawAsync(
+                "INSERT INTO PlanFeatures (Id, SubscriptionPlanId, FeatureDefinitionId, IsEnabled) VALUES ({0}, {1}, {2}, {3})",
+                Guid.NewGuid(), planId, featureDef.Id, boolVal);
         }
 
-        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("SetFeature: plan={PlanId} key={Key} enabled={IsEnabled} (affected={N})",
+            planId, featureKey, isEnabled, affected == 0 ? "inserted" : "updated");
 
         return new PlanFeatureItem
         {
             FeatureDefinitionId = featureDef.Id,
             Key                 = featureDef.Key,
             Name                = featureDef.Name,
+            Description         = featureDef.Description,
             FeatureGroup        = featureDef.FeatureGroup,
-            IsEnabled           = row.IsEnabled
+            Icon                = featureDef.Icon,
+            IsEnabled           = isEnabled
         };
     }
 

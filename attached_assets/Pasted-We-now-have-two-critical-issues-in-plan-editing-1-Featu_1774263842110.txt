@@ -1,0 +1,109 @@
+We now have two critical issues in plan editing:
+
+1) Feature toggles are not working correctly
+2) Changing the "images per listing" limit causes an internal server error
+
+We need to debug and fix plan update behavior end-to-end.
+
+==================================================
+GOAL
+==================================================
+
+Make plan editing fully reliable for:
+- feature toggles
+- limit updates
+- saving changes without server errors
+
+==================================================
+ISSUE 1 — FEATURES TOGGLES NOT PERSISTING
+==================================================
+
+Current problem:
+When I toggle plan features in edit mode, the UI changes visually but the system does not respond correctly or persist the change.
+
+Please verify:
+
+1) Frontend state:
+- toggles actually update the local form state
+- correct feature key/id is being changed
+- no readonly or stale state issue
+
+2) Request payload:
+- features are included in the update request
+- payload shape matches backend DTO exactly
+
+3) Backend update mapping:
+- UpdatePlanRequest correctly receives features
+- backend loops through features and updates isEnabled correctly
+- no features are silently ignored
+
+4) Database persistence:
+- updated feature values are actually saved
+- reloading the plan shows the new values correctly
+
+==================================================
+ISSUE 2 — IMAGES PER LISTING LIMIT CAUSES INTERNAL SERVER ERROR
+==================================================
+
+Current problem:
+When changing the number of allowed images per listing, saving causes an internal server error.
+
+Please debug the exact exception and fix root cause.
+
+Check carefully:
+
+1) limit key / definition:
+- does the "images per listing" limit key exactly match the backend/DB definition?
+- is its definition seeded correctly?
+
+2) DTO / types:
+- value is sent as integer
+- backend expects integer
+- no decimal/null mismatch
+
+3) update logic:
+- SetLimitAsync / update limit logic handles this specific limit correctly
+- no null reference / missing definition / invalid cast
+
+4) database:
+- the corresponding limit row exists or can be created safely
+- update does not fail when the limit already exists
+- update does not fail when the limit is missing
+
+==================================================
+TASK — DEBUG SAVE FLOW
+==================================================
+
+Please trace the full edit/save flow:
+
+1) Open existing plan
+2) Toggle one feature (example: WhatsApp)
+3) Change images per listing limit
+4) Click save
+
+Then verify:
+- frontend payload
+- backend controller request
+- service update logic
+- DB update result
+
+==================================================
+REQUIRED FIXES
+==================================================
+
+1) Fix feature toggles so they persist correctly
+2) Fix images-per-listing limit update so it saves without server error
+3) Add safe backend validation and logging
+4) Return meaningful error details in logs
+5) Keep Arabic UI messages clean
+
+==================================================
+DELIVERABLE
+==================================================
+
+After fixing, provide:
+1) root cause of feature toggle issue
+2) root cause of images-per-listing save error
+3) exact backend fix applied
+4) exact frontend fix applied
+5) confirmation that reloading the plan shows saved changes correctly
