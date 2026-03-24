@@ -194,12 +194,17 @@ public sealed class PlanCatalogSeeder
 
         var catalog = new[]
         {
-            LD("add00001-0000-0000-0000-000000000000", "max_active_listings",  "الحد الأقصى للإعلانات النشطة",  "عدد الإعلانات المسموح بها في نفس الوقت",                "إعلان", "integer", "account"),
-            LD("add00002-0000-0000-0000-000000000000", "max_agents",           "الحد الأقصى للوكلاء",           "عدد الوكلاء المسموح بهم في الحساب",                      "وكيل",  "integer", "account"),
-            LD("add00003-0000-0000-0000-000000000000", "max_projects",         "الحد الأقصى للمشاريع",          "عدد المشاريع العقارية المسموح بها",                       "مشروع", "integer", "account"),
-            LD("add00004-0000-0000-0000-000000000000", "max_project_units",    "الحد الأقصى لوحدات المشروع",    "إجمالي الوحدات العقارية المسموح بها عبر جميع المشاريع",  "وحدة",  "integer", "account"),
-            LD("add00005-0000-0000-0000-000000000000", "max_images_per_listing","الحد الأقصى للصور لكل إعلان",  "عدد الصور المسموح برفعها في الإعلان الواحد",             "صورة",  "integer", "listing"),
-            LD("add00006-0000-0000-0000-000000000000", "max_featured_slots",   "الإعلانات المميزة المتاحة",      "عدد الإعلانات المميزة المسموح بها في نفس الوقت",          "إعلان", "integer", "account"),
+            LD("add00001-0000-0000-0000-000000000000", "max_active_listings",    "الحد الأقصى للإعلانات النشطة",    "عدد الإعلانات المسموح بها في نفس الوقت",                 "إعلان",   "integer", "account"),
+            LD("add00002-0000-0000-0000-000000000000", "max_agents",             "الحد الأقصى للوكلاء",             "عدد الوكلاء المسموح بهم في الحساب",                       "وكيل",    "integer", "account"),
+            LD("add00003-0000-0000-0000-000000000000", "max_projects",           "الحد الأقصى للمشاريع",            "عدد المشاريع العقارية المسموح بها",                        "مشروع",   "integer", "account"),
+            LD("add00004-0000-0000-0000-000000000000", "max_project_units",      "الحد الأقصى لوحدات المشروع",      "إجمالي الوحدات العقارية المسموح بها عبر جميع المشاريع",   "وحدة",    "integer", "account"),
+            LD("add00005-0000-0000-0000-000000000000", "max_images_per_listing", "الحد الأقصى للصور لكل إعلان",    "عدد الصور المسموح برفعها في الإعلان الواحد",              "صورة",    "integer", "listing"),
+            LD("add00006-0000-0000-0000-000000000000", "max_featured_slots",     "الإعلانات المميزة المتاحة",        "عدد الإعلانات المميزة المسموح بها في نفس الوقت",           "إعلان",   "integer", "account"),
+            // Depends on: video_upload feature being enabled for that plan.
+            // Value 0 = no video upload allowed; ≥1 = number of videos per listing.
+            // Currently the property schema supports one VideoUrl field, so value is
+            // either 0 (blocked) or 1 (allowed) for most plans.
+            LD("add00007-0000-0000-0000-000000000000", "max_videos_per_listing", "الحد الأقصى للفيديوهات لكل إعلان","عدد مقاطع الفيديو المسموح بها في الإعلان الواحد (0 = محجوب)", "فيديو", "integer", "listing"),
         };
 
         var newLDs = catalog.Where(l => !existing.Contains(l.Key)).ToList();
@@ -450,6 +455,7 @@ public sealed class PlanCatalogSeeder
         const string ld4 = "add00004-0000-0000-0000-000000000000"; // max_project_units
         const string ld5 = "add00005-0000-0000-0000-000000000000"; // max_images_per_listing
         const string ld6 = "add00006-0000-0000-0000-000000000000"; // max_featured_slots
+        const string ld7 = "add00007-0000-0000-0000-000000000000"; // max_videos_per_listing (0=blocked)
 
         const string p01 = "00000001-0000-0000-0000-000000000000";
         const string p02 = "00000002-0000-0000-0000-000000000000";
@@ -543,6 +549,20 @@ public sealed class PlanCatalogSeeder
             PL("c2000016-0000-0000-0000-000000000000", p04, ld4, -1),
             PL("c2000017-0000-0000-0000-000000000000", p04, ld5, -1),
             PL("c2000018-0000-0000-0000-000000000000", p04, ld6, 20),
+            // ── max_videos_per_listing (ld7): mirrors the video_upload feature flag ─
+            // 0 = blocked (video_upload=false for that plan)
+            // ≥1 = allowed count (schema currently supports 1 VideoUrl per listing)
+            PL("c4000001-0000-0000-0000-000000000000", p01, ld7,  0), // Free:             blocked
+            PL("c4000002-0000-0000-0000-000000000000", p02, ld7,  0), // Silver:           blocked
+            PL("c4000003-0000-0000-0000-000000000000", p03, ld7,  1), // Gold:             1 video
+            PL("c4000004-0000-0000-0000-000000000000", p04, ld7,  3), // Platinum:         3 videos
+            PL("c4000005-0000-0000-0000-000000000000", p05, ld7,  0), // OwnerPro:         blocked
+            PL("c4000006-0000-0000-0000-000000000000", p06, ld7,  0), // BrokerPro:        blocked
+            PL("c4000007-0000-0000-0000-000000000000", p07, ld7,  1), // BrokerPremium:    1 video
+            PL("c4000008-0000-0000-0000-000000000000", p08, ld7,  0), // OfficeStarter:    blocked
+            PL("c4000009-0000-0000-0000-000000000000", p09, ld7,  2), // OfficeGrowth:     2 videos
+            PL("c400000a-0000-0000-0000-000000000000", p0a, ld7,  2), // DeveloperBusiness:2 videos
+            PL("c400000b-0000-0000-0000-000000000000", p0b, ld7,  3), // DeveloperPremium: 3 videos
         };
     }
 

@@ -1,0 +1,72 @@
+There is visible improvement in the plan entitlement system, but I need you to clarify and fix the catalog architecture around features vs numeric limits.
+
+Current confusion:
+- Some items behave like real feature definitions
+- Some numeric items show as undefined / disabled in the plan editor
+- Example: video count is not enabled, while other items are editable
+
+I need you to inspect and standardize the model.
+
+GOAL
+Make the admin understand clearly:
+1. what is a feature
+2. what is a limit
+3. how each one is defined in catalog
+4. why some items are disabled in plan edit
+5. how video entitlement should work end-to-end
+
+REQUIRED TASKS
+
+1. Audit current catalog model
+- Check whether the system currently has:
+  - FeatureDefinitions
+  - LimitDefinitions
+- Explain which UI fields come from each table
+- Explain which plan editor fields are boolean features vs numeric limits
+
+2. Fix the missing video entitlement definitions
+- Verify whether these exist:
+  - video_upload_enabled
+  - max_videos_per_ad
+- If missing, create them properly in DB seed / catalog
+- If the project uses separate LimitDefinitions, make sure max_videos_per_ad is stored there
+- If the project uses unified definitions, make sure its type is numeric/limit
+
+3. Enforce correct dependency logic
+- If video_upload_enabled = false:
+  - video upload must be blocked
+  - max_videos_per_ad should be disabled or ignored
+- If video_upload_enabled = true:
+  - max_videos_per_ad should become active
+  - runtime must enforce the allowed count
+
+4. Improve admin UX clarity
+In the catalog and plan edit UI, clearly distinguish:
+- Boolean features (Yes/No)
+- Numeric limits (counts)
+- Optional text/json entitlements if any
+
+Add visible labels like:
+- Type: Feature
+- Type: Limit
+
+5. Improve disabled-state explanation
+When an item is disabled in plan edit, show exact reason:
+- Not defined in catalog
+- Archived
+- Wrong type
+- Dependent on another feature being enabled
+
+6. Report clearly
+Return:
+- current schema used for features and limits
+- which video-related definitions existed already
+- which ones were missing
+- what was fixed
+- how the final logic now works for:
+  - video upload enabled/disabled
+  - max videos per ad
+
+IMPORTANT
+Do not just patch the UI.
+Make sure DB, API, admin editor, and runtime enforcement all match.

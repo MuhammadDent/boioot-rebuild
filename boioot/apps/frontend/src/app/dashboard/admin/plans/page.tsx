@@ -101,10 +101,22 @@ const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
 
 // ── Known catalog keys with Arabic labels ────────────────────────────────────
 
-const KNOWN_LIMITS: { key: string; icon: string; label: string }[] = [
+interface KnownLimit {
+  key: string;
+  icon: string;
+  label: string;
+  /** If set, this limit is only active when the named feature is enabled */
+  dependsOnFeatureKey?: string;
+  dependsOnFeatureLabel?: string;
+}
+
+const KNOWN_LIMITS: KnownLimit[] = [
   { key: "max_active_listings",    icon: "🏠", label: "عدد الإعلانات النشطة" },
   { key: "max_images_per_listing", icon: "📸", label: "عدد الصور لكل إعلان" },
-  { key: "max_videos_per_listing", icon: "🎬", label: "عدد الفيديوهات لكل إعلان" },
+  {
+    key: "max_videos_per_listing", icon: "🎬", label: "عدد الفيديوهات لكل إعلان",
+    dependsOnFeatureKey: "video_upload", dependsOnFeatureLabel: "رفع الفيديو",
+  },
   { key: "max_requests",           icon: "📨", label: "عدد الطلبات المستقبَلة" },
   { key: "max_messages",           icon: "💬", label: "عدد المحادثات الداخلية" },
   { key: "max_agents",             icon: "👤", label: "عدد الوسطاء" },
@@ -150,10 +162,29 @@ function LimitRow({ limit, saving, onSave }: { limit: PlanLimitItem; saving: boo
   );
 }
 
+// ── TypeBadge ─────────────────────────────────────────────────────────────────
+
+function TypeBadge({ kind }: { kind: "limit" | "feature" }) {
+  const isLimit = kind === "limit";
+  return (
+    <span style={{
+      display: "inline-block", fontSize: "0.63rem", fontWeight: 700,
+      padding: "0.1rem 0.45rem", borderRadius: 99,
+      background: isLimit ? "#eff6ff" : "#f5f3ff",
+      color:      isLimit ? "#1d4ed8" : "#7c3aed",
+      border:     `1px solid ${isLimit ? "#bfdbfe" : "#ddd6fe"}`,
+      flexShrink: 0,
+    }}>
+      {isLimit ? "حد عددي" : "ميزة"}
+    </span>
+  );
+}
+
 // ── NamedLimitField ───────────────────────────────────────────────────────────
 
 function NamedLimitField({
   icon, label, limitKey, limits, limitSaving, onSave,
+  dependsOnFeatureKey, dependsOnFeatureLabel, features,
 }: {
   icon: string;
   label: string;
@@ -161,6 +192,9 @@ function NamedLimitField({
   limits: PlanLimitItem[];
   limitSaving: string | null;
   onSave: (key: string, val: string) => void;
+  dependsOnFeatureKey?: string;
+  dependsOnFeatureLabel?: string;
+  features?: PlanFeatureItem[];
 }) {
   const item = limits.find(l => l.key === limitKey);
   const [val, setVal] = useState(item ? String(item.value) : "0");
@@ -172,14 +206,63 @@ function NamedLimitField({
   const saving = limitSaving === limitKey;
   const dirty  = item ? val !== String(item.value) : false;
 
+  // Check whether a required feature is enabled for this plan
+  const dependencyFeature = dependsOnFeatureKey && features
+    ? features.find(f => f.key === dependsOnFeatureKey)
+    : undefined;
+  const dependencyDisabled = dependsOnFeatureKey
+    ? !dependencyFeature?.isEnabled   // feature disabled or not found for this plan
+    : false;
+
   if (!item) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
         <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
         <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
-          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>لم يُعرَّف في كتالوج الحدود — أضفه أولاً من صفحة كتالوج الميزات</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
+            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
+            <TypeBadge kind="limit" />
+          </div>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>
+            لم يُعرَّف في كتالوج الحدود — أضفه أولاً من صفحة <strong>كتالوج الحدود</strong>
+          </p>
         </div>
+      </div>
+    );
+  }
+
+  // Limit exists but its prerequisite feature is disabled
+  if (dependencyDisabled) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#fffbeb", border: "1.5px solid #fde68a" }}>
+        <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
+            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#92400e" }}>{label}</p>
+            <TypeBadge kind="limit" />
+          </div>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#b45309" }}>
+            ⚠ يتوقف على تفعيل «{dependsOnFeatureLabel}» — فعّل الميزة أولاً لتأثير هذا الحد
+          </p>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#78716c", marginTop: "0.1rem" }}>
+            القيمة الحالية: <strong>{item.value === -1 ? "غير محدود ∞" : `${item.value}${item.unit ? ` ${item.unit}` : ""}`}</strong>
+          </p>
+        </div>
+        <input
+          type="number"
+          value={val}
+          onChange={e => setVal(e.target.value)}
+          style={{ ...inputStyle, width: 76, textAlign: "center", padding: "0.35rem 0.5rem", margin: 0, flexShrink: 0, opacity: 0.5 }}
+          disabled={true}
+          min={-1}
+        />
+        <button
+          className="btn btn-primary"
+          style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem", flexShrink: 0 }}
+          disabled={true}
+        >
+          حفظ
+        </button>
       </div>
     );
   }
@@ -188,7 +271,10 @@ function NamedLimitField({
     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#ffffff", border: "1.5px solid #e2e8f0" }}>
       <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600 }}>{label}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.1rem" }}>
+          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600 }}>{label}</p>
+          <TypeBadge kind="limit" />
+        </div>
         <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>
           الحالي: <strong>{item.value === -1 ? "غير محدود ∞" : `${item.value}${item.unit ? ` ${item.unit}` : ""}`}</strong>
         </p>
@@ -242,8 +328,13 @@ function NamedFeatureToggle({
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
         <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
         <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
-          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>لم تُعرَّف في كتالوج الميزات — أضفها أولاً من صفحة كتالوج الميزات</p>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
+            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
+            <TypeBadge kind="feature" />
+          </div>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>
+            لم تُعرَّف في كتالوج الميزات — أضفها أولاً من صفحة <strong>كتالوج الميزات</strong>
+          </p>
         </div>
         <ToggleSwitch checked={false} onChange={() => {}} disabled={true} />
       </div>
@@ -256,9 +347,12 @@ function NamedFeatureToggle({
     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: item.isEnabled ? "#f0fdf4" : "#ffffff", border: `1.5px solid ${item.isEnabled ? "#86efac" : "#e2e8f0"}`, transition: "all 0.2s", opacity: saving ? 0.55 : 1 }}>
       <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon || item.icon || "○"}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: item.isEnabled ? 600 : 400, color: item.isEnabled ? "#166534" : "#334155" }}>
-          {label}
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.1rem" }}>
+          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: item.isEnabled ? 600 : 400, color: item.isEnabled ? "#166534" : "#334155" }}>
+            {label}
+          </p>
+          <TypeBadge kind="feature" />
+        </div>
         {description && (
           <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>{description}</p>
         )}
@@ -1165,6 +1259,17 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
               count={limits.length}
               defaultOpen={true}
             >
+              {/* Type legend */}
+              <div style={{ display: "flex", gap: "1rem", marginBottom: "0.75rem", padding: "0.5rem 0.75rem", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700 }}>شرح الشارات:</span>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", color: "#1d4ed8" }}>
+                  <TypeBadge kind="limit" /> = حد عددي قابل للتعديل (−1 = غير محدود)
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", color: "#7c3aed" }}>
+                  <TypeBadge kind="feature" /> = ميزة تشغيل/إيقاف (في قسم المميزات)
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "#b45309", marginRight: "auto" }}>⚠ الحقول الصفراء تتوقف على تفعيل ميزة أخرى أولاً</span>
+              </div>
               {/* Quick-fill preset row */}
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem", padding: "0.55rem 0.75rem", background: "#f8fafc", borderRadius: 8, alignItems: "center", border: "1px solid #e2e8f0" }}>
                 <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 700, flexShrink: 0 }}>⚡ تعبئة سريعة:</span>
@@ -1194,6 +1299,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     limits={limits}
                     limitSaving={limitSaving}
                     onSave={handleLimitChange}
+                    dependsOnFeatureKey={kl.dependsOnFeatureKey}
+                    dependsOnFeatureLabel={kl.dependsOnFeatureLabel}
+                    features={features}
                   />
                 ))}
                 {/* Any limits not in KNOWN_LIMITS (fallback) */}
