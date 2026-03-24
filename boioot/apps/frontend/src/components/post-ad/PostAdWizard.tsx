@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useRef, type ChangeEvent } from "react";
+import Link from "next/link";
 import { apiConfig } from "@/lib/api-config";
 import { tokenStorage } from "@/lib/token";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { FEATURES_LIST } from "@/features/properties/constants";
+import { useSubscription } from "@/hooks/useSubscription";
 import type { ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
 
 const FLOOR_OPTIONS = [
@@ -176,6 +178,9 @@ interface PostAdWizardProps {
 export default function PostAdWizard({
   listingTypes = [], propertyTypes = [], ownershipTypes = [], onSubmit, isSubmitting, serverError,
 }: PostAdWizardProps) {
+  const { subscription } = useSubscription();
+  const videoAllowed = subscription === null || subscription.hasVideoUpload;
+
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(EMPTY);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -730,6 +735,34 @@ export default function PostAdWizard({
               فيديو العقار <span style={{ color: "#94a3b8", fontWeight: 400 }}>(اختياري)</span>
             </label>
 
+            {!videoAllowed ? (
+              <div style={{
+                background: "#fffbeb",
+                border: "1.5px solid #fcd34d",
+                borderRadius: 10,
+                padding: "0.9rem 1.1rem",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "0.65rem",
+              }}>
+                <span style={{ fontSize: "1.25rem", lineHeight: 1.3 }}>🔒</span>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 700, color: "#92400e", fontSize: "0.88rem" }}>
+                    رفع الفيديو غير متاح في باقتك الحالية
+                  </p>
+                  <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "#78350f" }}>
+                    قم بترقية خطتك إلى Gold أو أعلى لإضافة فيديو لإعلانك.{" "}
+                    <Link
+                      href="/dashboard/subscription/plans"
+                      style={{ color: "#b45309", fontWeight: 700 }}
+                    >
+                      ترقية الخطة ←
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            ) : (
+            <>
             {/* Mode toggle */}
             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.85rem" }}>
               {(["url", "file"] as const).map((m) => (
@@ -798,6 +831,8 @@ export default function PostAdWizard({
                   <p style={{ fontSize: "0.8rem", color: "#dc2626", margin: "0.35rem 0 0" }}>{videoError}</p>
                 )}
               </>
+            )}
+            </>
             )}
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from "react";
+import Link from "next/link";
 import { apiConfig } from "@/lib/api-config";
 import { tokenStorage } from "@/lib/token";
 import type {
@@ -15,6 +16,7 @@ import {
 } from "@/features/properties/constants";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
+import { useSubscription } from "@/hooks/useSubscription";
 import { api } from "@/lib/api";
 
 // ─── Property amenity types (from API) ───────────────────────────────────────
@@ -186,6 +188,9 @@ export default function PropertyForm({
   hideCompany = false,
   submitLabel,
 }: PropertyFormProps) {
+  const { subscription } = useSubscription();
+  const videoAllowed = subscription === null || subscription.hasVideoUpload;
+
   const [fields, setFields] = useState<FormFields>(
     initialData ? fromInitial(initialData) : EMPTY_FIELDS
   );
@@ -921,6 +926,34 @@ export default function PropertyForm({
             فيديو العقار <span style={{ color: "#94a3b8", fontWeight: 400 }}>(اختياري)</span>
           </label>
 
+          {!videoAllowed ? (
+            <div style={{
+              background: "#fffbeb",
+              border: "1.5px solid #fcd34d",
+              borderRadius: 10,
+              padding: "0.9rem 1.1rem",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.65rem",
+            }}>
+              <span style={{ fontSize: "1.25rem", lineHeight: 1.3 }}>🔒</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, color: "#92400e", fontSize: "0.88rem" }}>
+                  رفع الفيديو غير متاح في باقتك الحالية
+                </p>
+                <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "#78350f" }}>
+                  قم بترقية خطتك إلى Gold أو أعلى لإضافة فيديو لإعلانك.{" "}
+                  <Link
+                    href="/dashboard/subscription/plans"
+                    style={{ color: "#b45309", fontWeight: 700 }}
+                  >
+                    ترقية الخطة ←
+                  </Link>
+                </p>
+              </div>
+            </div>
+          ) : (
+          <>
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
             {(["url", "file"] as const).map((m) => (
               <button key={m} type="button"
@@ -981,6 +1014,8 @@ export default function PropertyForm({
               )}
               {videoError && <p style={{ fontSize: "0.78rem", color: "#dc2626", margin: "0.3rem 0 0" }}>{videoError}</p>}
             </>
+          )}
+          </>
           )}
         </div>
       </Section>

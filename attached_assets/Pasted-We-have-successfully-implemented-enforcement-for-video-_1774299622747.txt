@@ -1,0 +1,85 @@
+We have successfully implemented enforcement for video upload.
+
+Now we need to extend enforcement across the rest of the system.
+
+GOAL:
+Apply consistent enforcement rules for all major subscription limits and features.
+
+==================================================
+PHASE 2 — EXTEND ENFORCEMENT
+==================================================
+
+Implement enforcement for the following:
+
+1. Active listings limit
+- key: max_active_listings (or actual existing key)
+- Block creating new listing if user reached limit
+
+2. Images per listing
+- key: max_images_per_listing
+- Block upload if exceeding allowed count
+
+3. Requests
+- key: max_requests (or actual)
+- Block creating/sending/receiving requests when limit exceeded
+
+4. Internal chat
+- feature: internal_chat
+- if disabled → block sending messages
+- if limit exists → enforce it
+
+5. Analytics
+- feature: analytics_dashboard
+- if disabled → block API access
+
+6. Featured / promoted listings
+- enforce any premium feature flags if they exist
+
+==================================================
+PHASE 3 — CENTRALIZE LOGIC
+==================================================
+
+Refactor enforcement into reusable service:
+
+- ISubscriptionEntitlementService
+
+Ensure:
+- no duplicated logic
+- no scattered checks
+- all enforcement passes through this service
+
+==================================================
+PHASE 4 — FRONTEND INTEGRATION
+==================================================
+
+Use CurrentSubscriptionResponse to:
+
+1. Hide unavailable features
+2. Disable buttons
+3. Show upgrade prompts
+4. Prevent invalid actions before submit
+
+BUT:
+Backend must remain the authority.
+
+==================================================
+PHASE 5 — TESTING
+==================================================
+
+Test:
+
+- listing limit reached → block creation
+- image limit exceeded → block upload
+- chat disabled → block messaging
+- analytics disabled → block access
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+- what was enforced
+- where it was enforced
+- which keys used
+- which endpoints protected
+- what remains

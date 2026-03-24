@@ -10,7 +10,7 @@ import { ROLE_LABELS } from "@/features/admin/constants";
 import { hasPermission } from "@/lib/permissions";
 import { formatPrice, LISTING_TYPE_LABELS } from "@/features/properties/constants";
 import type { DashboardSummary, DashboardAnalytics, FavoriteResponse } from "@/types";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 
 const SUMMARY_ROLES = ["Admin", "CompanyOwner", "Broker", "Agent"] as const;
 type SummaryRole = (typeof SUMMARY_ROLES)[number];
@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [analytics, setAnalytics]         = useState<DashboardAnalytics | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsGated, setAnalyticsGated] = useState(false);
 
   const [favorites, setFavorites]       = useState<FavoriteResponse[]>([]);
   const [favLoading, setFavLoading]     = useState(true);
@@ -68,8 +69,12 @@ export default function DashboardPage() {
         attentionListings: Array.isArray(data?.attentionListings) ? data.attentionListings : [],
       });
     } catch (e) {
-      console.error("[dashboard] analytics error:", e);
-      /* silent — analytics section simply won't render */
+      const code = (e instanceof ApiError && (e.details as { code?: string } | null))?.code;
+      if (code === "FEATURE_DISABLED") {
+        setAnalyticsGated(true);
+      } else {
+        console.error("[dashboard] analytics error:", e);
+      }
     } finally {
       setAnalyticsLoading(false);
     }
@@ -262,6 +267,37 @@ export default function DashboardPage() {
                     backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite",
                   }} />
                 ))}
+              </div>
+            ) : analyticsGated ? (
+              <div style={{
+                background: "#fffbeb",
+                border: "1.5px solid #fcd34d",
+                borderRadius: 12,
+                padding: "1.5rem 1.25rem",
+                textAlign: "center",
+              }}>
+                <div style={{ fontSize: "2rem", marginBottom: "0.4rem" }}>📊</div>
+                <p style={{ margin: "0 0 0.25rem", fontWeight: 700, color: "#92400e", fontSize: "0.95rem" }}>
+                  لوحة التحليلات غير متاحة في باقتك الحالية
+                </p>
+                <p style={{ margin: "0 0 0.85rem", fontSize: "0.8rem", color: "#78350f" }}>
+                  قم بترقية خطتك إلى Gold أو أعلى للوصول إلى تقارير الأداء والإحصائيات التفصيلية.
+                </p>
+                <Link
+                  href="/dashboard/subscription/plans"
+                  style={{
+                    display: "inline-block",
+                    background: "#d97706",
+                    color: "#fff",
+                    padding: "0.5rem 1.25rem",
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    textDecoration: "none",
+                  }}
+                >
+                  ترقية الخطة ←
+                </Link>
               </div>
             ) : analytics ? (
               <>
