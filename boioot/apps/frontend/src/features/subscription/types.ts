@@ -7,6 +7,19 @@ export interface CurrentSubscriptionResponse {
   currencyCode: string;
   rank:         number;
   status:       string;
+  // ── Feature entitlements ──────────────────────────────────────────────────
+  hasAnalyticsDashboard:  boolean;
+  hasVideoUpload:         boolean;
+  hasFeaturedListings:    boolean;
+  hasWhatsappContact:     boolean;
+  hasVerifiedBadge:       boolean;
+  hasHomepageExposure:    boolean;
+  hasProjectManagement:   boolean;
+  // ── Limit entitlements ────────────────────────────────────────────────────
+  maxActiveListings:      number;
+  maxImagesPerListing:    number;
+  maxAgents:              number;
+  maxFeaturedSlots:       number;
 }
 
 export interface UpgradeIntentRequest {

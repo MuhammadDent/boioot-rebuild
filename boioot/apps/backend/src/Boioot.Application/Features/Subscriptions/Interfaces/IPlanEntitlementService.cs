@@ -32,4 +32,17 @@ public interface IPlanEntitlementService
     /// Requires the "project_management" feature AND checks "max_projects" limit.
     /// </summary>
     Task<bool> CanCreateProjectAsync(Guid accountId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns true if the account's plan allows video upload for listings.
+    /// Uses the "video_upload" feature key.
+    /// </summary>
+    Task<bool> CanUploadVideoAsync(Guid accountId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the maximum number of images allowed per listing.
+    /// Returns 0 if no active subscription or limit not defined.
+    /// Returns -1 if unlimited.
+    /// </summary>
+    Task<int> GetImageLimitAsync(Guid accountId, CancellationToken ct = default);
 }

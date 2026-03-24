@@ -1,0 +1,299 @@
+We need to fix the pricing/catalog architecture properly.
+
+Current problem:
+The Feature Catalog and Plan editing UI appear to be mostly frontend-only / cosmetic.
+There is no reliable end-to-end linkage between:
+- feature catalog definitions
+- plans/packages
+- database persistence
+- runtime subscription enforcement
+
+GOAL
+Turn the pricing system into a real DB-driven subscription entitlement system.
+
+==================================================
+REQUIRED ARCHITECTURE
+==================================================
+
+We need 4 connected layers:
+
+1) Feature Definition layer
+2) Plan-to-Feature assignment layer
+3) Subscription entitlement resolution layer
+4) Runtime enforcement layer
+
+This must be production-safe and SaaS-ready.
+
+==================================================
+PHASE 1 — AUDIT CURRENT IMPLEMENTATION
+==================================================
+
+First inspect the current codebase and report clearly:
+
+1. What database tables currently exist for:
+   - plans
+   - feature catalog / feature definitions
+   - plan-feature assignments
+   - subscriptions
+   - usage tracking
+
+2. Which admin screens are currently:
+   - real and persisted
+   - partially real
+   - UI only / mock only
+
+3. Whether the current "feature catalog" actually writes to DB
+4. Whether the current "plan edit" screen actually writes feature values to DB
+5. Whether subscriptions currently read limits from DB at runtime
+6. Whether ad creation / request creation / chat / analytics enforce plan limits from DB
+
+Do not guess.
+Trace actual code paths from:
+Admin UI -> API -> DB -> runtime usage.
+
+==================================================
+PHASE 2 — NORMALIZE DATA MODEL
+==================================================
+
+If missing, create / fix the following entities and relationships:
+
+A) FeatureDefinitions
+Fields:
+- Id
+- NameAr
+- NameEn
+- Code (UNIQUE, REQUIRED)
+- FeatureType (boolean, limit, quota, text, json)
+- Category
+- Description
+- Unit
+- IsActive
+- IsSystem
+- SortOrder
+- CreatedAt
+- UpdatedAt
+
+Important:
+Each feature must have a stable machine-readable code.
+Examples:
+- ads.max_active
+- ads.max_images_per_ad
+- ads.video_enabled
+- requests.max_active
+- chat.internal_enabled
+- analytics.dashboard_enabled
+- homepage.featured_enabled
+- listing.priority_enabled
+
+B) Plans
+Ensure plans are real persisted entities and not tied to mock data.
+
+C) PlanFeatures
+Create/fix a join table between Plans and FeatureDefinitions.
+
+Fields:
+- Id
+- PlanId
+- FeatureDefinitionId
+- IsEnabled
+- BooleanValue
+- NumericValue
+- TextValue
+- JsonValue
+- SortOrder
+- CreatedAt
+- UpdatedAt
+
+Rules:
+- One row per plan + feature
+- Unique index on (PlanId, FeatureDefinitionId)
+
+D) Subscriptions
+Ensure active user/company subscription references a Plan.
+
+E) Optional but recommended: UsageTracking
+Create a mechanism for counting usage where needed, such as:
+- active ads count
+- total requests received
+- storage usage
+- image count
+- video usage
+
+==================================================
+PHASE 3 — FIX ADMIN FEATURE CATALOG
+==================================================
+
+The admin feature catalog screen must become fully functional.
+
+Requirements:
+1. Add/Edit/Delete/Archive feature definitions in DB
+2. Persist all catalog changes to the database
+3. Load feature definitions from DB only
+4. Remove any hardcoded/mock feature catalog source
+5. Validate unique Code per feature
+6. Support categories and feature types properly
+7. Do not allow broken feature definitions with empty code
+8. Show whether a feature is already used by plans
+
+If a feature is already assigned to plans, do not hard-delete it unsafely.
+Use soft delete / archive if needed.
+
+==================================================
+PHASE 4 — FIX PLAN EDITING
+==================================================
+
+The plan edit modal/page must become a real plan entitlement editor.
+
+Requirements:
+1. Load all feature definitions from DB
+2. Load current plan-feature values from DB
+3. Allow assigning values per feature based on feature type:
+   - boolean -> toggle
+   - limit/quota -> numeric input
+   - text -> text input
+   - json -> structured editor or textarea
+
+4. Saving a plan must persist into PlanFeatures table
+5. Re-opening the same plan must show saved values correctly
+6. Prevent UI-only state that disappears after refresh
+7. Show explicit plan limits such as:
+   - max active ads
+   - max requests
+   - max internal chats
+   - max images per ad
+   - video enabled or not
+   - analytics dashboard enabled or not
+   - featured listings enabled or not
+
+==================================================
+PHASE 5 — BUILD ENTITLEMENT RESOLUTION SERVICE
+==================================================
+
+Create a backend service such as:
+- IPlanEntitlementService
+or equivalent
+
+Methods should include something like:
+- GetPlanFeatures(planId)
+- GetSubscriptionFeatures(subscriptionId)
+- GetUserEntitlements(userId)
+- HasFeature(userId, featureCode)
+- GetNumericLimit(userId, featureCode)
+- GetBooleanFeature(userId, featureCode)
+
+This service must read from DB only.
+No hardcoded package rules in frontend.
+No hardcoded package rules in random backend controllers.
+
+This service becomes the single source of truth for plan limits.
+
+==================================================
+PHASE 6 — ENFORCE FEATURES AT RUNTIME
+==================================================
+
+Apply real enforcement in the application flows.
+
+At minimum enforce in:
+
+1. Ad creation
+- Can user create a new ad?
+- Has user exceeded max active ads?
+- Is video upload allowed?
+- Is image count per ad within allowed limit?
+
+2. Request system
+- Is user allowed to create/receive more requests?
+
+3. Internal chat/messages
+- Is chat available in the current plan?
+- Are conversation limits enforced if applicable?
+
+4. Analytics
+- Only show analytics dashboard if enabled in plan
+
+5. Featured / promoted visibility
+- Only allow premium promotion features if enabled
+
+Important:
+All checks must come from entitlement service, not from frontend-only flags.
+
+==================================================
+PHASE 7 — FRONTEND CLEANUP
+==================================================
+
+Frontend should become a consumer of backend truth.
+
+Requirements:
+1. Replace mock plan feature state with API-backed state
+2. Show real saved values
+3. Disable/hide unavailable premium controls based on actual entitlements
+4. Keep UI professional but do not fake functionality
+
+==================================================
+PHASE 8 — MIGRATIONS + SEED
+==================================================
+
+Create/update migrations safely.
+
+Seed a proper starter catalog of features such as:
+- ads.max_active
+- ads.max_images_per_ad
+- ads.video_enabled
+- requests.max_active
+- chat.internal_enabled
+- analytics.dashboard_enabled
+- listing.featured_enabled
+- listing.priority_enabled
+
+Then assign realistic values to starter plans:
+- Free / Trial
+- Owner
+- Owner Pro
+- Broker
+- Company
+etc. based on current system naming
+
+==================================================
+PHASE 9 — VERIFICATION
+==================================================
+
+After implementation, test and report:
+
+1. Creating a feature definition persists to DB
+2. Editing a feature definition persists to DB
+3. Assigning feature values to a plan persists to DB
+4. Reloading page shows same saved values
+5. Subscribing a user to a plan gives real entitlements
+6. Ad creation is blocked when plan limit is exceeded
+7. Video upload is blocked when feature disabled
+8. Analytics visibility follows plan settings
+9. No regression in existing SQLite support
+10. If SQL Server provider exists, keep compatibility
+
+==================================================
+IMPORTANT RULES
+==================================================
+
+- Do NOT leave this as UI-only
+- Do NOT use mock data for feature catalog or plan features
+- Do NOT hardcode plan logic in frontend
+- Backend must be the source of truth
+- Keep architecture clean and SaaS-ready
+- Keep backward compatibility where possible
+- If there is existing messy code, refactor carefully rather than layering hacks
+
+==================================================
+DELIVERABLE FORMAT
+==================================================
+
+Return:
+1. Current audit findings
+2. DB schema changes made
+3. APIs added/changed
+4. Runtime enforcement points added
+5. Files changed
+6. Remaining risks if any
+7. Final verdict:
+   - UI only before?
+   - fully DB-driven now?
+   - fully enforced now?

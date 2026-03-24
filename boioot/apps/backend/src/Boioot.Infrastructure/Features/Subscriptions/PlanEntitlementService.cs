@@ -202,6 +202,22 @@ public class PlanEntitlementService : IPlanEntitlementService
         return agentCount < (int)limit;
     }
 
+    // ── CanUploadVideoAsync ───────────────────────────────────────────────
+    public async Task<bool> CanUploadVideoAsync(Guid accountId, CancellationToken ct = default)
+    {
+        await ThrowIfSubscriptionExpiredAsync(accountId, ct);
+        return await HasFeatureAsync(accountId, SubscriptionKeys.VideoUpload, ct);
+    }
+
+    // ── GetImageLimitAsync ────────────────────────────────────────────────
+    // Returns max images allowed per listing for the account's active plan.
+    // -1 = unlimited, 0 = not defined / no active subscription.
+    public async Task<int> GetImageLimitAsync(Guid accountId, CancellationToken ct = default)
+    {
+        var value = await GetLimitAsync(accountId, SubscriptionKeys.MaxImagesPerListing, ct);
+        return (int)value;
+    }
+
     // ── CanCreateProjectAsync ─────────────────────────────────────────────
     // FIX 2: Removed "if (!companyIds.Any()) return true" bypass.
     //         An account with no linked companies counts 0 projects;

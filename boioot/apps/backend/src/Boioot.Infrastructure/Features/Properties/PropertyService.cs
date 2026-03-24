@@ -240,6 +240,28 @@ public class PropertyService : IPropertyService
                 throw new PlanLimitException(
                     SubscriptionKeys.MaxActiveListings,
                     "لقد وصلت إلى الحد الأقصى من الإعلانات في خطتك الحالية. يرجى ترقية خطتك للمتابعة.");
+
+            // Enforce video_upload feature
+            if (!string.IsNullOrWhiteSpace(request.VideoUrl))
+            {
+                var canVideo = await _entitlement.CanUploadVideoAsync(accountId.Value, ct);
+                if (!canVideo)
+                    throw new PlanLimitException(
+                        SubscriptionKeys.VideoUpload,
+                        "رفع الفيديو غير متاح في باقتك الحالية. يرجى ترقية خطتك للمتابعة.",
+                        upgradeRequired: true);
+            }
+
+            // Enforce max_images_per_listing limit
+            if (request.Images is { Count: > 0 })
+            {
+                var imgLimit = await _entitlement.GetImageLimitAsync(accountId.Value, ct);
+                if (imgLimit > 0 && request.Images.Count > imgLimit)
+                    throw new PlanLimitException(
+                        SubscriptionKeys.MaxImagesPerListing,
+                        $"لا يمكن إضافة أكثر من {imgLimit} صورة في الإعلان الواحد ضمن باقتك الحالية.",
+                        upgradeRequired: false);
+            }
         }
         // accountId == null → allow (Admin or unlinked user)
 
@@ -337,25 +359,60 @@ public class PropertyService : IPropertyService
             : null;
 
         // Update VideoUrl if provided (null = unchanged, empty string = clear)
-        if (request.VideoUrl is not null)
-            property.VideoUrl = string.IsNullOrWhiteSpace(request.VideoUrl) ? null : request.VideoUrl.Trim();
+        if (request.VideoUrl is not null && !string.IsNullOrWhiteSpace(request.VideoUrl))
+        {
+            // Enforce video_upload feature if user has an active subscription
+            var updateAcctId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+            if (updateAcctId.HasValue)
+            {
+                var canVideo = await _entitlement.CanUploadVideoAsync(updateAcctId.Value, ct);
+                if (!canVideo)
+                    throw new PlanLimitException(
+                        SubscriptionKeys.VideoUpload,
+                        "رفع الفيديو غير متاح في باقتك الحالية. يرجى ترقية خطتك للمتابعة.",
+                        upgradeRequired: true);
+            }
+            property.VideoUrl = request.VideoUrl.Trim();
+        }
+        else if (request.VideoUrl is not null)
+        {
+            property.VideoUrl = null; // explicit clear
+        }
 
         // Partial image changes: only act when the caller explicitly passes at least one list.
         // null on both = text-only edit → images are untouched.
         if (request.RemovedImageIds is not null || request.NewImages is not null)
         {
             // 1. Remove explicitly deleted images
+            int removedCount = 0;
             if (request.RemovedImageIds is { Count: > 0 })
             {
                 var toRemove = property.Images
                     .Where(i => request.RemovedImageIds.Contains(i.Id.ToString()))
                     .ToList();
+                removedCount = toRemove.Count;
                 _context.Set<PropertyImage>().RemoveRange(toRemove);
             }
 
-            // 2. Append new images
+            // 2. Append new images (with limit enforcement)
             if (request.NewImages is { Count: > 0 })
             {
+                var imgAcctId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+                if (imgAcctId.HasValue)
+                {
+                    var imgLimit = await _entitlement.GetImageLimitAsync(imgAcctId.Value, ct);
+                    if (imgLimit > 0) // 0 = not defined, -1 = unlimited
+                    {
+                        int existingAfterRemoval = property.Images.Count - removedCount;
+                        int totalAfterUpdate     = existingAfterRemoval + request.NewImages.Count;
+                        if (totalAfterUpdate > imgLimit)
+                            throw new PlanLimitException(
+                                SubscriptionKeys.MaxImagesPerListing,
+                                $"لا يمكن إضافة أكثر من {imgLimit} صورة في الإعلان الواحد ضمن باقتك الحالية.",
+                                upgradeRequired: false);
+                    }
+                }
+
                 var now = DateTime.UtcNow;
                 int nextOrder = property.Images.Count > 0
                     ? property.Images.Max(i => i.Order) + 1
@@ -503,6 +560,29 @@ public class PropertyService : IPropertyService
                 throw new PlanLimitException(
                     SubscriptionKeys.MaxActiveListings,
                     "لقد وصلت إلى الحد الأقصى من الإعلانات في خطتك الحالية. يرجى ترقية خطتك للمتابعة.");
+
+            // Enforce video_upload feature
+            if (!string.IsNullOrWhiteSpace(request.VideoUrl))
+            {
+                var canVideo = await _entitlement.CanUploadVideoAsync(acctId.Value, ct);
+                if (!canVideo)
+                    throw new PlanLimitException(
+                        SubscriptionKeys.VideoUpload,
+                        "رفع الفيديو غير متاح في باقتك الحالية. يرجى ترقية خطتك للمتابعة.",
+                        upgradeRequired: true);
+            }
+
+            // Enforce max_images_per_listing limit
+            if (request.Images is { Count: > 0 })
+            {
+                var imgLimit = await _entitlement.GetImageLimitAsync(acctId.Value, ct);
+                if (imgLimit > 0 && request.Images.Count > imgLimit)
+                    throw new PlanLimitException(
+                        SubscriptionKeys.MaxImagesPerListing,
+                        $"لا يمكن إضافة أكثر من {imgLimit} صورة في الإعلان الواحد ضمن باقتك الحالية.",
+                        upgradeRequired: false);
+            }
+
             // Subscription check passed → skip legacy monthly limit check below
         }
         else

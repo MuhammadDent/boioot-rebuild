@@ -1,11 +1,22 @@
 using Boioot.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Boioot.Infrastructure.Persistence;
 
 public class BoiootDbContext : DbContext
 {
     public BoiootDbContext(DbContextOptions<BoiootDbContext> options) : base(options) { }
+
+    // EF Core 8 changed SQLite GUID storage to BLOB; revert to TEXT to preserve backward compat
+    // with the existing database that has all GUIDs stored as lowercase TEXT strings.
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // EF Core 8 changed SQLite GUID default storage to BLOB.
+        // Force TEXT to stay compatible with the existing database data.
+        configurationBuilder.Properties<Guid>().HaveConversion<GuidToStringConverter>();
+        base.ConfigureConventions(configurationBuilder);
+    }
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Company> Companies => Set<Company>();

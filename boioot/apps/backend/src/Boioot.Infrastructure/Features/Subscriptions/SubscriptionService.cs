@@ -1,5 +1,6 @@
 using Boioot.Application.Features.Subscriptions.DTOs;
 using Boioot.Application.Features.Subscriptions.Interfaces;
+using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -61,6 +62,8 @@ public sealed class SubscriptionService : ISubscriptionService
             .Where(p => p.PlanId == sub.PlanId && p.BillingCycle == "Monthly" && p.IsActive)
             .FirstOrDefaultAsync(ct);
 
+        var ent = await LoadPlanEntitlementsAsync(sub.PlanId, ct);
+
         return new CurrentSubscriptionResponse
         {
             PlanId       = sub.PlanId,
@@ -71,6 +74,18 @@ public sealed class SubscriptionService : ISubscriptionService
             CurrencyCode = pricing?.CurrencyCode  ?? "SYP",
             Rank         = sub.Plan.Rank,
             Status       = sub.Status.ToString(),
+            // ── Entitlements ──────────────────────────────────────────────
+            HasAnalyticsDashboard  = ent.Feat("analytics_dashboard"),
+            HasVideoUpload         = ent.Feat("video_upload"),
+            HasFeaturedListings    = ent.Feat("featured_listings"),
+            HasWhatsappContact     = ent.Feat("whatsapp_contact"),
+            HasVerifiedBadge       = ent.Feat("verified_badge"),
+            HasHomepageExposure    = ent.Feat("homepage_exposure"),
+            HasProjectManagement   = ent.Feat("project_management"),
+            MaxActiveListings      = ent.Limit("max_active_listings"),
+            MaxImagesPerListing    = ent.Limit("max_images_per_listing"),
+            MaxAgents              = ent.Limit("max_agents"),
+            MaxFeaturedSlots       = ent.Limit("max_featured_slots"),
         };
     }
 
@@ -183,6 +198,8 @@ public sealed class SubscriptionService : ISubscriptionService
         var freePlan = await _db.Plans.AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == FreePlanId, ct);
 
+        var ent = await LoadPlanEntitlementsAsync(FreePlanId, ct);
+
         return new CurrentSubscriptionResponse
         {
             PlanId       = FreePlanId,
@@ -193,7 +210,48 @@ public sealed class SubscriptionService : ISubscriptionService
             CurrencyCode = "SYP",
             Rank         = freePlan?.Rank ?? 0,
             Status       = "Free",
+            // ── Entitlements ──────────────────────────────────────────────
+            HasAnalyticsDashboard  = ent.Feat("analytics_dashboard"),
+            HasVideoUpload         = ent.Feat("video_upload"),
+            HasFeaturedListings    = ent.Feat("featured_listings"),
+            HasWhatsappContact     = ent.Feat("whatsapp_contact"),
+            HasVerifiedBadge       = ent.Feat("verified_badge"),
+            HasHomepageExposure    = ent.Feat("homepage_exposure"),
+            HasProjectManagement   = ent.Feat("project_management"),
+            MaxActiveListings      = ent.Limit("max_active_listings"),
+            MaxImagesPerListing    = ent.Limit("max_images_per_listing"),
+            MaxAgents              = ent.Limit("max_agents"),
+            MaxFeaturedSlots       = ent.Limit("max_featured_slots"),
         };
+    }
+
+    // ── Entitlement loader (safe projection — never reads junction Id columns) ──
+    private async Task<PlanEntitlements> LoadPlanEntitlementsAsync(Guid planId, CancellationToken ct)
+    {
+        var features = await (
+            from pf in _db.Set<PlanFeature>()
+            where pf.SubscriptionPlanId == planId
+            join fd in _db.Set<FeatureDefinition>() on pf.FeatureDefinitionId equals fd.Id
+            select new { fd.Key, pf.IsEnabled }
+        ).ToListAsync(ct);
+
+        var limits = await (
+            from pl in _db.Set<PlanLimit>()
+            where pl.SubscriptionPlanId == planId
+            join ld in _db.Set<LimitDefinition>() on pl.LimitDefinitionId equals ld.Id
+            select new { ld.Key, pl.Value }
+        ).ToListAsync(ct);
+
+        return new PlanEntitlements(features.ToDictionary(x => x.Key, x => x.IsEnabled),
+                                   limits.ToDictionary(x => x.Key, x => (int)x.Value));
+    }
+
+    private sealed record PlanEntitlements(
+        Dictionary<string, bool> Features,
+        Dictionary<string, int>  Limits)
+    {
+        public bool Feat(string key)  => Features.TryGetValue(key,  out var v) && v;
+        public int  Limit(string key) => Limits  .TryGetValue(key,  out var v) ? v : 0;
     }
 
     private static string ArabicCycle(string cycle) =>

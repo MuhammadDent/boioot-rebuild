@@ -52,6 +52,7 @@ public sealed class PlanCatalogSeeder
         {
             _ctx.Plans.AddRange(newPlans);
             await _ctx.SaveChangesAsync(ct);
+            _ctx.ChangeTracker.Clear();
             _log.LogInformation("Seeded {Count} new plans.", newPlans.Count);
         }
         else
@@ -133,6 +134,7 @@ public sealed class PlanCatalogSeeder
         {
             _ctx.FeatureDefinitions.AddRange(newFDs);
             await _ctx.SaveChangesAsync(ct);
+            _ctx.ChangeTracker.Clear();
             _log.LogInformation("Seeded {Count} new FeatureDefinitions.", newFDs.Count);
         }
 
@@ -227,6 +229,7 @@ public sealed class PlanCatalogSeeder
     private async Task SeedPlanFeaturesAsync(CancellationToken ct)
     {
         var existingIds = (await _ctx.PlanFeatures
+            .AsNoTracking()
             .Select(pf => pf.Id)
             .ToListAsync(ct)).ToHashSet();
 
@@ -235,6 +238,7 @@ public sealed class PlanCatalogSeeder
 
         if (newPFs.Count > 0)
         {
+            _ctx.ChangeTracker.Clear();
             _ctx.PlanFeatures.AddRange(newPFs);
             await _ctx.SaveChangesAsync(ct);
             _log.LogInformation("Seeded {Count} new PlanFeatures.", newPFs.Count);
@@ -318,6 +322,53 @@ public sealed class PlanCatalogSeeder
             // ── Plans 08–09: project_management (ce000018–ce000019) ──────────
             PF("ce000018-0000-0000-0000-000000000000", p08, fd4, true),
             PF("ce000019-0000-0000-0000-000000000000", p09, fd4, true),
+            // ── Business plans 05–07: missing fds 4–9 (da000001–da000012) ──
+            // OwnerPro (05)
+            PF("da000001-0000-0000-0000-000000000000", p05, fd4, false),
+            PF("da000002-0000-0000-0000-000000000000", p05, fd5, false),
+            PF("da000003-0000-0000-0000-000000000000", p05, fd6, true),
+            PF("da000004-0000-0000-0000-000000000000", p05, fd7, true),
+            PF("da000005-0000-0000-0000-000000000000", p05, fd8, false),
+            PF("da000006-0000-0000-0000-000000000000", p05, fd9, false),
+            // BrokerPro (06)
+            PF("da000007-0000-0000-0000-000000000000", p06, fd4, false),
+            PF("da000008-0000-0000-0000-000000000000", p06, fd5, false),
+            PF("da000009-0000-0000-0000-000000000000", p06, fd6, true),
+            PF("da00000a-0000-0000-0000-000000000000", p06, fd7, true),
+            PF("da00000b-0000-0000-0000-000000000000", p06, fd8, false),
+            PF("da00000c-0000-0000-0000-000000000000", p06, fd9, false),
+            // BrokerPremium (07)
+            PF("da00000d-0000-0000-0000-000000000000", p07, fd4, false),
+            PF("da00000e-0000-0000-0000-000000000000", p07, fd5, true),
+            PF("da00000f-0000-0000-0000-000000000000", p07, fd6, true),
+            PF("da000010-0000-0000-0000-000000000000", p07, fd7, true),
+            PF("da000011-0000-0000-0000-000000000000", p07, fd8, true),
+            PF("da000012-0000-0000-0000-000000000000", p07, fd9, false),
+            // ── Office/Developer plans 08–0b: missing fds 5–9 (da000013–da000026) ──
+            // OfficeStarter (08)
+            PF("da000013-0000-0000-0000-000000000000", p08, fd5, false),
+            PF("da000014-0000-0000-0000-000000000000", p08, fd6, true),
+            PF("da000015-0000-0000-0000-000000000000", p08, fd7, true),
+            PF("da000016-0000-0000-0000-000000000000", p08, fd8, true),
+            PF("da000017-0000-0000-0000-000000000000", p08, fd9, false),
+            // OfficeGrowth (09)
+            PF("da000018-0000-0000-0000-000000000000", p09, fd5, true),
+            PF("da000019-0000-0000-0000-000000000000", p09, fd6, true),
+            PF("da00001a-0000-0000-0000-000000000000", p09, fd7, true),
+            PF("da00001b-0000-0000-0000-000000000000", p09, fd8, true),
+            PF("da00001c-0000-0000-0000-000000000000", p09, fd9, true),
+            // DeveloperBusiness (0a)
+            PF("da00001d-0000-0000-0000-000000000000", p0a, fd5, true),
+            PF("da00001e-0000-0000-0000-000000000000", p0a, fd6, true),
+            PF("da00001f-0000-0000-0000-000000000000", p0a, fd7, true),
+            PF("da000020-0000-0000-0000-000000000000", p0a, fd8, true),
+            PF("da000021-0000-0000-0000-000000000000", p0a, fd9, false),
+            // DeveloperPremium (0b)
+            PF("da000022-0000-0000-0000-000000000000", p0b, fd5, true),
+            PF("da000023-0000-0000-0000-000000000000", p0b, fd6, true),
+            PF("da000024-0000-0000-0000-000000000000", p0b, fd7, true),
+            PF("da000025-0000-0000-0000-000000000000", p0b, fd8, true),
+            PF("da000026-0000-0000-0000-000000000000", p0b, fd9, true),
             // ── Plans 01–04 (cf000001–cf000024) ─────────────────────────────
             // Free (01)
             PF("cf000001-0000-0000-0000-000000000000", p01, fd1, false),
@@ -367,6 +418,7 @@ public sealed class PlanCatalogSeeder
     private async Task SeedPlanLimitsAsync(CancellationToken ct)
     {
         var existingIds = (await _ctx.PlanLimits
+            .AsNoTracking()
             .Select(pl => pl.Id)
             .ToListAsync(ct)).ToHashSet();
 
@@ -375,6 +427,7 @@ public sealed class PlanCatalogSeeder
 
         if (newPLs.Count > 0)
         {
+            _ctx.ChangeTracker.Clear();
             _ctx.PlanLimits.AddRange(newPLs);
             await _ctx.SaveChangesAsync(ct);
             _log.LogInformation("Seeded {Count} new PlanLimits.", newPLs.Count);
@@ -440,6 +493,31 @@ public sealed class PlanCatalogSeeder
             // ── Plans 08–09: max_project_units ─────────────────────────────────
             PL("c1000018-0000-0000-0000-000000000000", p08, ld4, 100),
             PL("c1000019-0000-0000-0000-000000000000", p09, ld4,  -1),
+            // ── Missing ld4/ld5/ld6 for business/developer plans (c3000001–c3000011) ──
+            // OwnerPro (05): ld4=max_project_units, ld5=max_images_per_listing, ld6=max_featured_slots
+            PL("c3000001-0000-0000-0000-000000000000", p05, ld4,   0),
+            PL("c3000002-0000-0000-0000-000000000000", p05, ld5,   8),
+            PL("c3000003-0000-0000-0000-000000000000", p05, ld6,   0),
+            // BrokerPro (06)
+            PL("c3000004-0000-0000-0000-000000000000", p06, ld4,   0),
+            PL("c3000005-0000-0000-0000-000000000000", p06, ld5,  15),
+            PL("c3000006-0000-0000-0000-000000000000", p06, ld6,   2),
+            // BrokerPremium (07)
+            PL("c3000007-0000-0000-0000-000000000000", p07, ld4,   0),
+            PL("c3000008-0000-0000-0000-000000000000", p07, ld5,  25),
+            PL("c3000009-0000-0000-0000-000000000000", p07, ld6,   5),
+            // OfficeStarter (08): ld5 + ld6 only (ld4 already seeded above)
+            PL("c300000a-0000-0000-0000-000000000000", p08, ld5,  25),
+            PL("c300000b-0000-0000-0000-000000000000", p08, ld6,  10),
+            // OfficeGrowth (09): ld5 + ld6 only
+            PL("c300000c-0000-0000-0000-000000000000", p09, ld5,  -1),
+            PL("c300000d-0000-0000-0000-000000000000", p09, ld6,  20),
+            // DeveloperBusiness (0a): ld5 + ld6 only (ld4 already seeded above)
+            PL("c300000e-0000-0000-0000-000000000000", p0a, ld5,  30),
+            PL("c300000f-0000-0000-0000-000000000000", p0a, ld6,  10),
+            // DeveloperPremium (0b): ld5 + ld6 only
+            PL("c3000010-0000-0000-0000-000000000000", p0b, ld5,  -1),
+            PL("c3000011-0000-0000-0000-000000000000", p0b, ld6,  30),
             // ── Plans 01–04 ────────────────────────────────────────────────────
             PL("c2000001-0000-0000-0000-000000000000", p01, ld1,  2),
             PL("c2000002-0000-0000-0000-000000000000", p01, ld2,  0),
