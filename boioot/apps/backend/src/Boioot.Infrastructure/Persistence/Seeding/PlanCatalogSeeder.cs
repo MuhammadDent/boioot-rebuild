@@ -118,16 +118,21 @@ public sealed class PlanCatalogSeeder
 
         var catalog = new[]
         {
-            FD("fd000001-0000-0000-0000-000000000000", "analytics_dashboard", "لوحة التحليلات",         "وصول إلى إحصائيات وأداء الإعلانات",               "business",      "📊"),
-            FD("fd000002-0000-0000-0000-000000000000", "priority_support",    "دعم ذو أولوية",          "أولوية الوصول لفريق الدعم الفني",                 "support",       "🛠"),
-            FD("fd000003-0000-0000-0000-000000000000", "featured_listings",   "إعلانات مميزة",          "إبراز الإعلانات في نتائج البحث",                  "marketing",     "⭐"),
-            FD("fd000004-0000-0000-0000-000000000000", "project_management",  "إدارة المشاريع",         "أدوات إنشاء وإدارة المشاريع العقارية والوحدات",    "business",      "🏗"),
-            FD("fd000005-0000-0000-0000-000000000000", "video_upload",        "رفع الفيديو",            "إمكانية رفع فيديو للإعلان",                       "content",       "🎥"),
-            FD("fd000006-0000-0000-0000-000000000000", "multiple_photos",     "صور متعددة للإعلان",     "رفع أكثر من صورة للإعلان الواحد",                  "content",       "📸"),
-            FD("fd000007-0000-0000-0000-000000000000", "whatsapp_contact",    "تواصل عبر واتساب",       "إظهار زر واتساب في صفحة الإعلان",                  "communication", "💬"),
-            FD("fd000008-0000-0000-0000-000000000000", "verified_badge",      "شارة التحقق",            "عرض علامة التحقق على الملف الشخصي والإعلانات",     "marketing",     "✅"),
-            FD("fd000009-0000-0000-0000-000000000000", "homepage_exposure",   "ظهور في الصفحة الرئيسية","عرض الإعلانات ضمن قسم مميز في الصفحة الرئيسية",   "marketing",     "🏠"),
-            FD("fd00000a-0000-0000-0000-000000000000", "internal_chat",       "المراسلة الداخلية",       "إمكانية التواصل مع البائعين والمشترين عبر المنصة",  "communication", "✉️"),
+            // marketing group (SortOrder 10-19)
+            FD("fd000003-0000-0000-0000-000000000000", "featured_listings",   "إعلانات مميزة",          "إبراز الإعلانات في نتائج البحث",                  "marketing",     "⭐",  "boolean", "listing",   10),
+            FD("fd000009-0000-0000-0000-000000000000", "homepage_exposure",   "ظهور في الصفحة الرئيسية","عرض الإعلانات ضمن قسم مميز في الصفحة الرئيسية",   "marketing",     "🏠",  "boolean", "listing",   11),
+            FD("fd000008-0000-0000-0000-000000000000", "verified_badge",      "شارة التحقق",            "عرض علامة التحقق على الملف الشخصي والإعلانات",     "marketing",     "✅",  "boolean", "user",      12),
+            // content group (SortOrder 20-29)
+            FD("fd000006-0000-0000-0000-000000000000", "multiple_photos",     "صور متعددة للإعلان",     "رفع أكثر من صورة للإعلان الواحد",                  "content",       "📸",  "boolean", "listing",   20),
+            FD("fd000005-0000-0000-0000-000000000000", "video_upload",        "رفع الفيديو",            "إمكانية رفع فيديو للإعلان",                       "content",       "🎥",  "boolean", "listing",   21),
+            // business group (SortOrder 30-39)
+            FD("fd000001-0000-0000-0000-000000000000", "analytics_dashboard", "لوحة التحليلات",         "وصول إلى إحصائيات وأداء الإعلانات",               "business",      "📊",  "boolean", "analytics", 30),
+            FD("fd000004-0000-0000-0000-000000000000", "project_management",  "إدارة المشاريع",         "أدوات إنشاء وإدارة المشاريع العقارية والوحدات",    "business",      "🏗",  "boolean", "system",    31),
+            // communication group (SortOrder 40-49)
+            FD("fd000007-0000-0000-0000-000000000000", "whatsapp_contact",    "تواصل عبر واتساب",       "إظهار زر واتساب في صفحة الإعلان",                  "communication", "💬",  "boolean", "messaging", 40),
+            FD("fd00000a-0000-0000-0000-000000000000", "internal_chat",       "المراسلة الداخلية",       "إمكانية التواصل مع البائعين والمشترين عبر المنصة",  "communication", "✉️",  "boolean", "messaging", 41),
+            // support group (SortOrder 50-59)
+            FD("fd000002-0000-0000-0000-000000000000", "priority_support",    "دعم ذو أولوية",          "أولوية الوصول لفريق الدعم الفني",                 "support",       "🛠",  "boolean", "user",      50),
         };
 
         var newFDs = catalog.Where(f => !existing.Contains(f.Key)).ToList();
@@ -139,44 +144,40 @@ public sealed class PlanCatalogSeeder
             _log.LogInformation("Seeded {Count} new FeatureDefinitions.", newFDs.Count);
         }
 
-        // Apply group + icon corrections (idempotent — runs every startup, portable EF update).
+        // Idempotent correction — run every startup to back-fill any gaps in existing rows.
         var fds = await _ctx.FeatureDefinitions.ToListAsync(ct);
-        var fdGroupMap = new Dictionary<string, string>(StringComparer.Ordinal)
+
+        // key → (group, icon, type, scope, isSystem, sortOrder)
+        var fdMetaMap = new Dictionary<string, (string group, string icon, string type, string scope, bool isSystem, int sortOrder)>(StringComparer.Ordinal)
         {
-            ["featured_listings"]   = "marketing",
-            ["verified_badge"]      = "marketing",
-            ["homepage_exposure"]   = "marketing",
-            ["video_upload"]        = "content",
-            ["multiple_photos"]     = "content",
-            ["analytics_dashboard"] = "business",
-            ["project_management"]  = "business",
-            ["whatsapp_contact"]    = "communication",
-            ["priority_support"]    = "support",
-            ["internal_chat"]       = "communication",
+            ["featured_listings"]   = ("marketing",     "⭐",  "boolean", "listing",   true,  10),
+            ["homepage_exposure"]   = ("marketing",     "🏠",  "boolean", "listing",   true,  11),
+            ["verified_badge"]      = ("marketing",     "✅",  "boolean", "user",      true,  12),
+            ["multiple_photos"]     = ("content",       "📸",  "boolean", "listing",   true,  20),
+            ["video_upload"]        = ("content",       "🎥",  "boolean", "listing",   true,  21),
+            ["analytics_dashboard"] = ("business",      "📊",  "boolean", "analytics", true,  30),
+            ["project_management"]  = ("business",      "🏗",  "boolean", "system",    true,  31),
+            ["whatsapp_contact"]    = ("communication", "💬",  "boolean", "messaging", true,  40),
+            ["internal_chat"]       = ("communication", "✉️",  "boolean", "messaging", true,  41),
+            ["priority_support"]    = ("support",       "🛠",  "boolean", "user",      true,  50),
         };
-        var fdIconMap = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["analytics_dashboard"] = "📊",
-            ["priority_support"]    = "🛠",
-            ["featured_listings"]   = "⭐",
-            ["project_management"]  = "🏗",
-            ["video_upload"]        = "🎥",
-            ["multiple_photos"]     = "📸",
-            ["whatsapp_contact"]    = "💬",
-            ["verified_badge"]      = "✅",
-            ["homepage_exposure"]   = "🏠",
-            ["internal_chat"]       = "✉️",
-        };
+
         foreach (var fd in fds)
         {
-            if (fdGroupMap.TryGetValue(fd.Key, out var group)) fd.FeatureGroup = group;
-            if (fdIconMap.TryGetValue(fd.Key, out var icon))   fd.Icon         = icon;
+            if (!fdMetaMap.TryGetValue(fd.Key, out var meta)) continue;
+            fd.FeatureGroup = meta.group;
+            fd.Icon         = meta.icon;
+            fd.Type         = meta.type;
+            fd.Scope        = meta.scope;
+            fd.IsSystem     = meta.isSystem;
+            fd.SortOrder    = meta.sortOrder;
         }
         await _ctx.SaveChangesAsync(ct);
     }
 
     private static FeatureDefinition FD(string id, string key, string name,
-        string? description, string group, string icon) => new()
+        string? description, string group, string icon,
+        string type, string scope, int sortOrder) => new()
     {
         Id           = Guid.Parse(id),
         Key          = key,
@@ -185,6 +186,10 @@ public sealed class PlanCatalogSeeder
         FeatureGroup = group,
         Icon         = icon,
         IsActive     = true,
+        Type         = type,
+        Scope        = scope,
+        IsSystem     = true,
+        SortOrder    = sortOrder,
     };
 
     // ── LimitDefinitions ──────────────────────────────────────────────────────

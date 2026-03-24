@@ -293,7 +293,11 @@ public sealed class SchemaEvolutionService
 
     private async Task ApplyFeatureDefinitionPatchesAsync(CancellationToken ct)
     {
-        await TryAlter("FeatureDefinitions", "Icon", "TEXT", ct);
+        await TryAlter("FeatureDefinitions", "Icon",      "TEXT",                              ct);
+        await TryAlter("FeatureDefinitions", "Type",      "TEXT NOT NULL DEFAULT 'boolean'",   ct);
+        await TryAlter("FeatureDefinitions", "Scope",     "TEXT NOT NULL DEFAULT 'system'",    ct);
+        await TryAlter("FeatureDefinitions", "IsSystem",  "INTEGER NOT NULL DEFAULT 0",        ct);
+        await TryAlter("FeatureDefinitions", "SortOrder", "INTEGER NOT NULL DEFAULT 0",        ct);
     }
 
     private async Task ApplyPlanFeaturePatchesAsync(CancellationToken ct)

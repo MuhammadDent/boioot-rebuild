@@ -119,6 +119,30 @@ const inputStyle: React.CSSProperties = {
 
 // ── Feature Section ───────────────────────────────────────────────────────────
 
+const FEATURE_TYPE_LABELS: Record<string, string> = {
+  boolean:  "✅ منطقي",
+  limit:    "🔢 حد عددي",
+  text:     "📝 نصي",
+  json:     "⚙️ JSON",
+};
+
+const FEATURE_SCOPE_LABELS: Record<string, string> = {
+  listing:   "🏠 إعلان",
+  user:      "👤 مستخدم",
+  system:    "⚙️ نظام",
+  messaging: "💬 مراسلة",
+  analytics: "📊 تحليلات",
+};
+
+function typeLabel(t?: string) {
+  if (!t) return "—";
+  return FEATURE_TYPE_LABELS[t] ?? t;
+}
+function scopeLabel(s?: string) {
+  if (!s) return "—";
+  return FEATURE_SCOPE_LABELS[s] ?? s;
+}
+
 type FeatFormMode = "create" | "edit";
 
 interface FeatForm {
@@ -128,10 +152,13 @@ interface FeatForm {
   featureGroup: string;
   icon: string;
   isActive: boolean;
+  type: string;
+  scope: string;
+  sortOrder: number;
 }
 
 function defaultFeatForm(): FeatForm {
-  return { key: "", name: "", description: "", featureGroup: "", icon: "", isActive: true };
+  return { key: "", name: "", description: "", featureGroup: "", icon: "", isActive: true, type: "boolean", scope: "listing", sortOrder: 0 };
 }
 
 function featFromEntry(e: FeatureDefinitionEntry): FeatForm {
@@ -142,6 +169,9 @@ function featFromEntry(e: FeatureDefinitionEntry): FeatForm {
     featureGroup: e.featureGroup ?? "",
     icon:         e.icon ?? "",
     isActive:     e.isActive,
+    type:         e.type,
+    scope:        e.scope,
+    sortOrder:    e.sortOrder,
   };
 }
 
@@ -157,17 +187,19 @@ interface FeatureSectionProps {
 function FeatureSection({
   items, onReload, globalError, setGlobalError, globalSuccess, setGlobalSuccess
 }: FeatureSectionProps) {
-  const [showForm, setShowForm]         = useState(false);
-  const [mode, setMode]                 = useState<FeatFormMode>("create");
-  const [editId, setEditId]             = useState<string | null>(null);
-  const [form, setForm]                 = useState<FeatForm>(defaultFeatForm());
-  const [saving, setSaving]             = useState(false);
-  const [deleting, setDeleting]         = useState<string | null>(null);
+  const [showForm, setShowForm]           = useState(false);
+  const [mode, setMode]                   = useState<FeatFormMode>("create");
+  const [editId, setEditId]               = useState<string | null>(null);
+  const [editItem, setEditItem]           = useState<FeatureDefinitionEntry | null>(null);
+  const [form, setForm]                   = useState<FeatForm>(defaultFeatForm());
+  const [saving, setSaving]               = useState(false);
+  const [deleting, setDeleting]           = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<FeatureDefinitionEntry | null>(null);
 
   function openCreate() {
     setMode("create");
     setEditId(null);
+    setEditItem(null);
     setForm(defaultFeatForm());
     setGlobalError("");
     setGlobalSuccess("");
@@ -177,6 +209,7 @@ function FeatureSection({
   function openEdit(item: FeatureDefinitionEntry) {
     setMode("edit");
     setEditId(item.id);
+    setEditItem(item);
     setForm(featFromEntry(item));
     setGlobalError("");
     setGlobalSuccess("");
@@ -186,6 +219,7 @@ function FeatureSection({
   function cancel() {
     setShowForm(false);
     setEditId(null);
+    setEditItem(null);
   }
 
   async function handleSave() {
@@ -200,6 +234,9 @@ function FeatureSection({
           description:  form.description.trim() || undefined,
           featureGroup: form.featureGroup.trim() || undefined,
           icon:         form.icon.trim() || undefined,
+          type:         form.type,
+          scope:        form.scope,
+          sortOrder:    form.sortOrder,
         };
         await adminApi.createCatalogFeature(payload);
         setGlobalSuccess("تم إضافة تعريف الميزة بنجاح");
@@ -210,6 +247,7 @@ function FeatureSection({
           featureGroup: form.featureGroup.trim() || undefined,
           icon:         form.icon.trim() || undefined,
           isActive:     form.isActive,
+          sortOrder:    form.sortOrder,
         };
         await adminApi.updateCatalogFeature(editId!, payload);
         setGlobalSuccess("تم تحديث تعريف الميزة بنجاح");
@@ -239,13 +277,16 @@ function FeatureSection({
     }
   }
 
+  const isCreateDisabled = saving || !form.name.trim() || !form.key.trim() || !form.type || !form.scope;
+  const isEditDisabled   = saving || !form.name.trim();
+
   return (
     <div style={card}>
       <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#fff" }}>تعريفات الميزات</div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
-            {items.length} تعريف — المفاتيح ثابتة ولا يُغيَّر اسمها بعد الإنشاء
+            {items.length} تعريف — المفاتيح والنوع والنطاق ثابتة بعد الإنشاء
           </div>
         </div>
         <button
@@ -261,7 +302,17 @@ function FeatureSection({
           <div style={{ fontWeight: 600, fontSize: 14, color: "#a78bfa", marginBottom: 14 }}>
             {mode === "create" ? "إضافة تعريف ميزة جديد" : "تعديل تعريف الميزة"}
           </div>
+
+          {/* System feature notice */}
+          {mode === "edit" && editItem?.isSystem && (
+            <div style={{ marginBottom: 12, padding: "8px 12px", background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.2)", borderRadius: 8, fontSize: 12, color: "#fbbf24" }}>
+              🔒 ميزة نظامية مدمجة — الاسم والوصف والمجموعة والأيقونة وترتيب العرض قابلة للتعديل. النوع والنطاق والمفتاح ثابتة.
+            </div>
+          )}
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+
+            {/* Key — create only */}
             {mode === "create" && (
               <div>
                 <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
@@ -271,11 +322,13 @@ function FeatureSection({
                   dir="ltr"
                   value={form.key}
                   onChange={e => setForm(f => ({ ...f, key: e.target.value }))}
-                  placeholder="video_upload"
+                  placeholder="my_feature"
                   style={inputStyle}
                 />
               </div>
             )}
+
+            {/* Name */}
             <div>
               <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
                 الاسم *
@@ -283,10 +336,64 @@ function FeatureSection({
               <input
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="رفع الفيديو"
+                placeholder="اسم الميزة"
                 style={inputStyle}
               />
             </div>
+
+            {/* Type */}
+            {mode === "create" ? (
+              <div>
+                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
+                  النوع (Type) *
+                </label>
+                <select
+                  value={form.type}
+                  onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+                  style={{ ...inputStyle, appearance: "none" }}>
+                  {Object.entries(FEATURE_TYPE_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
+                  النوع (Type)
+                </label>
+                <div style={{ ...inputStyle, background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.45)", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 6 }}>
+                  🔒 {typeLabel(form.type)}
+                </div>
+              </div>
+            )}
+
+            {/* Scope */}
+            {mode === "create" ? (
+              <div>
+                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
+                  النطاق (Scope) *
+                </label>
+                <select
+                  value={form.scope}
+                  onChange={e => setForm(f => ({ ...f, scope: e.target.value }))}
+                  style={{ ...inputStyle, appearance: "none" }}>
+                  {Object.entries(FEATURE_SCOPE_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
+                  النطاق (Scope)
+                </label>
+                <div style={{ ...inputStyle, background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.45)", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 6 }}>
+                  🔒 {scopeLabel(form.scope)}
+                </div>
+              </div>
+            )}
+
+            {/* Icon */}
             <div>
               <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
                 الأيقونة (إيموجي)
@@ -294,11 +401,13 @@ function FeatureSection({
               <input
                 value={form.icon}
                 onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
-                placeholder="🎥"
+                placeholder="🎯"
                 maxLength={8}
                 style={{ ...inputStyle, width: 90 }}
               />
             </div>
+
+            {/* Feature Group */}
             <div>
               <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
                 المجموعة
@@ -313,6 +422,23 @@ function FeatureSection({
                 ))}
               </select>
             </div>
+
+            {/* Sort Order */}
+            <div>
+              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
+                ترتيب العرض
+              </label>
+              <input
+                type="number"
+                dir="ltr"
+                value={form.sortOrder}
+                onChange={e => setForm(f => ({ ...f, sortOrder: Number(e.target.value) || 0 }))}
+                min={0}
+                style={{ ...inputStyle, width: 100 }}
+              />
+            </div>
+
+            {/* Description */}
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
                 الوصف
@@ -324,6 +450,8 @@ function FeatureSection({
                 style={inputStyle}
               />
             </div>
+
+            {/* Active toggle (edit only) */}
             {mode === "edit" && (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <input
@@ -332,17 +460,20 @@ function FeatureSection({
                   checked={form.isActive}
                   onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
                 />
-                <label htmlFor="featActive" style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", cursor: "pointer" }}>
+                <label
+                  htmlFor="featActive"
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", cursor: "pointer" }}>
                   مفعّلة
                 </label>
               </div>
             )}
           </div>
+
           <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
             <button
               onClick={handleSave}
-              disabled={saving || !form.name.trim() || (mode === "create" && !form.key.trim())}
-              style={{ ...btnPrimary, opacity: saving ? 0.6 : 1 }}>
+              disabled={mode === "create" ? isCreateDisabled : isEditDisabled}
+              style={{ ...btnPrimary, opacity: (mode === "create" ? isCreateDisabled : isEditDisabled) ? 0.6 : 1 }}>
               {saving ? "جاري الحفظ…" : mode === "create" ? "إضافة" : "حفظ التعديلات"}
             </button>
             <button
@@ -361,17 +492,21 @@ function FeatureSection({
             <tr>
               <th style={thStyle}>المفتاح</th>
               <th style={thStyle}>الاسم</th>
-              <th style={{ ...thStyle, textAlign: "center", width: 52 }}>أيقونة</th>
+              <th style={{ ...thStyle, textAlign: "center", width: 44 }}>أيقونة</th>
+              <th style={thStyle}>النوع</th>
+              <th style={thStyle}>النطاق</th>
               <th style={thStyle}>المجموعة</th>
-              <th style={thStyle}>الوصف</th>
               <th style={{ ...thStyle, textAlign: "center" }}>الحالة</th>
+              <th style={{ ...thStyle, textAlign: "center" }}>خطط</th>
               <th style={{ ...thStyle, textAlign: "center" }}>إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ ...tdStyle, textAlign: "center", color: "rgba(255,255,255,0.35)", padding: 28 }}>
+                <td
+                  colSpan={9}
+                  style={{ ...tdStyle, textAlign: "center", color: "rgba(255,255,255,0.35)", padding: 28 }}>
                   لا توجد تعريفات بعد
                 </td>
               </tr>
@@ -379,21 +514,35 @@ function FeatureSection({
             {items.map(item => (
               <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
                 <td style={tdStyle}>
-                  <span style={codeStyle}>{item.key}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={codeStyle}>{item.key}</span>
+                    {item.isSystem && (
+                      <span style={{ fontSize: 10, background: "rgba(234,179,8,0.12)", color: "#fbbf24", borderRadius: 4, padding: "1px 5px" }}>
+                        🔒 نظام
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td style={tdStyle}>{item.name}</td>
-                <td style={{ ...tdStyle, textAlign: "center", fontSize: "1.25rem" }}>
+                <td style={{ ...tdStyle, textAlign: "center", fontSize: "1.2rem" }}>
                   {item.icon ?? "—"}
                 </td>
                 <td style={tdStyle}>
+                  <span style={{ fontSize: 11, background: "rgba(99,102,241,0.12)", color: "#818cf8", borderRadius: 4, padding: "2px 7px" }}>
+                    {typeLabel(item.type)}
+                  </span>
+                </td>
+                <td style={tdStyle}>
+                  <span style={{ fontSize: 11, background: "rgba(20,184,166,0.12)", color: "#2dd4bf", borderRadius: 4, padding: "2px 7px" }}>
+                    {scopeLabel(item.scope)}
+                  </span>
+                </td>
+                <td style={tdStyle}>
                   {item.featureGroup ? (
-                    <span style={{ fontSize: 11, background: "rgba(167,139,250,0.12)", color: "#a78bfa", borderRadius: 4, padding: "2px 8px" }}>
+                    <span style={{ fontSize: 11, background: "rgba(167,139,250,0.12)", color: "#a78bfa", borderRadius: 4, padding: "2px 7px" }}>
                       {groupLabel(item.featureGroup)}
                     </span>
                   ) : "—"}
-                </td>
-                <td style={{ ...tdStyle, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
-                  {item.description ?? "—"}
                 </td>
                 <td style={{ ...tdStyle, textAlign: "center" }}>
                   <span style={{
@@ -406,6 +555,11 @@ function FeatureSection({
                     {item.isActive ? "مفعّلة" : "معطّلة"}
                   </span>
                 </td>
+                <td style={{ ...tdStyle, textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                  {item.planFeatureCount > 0 ? (
+                    <span style={{ color: "#a78bfa", fontWeight: 600 }}>{item.planFeatureCount}</span>
+                  ) : "0"}
+                </td>
                 <td style={{ ...tdStyle, textAlign: "center" }}>
                   <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                     <button
@@ -413,7 +567,11 @@ function FeatureSection({
                       style={btnSecondary}>
                       تعديل
                     </button>
-                    {confirmDelete?.id === item.id ? (
+                    {item.isSystem ? (
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", padding: "5px 8px" }}>
+                        🔒 محمي
+                      </span>
+                    ) : confirmDelete?.id === item.id ? (
                       <div style={{ display: "flex", gap: 4 }}>
                         <button
                           onClick={() => handleDelete(item)}
@@ -430,7 +588,9 @@ function FeatureSection({
                     ) : (
                       <button
                         onClick={() => setConfirmDelete(item)}
-                        style={btnDanger}>
+                        disabled={item.planFeatureCount > 0}
+                        style={{ ...btnDanger, opacity: item.planFeatureCount > 0 ? 0.4 : 1, cursor: item.planFeatureCount > 0 ? "not-allowed" : "pointer" }}
+                        title={item.planFeatureCount > 0 ? "مرتبط بخطط — عطّله بدلاً من حذفه" : undefined}>
                         حذف
                       </button>
                     )}

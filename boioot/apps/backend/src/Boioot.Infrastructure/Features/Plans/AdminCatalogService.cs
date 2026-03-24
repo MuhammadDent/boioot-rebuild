@@ -20,11 +20,42 @@ public class AdminCatalogService : IAdminCatalogService
 
     public async Task<List<FeatureDefinitionResponse>> GetFeaturesAsync(CancellationToken ct = default)
     {
+        // Count PlanFeature references per FeatureDefinition in a single query.
+        var counts = await _db.PlanFeatures
+            .GroupBy(pf => pf.FeatureDefinitionId)
+            .Select(g => new { Id = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Id, x => x.Count, ct);
+
         return await _db.FeatureDefinitions
-            .OrderBy(f => f.FeatureGroup)
+            .OrderBy(f => f.SortOrder)
+            .ThenBy(f => f.FeatureGroup)
             .ThenBy(f => f.Key)
-            .Select(f => MapFeature(f))
-            .ToListAsync(ct);
+            .Select(f => new FeatureDefinitionResponse
+            {
+                Id               = f.Id,
+                Key              = f.Key,
+                Name             = f.Name,
+                Description      = f.Description,
+                FeatureGroup     = f.FeatureGroup,
+                Icon             = f.Icon,
+                IsActive         = f.IsActive,
+                Type             = f.Type,
+                Scope            = f.Scope,
+                IsSystem         = f.IsSystem,
+                SortOrder        = f.SortOrder,
+                PlanFeatureCount = 0  // filled below after materialisation
+            })
+            .ToListAsync(ct)
+            .ContinueWith(t =>
+            {
+                var list = t.Result;
+                foreach (var r in list)
+                {
+                    if (counts.TryGetValue(r.Id, out var c)) r.PlanFeatureCount = c;
+                }
+                return list;
+            }, ct, System.Threading.Tasks.TaskContinuationOptions.OnlyOnRanToCompletion,
+               System.Threading.Tasks.TaskScheduler.Default);
     }
 
     public async Task<FeatureDefinitionResponse> CreateFeatureAsync(
@@ -33,6 +64,17 @@ public class AdminCatalogService : IAdminCatalogService
         if (await _db.FeatureDefinitions.AnyAsync(f => f.Key == request.Key, ct))
             throw new BoiootException($"المفتاح '{request.Key}' موجود مسبقاً", 409);
 
+        var validTypes  = new[] { "boolean", "limit", "text", "json" };
+        var validScopes = new[] { "listing", "user", "system", "messaging", "analytics" };
+
+        var type  = request.Type.Trim().ToLowerInvariant();
+        var scope = request.Scope.Trim().ToLowerInvariant();
+
+        if (!validTypes.Contains(type))
+            throw new BoiootException($"النوع '{type}' غير صالح. القيم المسموح بها: boolean, limit, text, json", 400);
+        if (!validScopes.Contains(scope))
+            throw new BoiootException($"النطاق '{scope}' غير صالح. القيم المسموح بها: listing, user, system, messaging, analytics", 400);
+
         var entity = new FeatureDefinition
         {
             Key          = request.Key.Trim().ToLowerInvariant(),
@@ -40,12 +82,16 @@ public class AdminCatalogService : IAdminCatalogService
             Description  = request.Description?.Trim(),
             FeatureGroup = request.FeatureGroup?.Trim().ToLowerInvariant(),
             Icon         = request.Icon?.Trim(),
-            IsActive     = true
+            IsActive     = true,
+            Type         = type,
+            Scope        = scope,
+            IsSystem     = false,
+            SortOrder    = request.SortOrder
         };
 
         _db.FeatureDefinitions.Add(entity);
         await _db.SaveChangesAsync(ct);
-        return MapFeature(entity);
+        return MapFeature(entity, 0);
     }
 
     public async Task<FeatureDefinitionResponse> UpdateFeatureAsync(
@@ -59,16 +105,22 @@ public class AdminCatalogService : IAdminCatalogService
         entity.FeatureGroup = request.FeatureGroup?.Trim().ToLowerInvariant();
         entity.Icon         = request.Icon?.Trim();
         entity.IsActive     = request.IsActive;
+        entity.SortOrder    = request.SortOrder;
         entity.UpdatedAt    = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
-        return MapFeature(entity);
+
+        int count = await _db.PlanFeatures.CountAsync(pf => pf.FeatureDefinitionId == id, ct);
+        return MapFeature(entity, count);
     }
 
     public async Task DeleteFeatureAsync(Guid id, CancellationToken ct = default)
     {
         var entity = await _db.FeatureDefinitions.FindAsync([id], ct)
             ?? throw new BoiootException("تعريف الميزة غير موجود", 404);
+
+        if (entity.IsSystem)
+            throw new BoiootException("لا يمكن حذف ميزة نظامية مدمجة؛ قم بتعطيلها بدلاً من ذلك", 409);
 
         bool inUse = await _db.PlanFeatures
             .AnyAsync(pf => pf.FeatureDefinitionId == id, ct);
@@ -146,15 +198,20 @@ public class AdminCatalogService : IAdminCatalogService
 
     // ── Private mappers ──────────────────────────────────────────────────────
 
-    private static FeatureDefinitionResponse MapFeature(FeatureDefinition f) => new()
+    private static FeatureDefinitionResponse MapFeature(FeatureDefinition f, int planFeatureCount) => new()
     {
-        Id           = f.Id,
-        Key          = f.Key,
-        Name         = f.Name,
-        Description  = f.Description,
-        FeatureGroup = f.FeatureGroup,
-        Icon         = f.Icon,
-        IsActive     = f.IsActive
+        Id               = f.Id,
+        Key              = f.Key,
+        Name             = f.Name,
+        Description      = f.Description,
+        FeatureGroup     = f.FeatureGroup,
+        Icon             = f.Icon,
+        IsActive         = f.IsActive,
+        Type             = f.Type,
+        Scope            = f.Scope,
+        IsSystem         = f.IsSystem,
+        SortOrder        = f.SortOrder,
+        PlanFeatureCount = planFeatureCount
     };
 
     private static LimitDefinitionResponse MapLimit(LimitDefinition l) => new()

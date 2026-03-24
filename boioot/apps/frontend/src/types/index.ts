@@ -851,6 +851,11 @@ export interface FeatureDefinitionEntry {
   featureGroup?: string;
   icon?: string;
   isActive: boolean;
+  type: string;
+  scope: string;
+  isSystem: boolean;
+  sortOrder: number;
+  planFeatureCount: number;
 }
 
 export interface LimitDefinitionEntry {
@@ -870,6 +875,9 @@ export interface CreateFeatureDefinitionPayload {
   description?: string;
   featureGroup?: string;
   icon?: string;
+  type: string;
+  scope: string;
+  sortOrder?: number;
 }
 
 export interface UpdateFeatureDefinitionPayload {
@@ -878,6 +886,7 @@ export interface UpdateFeatureDefinitionPayload {
   featureGroup?: string;
   icon?: string;
   isActive: boolean;
+  sortOrder?: number;
 }
 
 export interface CreateLimitDefinitionPayload {

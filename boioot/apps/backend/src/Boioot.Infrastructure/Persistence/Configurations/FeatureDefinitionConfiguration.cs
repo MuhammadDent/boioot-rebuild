@@ -24,7 +24,24 @@ public class FeatureDefinitionConfiguration : IEntityTypeConfiguration<FeatureDe
         builder.Property(f => f.FeatureGroup)
             .HasMaxLength(100);
 
+        builder.Property(f => f.Type)
+            .IsRequired()
+            .HasMaxLength(50)
+            .HasDefaultValue("boolean");
+
+        builder.Property(f => f.Scope)
+            .IsRequired()
+            .HasMaxLength(50)
+            .HasDefaultValue("system");
+
+        builder.Property(f => f.IsSystem)
+            .HasDefaultValue(false);
+
+        builder.Property(f => f.SortOrder)
+            .HasDefaultValue(0);
+
         builder.HasIndex(f => f.Key).IsUnique();
         builder.HasIndex(f => f.FeatureGroup);
+        builder.HasIndex(f => new { f.Scope, f.SortOrder });
     }
 }

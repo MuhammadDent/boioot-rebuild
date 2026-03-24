@@ -29,4 +29,28 @@ public class FeatureDefinition : BaseEntity
     public string? Icon { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    // ── Production-grade structural fields ──────────────────────────────────
+
+    /// <summary>
+    /// Data type of the feature value.
+    /// "boolean" = on/off flag, "limit" = numeric cap, "text" = string config, "json" = arbitrary object.
+    /// Immutable once the feature is referenced by PlanFeatures.
+    /// </summary>
+    public string Type { get; set; } = "boolean";
+
+    /// <summary>
+    /// Functional domain this feature belongs to.
+    /// "listing" | "user" | "system" | "messaging" | "analytics"
+    /// Immutable once the feature is referenced by PlanFeatures.
+    /// </summary>
+    public string Scope { get; set; } = "system";
+
+    /// <summary>
+    /// True when this feature was seeded by the system and cannot be deleted or have its Key/Type/Scope changed.
+    /// </summary>
+    public bool IsSystem { get; set; } = false;
+
+    /// <summary>Display order in admin catalog and pricing pages. Lower = first.</summary>
+    public int SortOrder { get; set; } = 0;
 }
