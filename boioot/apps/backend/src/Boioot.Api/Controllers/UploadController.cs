@@ -1,3 +1,6 @@
+using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Subscriptions;
+using Boioot.Application.Features.Subscriptions.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,9 +9,11 @@ namespace Boioot.Api.Controllers;
 [ApiController]
 [Route("api/upload")]
 [Authorize]
-public class UploadController : ControllerBase
+public class UploadController : BaseController
 {
     private readonly IWebHostEnvironment _env;
+    private readonly IPlanEntitlementService _entitlement;
+    private readonly IAccountResolver _accountResolver;
     private readonly ILogger<UploadController> _logger;
 
     private static readonly string[] AllowedImageTypes =
@@ -27,10 +32,16 @@ public class UploadController : ControllerBase
 
     private const long MaxVideoBytes = 50L * 1024 * 1024; // 50 MB
 
-    public UploadController(IWebHostEnvironment env, ILogger<UploadController> logger)
+    public UploadController(
+        IWebHostEnvironment env,
+        IPlanEntitlementService entitlement,
+        IAccountResolver accountResolver,
+        ILogger<UploadController> logger)
     {
-        _env = env;
-        _logger = logger;
+        _env            = env;
+        _entitlement    = entitlement;
+        _accountResolver = accountResolver;
+        _logger         = logger;
     }
 
     [HttpPost("image")]
@@ -76,6 +87,20 @@ public class UploadController : ControllerBase
 
         if (!AllowedVideoTypes.Contains(file.ContentType.ToLower()))
             return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: MP4، WebM، OGG، MOV، AVI" });
+
+        // ── Subscription enforcement: video_upload feature ────────────────
+        // If the user has an active account and video_upload is disabled → block.
+        // No account → allow (open / unlinked user, enforcement at listing save).
+        var userId    = GetUserId();
+        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (accountId.HasValue)
+        {
+            var canVideo = await _entitlement.CanUploadVideoAsync(accountId.Value, ct);
+            if (!canVideo)
+                throw new PlanFeatureDisabledException(
+                    SubscriptionKeys.VideoUpload,
+                    "رفع الفيديو غير متاح في باقتك الحالية. يرجى ترقية خطتك للمتابعة.");
+        }
 
         var videosDir = Path.Combine(_env.WebRootPath, "videos");
         Directory.CreateDirectory(videosDir);

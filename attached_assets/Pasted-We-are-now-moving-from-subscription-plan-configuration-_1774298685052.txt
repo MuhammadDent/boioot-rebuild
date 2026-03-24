@@ -1,0 +1,298 @@
+We are now moving from subscription plan configuration
+to real runtime enforcement.
+
+Current state:
+- Plans exist
+- FeatureDefinitions exist
+- LimitDefinitions exist
+- PlanFeatures exist
+- PlanLimits exist
+- Admin can configure plans
+
+GOAL:
+Turn the plan system into a real enforcement engine that blocks disallowed actions at runtime.
+
+This must be backend-driven and production-safe.
+Frontend can reflect restrictions, but backend must be the final authority.
+
+==================================================
+PHASE 1 — AUDIT ENFORCEMENT ENTRY POINTS
+==================================================
+
+First inspect the current application flows and identify all places where subscription limits and features should be enforced.
+
+At minimum inspect these flows:
+
+1. Listing / Ad creation
+2. Listing / Ad update
+3. Image upload for listing
+4. Video upload for listing
+5. Request creation / request receiving
+6. Internal messaging / chat
+7. Analytics dashboard access
+8. Featured / promoted listing options
+9. Any premium-only tools in user dashboard
+
+Return a short audit:
+- endpoint / service / handler
+- what should be enforced there
+- current state (not enforced / partially enforced / already enforced)
+
+Do not guess.
+Trace actual backend paths.
+
+==================================================
+PHASE 2 — BUILD A SINGLE SOURCE OF TRUTH
+==================================================
+
+Create a backend entitlement service and use it everywhere.
+
+Suggested interface:
+- ISubscriptionEntitlementService
+
+Suggested methods:
+- GetUserSubscriptionAsync(userId)
+- HasFeatureAsync(userId, featureKey)
+- GetLimitAsync(userId, limitKey)
+- GetEntitlementsAsync(userId)
+- EnsureFeatureEnabledAsync(userId, featureKey)
+- EnsureWithinLimitAsync(userId, limitKey, currentValue, requestedValue = 1)
+
+Important:
+- Read from DB only
+- No hardcoded package logic
+- No role-based bypasses except explicit admin superuser rules if already approved
+- Keep logic centralized, reusable, and testable
+
+==================================================
+PHASE 3 — ENFORCEMENT RULES
+==================================================
+
+Implement runtime enforcement rules for the following:
+
+A) Listing creation
+Examples:
+- max_active_listings
+- max_total_listings if applicable
+
+Behavior:
+- Before creating a listing, count the user's currently active listings
+- Compare against plan limit
+- If limit exceeded, block creation with a clear business error
+
+B) Image upload per listing
+Examples:
+- max_images_per_listing
+
+Behavior:
+- Count existing images on the listing
+- If uploading more would exceed limit, block request
+
+C) Video upload
+Use both feature + limit:
+- feature: video_upload
+- limit: max_videos_per_listing
+
+Behavior:
+- If video_upload = false -> reject any video upload
+- If enabled, enforce max_videos_per_listing
+- If limit is 0, reject upload
+- Validate at backend, not just frontend
+
+D) Requests
+Examples:
+- max_requests
+- max_received_requests if your architecture distinguishes them
+
+Behavior:
+- Enforce according to your current request model
+- If not fully clear, document your interpretation before coding
+
+E) Internal messaging
+Examples:
+- internal_chat
+- max_messages or max_conversations if present
+
+Behavior:
+- If chat feature disabled, block message sending / conversation creation
+- If numeric limits exist, enforce them
+
+F) Analytics access
+Feature:
+- analytics_dashboard
+
+Behavior:
+- If disabled, block analytics endpoint access
+- Return appropriate forbidden/business response
+
+G) Featured / promoted listing options
+Features such as:
+- featured_listing
+- priority_listing
+- homepage_boost
+or equivalent if already in catalog
+
+Behavior:
+- If feature not enabled, reject premium promotion usage
+
+==================================================
+PHASE 4 — BUSINESS ERROR MODEL
+==================================================
+
+Create clean business/domain errors for enforcement failures.
+
+Examples:
+- PlanFeatureDisabledException
+- PlanLimitExceededException
+
+API responses should be user-friendly and structured.
+
+Examples:
+- code: FEATURE_DISABLED
+- message: Your current plan does not allow video uploads.
+- details:
+  - featureKey: video_upload
+
+and
+
+- code: LIMIT_EXCEEDED
+- message: You have reached your plan limit for active listings.
+- details:
+  - limitKey: max_active_listings
+  - allowed: 20
+  - current: 20
+  - requested: 1
+
+Do not return vague 500 errors.
+
+==================================================
+PHASE 5 — FRONTEND REFLECTION (NOT AUTHORITY)
+==================================================
+
+After backend enforcement is working, improve frontend UX:
+
+1. Hide or disable unavailable premium actions when possible
+2. Show tooltips / upgrade prompts
+3. Prevent obviously invalid actions before submit
+4. But do NOT rely on frontend for security
+
+Examples:
+- Hide video uploader if video_upload disabled
+- Disable analytics page entry if analytics_dashboard disabled
+- Show “upgrade your plan” when listing cap reached
+
+==================================================
+PHASE 6 — CURRENT LIMIT KEYS / FEATURE KEYS
+==================================================
+
+Use the actual keys already present in the project.
+Do not invent new names unless necessary.
+
+At minimum verify and use the current real keys for:
+- video_upload
+- max_videos_per_listing
+- max_images_per_listing
+- analytics_dashboard
+- max_active_listings or equivalent actual listing key
+- max_requests or equivalent
+- internal_chat / messaging equivalent
+- featured listing related keys if they exist
+
+If current names are inconsistent, normalize carefully and report changes.
+
+==================================================
+PHASE 7 — ENFORCEMENT INSERTION POINTS
+==================================================
+
+Important:
+Do not scatter random checks everywhere.
+
+Prefer clean insertion points such as:
+- application services
+- command handlers
+- domain services
+- upload services
+- request services
+
+Use reusable helper methods so enforcement is maintainable.
+
+==================================================
+PHASE 8 — TRACKING COUNTS CORRECTLY
+==================================================
+
+Make sure counts are calculated correctly.
+
+Examples:
+- active listings count should ignore deleted/draft/archived listings if business rules say so
+- image count should count actual attached listing images
+- video count should count actual attached listing videos
+- request count should reflect the correct ownership direction
+- analytics should check current active subscription / current plan
+
+If business rules are ambiguous, document assumptions before finalizing.
+
+==================================================
+PHASE 9 — TEST SCENARIOS
+==================================================
+
+After implementation, verify with real scenarios.
+
+Test at minimum:
+
+1. Plan with video_upload = false
+- Try uploading video
+- Expected: blocked
+
+2. Plan with video_upload = true and max_videos_per_listing = 1
+- Upload first video -> allowed
+- Upload second video -> blocked
+
+3. Plan with max_images_per_listing = 20
+- Upload 20 images -> allowed
+- Upload 21st -> blocked
+
+4. Plan with active listing cap
+- Create listings until limit reached
+- Next creation -> blocked
+
+5. Plan without analytics_dashboard
+- Try accessing analytics endpoint/page
+- Expected: forbidden or business-blocked
+
+6. Plan with internal chat disabled
+- Try starting conversation / sending message
+- Expected: blocked
+
+7. Featured/promotion features disabled
+- Try enabling premium promotion
+- Expected: blocked
+
+==================================================
+PHASE 10 — REPORT FORMAT
+==================================================
+
+Return the final result in this format:
+
+1. Enforcement audit
+2. Services added/changed
+3. Endpoints/flows now protected
+4. Keys used for each rule
+5. Files changed
+6. Test scenarios executed
+7. Remaining gaps if any
+8. Final verdict:
+   - Backend enforcement working or not
+   - Frontend reflection added or not
+   - Any flows still unprotected
+
+==================================================
+IMPORTANT RULES
+==================================================
+
+- Backend must be the source of truth
+- Do NOT leave enforcement as UI-only
+- Do NOT hardcode package rules
+- Use the existing DB-driven entitlement model
+- Keep SQLite support intact
+- Keep code clean and reusable
+- Avoid hacks

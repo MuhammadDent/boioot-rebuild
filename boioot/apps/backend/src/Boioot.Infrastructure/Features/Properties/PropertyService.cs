@@ -241,7 +241,7 @@ public class PropertyService : IPropertyService
                     SubscriptionKeys.MaxActiveListings,
                     "لقد وصلت إلى الحد الأقصى من الإعلانات في خطتك الحالية. يرجى ترقية خطتك للمتابعة.");
 
-            // Enforce video_upload feature
+            // Enforce video_upload feature + max_videos_per_listing limit
             if (!string.IsNullOrWhiteSpace(request.VideoUrl))
             {
                 var canVideo = await _entitlement.CanUploadVideoAsync(accountId.Value, ct);
@@ -249,6 +249,13 @@ public class PropertyService : IPropertyService
                     throw new PlanLimitException(
                         SubscriptionKeys.VideoUpload,
                         "رفع الفيديو غير متاح في باقتك الحالية. يرجى ترقية خطتك للمتابعة.",
+                        upgradeRequired: true);
+
+                var videoLimit = (int)await _entitlement.GetLimitAsync(accountId.Value, SubscriptionKeys.MaxVideosPerListing, ct);
+                if (videoLimit == 0)
+                    throw new PlanLimitException(
+                        SubscriptionKeys.MaxVideosPerListing,
+                        "الباقة الحالية لا تسمح بإضافة فيديو للإعلان. يرجى ترقية خطتك للمتابعة.",
                         upgradeRequired: true);
             }
 
@@ -361,7 +368,7 @@ public class PropertyService : IPropertyService
         // Update VideoUrl if provided (null = unchanged, empty string = clear)
         if (request.VideoUrl is not null && !string.IsNullOrWhiteSpace(request.VideoUrl))
         {
-            // Enforce video_upload feature if user has an active subscription
+            // Enforce video_upload feature + max_videos_per_listing limit
             var updateAcctId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
             if (updateAcctId.HasValue)
             {
@@ -370,6 +377,13 @@ public class PropertyService : IPropertyService
                     throw new PlanLimitException(
                         SubscriptionKeys.VideoUpload,
                         "رفع الفيديو غير متاح في باقتك الحالية. يرجى ترقية خطتك للمتابعة.",
+                        upgradeRequired: true);
+
+                var videoLimit = (int)await _entitlement.GetLimitAsync(updateAcctId.Value, SubscriptionKeys.MaxVideosPerListing, ct);
+                if (videoLimit == 0)
+                    throw new PlanLimitException(
+                        SubscriptionKeys.MaxVideosPerListing,
+                        "الباقة الحالية لا تسمح بإضافة فيديو للإعلان. يرجى ترقية خطتك للمتابعة.",
                         upgradeRequired: true);
             }
             property.VideoUrl = request.VideoUrl.Trim();
@@ -561,7 +575,7 @@ public class PropertyService : IPropertyService
                     SubscriptionKeys.MaxActiveListings,
                     "لقد وصلت إلى الحد الأقصى من الإعلانات في خطتك الحالية. يرجى ترقية خطتك للمتابعة.");
 
-            // Enforce video_upload feature
+            // Enforce video_upload feature + max_videos_per_listing limit
             if (!string.IsNullOrWhiteSpace(request.VideoUrl))
             {
                 var canVideo = await _entitlement.CanUploadVideoAsync(acctId.Value, ct);
@@ -569,6 +583,13 @@ public class PropertyService : IPropertyService
                     throw new PlanLimitException(
                         SubscriptionKeys.VideoUpload,
                         "رفع الفيديو غير متاح في باقتك الحالية. يرجى ترقية خطتك للمتابعة.",
+                        upgradeRequired: true);
+
+                var videoLimit = (int)await _entitlement.GetLimitAsync(acctId.Value, SubscriptionKeys.MaxVideosPerListing, ct);
+                if (videoLimit == 0)
+                    throw new PlanLimitException(
+                        SubscriptionKeys.MaxVideosPerListing,
+                        "الباقة الحالية لا تسمح بإضافة فيديو للإعلان. يرجى ترقية خطتك للمتابعة.",
                         upgradeRequired: true);
             }
 

@@ -95,7 +95,18 @@ app.UseExceptionHandler(errorApp =>
         var error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
         context.Response.ContentType = "application/json";
 
-        if (error is PlanLimitException planEx)
+        if (error is PlanFeatureDisabledException featureEx)
+        {
+            context.Response.StatusCode = featureEx.StatusCode;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                code            = featureEx.ErrorCode,
+                feature         = featureEx.FeatureKey,
+                message         = featureEx.Message,
+                upgradeRequired = featureEx.UpgradeRequired,
+            });
+        }
+        else if (error is PlanLimitException planEx)
         {
             context.Response.StatusCode = planEx.StatusCode;
             await context.Response.WriteAsJsonAsync(new

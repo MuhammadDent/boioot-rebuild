@@ -1,4 +1,5 @@
 using Boioot.Application.Common.Models;
+using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Dashboard.DTOs;
 using Boioot.Application.Features.Dashboard.Interfaces;
 using Boioot.Application.Features.Subscriptions;
@@ -109,6 +110,18 @@ public class DashboardService : IDashboardService
     public async Task<DashboardAnalyticsResponse> GetAnalyticsAsync(
         Guid userId, string userRole, CancellationToken ct = default)
     {
+        // ── Subscription enforcement: analytics_dashboard feature ─────────
+        // Admin always has access. All other users must have the feature enabled.
+        // If no account → block (analytics is a premium feature, not open access).
+        if (userRole != RoleNames.Admin)
+        {
+            var acctId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+            if (!acctId.HasValue || !await _entitlement.CanUseAnalyticsAsync(acctId.Value, ct))
+                throw new PlanFeatureDisabledException(
+                    SubscriptionKeys.AnalyticsDashboard,
+                    "لوحة التحليلات غير متاحة في باقتك الحالية. يرجى ترقية خطتك للوصول إلى تقارير الأداء.");
+        }
+
         var scope = await ResolveScopeAsync(userId, userRole, ct);
 
         var propQuery = GetScopedPropertyQuery(scope).Where(p => !p.IsDeleted);

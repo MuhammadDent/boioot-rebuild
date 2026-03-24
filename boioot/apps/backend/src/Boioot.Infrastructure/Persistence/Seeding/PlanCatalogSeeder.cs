@@ -127,6 +127,7 @@ public sealed class PlanCatalogSeeder
             FD("fd000007-0000-0000-0000-000000000000", "whatsapp_contact",    "تواصل عبر واتساب",       "إظهار زر واتساب في صفحة الإعلان",                  "communication", "💬"),
             FD("fd000008-0000-0000-0000-000000000000", "verified_badge",      "شارة التحقق",            "عرض علامة التحقق على الملف الشخصي والإعلانات",     "marketing",     "✅"),
             FD("fd000009-0000-0000-0000-000000000000", "homepage_exposure",   "ظهور في الصفحة الرئيسية","عرض الإعلانات ضمن قسم مميز في الصفحة الرئيسية",   "marketing",     "🏠"),
+            FD("fd00000a-0000-0000-0000-000000000000", "internal_chat",       "المراسلة الداخلية",       "إمكانية التواصل مع البائعين والمشترين عبر المنصة",  "communication", "✉️"),
         };
 
         var newFDs = catalog.Where(f => !existing.Contains(f.Key)).ToList();
@@ -151,6 +152,7 @@ public sealed class PlanCatalogSeeder
             ["project_management"]  = "business",
             ["whatsapp_contact"]    = "communication",
             ["priority_support"]    = "support",
+            ["internal_chat"]       = "communication",
         };
         var fdIconMap = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -163,6 +165,7 @@ public sealed class PlanCatalogSeeder
             ["whatsapp_contact"]    = "💬",
             ["verified_badge"]      = "✅",
             ["homepage_exposure"]   = "🏠",
+            ["internal_chat"]       = "✉️",
         };
         foreach (var fd in fds)
         {
@@ -275,15 +278,16 @@ public sealed class PlanCatalogSeeder
             IsEnabled           = enabled,
         };
 
-        const string fd1 = "fd000001-0000-0000-0000-000000000000"; // analytics_dashboard
-        const string fd2 = "fd000002-0000-0000-0000-000000000000"; // priority_support
-        const string fd3 = "fd000003-0000-0000-0000-000000000000"; // featured_listings
-        const string fd4 = "fd000004-0000-0000-0000-000000000000"; // project_management
-        const string fd5 = "fd000005-0000-0000-0000-000000000000"; // video_upload
-        const string fd6 = "fd000006-0000-0000-0000-000000000000"; // multiple_photos
-        const string fd7 = "fd000007-0000-0000-0000-000000000000"; // whatsapp_contact
-        const string fd8 = "fd000008-0000-0000-0000-000000000000"; // verified_badge
-        const string fd9 = "fd000009-0000-0000-0000-000000000000"; // homepage_exposure
+        const string fd1  = "fd000001-0000-0000-0000-000000000000"; // analytics_dashboard
+        const string fd2  = "fd000002-0000-0000-0000-000000000000"; // priority_support
+        const string fd3  = "fd000003-0000-0000-0000-000000000000"; // featured_listings
+        const string fd4  = "fd000004-0000-0000-0000-000000000000"; // project_management
+        const string fd5  = "fd000005-0000-0000-0000-000000000000"; // video_upload
+        const string fd6  = "fd000006-0000-0000-0000-000000000000"; // multiple_photos
+        const string fd7  = "fd000007-0000-0000-0000-000000000000"; // whatsapp_contact
+        const string fd8  = "fd000008-0000-0000-0000-000000000000"; // verified_badge
+        const string fd9  = "fd000009-0000-0000-0000-000000000000"; // homepage_exposure
+        const string fd0a = "fd00000a-0000-0000-0000-000000000000"; // internal_chat
 
         const string p01 = "00000001-0000-0000-0000-000000000000"; // Free
         const string p02 = "00000002-0000-0000-0000-000000000000"; // Silver
@@ -415,6 +419,20 @@ public sealed class PlanCatalogSeeder
             PF("cf000022-0000-0000-0000-000000000000", p04, fd7, true),
             PF("cf000023-0000-0000-0000-000000000000", p04, fd8, true),
             PF("cf000024-0000-0000-0000-000000000000", p04, fd9, true),
+            // ── internal_chat (fd0a) for all 11 plans (eb000001–eb00000b) ──────
+            // Free & Silver: false — no internal chat on basic plans.
+            // All paid plans: true — internal chat enabled.
+            PF("eb000001-0000-0000-0000-000000000000", p01, fd0a, false), // Free
+            PF("eb000002-0000-0000-0000-000000000000", p02, fd0a, false), // Silver
+            PF("eb000003-0000-0000-0000-000000000000", p03, fd0a, true),  // Gold
+            PF("eb000004-0000-0000-0000-000000000000", p04, fd0a, true),  // Platinum
+            PF("eb000005-0000-0000-0000-000000000000", p05, fd0a, true),  // OwnerPro
+            PF("eb000006-0000-0000-0000-000000000000", p06, fd0a, true),  // BrokerPro
+            PF("eb000007-0000-0000-0000-000000000000", p07, fd0a, true),  // BrokerPremium
+            PF("eb000008-0000-0000-0000-000000000000", p08, fd0a, true),  // OfficeStarter
+            PF("eb000009-0000-0000-0000-000000000000", p09, fd0a, true),  // OfficeGrowth
+            PF("eb00000a-0000-0000-0000-000000000000", p0a, fd0a, true),  // DeveloperBusiness
+            PF("eb00000b-0000-0000-0000-000000000000", p0b, fd0a, true),  // DeveloperPremium
         };
     }
 

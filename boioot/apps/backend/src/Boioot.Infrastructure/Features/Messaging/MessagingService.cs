@@ -2,6 +2,8 @@ using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Messaging.DTOs;
 using Boioot.Application.Features.Messaging.Interfaces;
+using Boioot.Application.Features.Subscriptions;
+using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Entities;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,12 +14,20 @@ namespace Boioot.Infrastructure.Features.Messaging;
 public class MessagingService : IMessagingService
 {
     private readonly BoiootDbContext _context;
+    private readonly IPlanEntitlementService _entitlement;
+    private readonly IAccountResolver _accountResolver;
     private readonly ILogger<MessagingService> _logger;
 
-    public MessagingService(BoiootDbContext context, ILogger<MessagingService> logger)
+    public MessagingService(
+        BoiootDbContext context,
+        IPlanEntitlementService entitlement,
+        IAccountResolver accountResolver,
+        ILogger<MessagingService> logger)
     {
-        _context = context;
-        _logger = logger;
+        _context         = context;
+        _entitlement     = entitlement;
+        _accountResolver = accountResolver;
+        _logger          = logger;
     }
 
     public async Task<IReadOnlyList<ConversationSummaryResponse>> GetConversationsAsync(
@@ -55,6 +65,10 @@ public class MessagingService : IMessagingService
     public async Task<ConversationSummaryResponse> GetOrCreateConversationAsync(
         Guid userId, CreateConversationRequest request, CancellationToken ct = default)
     {
+        // ── Subscription enforcement: internal_chat feature ───────────────
+        // Gate only on the initiator's plan. If no account → allow (open users).
+        await EnforceChatFeatureAsync(userId, ct);
+
         var recipientId = request.RecipientId!.Value;
 
         if (recipientId == userId)
@@ -148,6 +162,9 @@ public class MessagingService : IMessagingService
     public async Task<MessageResponse> SendMessageAsync(
         Guid userId, Guid conversationId, SendMessageRequest request, CancellationToken ct = default)
     {
+        // ── Subscription enforcement: internal_chat feature ───────────────
+        await EnforceChatFeatureAsync(userId, ct);
+
         var conversation = await _context.Conversations
             .FirstOrDefaultAsync(c => c.Id == conversationId, ct)
             ?? throw new BoiootException("المحادثة غير موجودة", 404);
@@ -175,6 +192,24 @@ public class MessagingService : IMessagingService
         await _context.Entry(message).Reference(m => m.Sender).LoadAsync(ct);
 
         return MapToMessage(message, userId);
+    }
+
+    // ── Enforcement helper ───────────────────────────────────────────────
+    /// <summary>
+    /// Checks internal_chat feature for the given user.
+    /// If the user has no account → allowed (no subscription = open access).
+    /// If the user has an account with internal_chat disabled → blocked.
+    /// </summary>
+    private async Task EnforceChatFeatureAsync(Guid userId, CancellationToken ct)
+    {
+        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (!accountId.HasValue) return; // no subscription → allow
+
+        var canChat = await _entitlement.CanUseChatAsync(accountId.Value, ct);
+        if (!canChat)
+            throw new PlanFeatureDisabledException(
+                SubscriptionKeys.InternalChat,
+                "المراسلة الداخلية غير متاحة في باقتك الحالية. يرجى ترقية خطتك للتواصل عبر المنصة.");
     }
 
     // ── Private helpers ─────────────────────────────────────────────────────

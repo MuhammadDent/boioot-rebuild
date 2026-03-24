@@ -16,6 +16,21 @@ public interface IPlanEntitlementService
     Task<decimal> GetLimitAsync(Guid accountId, string limitKey, CancellationToken ct = default);
 
     /// <summary>
+    /// Throws <see cref="Boioot.Application.Exceptions.PlanFeatureDisabledException"/>
+    /// if the feature is not enabled on the account's active plan.
+    /// Throws <see cref="Boioot.Application.Exceptions.PlanLimitException"/> with
+    /// SUBSCRIPTION_EXPIRED if the account's subscription has lapsed.
+    /// </summary>
+    Task EnsureFeatureEnabledAsync(Guid accountId, string featureKey, string userMessage, CancellationToken ct = default);
+
+    /// <summary>
+    /// Throws <see cref="Boioot.Application.Exceptions.PlanLimitException"/>
+    /// if adding <paramref name="requestedValue"/> to <paramref name="currentValue"/>
+    /// would exceed the plan's limit for <paramref name="limitKey"/>.
+    /// </summary>
+    Task EnsureWithinLimitAsync(Guid accountId, string limitKey, int currentValue, int requestedValue, string userMessage, CancellationToken ct = default);
+
+    /// <summary>
     /// Returns true if the account can create a new property listing.
     /// Uses the "max_active_listings" limit key.
     /// </summary>
@@ -45,4 +60,23 @@ public interface IPlanEntitlementService
     /// Returns -1 if unlimited.
     /// </summary>
     Task<int> GetImageLimitAsync(Guid accountId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the maximum number of videos allowed per listing.
+    /// Returns 0 if blocked (video_upload feature disabled or limit=0).
+    /// Returns -1 if unlimited.
+    /// </summary>
+    Task<int> GetVideoLimitAsync(Guid accountId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns true if the account's plan allows using the internal chat / messaging feature.
+    /// Uses the "internal_chat" feature key.
+    /// </summary>
+    Task<bool> CanUseChatAsync(Guid accountId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns true if the account's plan includes access to the analytics dashboard.
+    /// Uses the "analytics_dashboard" feature key.
+    /// </summary>
+    Task<bool> CanUseAnalyticsAsync(Guid accountId, CancellationToken ct = default);
 }
