@@ -1,0 +1,155 @@
+We are now implementing Phase 2A: CMS Lite for Boioot.
+
+GOAL:
+Remove hardcoded public-facing text/content from the frontend and replace it with a simple database-driven CMS layer managed from the admin panel.
+
+IMPORTANT:
+This phase is CMS Lite only.
+Do NOT build a full page builder.
+Do NOT build advanced media library.
+Do NOT overengineer versioning/workflows yet.
+We want a clean, scalable content management foundation.
+
+CURRENT OBJECTIVE:
+Make core public text configurable from admin instead of hardcoded in code.
+
+SCOPE FOR THIS PHASE
+1. Home hero content
+2. Navbar text labels
+3. Footer content
+4. Small general settings text/links
+
+REQUIREMENTS
+
+A) BACKEND
+1. Add a new entity/table: SiteContent
+Suggested fields:
+- Id
+- Key (unique, e.g. home.hero.title)
+- Group (e.g. home, navbar, footer, general)
+- Type (text, textarea, url, image, richtext)
+- LabelAr
+- LabelEn
+- ValueAr
+- ValueEn
+- IsActive
+- IsSystem
+- SortOrder
+- CreatedAtUtc
+- UpdatedAtUtc
+
+2. Add DB migration and seed initial content records for:
+HOME
+- home.hero.title
+- home.hero.subtitle
+- home.hero.primaryCtaText
+- home.hero.primaryCtaUrl
+- home.hero.secondaryCtaText
+- home.hero.secondaryCtaUrl
+- home.hero.image
+
+NAVBAR
+- navbar.loginText
+- navbar.registerText
+- navbar.addListingText
+- navbar.addRequestText
+
+FOOTER
+- footer.aboutTitle
+- footer.aboutText
+- footer.contactPhone
+- footer.contactEmail
+- footer.copyright
+
+GENERAL
+- general.defaultCountryName
+- general.supportWhatsappUrl
+
+3. Public content API
+Add GET /api/content/public
+Behavior:
+- return only active content
+- return a simple key-value dictionary using Arabic values by default for now
+- keep shape easy for frontend usage
+
+4. Admin content APIs
+Add:
+- GET /api/admin/content
+- GET /api/admin/content/{id}
+- POST /api/admin/content
+- PUT /api/admin/content/{id}
+- DELETE /api/admin/content/{id}
+
+Rules:
+- key must be unique
+- system keys cannot be deleted
+- use UTC timestamps
+- support filtering/sorting by group if easy to add
+- keep DTOs clean
+
+B) FRONTEND
+1. Create a public content API client helper
+- fetch /api/content/public
+- return a dictionary/map
+
+2. Replace hardcoded content in:
+- homepage hero title/subtitle/buttons
+- navbar button texts
+- footer texts
+
+3. Add safe fallback values in frontend
+Example:
+- if content key missing, show a hardcoded default so pages never break
+
+4. Admin UI
+Add a new admin page:
+- /dashboard/admin/content
+
+Features:
+- list all content items grouped by group
+- display key, label, type, current value, active state
+- edit content item
+- add content item
+- delete non-system items only
+
+5. Editing UI behavior by type
+- text -> input
+- textarea -> textarea
+- url -> input
+- image -> input (URL-based for now)
+- richtext -> textarea for now
+
+6. Keep Arabic-first UX
+- Arabic labels
+- RTL layout
+- Arabic values primary
+- English fields can exist but do not need full bilingual public rendering yet
+
+C) ARCHITECTURE / QUALITY
+1. Do not hardcode page text once migrated
+2. Keep code extensible for future bilingual rendering
+3. Keep public API read-only and simple
+4. Do not break current homepage or navbar behavior
+5. Preserve existing auth/admin structure
+6. Use clean naming and DTOs
+
+D) VALIDATION / TESTS
+Implement and report exact results for:
+1. Home hero text updates from admin and appears on homepage
+2. Navbar text updates from admin and appears correctly
+3. Footer text updates from admin and appears correctly
+4. Inactive content does not appear in public API
+5. Missing content key falls back safely in frontend
+6. System content cannot be deleted
+7. New custom content item can be created and edited
+8. Public pages still render correctly after refresh
+
+DELIVERABLES
+Report clearly:
+- DB/entity changes
+- migration name
+- seeded keys
+- backend endpoints added
+- frontend files changed
+- admin UI files added
+- exact test results

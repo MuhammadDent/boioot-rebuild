@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
 import MessagesIconBtn from "./MessagesIconBtn";
+import { useContent } from "@/context/ContentContext";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,9 @@ export default function Navbar() {
   const router   = useRouter();
   const { isAuthenticated, isLoading, logout, user } = useAuth();
   const { openAuthModal } = useAuthGate();
+
+  const loginText    = useContent("navbar.loginText",    "تسجيل الدخول");
+  const registerText = useContent("navbar.registerText", "إنشاء حساب");
 
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
@@ -170,7 +174,7 @@ export default function Navbar() {
                     className="btn btn-outline btn-sm"
                     style={{ textDecoration: "none", padding: "0.4rem 1rem" }}
                   >
-                    تسجيل الدخول
+                    {loginText}
                   </Link>
 
                   <Link
@@ -185,7 +189,7 @@ export default function Navbar() {
                       borderRadius: "6px",
                     }}
                   >
-                    إنشاء حساب
+                    {registerText}
                   </Link>
                 </>
               )

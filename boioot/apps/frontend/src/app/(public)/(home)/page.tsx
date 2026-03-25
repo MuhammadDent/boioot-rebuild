@@ -11,10 +11,13 @@ import { api } from "@/lib/api";
 import type { PropertyResponse } from "@/types";
 import { PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
 import { useCities } from "@/hooks/useCities";
+import { useContent } from "@/context/ContentContext";
 
 // ─── Slider data ──────────────────────────────────────────────────────────────
+// NOTE: SLIDES[0] (the main hero) is CMS-driven — built inside the component.
+// The remaining slides are static editorial content.
 
-const SLIDES = [
+const STATIC_SLIDES = [
   {
     image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1600&q=80",
     title: "شارك طلبك... وحلي العروض تجي لعندك",
@@ -27,13 +30,6 @@ const SLIDES = [
     title: "لأن العقار رحلة... شاركها مع الآخرين",
     subtitle: "في مجتمع بيوت... تواصل مع الآخرين واستفد من تجارياهم.",
     btnText: "اكتشف المجتمع",
-    btnHref: "/properties",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1613977257592-4871e5fcd7c4?w=1600&q=80",
-    title: "ابحث عن منزل أحلامك في سوريا",
-    subtitle: "آلاف العقارات المتاحة للبيع والإيجار في مختلف المحافظات السورية.",
-    btnText: "تصفح العقارات",
     btnHref: "/properties",
   },
 ];
@@ -102,6 +98,18 @@ export default function HomePage() {
   const { isAuthenticated } = useAuth();
   const { cities } = useCities();
 
+  // ── CMS hero slide ──────────────────────────────────────────────────────────
+  const heroTitle    = useContent("home.hero.title",          "ابحث عن منزل أحلامك في سوريا");
+  const heroSubtitle = useContent("home.hero.subtitle",       "آلاف العقارات المتاحة للبيع والإيجار في مختلف المحافظات السورية.");
+  const heroCtaText  = useContent("home.hero.primaryCtaText", "تصفّح العقارات");
+  const heroCtaUrl   = useContent("home.hero.primaryCtaUrl",  "/properties");
+  const heroImage    = useContent("home.hero.image",          "https://images.unsplash.com/photo-1613977257592-4871e5fcd7c4?w=1600&q=80");
+
+  const slides = [
+    { image: heroImage, title: heroTitle, subtitle: heroSubtitle, btnText: heroCtaText, btnHref: heroCtaUrl },
+    ...STATIC_SLIDES,
+  ];
+
   // Slider
   const [slideIndex, setSlideIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -149,7 +157,7 @@ export default function HomePage() {
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setSlideIndex((i) => (i + 1) % SLIDES.length);
+      setSlideIndex((i) => (i + 1) % slides.length);
     }, 5000);
   }, []);
 
@@ -389,14 +397,14 @@ export default function HomePage() {
       <div style={{ position: "relative", width: "100%", height: 460, overflow: "hidden" }}>
         <div style={{
           display: "flex",
-          width: `${SLIDES.length * 100}%`,
+          width: `${slides.length * 100}%`,
           height: "100%",
-          transform: `translateX(${slideIndex * (100 / SLIDES.length)}%)`,
+          transform: `translateX(${slideIndex * (100 / slides.length)}%)`,
           transition: "transform 0.6s ease-in-out",
         }}>
-          {SLIDES.map((slide, i) => (
+          {slides.map((slide, i) => (
             <div key={i} style={{
-              width: `${100 / SLIDES.length}%`,
+              width: `${100 / slides.length}%`,
               height: "100%",
               position: "relative",
               flexShrink: 0,
@@ -422,19 +430,19 @@ export default function HomePage() {
         <button
           suppressHydrationWarning
           type="button"
-          onClick={() => goSlide((slideIndex - 1 + SLIDES.length) % SLIDES.length)}
+          onClick={() => goSlide((slideIndex - 1 + slides.length) % slides.length)}
           style={sliderArrowStyle("right")}
           aria-label="السابق"
         >→</button>
         <button
           suppressHydrationWarning
           type="button"
-          onClick={() => goSlide((slideIndex + 1) % SLIDES.length)}
+          onClick={() => goSlide((slideIndex + 1) % slides.length)}
           style={sliderArrowStyle("left")}
           aria-label="التالي"
         >←</button>
         <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8 }}>
-          {SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <button
               suppressHydrationWarning
               key={i}

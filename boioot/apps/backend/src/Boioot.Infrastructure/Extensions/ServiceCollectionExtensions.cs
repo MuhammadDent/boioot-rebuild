@@ -5,6 +5,7 @@ using Boioot.Application.Features.Admin.Interfaces;
 using Boioot.Application.Features.AgentManagement.Interfaces;
 using Boioot.Application.Features.Auth.Interfaces;
 using Boioot.Application.Features.Blog.Interfaces;
+using Boioot.Application.Features.Content.Interfaces;
 using Boioot.Application.Features.Locations.Interfaces;
 using Boioot.Application.Features.Onboarding.Interfaces;
 using Boioot.Application.Features.BuyerRequests.Interfaces;
@@ -29,6 +30,7 @@ using Boioot.Infrastructure.Features.Onboarding;
 using Boioot.Infrastructure.Features.Rbac;
 using Boioot.Infrastructure.Features.Billing;
 using Boioot.Infrastructure.Features.Blog;
+using Boioot.Infrastructure.Features.Content;
 using Boioot.Infrastructure.Features.Locations;
 using Boioot.Infrastructure.Features.BuyerRequests;
 using Boioot.Infrastructure.Features.Dashboard;
@@ -107,6 +109,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBlogService, BlogService>();
         services.AddScoped<ILocationMasterService, LocationMasterService>();
         services.AddScoped<IUserNotificationService, NotificationService>();
+        services.AddScoped<ISiteContentService, SiteContentService>();
 
         // ── Billing providers ──────────────────────────────────────────────────
         // Both registered as IBillingProvider — BillingService injects IEnumerable<IBillingProvider>
@@ -120,6 +123,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<DataSeeder>();
         services.AddScoped<PlanCatalogSeeder>();
+        services.AddScoped<SiteContentSeeder>();
         services.AddScoped<DatabaseStartupService>();
         services.AddScoped<SchemaEvolutionService>();
         services.AddScoped<RbacRepository>();

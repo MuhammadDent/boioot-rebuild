@@ -169,6 +169,10 @@ app.MapControllers();
             .GetRequiredService<PlanCatalogSeeder>()
             .SeedAsync();
 
+        await startupServices
+            .GetRequiredService<SiteContentSeeder>()
+            .SeedAsync();
+
         startupLogger.LogInformation("Database initialization and seeding complete.");
     }
     catch (Exception ex)

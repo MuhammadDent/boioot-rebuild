@@ -3,6 +3,7 @@ import { Cairo } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { AuthGateProvider } from "@/context/AuthGateContext";
+import { ContentProvider } from "@/context/ContentContext";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -41,7 +42,9 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className={cairo.variable} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <AuthProvider>
-          <AuthGateProvider>{children}</AuthGateProvider>
+          <ContentProvider>
+            <AuthGateProvider>{children}</AuthGateProvider>
+          </ContentProvider>
         </AuthProvider>
       </body>
     </html>

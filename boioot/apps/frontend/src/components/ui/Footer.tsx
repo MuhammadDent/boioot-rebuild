@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import FooterCTASection from "@/components/sections/FooterCTASection";
+import { useContent } from "@/context/ContentContext";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (inline SVG — no external dependency)
@@ -164,6 +167,15 @@ const SOCIAL_LINKS = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Footer() {
+  const footerAboutText = useContent(
+    "footer.aboutText",
+    "منصة عقارية متكاملة لشراء وبيع وتأجير العقارات في سوريا.\n              نربط الملاك بالمشترين والمستأجرين بكل شفافية وسهولة.",
+  );
+  const footerCopyright = useContent(
+    "footer.copyright",
+    "© 2026 بيوت سوريا. جميع الحقوق محفوظة.",
+  );
+
   return (
     <footer className="footer2" role="contentinfo" aria-label="تذييل الصفحة">
 
@@ -180,8 +192,7 @@ export default function Footer() {
               Boioot
             </Link>
             <p className="footer2__about-desc">
-              منصة عقارية متكاملة لشراء وبيع وتأجير العقارات في سوريا.
-              نربط الملاك بالمشترين والمستأجرين بكل شفافية وسهولة.
+              {footerAboutText}
             </p>
             <ul className="footer2__checks" role="list">
               {ABOUT_CHECKS.map(item => (
@@ -229,7 +240,7 @@ export default function Footer() {
         <div className="footer2__wrap footer2__bottom-inner">
 
           <p className="footer2__copy">
-            © 2026 بيوت سوريا. جميع الحقوق محفوظة.
+            {footerCopyright}
           </p>
 
           <div className="footer2__bottom-legal">
