@@ -1592,7 +1592,7 @@ function ProfileTabs({
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user: ctxUser, setUser, token, isLoading: authLoading } = useAuth();
+  const { user: ctxUser, setUser, logout, token, isLoading: authLoading } = useAuth();
 
   const [raw,       setRaw]       = useState<UserProfileResponse | null>(ctxUser);
   const [activeTab, setActiveTab] = useState("info");
@@ -1618,7 +1618,9 @@ export default function ProfilePage() {
           setFetchError("تعذّر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.");
         } else if (err instanceof ApiError) {
           if (err.status === 401) {
-            setFetchError("انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.");
+            // Session expired or token invalid — clear it and redirect to login.
+            logout();
+            router.replace("/login");
           } else if (err.status === 403) {
             setFetchError("ليس لديك صلاحية للوصول إلى هذه الصفحة.");
           } else if (err.status >= 500) {
@@ -1630,7 +1632,7 @@ export default function ProfilePage() {
           setFetchError("حدث خطأ غير متوقع أثناء تحميل بياناتك.");
         }
       });
-  }, [token, authLoading, router, setUser]);
+  }, [token, authLoading, router, setUser, logout]);
 
   function handleUpdate(updated: UserProfileResponse) {
     setRaw(updated);
