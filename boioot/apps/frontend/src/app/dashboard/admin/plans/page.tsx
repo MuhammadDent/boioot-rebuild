@@ -1542,6 +1542,11 @@ export default function AdminPlansPage() {
             </div>
             <div style={{ display: "flex", gap: "0.6rem", flexShrink: 0 }}>
               <a
+                href="/dashboard/admin/plan-matrix"
+                style={{ display: "inline-flex", alignItems: "center", padding: "0.4rem 1rem", borderRadius: 8, fontSize: "0.85rem", border: "1.5px solid rgba(167,139,250,0.4)", color: "#a78bfa", textDecoration: "none", background: "rgba(167,139,250,0.07)", gap: "0.3rem" }}>
+                📊 مصفوفة الخطط
+              </a>
+              <a
                 href="/dashboard/admin/plan-catalog"
                 style={{ display: "inline-flex", alignItems: "center", padding: "0.4rem 1rem", borderRadius: 8, fontSize: "0.85rem", border: "1.5px solid var(--color-border, #e5e7eb)", color: "var(--color-text-secondary)", textDecoration: "none", background: "#ffffff" }}>
                 كتالوج الميزات والحدود

@@ -4,6 +4,9 @@ namespace Boioot.Application.Features.Plans.Interfaces;
 
 public interface IAdminCatalogService
 {
+    // ── Plan Matrix ───────────────────────────────────────────────────────────
+    Task<PlanMatrixResponse> GetMatrixAsync(CancellationToken ct = default);
+
     // ── Feature Definitions ──────────────────────────────────────────────────
     Task<List<FeatureDefinitionResponse>> GetFeaturesAsync(CancellationToken ct = default);
     Task<FeatureDefinitionResponse> CreateFeatureAsync(CreateFeatureDefinitionRequest request, CancellationToken ct = default);

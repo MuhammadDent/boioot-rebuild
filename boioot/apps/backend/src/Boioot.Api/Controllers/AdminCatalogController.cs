@@ -19,6 +19,16 @@ public class AdminCatalogController : BaseController
         _catalog = catalog;
     }
 
+    // ── Plan Matrix ──────────────────────────────────────────────────────────
+
+    /// <summary>GET /api/admin/plan-catalog/matrix — full plan × feature matrix for the matrix editor</summary>
+    [HttpGet("matrix")]
+    public async Task<IActionResult> GetMatrix(CancellationToken ct)
+    {
+        var result = await _catalog.GetMatrixAsync(ct);
+        return Ok(result);
+    }
+
     // ── Feature Definitions ──────────────────────────────────────────────────
 
     /// <summary>GET /api/admin/plan-catalog/features — list all feature definitions</summary>

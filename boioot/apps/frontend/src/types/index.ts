@@ -841,6 +841,44 @@ export interface AdminInvoiceResponse {
   proof?: PaymentProofDto;
 }
 
+// ── Plan Matrix ──────────────────────────────────────────────────────────────
+
+export interface MatrixFeatureDef {
+  key: string;
+  name: string;
+  featureGroup?: string;
+  icon?: string;
+  sortOrder: number;
+  isSystem: boolean;
+}
+
+export interface MatrixLimitDef {
+  key: string;
+  name: string;
+  unit?: string;
+  valueType: string;
+  appliesToScope?: string;
+}
+
+export interface MatrixPlanCol {
+  planId: string;
+  planName: string;
+  code?: string;
+  isActive: boolean;
+  isRecommended: boolean;
+  displayOrder: number;
+  planCategory?: string;
+  priceMonthly: number;
+  featureValues: Record<string, boolean>;
+  limitValues: Record<string, number>;
+}
+
+export interface PlanMatrixData {
+  featureDefs: MatrixFeatureDef[];
+  limitDefs: MatrixLimitDef[];
+  plans: MatrixPlanCol[];
+}
+
 // ── Plan Catalog ─────────────────────────────────────────────────────────────
 
 export interface FeatureDefinitionEntry {

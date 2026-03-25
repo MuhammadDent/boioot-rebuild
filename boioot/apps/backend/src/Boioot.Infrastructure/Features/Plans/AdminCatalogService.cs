@@ -16,6 +16,117 @@ public class AdminCatalogService : IAdminCatalogService
         _db = db;
     }
 
+    // ── Plan Matrix ──────────────────────────────────────────────────────────
+
+    public async Task<PlanMatrixResponse> GetMatrixAsync(CancellationToken ct = default)
+    {
+        // 1) All active feature definitions (ordered for display)
+        var featureDefs = await _db.FeatureDefinitions
+            .Where(f => f.IsActive)
+            .OrderBy(f => f.SortOrder)
+            .ThenBy(f => f.FeatureGroup)
+            .ThenBy(f => f.Key)
+            .Select(f => new MatrixFeatureDef
+            {
+                Key          = f.Key,
+                Name         = f.Name,
+                FeatureGroup = f.FeatureGroup,
+                Icon         = f.Icon,
+                SortOrder    = f.SortOrder,
+                IsSystem     = f.IsSystem,
+            })
+            .ToListAsync(ct);
+
+        // 2) All active limit definitions
+        var limitDefs = await _db.LimitDefinitions
+            .Where(l => l.IsActive)
+            .OrderBy(l => l.AppliesToScope)
+            .ThenBy(l => l.Key)
+            .Select(l => new MatrixLimitDef
+            {
+                Key            = l.Key,
+                Name           = l.Name,
+                Unit           = l.Unit,
+                ValueType      = l.ValueType,
+                AppliesToScope = l.AppliesToScope,
+            })
+            .ToListAsync(ct);
+
+        // 3) All plans (admin sees all, including inactive)
+        var plans = await _db.Plans
+            .OrderBy(p => p.DisplayOrder)
+            .ThenBy(p => p.Name)
+            .ToListAsync(ct);
+
+        // 4) All PlanFeatures in one query  →  key = (planId, featureKey)
+        var allFeatureKeys = featureDefs.Select(f => f.Key).ToHashSet();
+        var planFeatureRows = await _db.PlanFeatures
+            .Join(_db.FeatureDefinitions,
+                  pf => pf.FeatureDefinitionId,
+                  fd => fd.Id,
+                  (pf, fd) => new { pf.SubscriptionPlanId, fd.Key, pf.IsEnabled })
+            .Where(x => allFeatureKeys.Contains(x.Key))
+            .ToListAsync(ct);
+
+        // group: planId → dict<featureKey, isEnabled>
+        var featureByPlan = planFeatureRows
+            .GroupBy(x => x.SubscriptionPlanId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.ToDictionary(r => r.Key, r => r.IsEnabled));
+
+        // 5) All PlanLimits in one query — materialize decimal values then cast in memory
+        var allLimitKeys = limitDefs.Select(l => l.Key).ToHashSet();
+        var planLimitRaw = await _db.PlanLimits
+            .Join(_db.LimitDefinitions,
+                  pl => pl.LimitDefinitionId,
+                  ld => ld.Id,
+                  (pl, ld) => new { pl.SubscriptionPlanId, ld.Key, pl.Value })
+            .Where(x => allLimitKeys.Contains(x.Key))
+            .ToListAsync(ct);
+
+        // group: planId → dict<limitKey, value>  (cast decimal → int in memory)
+        var limitByPlan = planLimitRaw
+            .GroupBy(x => x.SubscriptionPlanId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.ToDictionary(r => r.Key, r => (int)r.Value));
+
+        // 6) Assemble the response
+        var planCols = plans.Select(p =>
+        {
+            featureByPlan.TryGetValue(p.Id, out var fv);
+            limitByPlan.TryGetValue(p.Id, out var lv);
+
+            var col = new MatrixPlanCol
+            {
+                PlanId        = p.Id,
+                PlanName      = p.Name,
+                Code          = p.Code,
+                IsActive      = p.IsActive,
+                IsRecommended = p.IsRecommended,
+                DisplayOrder  = p.DisplayOrder,
+                PlanCategory  = p.PlanCategory,
+                PriceMonthly  = p.BasePriceMonthly,
+            };
+
+            foreach (var fd in featureDefs)
+                col.FeatureValues[fd.Key] = fv != null && fv.TryGetValue(fd.Key, out var enabled) && enabled;
+
+            foreach (var ld in limitDefs)
+                col.LimitValues[ld.Key] = lv != null && lv.TryGetValue(ld.Key, out var val) ? val : 0;
+
+            return col;
+        }).ToList();
+
+        return new PlanMatrixResponse
+        {
+            FeatureDefs = featureDefs,
+            LimitDefs   = limitDefs,
+            Plans        = planCols,
+        };
+    }
+
     // ── Feature Definitions ──────────────────────────────────────────────────
 
     public async Task<List<FeatureDefinitionResponse>> GetFeaturesAsync(CancellationToken ct = default)

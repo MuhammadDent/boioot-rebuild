@@ -535,6 +535,13 @@ export const adminApi = {
     return api.post(`/admin/payment-requests/${id}/activate`, {});
   },
 
+  // ── Plan Matrix ──────────────────────────────────────────────────────────
+
+  /** GET /api/admin/plan-catalog/matrix — full plan × feature matrix */
+  getPlanMatrix(): Promise<import("@/types").PlanMatrixData> {
+    return api.get("/admin/plan-catalog/matrix");
+  },
+
   // ── Plan Catalog — Feature Definitions ─────────────────────────────────────
 
   /** GET /api/admin/plan-catalog/features */

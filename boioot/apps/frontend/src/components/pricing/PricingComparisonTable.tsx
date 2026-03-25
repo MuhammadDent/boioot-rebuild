@@ -3,22 +3,27 @@
 import type { PublicPricingItem } from "@/features/pricing/types";
 import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
 
-// ── Row definitions ────────────────────────────────────────────────────────────
+// ── Icon hints for well-known keys ────────────────────────────────────────────
 
-const LIMIT_ROWS: { key: string; label: string; icon: string }[] = [
-  { key: "max_active_listings",    label: "الإعلانات النشطة",    icon: "📢" },
-  { key: "max_images_per_listing", label: "الصور لكل إعلان",     icon: "🖼" },
-  { key: "max_agents",             label: "الوسطاء",             icon: "👤" },
-  { key: "max_projects",           label: "المشاريع",             icon: "🏗" },
-];
+const LIMIT_ICONS: Record<string, string> = {
+  max_active_listings:    "📢",
+  max_images_per_listing: "🖼",
+  max_agents:             "👤",
+  max_projects:           "🏗",
+  max_featured_slots:     "⭐",
+  max_videos_per_listing: "🎬",
+};
 
-const FEATURE_ROWS: { key: string; label: string; icon: string }[] = [
-  { key: "featured_listings",   label: "ظهور مميز",   icon: "⭐" },
-  { key: "analytics_dashboard", label: "تحليلات",     icon: "📊" },
-  { key: "whatsapp_contact",    label: "دعم واتساب",  icon: "📱" },
-  { key: "verified_badge",      label: "حساب موثّق", icon: "✅" },
-  { key: "priority_support",    label: "دعم سريع",    icon: "⚡" },
-];
+const FEATURE_ICONS: Record<string, string> = {
+  featured_listings:   "⭐",
+  analytics_dashboard: "📊",
+  whatsapp_contact:    "📱",
+  verified_badge:      "✅",
+  priority_support:    "⚡",
+  internal_chat:       "💬",
+  video_upload:        "🎬",
+  project_management:  "🏗",
+};
 
 // ── Value formatters ───────────────────────────────────────────────────────────
 
@@ -58,6 +63,31 @@ export default function PricingComparisonTable({ plans, currentSubscription }: P
   if (plans.length === 0) return null;
 
   const colW = `${Math.max(110, Math.floor(640 / plans.length))}px`;
+
+  // ── Derive rows dynamically from plan data ────────────────────────────────
+  // Collect all unique limit keys across all plans (preserving encounter order)
+  const seenLimitKeys = new Set<string>();
+  const limitRows: { key: string; label: string; icon: string }[] = [];
+  for (const plan of plans) {
+    for (const lim of plan.limits ?? []) {
+      if (!seenLimitKeys.has(lim.key)) {
+        seenLimitKeys.add(lim.key);
+        limitRows.push({ key: lim.key, label: lim.name, icon: LIMIT_ICONS[lim.key] ?? "🔢" });
+      }
+    }
+  }
+
+  // Collect all unique feature keys across all plans
+  const seenFeatureKeys = new Set<string>();
+  const featureRows: { key: string; label: string; icon: string }[] = [];
+  for (const plan of plans) {
+    for (const feat of plan.features ?? []) {
+      if (!seenFeatureKeys.has(feat.key)) {
+        seenFeatureKeys.add(feat.key);
+        featureRows.push({ key: feat.key, label: feat.name, icon: FEATURE_ICONS[feat.key] ?? feat.icon ?? "✦" });
+      }
+    }
+  }
 
   function isCurrent(plan: PublicPricingItem) {
     return currentSubscription?.planId === plan.planId;
@@ -177,7 +207,7 @@ export default function PricingComparisonTable({ plans, currentSubscription }: P
               </td>
             </tr>
 
-            {LIMIT_ROWS.map((row, idx) => (
+            {limitRows.map((row, idx) => (
               <tr
                 key={row.key}
                 style={{
@@ -252,7 +282,7 @@ export default function PricingComparisonTable({ plans, currentSubscription }: P
               </td>
             </tr>
 
-            {FEATURE_ROWS.map((row, idx) => (
+            {featureRows.map((row, idx) => (
               <tr
                 key={row.key}
                 style={{
