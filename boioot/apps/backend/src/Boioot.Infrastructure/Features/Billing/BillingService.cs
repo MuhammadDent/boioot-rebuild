@@ -93,7 +93,7 @@ public sealed class BillingService : IBillingService
                 PlanPricingId: request.PricingId,
                 Amount:        pricing.PriceAmount,
                 Currency:      pricing.CurrencyCode,
-                PlanName:      pricing.Plan.Name,
+                PlanName:      pricing.Plan.DisplayNameAr ?? pricing.Plan.Name,
                 BillingCycle:  pricing.BillingCycle,
                 ExpiresAt:     DateTime.UtcNow.AddHours(48)),
             ct);

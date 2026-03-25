@@ -32,7 +32,7 @@ public class AccountResolver : IAccountResolver
                      && (s.Status == SubscriptionStatus.Trial || s.Status == SubscriptionStatus.Active)
                      && (s.EndDate == null || s.EndDate > DateTime.UtcNow))
             .OrderByDescending(s => s.StartDate)
-            .Select(s => s.Plan.Name)
+            .Select(s => s.Plan.DisplayNameAr ?? s.Plan.Name)
             .FirstOrDefaultAsync(ct);
     }
 }

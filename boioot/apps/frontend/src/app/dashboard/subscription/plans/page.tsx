@@ -129,7 +129,7 @@ function PlanCard({
           {plan.planCategory ?? plan.applicableAccountType ?? ""}
         </p>
         <h3 style={{ margin: "0.2rem 0 0", fontSize: "1.15rem", fontWeight: 800, color: "#1a2e1a" }}>
-          {plan.planName}
+          {plan.displayNameAr}
         </h3>
         {plan.description && (
           <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5 }}>
@@ -298,7 +298,7 @@ function CheckoutModal({
             الباقة المختارة
           </p>
           <p style={{ margin: "0.25rem 0 0", fontSize: "1.05rem", fontWeight: 800, color: "#1a2e1a" }}>
-            {plan.planName}
+            {plan.displayNameAr}
           </p>
           <p style={{ margin: "0.4rem 0 0", fontSize: "1.2rem", fontWeight: 900, color: "#059669" }}>
             {formatAmount(selectedPricing.priceAmount, selectedPricing.currencyCode)}

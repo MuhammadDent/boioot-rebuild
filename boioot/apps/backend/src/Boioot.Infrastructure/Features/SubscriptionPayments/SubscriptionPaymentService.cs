@@ -539,7 +539,7 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         return new FreePlanActivationResponse
         {
             SubscriptionId = subscription.Id,
-            PlanName       = plan.Name,
+            PlanName       = plan.DisplayNameAr ?? plan.Name,
             Message        = "تم تفعيل الباقة المجانية بنجاح.",
         };
     }

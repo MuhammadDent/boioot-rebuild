@@ -96,7 +96,10 @@ export default function PricingCard({
 
   function handleClick() {
     if (isDisabled || !pricingId) return;
-    onUpgradeIntent(pricingId, plan.planName);
+    if (process.env.NODE_ENV !== "production" && !plan.displayNameAr) {
+      console.warn("Missing displayNameAr for plan:", plan.planName);
+    }
+    onUpgradeIntent(pricingId, plan.displayNameAr ?? "");
   }
 
   // ── Card border/shadow/scale by tier ─────────────────────────────────────
@@ -184,7 +187,7 @@ export default function PricingCard({
           margin:     0,
           lineHeight: 1.2,
         }}>
-          {plan.displayNameAr ?? plan.planName}
+          {plan.displayNameAr}
         </h3>
         {plan.description && (
           <p style={{

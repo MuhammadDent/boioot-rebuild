@@ -464,7 +464,7 @@ export default function PlanMatrixPage() {
                     </div>
                   )}
                   <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {plan.displayNameAr ?? plan.planName}
+                    {plan.displayNameAr}
                   </div>
                   {plan.code && (
                     <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "monospace", marginBottom: 2 }}>

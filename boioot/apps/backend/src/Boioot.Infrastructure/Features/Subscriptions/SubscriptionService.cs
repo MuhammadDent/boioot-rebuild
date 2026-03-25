@@ -67,7 +67,7 @@ public sealed class SubscriptionService : ISubscriptionService
         return new CurrentSubscriptionResponse
         {
             PlanId       = sub.PlanId,
-            PlanName     = sub.Plan.Name,
+            PlanName     = sub.Plan.DisplayNameAr ?? sub.Plan.Name,
             PricingId    = pricing?.Id,
             BillingCycle = pricing?.BillingCycle ?? "Monthly",
             PriceAmount  = pricing?.PriceAmount  ?? 0,
@@ -112,7 +112,7 @@ public sealed class SubscriptionService : ISubscriptionService
             return new UpgradeIntentResponse
             {
                 CurrentPlanName = "—",
-                TargetPlanName  = targetPricing.Plan.Name,
+                TargetPlanName  = targetPricing.Plan.DisplayNameAr ?? targetPricing.Plan.Name,
                 BillingCycle    = targetPricing.BillingCycle,
                 PriceAmount     = targetPricing.PriceAmount,
                 CurrencyCode    = targetPricing.CurrencyCode,
@@ -132,7 +132,7 @@ public sealed class SubscriptionService : ISubscriptionService
             return new UpgradeIntentResponse
             {
                 CurrentPlanName = current.PlanName,
-                TargetPlanName  = targetPricing.Plan.Name,
+                TargetPlanName  = targetPricing.Plan.DisplayNameAr ?? targetPricing.Plan.Name,
                 BillingCycle    = targetPricing.BillingCycle,
                 PriceAmount     = targetPricing.PriceAmount,
                 CurrencyCode    = targetPricing.CurrencyCode,
@@ -148,7 +148,7 @@ public sealed class SubscriptionService : ISubscriptionService
             return new UpgradeIntentResponse
             {
                 CurrentPlanName = current.PlanName,
-                TargetPlanName  = targetPricing.Plan.Name,
+                TargetPlanName  = targetPricing.Plan.DisplayNameAr ?? targetPricing.Plan.Name,
                 BillingCycle    = targetPricing.BillingCycle,
                 PriceAmount     = targetPricing.PriceAmount,
                 CurrencyCode    = targetPricing.CurrencyCode,
@@ -165,13 +165,13 @@ public sealed class SubscriptionService : ISubscriptionService
             return new UpgradeIntentResponse
             {
                 CurrentPlanName = current.PlanName,
-                TargetPlanName  = targetPricing.Plan.Name,
+                TargetPlanName  = targetPricing.Plan.DisplayNameAr ?? targetPricing.Plan.Name,
                 BillingCycle    = targetPricing.BillingCycle,
                 PriceAmount     = targetPricing.PriceAmount,
                 CurrencyCode    = targetPricing.CurrencyCode,
                 Allowed         = true,
                 Reason          = "upgrade",
-                Message         = $"ترقية من {current.PlanName} إلى {targetPricing.Plan.Name} " +
+                Message         = $"ترقية من {current.PlanName} إلى {targetPricing.Plan.DisplayNameAr ?? targetPricing.Plan.Name} " +
                                   $"بسعر {targetPricing.PriceAmount:N0} {targetPricing.CurrencyCode} / {ArabicCycle(targetPricing.BillingCycle)}",
             };
         }
@@ -180,13 +180,13 @@ public sealed class SubscriptionService : ISubscriptionService
         return new UpgradeIntentResponse
         {
             CurrentPlanName = current.PlanName,
-            TargetPlanName  = targetPricing.Plan.Name,
+            TargetPlanName  = targetPricing.Plan.DisplayNameAr ?? targetPricing.Plan.Name,
             BillingCycle    = targetPricing.BillingCycle,
             PriceAmount     = targetPricing.PriceAmount,
             CurrencyCode    = targetPricing.CurrencyCode,
             Allowed         = true,
             Reason          = "downgrade",
-            Message         = $"تخفيض من {current.PlanName} إلى {targetPricing.Plan.Name} " +
+            Message         = $"تخفيض من {current.PlanName} إلى {targetPricing.Plan.DisplayNameAr ?? targetPricing.Plan.Name} " +
                               $"بسعر {targetPricing.PriceAmount:N0} {targetPricing.CurrencyCode} / {ArabicCycle(targetPricing.BillingCycle)}",
         };
     }
@@ -203,7 +203,7 @@ public sealed class SubscriptionService : ISubscriptionService
         return new CurrentSubscriptionResponse
         {
             PlanId       = FreePlanId,
-            PlanName     = freePlan?.Name ?? "Free",
+            PlanName     = freePlan?.DisplayNameAr ?? freePlan?.Name ?? "مجاني",
             PricingId    = FreePricingId,
             BillingCycle = "Monthly",
             PriceAmount  = 0,

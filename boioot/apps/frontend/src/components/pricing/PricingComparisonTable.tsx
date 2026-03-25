@@ -178,7 +178,7 @@ export default function PricingComparisonTable({ plans, currentSubscription }: P
                       </span>
                     )}
                     <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--color-text-primary)" }}>
-                      {plan.displayNameAr ?? plan.planName}
+                      {plan.displayNameAr}
                     </span>
                   </div>
                 </th>

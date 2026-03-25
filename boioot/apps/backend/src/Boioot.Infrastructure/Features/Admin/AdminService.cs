@@ -172,7 +172,7 @@ public class AdminService : IAdminService
             City                    = topCity?.City,
 
             HasActiveSubscription   = activeSub != null,
-            PlanName                = plan?.Name,
+            PlanName                = plan?.DisplayNameAr ?? plan?.Name,
             PlanListingLimit        = planLimit,
             UsedListings            = usedListings,
             RemainingListings       = remaining,

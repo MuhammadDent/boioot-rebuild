@@ -1671,7 +1671,7 @@ export default function AdminPlansPage() {
                   {plan.planColor && (
                     <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: plan.planColor, flexShrink: 0 }} />
                   )}
-                  <span style={{ fontWeight: 700, fontSize: "1rem" }}>{plan.displayNameAr ?? plan.name}</span>
+                  <span style={{ fontWeight: 700, fontSize: "1rem" }}>{plan.displayNameAr}</span>
                   {plan.code && <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{plan.code}</span>}
                   <span className={plan.isActive ? "badge badge-green" : "badge badge-red"}>{plan.isActive ? "نشطة" : "معطلة"}</span>
                   <span className={plan.isPublic ? "badge badge-blue" : "badge badge-gray"}>{plan.isPublic ? "عامة" : "مخفية"}</span>
