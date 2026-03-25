@@ -7,6 +7,22 @@ public class UpdatePlanRequest
     [Required, MaxLength(100)]
     public string  Name                    { get; set; } = string.Empty;
 
+    /// <summary>Primary Arabic display name shown in UI.</summary>
+    [MaxLength(100)]
+    public string? DisplayNameAr           { get; set; }
+
+    /// <summary>Secondary English display name.</summary>
+    [MaxLength(100)]
+    public string? DisplayNameEn           { get; set; }
+
+    /// <summary>seeker | owner | broker | office | company</summary>
+    [MaxLength(30)]
+    public string? AudienceType            { get; set; }
+
+    /// <summary>free | basic | advanced | enterprise</summary>
+    [MaxLength(30)]
+    public string? Tier                    { get; set; }
+
     [MaxLength(500)]
     public string? Description             { get; set; }
 

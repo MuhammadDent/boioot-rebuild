@@ -559,6 +559,14 @@ export interface AdminPlanSummary {
   id: string;
   name: string;
   code?: string;
+  /** Primary Arabic display name — prefer this over `name` in UI. */
+  displayNameAr?: string;
+  /** Secondary English display name. */
+  displayNameEn?: string;
+  /** seeker | owner | broker | office | company */
+  audienceType?: string;
+  /** free | basic | advanced | enterprise */
+  tier?: string;
   description?: string;
   isActive: boolean;
   basePriceMonthly: number;
@@ -863,6 +871,9 @@ export interface MatrixLimitDef {
 export interface MatrixPlanCol {
   planId: string;
   planName: string;
+  displayNameAr?: string;
+  audienceType?: string;
+  tier?: string;
   code?: string;
   isActive: boolean;
   isRecommended: boolean;

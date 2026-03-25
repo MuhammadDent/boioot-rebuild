@@ -57,6 +57,7 @@ public sealed class SchemaEvolutionService
         await ApplyPlanPatchesAsync(ct);
         await ApplyInvoicePatchesAsync(ct);
         await ApplyFeatureDefinitionPatchesAsync(ct);
+        await ApplyPlanNamingPatchesAsync(ct);
         await ApplyPlanFeaturePatchesAsync(ct);
 
         await ApplySqliteIndexPatchesAsync(ct);
@@ -298,6 +299,14 @@ public sealed class SchemaEvolutionService
         await TryAlter("FeatureDefinitions", "Scope",     "TEXT NOT NULL DEFAULT 'system'",    ct);
         await TryAlter("FeatureDefinitions", "IsSystem",  "INTEGER NOT NULL DEFAULT 0",        ct);
         await TryAlter("FeatureDefinitions", "SortOrder", "INTEGER NOT NULL DEFAULT 0",        ct);
+    }
+
+    private async Task ApplyPlanNamingPatchesAsync(CancellationToken ct)
+    {
+        await TryAlter("Plans", "DisplayNameAr", "TEXT",                                       ct);
+        await TryAlter("Plans", "DisplayNameEn", "TEXT",                                       ct);
+        await TryAlter("Plans", "AudienceType",  "TEXT",                                       ct);
+        await TryAlter("Plans", "Tier",          "TEXT",                                       ct);
     }
 
     private async Task ApplyPlanFeaturePatchesAsync(CancellationToken ct)

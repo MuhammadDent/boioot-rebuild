@@ -5,6 +5,14 @@ public class PlanSummaryResponse
     public Guid    Id                      { get; set; }
     public string  Name                    { get; set; } = string.Empty;
     public string? Code                    { get; set; }
+    /// <summary>Primary Arabic display name (user-facing). Prefer over Name in UI.</summary>
+    public string? DisplayNameAr           { get; set; }
+    /// <summary>Secondary English display name (for future localization).</summary>
+    public string? DisplayNameEn           { get; set; }
+    /// <summary>seeker | owner | broker | office | company</summary>
+    public string? AudienceType            { get; set; }
+    /// <summary>free | basic | advanced | enterprise</summary>
+    public string? Tier                    { get; set; }
     public string? Description             { get; set; }
     public bool    IsActive                { get; set; }
     public decimal BasePriceMonthly        { get; set; }

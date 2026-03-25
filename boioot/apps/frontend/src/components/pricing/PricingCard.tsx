@@ -184,7 +184,7 @@ export default function PricingCard({
           margin:     0,
           lineHeight: 1.2,
         }}>
-          {plan.planName}
+          {plan.displayNameAr ?? plan.planName}
         </h3>
         {plan.description && (
           <p style={{

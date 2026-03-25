@@ -21,6 +21,36 @@ const FEATURE_GROUP_LABELS: Record<string, string> = {
   support:       "🛠 الدعم الفني",
 };
 
+const AUDIENCE_AR: Record<string, string> = {
+  seeker:  "باحث",
+  owner:   "مالك",
+  broker:  "وسيط",
+  office:  "مكتب",
+  company: "شركة",
+};
+
+const AUDIENCE_COLORS: Record<string, { bg: string; text: string }> = {
+  seeker:  { bg: "rgba(37,99,235,0.25)",  text: "#93c5fd" },
+  owner:   { bg: "rgba(22,163,74,0.25)",  text: "#86efac" },
+  broker:  { bg: "rgba(234,88,12,0.25)",  text: "#fdba74" },
+  office:  { bg: "rgba(124,58,237,0.25)", text: "#c4b5fd" },
+  company: { bg: "rgba(220,38,38,0.25)",  text: "#fca5a5" },
+};
+
+const TIER_AR: Record<string, string> = {
+  free:       "مجاني",
+  basic:      "أساسي",
+  advanced:   "متقدم",
+  enterprise: "مؤسسي",
+};
+
+const TIER_COLORS: Record<string, { bg: string; text: string }> = {
+  free:       { bg: "rgba(107,114,128,0.2)",  text: "rgba(255,255,255,0.4)" },
+  basic:      { bg: "rgba(37,99,235,0.15)",   text: "#93c5fd" },
+  advanced:   { bg: "rgba(99,102,241,0.2)",   text: "#a5b4fc" },
+  enterprise: { bg: "rgba(167,139,250,0.2)",  text: "#c4b5fd" },
+};
+
 function groupLabel(key?: string) {
   if (!key) return "ميزات";
   return FEATURE_GROUP_LABELS[key] ?? key;
@@ -434,21 +464,36 @@ export default function PlanMatrixPage() {
                     </div>
                   )}
                   <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {plan.planName}
+                    {plan.displayNameAr ?? plan.planName}
                   </div>
                   {plan.code && (
-                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "monospace", marginBottom: 3 }}>
+                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", fontFamily: "monospace", marginBottom: 2 }}>
                       {plan.code}
+                    </div>
+                  )}
+                  {plan.audienceType && (
+                    <div style={{ fontSize: 8, marginBottom: 2, display: "flex", gap: 2, justifyContent: "center", flexWrap: "wrap" }}>
+                      <span style={{
+                        padding: "1px 4px", borderRadius: 4, fontWeight: 600,
+                        background: AUDIENCE_COLORS[plan.audienceType]?.bg ?? "rgba(255,255,255,0.1)",
+                        color: AUDIENCE_COLORS[plan.audienceType]?.text ?? "#fff",
+                      }}>
+                        {AUDIENCE_AR[plan.audienceType] ?? plan.audienceType}
+                      </span>
+                      {plan.tier && (
+                        <span style={{
+                          padding: "1px 4px", borderRadius: 4, fontWeight: 600,
+                          background: TIER_COLORS[plan.tier]?.bg ?? "rgba(255,255,255,0.08)",
+                          color: TIER_COLORS[plan.tier]?.text ?? "rgba(255,255,255,0.5)",
+                        }}>
+                          {TIER_AR[plan.tier] ?? plan.tier}
+                        </span>
+                      )}
                     </div>
                   )}
                   <div style={{ fontSize: 10, color: "#6ee7b7", fontWeight: 600 }}>
                     {formatPrice(plan.priceMonthly)}
                   </div>
-                  {plan.planCategory && (
-                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
-                      {plan.planCategory}
-                    </div>
-                  )}
                 </th>
               ))}
             </tr>

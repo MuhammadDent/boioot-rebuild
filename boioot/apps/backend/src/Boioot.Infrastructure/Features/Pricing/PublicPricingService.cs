@@ -42,6 +42,9 @@ public class PublicPricingService : IPublicPricingService
             {
                 p.Id,
                 p.Name,
+                p.DisplayNameAr,
+                p.AudienceType,
+                p.Tier,
                 p.Description,
                 ApplicableAccountType = p.ApplicableAccountType == null ? null : p.ApplicableAccountType.ToString(),
                 p.Rank,
@@ -100,6 +103,9 @@ public class PublicPricingService : IPublicPricingService
         return plans.Select(p => new PublicPricingItem(
             PlanId:               p.Id,
             PlanName:             p.Name,
+            DisplayNameAr:        p.DisplayNameAr,
+            AudienceType:         p.AudienceType,
+            Tier:                 p.Tier,
             Description:          p.Description,
             ApplicableAccountType: p.ApplicableAccountType,
             Rank:                 p.Rank,

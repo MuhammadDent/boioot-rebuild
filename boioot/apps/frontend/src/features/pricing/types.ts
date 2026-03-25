@@ -22,6 +22,12 @@ export interface PublicFeatureItem {
 export interface PublicPricingItem {
   planId:               string;
   planName:             string;
+  /** Primary Arabic display name — use this in UI instead of planName. */
+  displayNameAr:        string | null;
+  /** seeker | owner | broker | office | company */
+  audienceType:         string | null;
+  /** free | basic | advanced | enterprise */
+  tier:                 string | null;
   description:          string | null;
   applicableAccountType: string | null;
   rank:                 number;

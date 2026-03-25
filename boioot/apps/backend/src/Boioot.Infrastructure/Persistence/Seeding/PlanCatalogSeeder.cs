@@ -33,6 +33,7 @@ public sealed class PlanCatalogSeeder
         await SeedPlanLimitsAsync(ct);
         await SeedPlanPricingsAsync(ct);
         await ApplyPlanCorrectionsAsync(ct);
+        await ApplyPlanNameNormalizationAsync(ct);
         await SeedBlogSeoSettingsAsync(ct);
     }
 
@@ -105,6 +106,9 @@ public sealed class PlanCatalogSeeder
             // ── Developer plans (0a–0b) ───────────────────────────────────────
             P("0000000a-0000-0000-0000-000000000000", "DeveloperBusiness","developer_business",50,  5, 10, 10, 15000,130000, "Company",    "Business",   15, 15),
             P("0000000b-0000-0000-0000-000000000000", "DeveloperPremium", "developer_premium", -1, -1, -1, 30, 30000,260000, "Company",    "Business",   16, 16, isRecommended: true),
+            // ── New normalized plans (0c–0d) ──────────────────────────────────
+            P("0000000c-0000-0000-0000-000000000000", "BrokerAdvanced",   "broker_advanced",   -1,  8, 20,  15, 7500, 65000, "Individual", "Business",   22, 22),
+            P("0000000d-0000-0000-0000-000000000000", "OfficeAdvanced",   "office_advanced",   -1, -1, -1,  30,30000,260000, "Office",     "Business",   32, 32, isRecommended: true),
         };
     }
 
@@ -303,8 +307,10 @@ public sealed class PlanCatalogSeeder
         const string p07 = "00000007-0000-0000-0000-000000000000"; // BrokerPremium
         const string p08 = "00000008-0000-0000-0000-000000000000"; // OfficeStarter
         const string p09 = "00000009-0000-0000-0000-000000000000"; // OfficeGrowth
-        const string p0a = "0000000a-0000-0000-0000-000000000000"; // DeveloperBusiness
-        const string p0b = "0000000b-0000-0000-0000-000000000000"; // DeveloperPremium
+        const string p0a = "0000000a-0000-0000-0000-000000000000"; // DeveloperBusiness → company_basic
+        const string p0b = "0000000b-0000-0000-0000-000000000000"; // DeveloperPremium  → company_enterprise
+        const string p0c = "0000000c-0000-0000-0000-000000000000"; // BrokerAdvanced
+        const string p0d = "0000000d-0000-0000-0000-000000000000"; // OfficeAdvanced
 
         return new List<PlanFeature>
         {
@@ -438,6 +444,28 @@ public sealed class PlanCatalogSeeder
             PF("eb000009-0000-0000-0000-000000000000", p09, fd0a, true),  // OfficeGrowth
             PF("eb00000a-0000-0000-0000-000000000000", p0a, fd0a, true),  // DeveloperBusiness
             PF("eb00000b-0000-0000-0000-000000000000", p0b, fd0a, true),  // DeveloperPremium
+            // ── BrokerAdvanced (0c) ────────────────────────────────────────────
+            PF("ec000001-0000-0000-0000-000000000000", p0c, fd1, true),
+            PF("ec000002-0000-0000-0000-000000000000", p0c, fd2, true),
+            PF("ec000003-0000-0000-0000-000000000000", p0c, fd3, true),
+            PF("ec000004-0000-0000-0000-000000000000", p0c, fd4, true),
+            PF("ec000005-0000-0000-0000-000000000000", p0c, fd5, true),
+            PF("ec000006-0000-0000-0000-000000000000", p0c, fd6, true),
+            PF("ec000007-0000-0000-0000-000000000000", p0c, fd7, true),
+            PF("ec000008-0000-0000-0000-000000000000", p0c, fd8, true),
+            PF("ec000009-0000-0000-0000-000000000000", p0c, fd9, true),
+            PF("ec00000a-0000-0000-0000-000000000000", p0c, fd0a, true),
+            // ── OfficeAdvanced (0d) ────────────────────────────────────────────
+            PF("ed000001-0000-0000-0000-000000000000", p0d, fd1, true),
+            PF("ed000002-0000-0000-0000-000000000000", p0d, fd2, true),
+            PF("ed000003-0000-0000-0000-000000000000", p0d, fd3, true),
+            PF("ed000004-0000-0000-0000-000000000000", p0d, fd4, true),
+            PF("ed000005-0000-0000-0000-000000000000", p0d, fd5, true),
+            PF("ed000006-0000-0000-0000-000000000000", p0d, fd6, true),
+            PF("ed000007-0000-0000-0000-000000000000", p0d, fd7, true),
+            PF("ed000008-0000-0000-0000-000000000000", p0d, fd8, true),
+            PF("ed000009-0000-0000-0000-000000000000", p0d, fd9, true),
+            PF("ed00000a-0000-0000-0000-000000000000", p0d, fd0a, true),
         };
     }
 
@@ -491,6 +519,8 @@ public sealed class PlanCatalogSeeder
         const string p09 = "00000009-0000-0000-0000-000000000000";
         const string p0a = "0000000a-0000-0000-0000-000000000000";
         const string p0b = "0000000b-0000-0000-0000-000000000000";
+        const string p0c = "0000000c-0000-0000-0000-000000000000"; // broker_advanced
+        const string p0d = "0000000d-0000-0000-0000-000000000000"; // office_advanced
 
         return new List<PlanLimit>
         {
@@ -586,6 +616,22 @@ public sealed class PlanCatalogSeeder
             PL("c4000009-0000-0000-0000-000000000000", p09, ld7,  2), // OfficeGrowth:     2 videos
             PL("c400000a-0000-0000-0000-000000000000", p0a, ld7,  2), // DeveloperBusiness:2 videos
             PL("c400000b-0000-0000-0000-000000000000", p0b, ld7,  3), // DeveloperPremium: 3 videos
+            // ── BrokerAdvanced (0c) ────────────────────────────────────────────
+            PL("c5000001-0000-0000-0000-000000000000", p0c, ld1,  -1),
+            PL("c5000002-0000-0000-0000-000000000000", p0c, ld2,  20),
+            PL("c5000003-0000-0000-0000-000000000000", p0c, ld3,   8),
+            PL("c5000004-0000-0000-0000-000000000000", p0c, ld4,   0),
+            PL("c5000005-0000-0000-0000-000000000000", p0c, ld5,  -1),
+            PL("c5000006-0000-0000-0000-000000000000", p0c, ld6,  15),
+            PL("c5000007-0000-0000-0000-000000000000", p0c, ld7,   2),
+            // ── OfficeAdvanced (0d) ────────────────────────────────────────────
+            PL("c6000001-0000-0000-0000-000000000000", p0d, ld1,  -1),
+            PL("c6000002-0000-0000-0000-000000000000", p0d, ld2,  -1),
+            PL("c6000003-0000-0000-0000-000000000000", p0d, ld3,  -1),
+            PL("c6000004-0000-0000-0000-000000000000", p0d, ld4,  -1),
+            PL("c6000005-0000-0000-0000-000000000000", p0d, ld5,  -1),
+            PL("c6000006-0000-0000-0000-000000000000", p0d, ld6,  30),
+            PL("c6000007-0000-0000-0000-000000000000", p0d, ld7,   3),
         };
     }
 
@@ -644,6 +690,11 @@ public sealed class PlanCatalogSeeder
             PP("ef000013-0000-0000-0000-000000000000", "0000000a-0000-0000-0000-000000000000", "Yearly",  130000),
             PP("ef000014-0000-0000-0000-000000000000", "0000000b-0000-0000-0000-000000000000", "Monthly",  30000),
             PP("ef000015-0000-0000-0000-000000000000", "0000000b-0000-0000-0000-000000000000", "Yearly",  260000),
+            // ── New plans (0c–0d) ──────────────────────────────────────────────
+            PP("ef000016-0000-0000-0000-000000000000", "0000000c-0000-0000-0000-000000000000", "Monthly",   7500),
+            PP("ef000017-0000-0000-0000-000000000000", "0000000c-0000-0000-0000-000000000000", "Yearly",   65000),
+            PP("ef000018-0000-0000-0000-000000000000", "0000000d-0000-0000-0000-000000000000", "Monthly",  30000),
+            PP("ef000019-0000-0000-0000-000000000000", "0000000d-0000-0000-0000-000000000000", "Yearly",  260000),
         };
     }
 
@@ -760,6 +811,54 @@ public sealed class PlanCatalogSeeder
             Apply(id, p => { if (string.IsNullOrEmpty(p.Code)) p.Code = code; });
 
         await _ctx.SaveChangesAsync(ct);
+    }
+
+    // ── Plan naming normalization (idempotent, force-updates all 13 plans) ──────
+    //
+    // Normalizes Code, DisplayNameAr, DisplayNameEn, AudienceType, Tier.
+    // Also resets BasePriceMonthly to 0 for every "free" tier plan.
+    // Runs AFTER ApplyPlanCorrectionsAsync — safe to run on every startup.
+
+    private async Task ApplyPlanNameNormalizationAsync(CancellationToken ct)
+    {
+        // Map: planId → (code, displayNameAr, displayNameEn, audienceType, tier, priceMonthly? null=keep)
+        var norm = new Dictionary<Guid, (string code, string ar, string en, string audience, string tier, decimal? price)>
+        {
+            [Guid.Parse("00000001-0000-0000-0000-000000000000")] = ("seeker_free",       "مجاني للباحث",     "Seeker Free",        "seeker",  "free",       0m),
+            [Guid.Parse("00000002-0000-0000-0000-000000000000")] = ("seeker_advanced",   "متقدم للباحث",     "Seeker Advanced",    "seeker",  "advanced",   null),
+            [Guid.Parse("00000003-0000-0000-0000-000000000000")] = ("owner_free",        "مجاني للمالك",     "Owner Free",         "owner",   "free",       0m),
+            [Guid.Parse("00000004-0000-0000-0000-000000000000")] = ("owner_basic",       "أساسي للمالك",     "Owner Basic",        "owner",   "basic",      null),
+            [Guid.Parse("00000005-0000-0000-0000-000000000000")] = ("owner_advanced",    "متقدم للمالك",     "Owner Advanced",     "owner",   "advanced",   null),
+            [Guid.Parse("00000006-0000-0000-0000-000000000000")] = ("broker_free",       "مجاني للوسيط",     "Broker Free",        "broker",  "free",       0m),
+            [Guid.Parse("00000007-0000-0000-0000-000000000000")] = ("broker_basic",      "أساسي للوسيط",     "Broker Basic",       "broker",  "basic",      null),
+            [Guid.Parse("00000008-0000-0000-0000-000000000000")] = ("office_free",       "مجاني للمكتب",     "Office Free",        "office",  "free",       0m),
+            [Guid.Parse("00000009-0000-0000-0000-000000000000")] = ("office_basic",      "أساسي للمكتب",     "Office Basic",       "office",  "basic",      null),
+            [Guid.Parse("0000000a-0000-0000-0000-000000000000")] = ("company_basic",     "أساسي للشركة",     "Company Basic",      "company", "basic",      null),
+            [Guid.Parse("0000000b-0000-0000-0000-000000000000")] = ("company_enterprise","مؤسسي للشركة",     "Company Enterprise", "company", "enterprise", null),
+            [Guid.Parse("0000000c-0000-0000-0000-000000000000")] = ("broker_advanced",   "متقدم للوسيط",     "Broker Advanced",    "broker",  "advanced",   null),
+            [Guid.Parse("0000000d-0000-0000-0000-000000000000")] = ("office_advanced",   "متقدم للمكتب",     "Office Advanced",    "office",  "advanced",   null),
+        };
+
+        var planIds = norm.Keys.ToList();
+        var plans = await _ctx.Plans
+            .IgnoreQueryFilters()
+            .Where(p => planIds.Contains(p.Id))
+            .ToListAsync(ct);
+
+        foreach (var plan in plans)
+        {
+            if (!norm.TryGetValue(plan.Id, out var n)) continue;
+            plan.Code          = n.code;
+            plan.DisplayNameAr = n.ar;
+            plan.DisplayNameEn = n.en;
+            plan.AudienceType  = n.audience;
+            plan.Tier          = n.tier;
+            if (n.price.HasValue)
+                plan.BasePriceMonthly = n.price.Value;
+        }
+
+        await _ctx.SaveChangesAsync(ct);
+        _log.LogInformation("Applied plan naming normalization to {Count} plans.", plans.Count);
     }
 
     // ── BlogSeoSettings (singleton) ───────────────────────────────────────────

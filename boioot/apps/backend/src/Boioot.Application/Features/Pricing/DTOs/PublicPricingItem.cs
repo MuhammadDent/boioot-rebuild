@@ -7,6 +7,12 @@ namespace Boioot.Application.Features.Pricing.DTOs;
 public record PublicPricingItem(
     Guid PlanId,
     string PlanName,
+    /// <summary>Primary Arabic display name — use this in UI instead of PlanName.</summary>
+    string? DisplayNameAr,
+    /// <summary>seeker | owner | broker | office | company</summary>
+    string? AudienceType,
+    /// <summary>free | basic | advanced | enterprise</summary>
+    string? Tier,
     string? Description,
     string? ApplicableAccountType,
     /// <summary>Ordinal rank for upgrade/downgrade comparison (higher = more advanced).</summary>

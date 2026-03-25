@@ -8,11 +8,28 @@ public class Plan : BaseEntity
 
     /// <summary>
     /// Stable machine-readable identifier for this plan.
-    /// Used by entitlement/enforcement code to reference plans without relying on Names.
-    /// Format: snake_case, e.g. "owner_pro", "broker_premium", "office_starter".
-    /// Never rename after plans are in use.
+    /// Format: snake_case, e.g. "seeker_free", "broker_advanced", "company_enterprise".
+    /// Once in billing use, treat as immutable.
     /// </summary>
     public string? Code { get; set; }
+
+    /// <summary>Primary Arabic display name shown in UI. This is the user-facing label.</summary>
+    public string? DisplayNameAr { get; set; }
+
+    /// <summary>Secondary English display name for future localization.</summary>
+    public string? DisplayNameEn { get; set; }
+
+    /// <summary>
+    /// Business audience segment: seeker | owner | broker | office | company.
+    /// Controls grouping on the pricing page and access rules.
+    /// </summary>
+    public string? AudienceType { get; set; }
+
+    /// <summary>
+    /// Plan tier within the audience: free | basic | advanced | enterprise.
+    /// Controls upgrade path ordering within an audience group.
+    /// </summary>
+    public string? Tier { get; set; }
 
     /// <summary>Marketing description shown on the pricing page.</summary>
     public string? Description { get; set; }

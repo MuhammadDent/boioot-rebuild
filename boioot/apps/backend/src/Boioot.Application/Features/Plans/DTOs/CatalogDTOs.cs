@@ -33,6 +33,9 @@ public class MatrixPlanCol
 {
     public Guid    PlanId        { get; set; }
     public string  PlanName      { get; set; } = string.Empty;
+    public string? DisplayNameAr { get; set; }
+    public string? AudienceType  { get; set; }
+    public string? Tier          { get; set; }
     public string? Code          { get; set; }
     public bool    IsActive      { get; set; }
     public bool    IsRecommended { get; set; }

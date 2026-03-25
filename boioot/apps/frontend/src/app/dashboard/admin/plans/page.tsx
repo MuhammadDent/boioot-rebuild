@@ -24,6 +24,21 @@ function Toast({ msg, type }: { msg: string; type: "ok" | "err" }) {
   );
 }
 
+// ── Audience / Tier display helpers ───────────────────────────────────────────
+
+const AUDIENCE_AR_LABEL: Record<string, string> = {
+  seeker: "باحث", owner: "مالك", broker: "وسيط", office: "مكتب", company: "شركة",
+};
+const AUDIENCE_BG: Record<string, string> = {
+  seeker: "#1d4ed8", owner: "#15803d", broker: "#c2410c", office: "#6d28d9", company: "#b91c1c",
+};
+const TIER_AR_LABEL: Record<string, string> = {
+  free: "مجاني", basic: "أساسي", advanced: "متقدم", enterprise: "مؤسسي",
+};
+const TIER_BG: Record<string, string> = {
+  free: "#374151", basic: "#1e40af", advanced: "#4338ca", enterprise: "#5b21b6",
+};
+
 // ── Feature group labels ───────────────────────────────────────────────────────
 
 const FEATURE_GROUP_LABELS: Record<string, string> = {
@@ -805,6 +820,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [displayOrder, setDisplayOrder]           = useState(String(plan?.displayOrder ?? 0));
   const [billingMode, setBillingMode]             = useState(plan?.billingMode ?? "InternalOnly");
   const [planCategory, setPlanCategory]           = useState(plan?.planCategory ?? "");
+  const [displayNameAr, setDisplayNameAr]         = useState(plan?.displayNameAr ?? "");
+  const [audienceType, setAudienceType]           = useState(plan?.audienceType ?? "");
+  const [tier, setTier]                           = useState(plan?.tier ?? "");
   const [badgeText, setBadgeText]                 = useState(plan?.badgeText ?? "");
   const [planColor, setPlanColor]                 = useState(plan?.planColor ?? "");
 
@@ -857,6 +875,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           basePriceYearly:        parseFloat(priceYearly)  || 0,
           applicableAccountType:  applicableAccountType || undefined,
           planCategory:           planCategory || undefined,
+          displayNameAr:          displayNameAr.trim() || undefined,
+          audienceType:           audienceType || undefined,
+          tier:                   tier || undefined,
           billingMode,
           badgeText:              badgeText.trim() || undefined,
           planColor:              planColor.trim() || undefined,
@@ -883,6 +904,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           isPublic,
           isRecommended,
           planCategory:           planCategory || undefined,
+          displayNameAr:          displayNameAr.trim() || undefined,
+          audienceType:           audienceType || undefined,
+          tier:                   tier || undefined,
           billingMode,
           badgeText:              badgeText.trim() || undefined,
           planColor:              planColor.trim() || undefined,
@@ -1018,6 +1042,45 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     <option value="">— بدون فئة —</option>
                     <option value="Individual">أفراد (Individual)</option>
                     <option value="Business">أعمال (Business)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>الاسم العربي للعرض (DisplayNameAr)</label>
+                  <input
+                    value={displayNameAr}
+                    onChange={e => setDisplayNameAr(e.target.value)}
+                    style={inputStyle}
+                    placeholder="مثال: باحث متقدم"
+                    maxLength={120}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>جمهور الخطة (Audience)</label>
+                  <select
+                    value={audienceType}
+                    onChange={e => setAudienceType(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">— بدون تحديد —</option>
+                    <option value="seeker">باحث (seeker)</option>
+                    <option value="owner">مالك (owner)</option>
+                    <option value="broker">وسيط (broker)</option>
+                    <option value="office">مكتب (office)</option>
+                    <option value="company">شركة (company)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>مستوى الخطة (Tier)</label>
+                  <select
+                    value={tier}
+                    onChange={e => setTier(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">— بدون تحديد —</option>
+                    <option value="free">مجاني (free)</option>
+                    <option value="basic">أساسي (basic)</option>
+                    <option value="advanced">متقدم (advanced)</option>
+                    <option value="enterprise">مؤسسي (enterprise)</option>
                   </select>
                 </div>
                 <div>
@@ -1608,13 +1671,14 @@ export default function AdminPlansPage() {
                   {plan.planColor && (
                     <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: plan.planColor, flexShrink: 0 }} />
                   )}
-                  <span style={{ fontWeight: 700, fontSize: "1rem" }}>{plan.name}</span>
+                  <span style={{ fontWeight: 700, fontSize: "1rem" }}>{plan.displayNameAr ?? plan.name}</span>
                   {plan.code && <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{plan.code}</span>}
                   <span className={plan.isActive ? "badge badge-green" : "badge badge-red"}>{plan.isActive ? "نشطة" : "معطلة"}</span>
                   <span className={plan.isPublic ? "badge badge-blue" : "badge badge-gray"}>{plan.isPublic ? "عامة" : "مخفية"}</span>
                   {plan.isRecommended && <span className="badge badge-yellow">⭐ موصى بها</span>}
                   {plan.hasTrial && <span className="badge badge-green">🎁 تجريبية {plan.trialDays}ي</span>}
-                  {plan.planCategory && <span className="badge badge-gray">{plan.planCategory === "Individual" ? "أفراد" : plan.planCategory === "Business" ? "أعمال" : plan.planCategory}</span>}
+                  {plan.audienceType && <span className="badge" style={{ background: AUDIENCE_BG[plan.audienceType], color: "#fff" }}>{AUDIENCE_AR_LABEL[plan.audienceType] ?? plan.audienceType}</span>}
+                  {plan.tier && <span className="badge" style={{ background: TIER_BG[plan.tier], color: "#fff" }}>{TIER_AR_LABEL[plan.tier] ?? plan.tier}</span>}
                 </div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", marginBottom: "0.25rem" }}>
                   <span style={{ fontWeight: 700, fontSize: "0.95rem", color: plan.planColor || "var(--color-primary, #2563eb)" }}>{monthlyPrice}</span>

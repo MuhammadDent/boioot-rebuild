@@ -213,6 +213,10 @@ public class AdminPlanService : IAdminPlanService
         var plan = new Plan
         {
             Name                    = request.Name.Trim(),
+            DisplayNameAr           = string.IsNullOrWhiteSpace(request.DisplayNameAr) ? null : request.DisplayNameAr.Trim(),
+            DisplayNameEn           = string.IsNullOrWhiteSpace(request.DisplayNameEn) ? null : request.DisplayNameEn.Trim(),
+            AudienceType            = string.IsNullOrWhiteSpace(request.AudienceType)  ? null : request.AudienceType.Trim().ToLowerInvariant(),
+            Tier                    = string.IsNullOrWhiteSpace(request.Tier)           ? null : request.Tier.Trim().ToLowerInvariant(),
             Description             = request.Description?.Trim(),
             BasePriceMonthly        = request.BasePriceMonthly,
             BasePriceYearly         = request.BasePriceYearly,
@@ -290,6 +294,10 @@ public class AdminPlanService : IAdminPlanService
             accountType = at;
 
         plan.Name                    = request.Name.Trim();
+        plan.DisplayNameAr           = string.IsNullOrWhiteSpace(request.DisplayNameAr) ? null : request.DisplayNameAr.Trim();
+        plan.DisplayNameEn           = string.IsNullOrWhiteSpace(request.DisplayNameEn) ? null : request.DisplayNameEn.Trim();
+        plan.AudienceType            = string.IsNullOrWhiteSpace(request.AudienceType)  ? null : request.AudienceType.Trim().ToLowerInvariant();
+        plan.Tier                    = string.IsNullOrWhiteSpace(request.Tier)           ? null : request.Tier.Trim().ToLowerInvariant();
         plan.Description             = request.Description?.Trim();
         plan.BasePriceMonthly        = request.BasePriceMonthly;
         plan.BasePriceYearly         = request.BasePriceYearly;
@@ -355,6 +363,10 @@ public class AdminPlanService : IAdminPlanService
         {
             Name                    = $"{source.Name} (نسخة)",
             Code                    = null,
+            DisplayNameAr           = source.DisplayNameAr != null ? $"{source.DisplayNameAr} (نسخة)" : null,
+            DisplayNameEn           = source.DisplayNameEn != null ? $"{source.DisplayNameEn} (Copy)" : null,
+            AudienceType            = source.AudienceType,
+            Tier                    = source.Tier,
             Description             = source.Description,
             BasePriceMonthly        = source.BasePriceMonthly,
             BasePriceYearly         = source.BasePriceYearly,
@@ -535,6 +547,10 @@ public class AdminPlanService : IAdminPlanService
         Id                      = p.Id,
         Name                    = p.Name,
         Code                    = p.Code,
+        DisplayNameAr           = p.DisplayNameAr,
+        DisplayNameEn           = p.DisplayNameEn,
+        AudienceType            = p.AudienceType,
+        Tier                    = p.Tier,
         Description             = p.Description,
         IsActive                = p.IsActive,
         BasePriceMonthly        = p.BasePriceMonthly,

@@ -102,6 +102,9 @@ public class AdminCatalogService : IAdminCatalogService
             {
                 PlanId        = p.Id,
                 PlanName      = p.Name,
+                DisplayNameAr = p.DisplayNameAr,
+                AudienceType  = p.AudienceType,
+                Tier          = p.Tier,
                 Code          = p.Code,
                 IsActive      = p.IsActive,
                 IsRecommended = p.IsRecommended,
