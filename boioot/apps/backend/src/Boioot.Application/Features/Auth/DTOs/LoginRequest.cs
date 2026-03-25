@@ -10,4 +10,9 @@ public class LoginRequest
 
     [Required(ErrorMessage = "كلمة المرور مطلوبة")]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// When true the refresh token lifetime is 30 days; otherwise 1 day.
+    /// </summary>
+    public bool RememberMe { get; set; } = false;
 }

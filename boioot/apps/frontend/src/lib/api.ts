@@ -1,7 +1,7 @@
 import { apiConfig } from "./api-config";
 import { tokenStorage } from "./token";
 
-// ─── Error types ──────────────────────────────────────────────────────────────
+// ─── Error types ───────────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
   constructor(
@@ -21,70 +21,140 @@ export class NetworkError extends Error {
   }
 }
 
-// ─── Session expiry message ───────────────────────────────────────────────────
+// ─── Session messages ──────────────────────────────────────────────────────────
 
 const SESSION_EXPIRED_MSG =
   "انتهت صلاحية الجلسة، الرجاء تسجيل الدخول مرة أخرى";
 
-// ─── Central 401 handler ─────────────────────────────────────────────────────
+// ─── Concurrency-safe silent refresh ──────────────────────────────────────────
 //
-// Differentiates between two 401 scenarios:
-//
-// 1. Authenticated session expired (token was in localStorage):
-//    → clear token + redirect to /login + throw session-expired ApiError.
-//
-// 2. Unauthenticated 401 (e.g. wrong login credentials, no stored token):
-//    → read the actual backend error message + throw that ApiError.
-//    → No redirect, no session-expired message — caller handles it normally.
+// All in-flight requests that need a token refresh share ONE refresh promise.
+// This prevents N simultaneous calls all independently hitting POST /auth/refresh.
 
-async function handle401(res: Response): Promise<never> {
-  const hadToken = !!tokenStorage.getToken();
-  tokenStorage.clear();
+let refreshPromise: Promise<boolean> | null = null;
 
-  if (hadToken) {
-    // ── Expired / invalidated authenticated session ────────────────────────
-    if (typeof window !== "undefined") {
-      window.location.replace("/login");
+/**
+ * Calls POST /auth/refresh directly via fetch (NOT through request() to avoid
+ * infinite loops). Rotates stored access + refresh tokens on success.
+ *
+ * Returns true on success, false on any failure.
+ * All concurrent callers share the same in-flight promise.
+ */
+async function silentRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async (): Promise<boolean> => {
+    const refreshToken = tokenStorage.getRefreshToken();
+    if (!refreshToken) return false;
+
+    try {
+      const res = await fetch(`${apiConfig.baseUrl}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) return false;
+
+      const data = await res.json();
+
+      // Rotate stored tokens
+      if (data.token)               tokenStorage.setToken(data.token);
+      if (data.expiresAt)           tokenStorage.setExpiresAt(data.expiresAt);
+      if (data.refreshToken)        tokenStorage.setRefreshToken(data.refreshToken);
+      if (data.refreshTokenExpiresAt) tokenStorage.setRefreshTokenExpiresAt(data.refreshTokenExpiresAt);
+
+      return true;
+    } catch {
+      return false;
     }
-    throw new ApiError(SESSION_EXPIRED_MSG, 401, null);
-  }
+  })().finally(() => {
+    refreshPromise = null;
+  });
 
-  // ── Unauthenticated 401 (login failure, etc.) ──────────────────────────
-  const payload = await res.json().catch(() => null);
-  const message =
-    payload?.error ??
-    payload?.message ??
-    payload?.title ??
-    "بيانات الدخول غير صحيحة";
-  throw new ApiError(message, 401, payload);
+  return refreshPromise;
 }
 
-// ─── Core request ─────────────────────────────────────────────────────────────
+// ─── Session termination ───────────────────────────────────────────────────────
+
+function terminateSession(): never {
+  tokenStorage.clear();
+  if (typeof window !== "undefined") {
+    window.location.replace("/login");
+  }
+  throw new ApiError(SESSION_EXPIRED_MSG, 401, null);
+}
+
+// ─── Core request ──────────────────────────────────────────────────────────────
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = tokenStorage.getToken();
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>),
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  // ── Preemptive silent refresh ──────────────────────────────────────────────
+  // If the access token is expired/expiring soon AND we have a refresh token,
+  // refresh NOW before sending the original request.
+  if (tokenStorage.isExpiredOrExpiringSoon(30)) {
+    const hasRefresh = !!tokenStorage.getRefreshToken();
+    if (hasRefresh) {
+      const ok = await silentRefresh();
+      if (!ok) terminateSession();
+    }
   }
 
-  let res: Response;
-  try {
-    res = await fetch(`${apiConfig.baseUrl}${path}`, { ...options, headers });
-  } catch {
-    throw new NetworkError();
+  const executeRequest = async (): Promise<Response> => {
+    const token = tokenStorage.getToken();
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
+    };
+
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    try {
+      return await fetch(`${apiConfig.baseUrl}${path}`, { ...options, headers });
+    } catch {
+      throw new NetworkError();
+    }
+  };
+
+  let res = await executeRequest();
+
+  // ── 401 with refresh token → try refresh once → retry ────────────────────
+  if (res.status === 401) {
+    const hadToken    = !!tokenStorage.getToken();
+    const hasRefresh  = !!tokenStorage.getRefreshToken();
+
+    if (hadToken && hasRefresh) {
+      const refreshed = await silentRefresh();
+
+      if (refreshed) {
+        // Retry the original request with the new access token
+        res = await executeRequest();
+
+        if (res.status === 401) {
+          // Retry also got 401 — session is truly dead
+          terminateSession();
+        }
+      } else {
+        // Refresh failed — force logout
+        terminateSession();
+      }
+    } else {
+      // No refresh token available — differentiate expired session vs. login failure
+      if (hadToken) {
+        terminateSession();
+      }
+      // Unauthenticated 401 (e.g. wrong login credentials) — pass backend error through
+      const payload = await res.json().catch(() => null);
+      const message =
+        payload?.error ??
+        payload?.message ??
+        payload?.title ??
+        "بيانات الدخول غير صحيحة";
+      throw new ApiError(message, 401, payload);
+    }
   }
 
   if (!res.ok) {
-    if (res.status === 401) {
-      await handle401(res);
-    }
-
     const payload = await res.json().catch(() => null);
     const message =
       payload?.error ?? payload?.message ?? payload?.title ?? "حدث خطأ غير متوقع";
@@ -128,25 +198,56 @@ export const api = {
   },
 
   async postForm<T>(path: string, form: FormData): Promise<T> {
-    const token = tokenStorage.getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    // ── Preemptive silent refresh for form uploads too ─────────────────────
+    if (tokenStorage.isExpiredOrExpiringSoon(30)) {
+      const hasRefresh = !!tokenStorage.getRefreshToken();
+      if (hasRefresh) {
+        const ok = await silentRefresh();
+        if (!ok) terminateSession();
+      }
+    }
 
-    let res: Response;
-    try {
-      res = await fetch(`${apiConfig.baseUrl}${path}`, {
-        method: "POST",
-        headers,
-        body: form,
-      });
-    } catch {
-      throw new NetworkError();
+    const executeFormRequest = async (): Promise<Response> => {
+      const token = tokenStorage.getToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      try {
+        return await fetch(`${apiConfig.baseUrl}${path}`, {
+          method: "POST",
+          headers,
+          body: form,
+        });
+      } catch {
+        throw new NetworkError();
+      }
+    };
+
+    let res = await executeFormRequest();
+
+    // ── 401 with refresh token → try refresh once → retry ──────────────────
+    if (res.status === 401) {
+      const hadToken   = !!tokenStorage.getToken();
+      const hasRefresh = !!tokenStorage.getRefreshToken();
+
+      if (hadToken && hasRefresh) {
+        const refreshed = await silentRefresh();
+        if (refreshed) {
+          res = await executeFormRequest();
+          if (res.status === 401) terminateSession();
+        } else {
+          terminateSession();
+        }
+      } else {
+        if (hadToken) terminateSession();
+        const payload = await res.json().catch(() => null);
+        const message =
+          payload?.error ?? payload?.message ?? "بيانات الدخول غير صحيحة";
+        throw new ApiError(message, 401, payload);
+      }
     }
 
     if (!res.ok) {
-      if (res.status === 401) {
-        await handle401(res);
-      }
       const payload = await res.json().catch(() => null);
       const message =
         payload?.error ?? payload?.message ?? "حدث خطأ أثناء رفع الملف";
@@ -157,7 +258,7 @@ export const api = {
   },
 };
 
-// ─── Error normalizer ─────────────────────────────────────────────────────────
+// ─── Error normalizer ──────────────────────────────────────────────────────────
 
 /**
  * Extracts a user-friendly Arabic error message from any thrown error.

@@ -62,6 +62,9 @@ public class BoiootDbContext : DbContext
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    // ── Auth: Refresh tokens (Phase 1A) ──────────────────────────────────────
+    public DbSet<UserRefreshToken> UserRefreshTokens => Set<UserRefreshToken>();
+
     // ── Dynamic RBAC (Phase 1 — infrastructure only, not wired to auth flow yet) ──
     public DbSet<RbacRole>           RbacRoles           => Set<RbacRole>();
     public DbSet<RbacPermission>     RbacPermissions     => Set<RbacPermission>();

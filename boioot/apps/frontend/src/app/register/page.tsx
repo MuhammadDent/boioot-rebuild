@@ -175,7 +175,7 @@ export default function RegisterPage() {
         companyName: needsBusinessName ? businessName : undefined,
         companyType: option.companyType ?? undefined,
       });
-      login(res.token, res.user, res.expiresAt);
+      login(res.token, res.user, res.expiresAt, res.refreshToken, res.refreshTokenExpiresAt);
       // Business accounts go to onboarding to complete their profile first.
       const role = option.value;
       const needsOnboarding = role === "Broker" || role === "CompanyOwner";

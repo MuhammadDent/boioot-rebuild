@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Auth.DTOs;
@@ -35,6 +36,8 @@ public class AuthService : IAuthService
         _rbac = rbac;
     }
 
+    // ── Register ──────────────────────────────────────────────────────────────
+
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
         var emailLower = request.Email.ToLowerInvariant();
@@ -65,10 +68,7 @@ public class AuthService : IAuthService
 
         _context.Users.Add(user);
 
-        // ── Auto-create Company + Agent for CompanyOwner accounts ────────────
-        // Broker is an independent individual — no company record is created.
-        // Everything is added to the EF change tracker before SaveChanges so
-        // all records (User, Company, Agent) are written atomically.
+        // ── Auto-create Company + Agent for CompanyOwner accounts ─────────────
         if (role is UserRole.CompanyOwner)
         {
             var businessName = string.IsNullOrWhiteSpace(request.CompanyName)
@@ -104,10 +104,17 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("New user registered: {Email} | Role: {Role}", emailLower, user.Role);
 
-        return await BuildAuthResponseAsync(user, ct);
+        // Register issues a refresh token with rememberMe=false
+        return await BuildAuthResponseAsync(user, rememberMe: false, ipAddress: null, userAgent: null, ct);
     }
 
-    public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
+    // ── Login ─────────────────────────────────────────────────────────────────
+
+    public async Task<AuthResponse> LoginAsync(
+        LoginRequest request,
+        string? ipAddress = null,
+        string? userAgent = null,
+        CancellationToken ct = default)
     {
         var emailLower = request.Email.ToLowerInvariant();
 
@@ -126,10 +133,143 @@ public class AuthService : IAuthService
             throw new BoiootException("الحساب غير مفعّل. يرجى التواصل مع الدعم", 403);
         }
 
-        _logger.LogInformation("User logged in: {Email} | Role: {Role}", emailLower, user.Role);
+        _logger.LogInformation(
+            "User logged in: {Email} | Role: {Role} | RememberMe: {RememberMe}",
+            emailLower, user.Role, request.RememberMe);
 
-        return await BuildAuthResponseAsync(user, ct);
+        return await BuildAuthResponseAsync(user, request.RememberMe, ipAddress, userAgent, ct);
     }
+
+    // ── Refresh ───────────────────────────────────────────────────────────────
+
+    public async Task<AuthResponse> RefreshAsync(
+        string refreshToken,
+        string? ipAddress = null,
+        string? userAgent = null,
+        CancellationToken ct = default)
+    {
+        var tokenHash = HashToken(refreshToken);
+
+        var storedToken = await _context.UserRefreshTokens
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct);
+
+        if (storedToken is null)
+        {
+            _logger.LogWarning("[Refresh] Token not found in DB.");
+            throw new BoiootException("رمز التحديث غير صالح", 401);
+        }
+
+        if (storedToken.IsRevoked)
+        {
+            // Possible token reuse attack — revoke the entire family
+            _logger.LogWarning(
+                "[Refresh] Revoked token reuse attempt for user {UserId}. Revoking all tokens.",
+                storedToken.UserId);
+            await RevokeAllRefreshTokensAsync(storedToken.UserId, ipAddress, ct);
+            throw new BoiootException("رمز التحديث مُلغى. يرجى تسجيل الدخول مجدداً", 401);
+        }
+
+        if (storedToken.IsExpired)
+        {
+            _logger.LogWarning("[Refresh] Expired refresh token for user {UserId}.", storedToken.UserId);
+            throw new BoiootException("انتهت صلاحية رمز التحديث. يرجى تسجيل الدخول مجدداً", 401);
+        }
+
+        var user = storedToken.User;
+
+        if (!user.IsActive)
+            throw new BoiootException("الحساب غير مفعّل. يرجى التواصل مع الدعم", 403);
+
+        // ── Rotation: determine the same rememberMe duration as the original ──
+        // If original token lived > 1 day it was a rememberMe session.
+        var wasRememberMe = (storedToken.ExpiresAtUtc - storedToken.CreatedAtUtc).TotalDays > 1;
+
+        // Generate a new refresh token
+        var (newRawToken, newTokenHash, newExpiresAt) = GenerateRefreshToken(wasRememberMe);
+
+        // Revoke old token and link to replacement
+        storedToken.RevokedAtUtc        = DateTime.UtcNow;
+        storedToken.RevokedByIp         = ipAddress;
+        storedToken.ReplacedByTokenHash = newTokenHash;
+
+        // Persist new token
+        var newStoredToken = new UserRefreshToken
+        {
+            UserId        = user.Id,
+            TokenHash     = newTokenHash,
+            CreatedAtUtc  = DateTime.UtcNow,
+            ExpiresAtUtc  = newExpiresAt,
+            CreatedByIp   = ipAddress,
+            UserAgent     = userAgent,
+        };
+
+        _context.UserRefreshTokens.Add(newStoredToken);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("[Refresh] Token rotated for user {UserId}.", user.Id);
+
+        var permissions  = await ResolvePermissionsAsync(user, ct);
+        var accessExpiry = DateTime.UtcNow.AddMinutes(GetAccessTokenExpiryMinutes());
+
+        return new AuthResponse
+        {
+            Token                = GenerateToken(user, accessExpiry, permissions),
+            ExpiresAt            = accessExpiry,
+            RefreshToken         = newRawToken,
+            RefreshTokenExpiresAt = newExpiresAt,
+            User                 = MapToProfileResponse(user, permissions),
+        };
+    }
+
+    // ── Logout (revoke single token) ──────────────────────────────────────────
+
+    public async Task RevokeRefreshTokenAsync(
+        string refreshToken,
+        string? ipAddress = null,
+        CancellationToken ct = default)
+    {
+        var tokenHash = HashToken(refreshToken);
+
+        var storedToken = await _context.UserRefreshTokens
+            .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct);
+
+        if (storedToken is null || storedToken.IsRevoked)
+            return; // idempotent
+
+        storedToken.RevokedAtUtc = DateTime.UtcNow;
+        storedToken.RevokedByIp  = ipAddress;
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("[Logout] Refresh token revoked for user {UserId}.", storedToken.UserId);
+    }
+
+    // ── Logout All (revoke all tokens for user) ───────────────────────────────
+
+    public async Task RevokeAllRefreshTokensAsync(
+        Guid userId,
+        string? ipAddress = null,
+        CancellationToken ct = default)
+    {
+        var now    = DateTime.UtcNow;
+        var active = await _context.UserRefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAtUtc == null && t.ExpiresAtUtc > now)
+            .ToListAsync(ct);
+
+        foreach (var token in active)
+        {
+            token.RevokedAtUtc = now;
+            token.RevokedByIp  = ipAddress;
+        }
+
+        if (active.Count > 0)
+            await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("[LogoutAll] Revoked {Count} active token(s) for user {UserId}.", active.Count, userId);
+    }
+
+    // ── Profile ───────────────────────────────────────────────────────────────
 
     public async Task<UserProfileResponse> GetProfileAsync(Guid userId, CancellationToken ct = default)
     {
@@ -202,17 +342,14 @@ public class AuthService : IAuthService
         if (!user.IsActive)
             throw new BoiootException("الحساب غير مفعّل", 403);
 
-        // ── Password verification (required for email change) ─────────────────
         if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
             throw new BoiootException("كلمة المرور الحالية غير صحيحة", 400);
 
         var normalizedEmail = request.NewEmail.Trim().ToLowerInvariant();
 
-        // ── Reject if same as current ─────────────────────────────────────────
         if (normalizedEmail.Equals(user.Email, StringComparison.OrdinalIgnoreCase))
             throw new BoiootException("البريد الإلكتروني الجديد مطابق للبريد الحالي", 400);
 
-        // ── Uniqueness check ──────────────────────────────────────────────────
         var emailTaken = await _context.Users
             .AnyAsync(u => u.Email == normalizedEmail && u.Id != userId, ct);
         if (emailTaken)
@@ -227,10 +364,7 @@ public class AuthService : IAuthService
         return MapToProfileResponse(user, permissions);
     }
 
-    // ── Permission resolution — Phase 3 (Selective DB Mode) ──────────────────
-    //
-    // Admin + CompanyOwner → DB ONLY. No fallback to legacy. Source of truth = DB rows.
-    // All other roles → DB first, fallback to legacy if no DB rows found.
+    // ── Permission resolution ──────────────────────────────────────────────────
 
     private static readonly IReadOnlySet<UserRole> DbOnlyRoles =
         new HashSet<UserRole> { UserRole.Admin, UserRole.CompanyOwner };
@@ -240,10 +374,8 @@ public class AuthService : IAuthService
         var roleStr  = user.Role.ToString();
         var isDbOnly = DbOnlyRoles.Contains(user.Role);
 
-        // Pass 1 — DB-driven permissions (always queried)
         var dbPermissions = await _rbac.GetUserPermissionsAsync(user.Id, ct);
 
-        // ── Admin + CompanyOwner: DB ONLY — no legacy fallback ───────────────
         if (isDbOnly)
         {
             _logger.LogInformation(
@@ -254,17 +386,10 @@ public class AuthService : IAuthService
             return dbPermissions;
         }
 
-        // ── All other roles: DB first, legacy fallback ────────────────────────
         var legacyPermissions = StaffRolePermissions.GetPermissions(roleStr);
 
         if (dbPermissions.Count == 0 && legacyPermissions.Count == 0)
-        {
-            _logger.LogDebug(
-                "[RBAC] {Email} ({Role}) → fallback legacy — DB: none, Legacy: none → no permissions",
-                user.Email, roleStr);
-
             return Array.Empty<string>();
-        }
 
         if (dbPermissions.Count == 0)
         {
@@ -276,17 +401,10 @@ public class AuthService : IAuthService
             return legacyPermissions;
         }
 
-        // DB has rows — log comparison and use DB
         var onlyInDb     = dbPermissions.Except(legacyPermissions).ToList();
         var onlyInLegacy = legacyPermissions.Except(dbPermissions).ToList();
 
-        if (onlyInDb.Count == 0 && onlyInLegacy.Count == 0)
-        {
-            _logger.LogInformation(
-                "[RBAC] {Email} ({Role}) → DB ({DbCount}) == Legacy ({LegacyCount}) ✓ identical",
-                user.Email, roleStr, dbPermissions.Count, legacyPermissions.Count);
-        }
-        else
+        if (onlyInDb.Count != 0 || onlyInLegacy.Count != 0)
         {
             _logger.LogWarning(
                 "[RBAC] {Email} ({Role}) → DB vs Legacy DIFF: only-in-DB=[{OnlyDb}] only-in-Legacy=[{OnlyLegacy}]",
@@ -305,17 +423,39 @@ public class AuthService : IAuthService
 
     // ── Auth response builder ──────────────────────────────────────────────────
 
-    private async Task<AuthResponse> BuildAuthResponseAsync(User user, CancellationToken ct)
+    private async Task<AuthResponse> BuildAuthResponseAsync(
+        User user,
+        bool rememberMe,
+        string? ipAddress,
+        string? userAgent,
+        CancellationToken ct)
     {
-        var expiryMinutes = GetExpiryMinutes();
-        var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
-        var permissions = await ResolvePermissionsAsync(user, ct);
+        var permissions  = await ResolvePermissionsAsync(user, ct);
+        var accessExpiry = DateTime.UtcNow.AddMinutes(GetAccessTokenExpiryMinutes());
+
+        var (rawRefreshToken, tokenHash, refreshExpiry) = GenerateRefreshToken(rememberMe);
+
+        // Persist the refresh token
+        var storedToken = new UserRefreshToken
+        {
+            UserId       = user.Id,
+            TokenHash    = tokenHash,
+            CreatedAtUtc = DateTime.UtcNow,
+            ExpiresAtUtc = refreshExpiry,
+            CreatedByIp  = ipAddress,
+            UserAgent    = userAgent,
+        };
+
+        _context.UserRefreshTokens.Add(storedToken);
+        await _context.SaveChangesAsync(ct);
 
         return new AuthResponse
         {
-            Token = GenerateToken(user, expiresAt, permissions),
-            ExpiresAt = expiresAt,
-            User = MapToProfileResponse(user, permissions)
+            Token                 = GenerateToken(user, accessExpiry, permissions),
+            ExpiresAt             = accessExpiry,
+            RefreshToken          = rawRefreshToken,
+            RefreshTokenExpiresAt = refreshExpiry,
+            User                  = MapToProfileResponse(user, permissions),
         };
     }
 
@@ -323,7 +463,7 @@ public class AuthService : IAuthService
 
     private string GenerateToken(User user, DateTime expiresAt, IReadOnlyList<string> permissions)
     {
-        var key = _configuration["Jwt:Key"]!;
+        var key         = _configuration["Jwt:Key"]!;
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
@@ -331,26 +471,50 @@ public class AuthService : IAuthService
 
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Sub,   user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new(JwtRegisteredClaimNames.Name, user.FullName),
-            new(ClaimTypes.Role, roleStr),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(JwtRegisteredClaimNames.Name,  user.FullName),
+            new(ClaimTypes.Role,               roleStr),
+            new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString())
         };
 
-        // Embed resolved permissions as individual claims.
-        // PermissionAuthorizationHandler reads these on every request — no DB hit per request.
         foreach (var perm in permissions)
             claims.Add(new Claim("permission", perm));
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"] ?? "Boioot",
-            audience: _configuration["Jwt:Audience"] ?? "BoiootClient",
-            claims: claims,
-            expires: expiresAt,
+            issuer:             _configuration["Jwt:Issuer"] ?? "Boioot",
+            audience:           _configuration["Jwt:Audience"] ?? "BoiootClient",
+            claims:             claims,
+            expires:            expiresAt,
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    // ── Refresh token generation ───────────────────────────────────────────────
+
+    private (string rawToken, string tokenHash, DateTime expiresAt) GenerateRefreshToken(bool rememberMe)
+    {
+        // 64 cryptographically random bytes → base64url encoded opaque token
+        var randomBytes = RandomNumberGenerator.GetBytes(64);
+        var rawToken    = Convert.ToBase64String(randomBytes);
+
+        var expiryDays = rememberMe
+            ? GetRefreshTokenRememberMeExpiryDays()
+            : GetRefreshTokenExpiryDays();
+
+        var expiresAt = DateTime.UtcNow.AddDays(expiryDays);
+
+        return (rawToken, HashToken(rawToken), expiresAt);
+    }
+
+    // ── Hashing ───────────────────────────────────────────────────────────────
+
+    private static string HashToken(string token)
+    {
+        var bytes = Encoding.UTF8.GetBytes(token);
+        var hash  = SHA256.HashData(bytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -386,12 +550,17 @@ public class AuthService : IAuthService
         return code;
     }
 
-    private int GetExpiryMinutes() =>
-        int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var mins) ? mins : 1440;
+    private int GetAccessTokenExpiryMinutes() =>
+        int.TryParse(_configuration["Jwt:AccessTokenExpiryMinutes"], out var mins) ? mins : 15;
+
+    private int GetRefreshTokenExpiryDays() =>
+        int.TryParse(_configuration["Jwt:RefreshTokenExpiryDays"], out var days) ? days : 1;
+
+    private int GetRefreshTokenRememberMeExpiryDays() =>
+        int.TryParse(_configuration["Jwt:RefreshTokenRememberMeExpiryDays"], out var days) ? days : 30;
 
     private static UserProfileResponse MapToProfileResponse(User user, IReadOnlyList<string> permissions)
     {
-        var roleStr = user.Role.ToString();
         return new UserProfileResponse
         {
             Id              = user.Id,
@@ -399,7 +568,7 @@ public class AuthService : IAuthService
             FullName        = user.FullName,
             Email           = user.Email,
             Phone           = user.Phone,
-            Role            = roleStr,
+            Role            = user.Role.ToString(),
             ProfileImageUrl = user.ProfileImageUrl,
             CreatedAt       = user.CreatedAt,
             Permissions     = permissions,

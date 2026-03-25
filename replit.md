@@ -27,7 +27,7 @@ I prefer simple language. I want iterative development. Ask before making major 
 - **Architecture:** Modular Monolith design pattern.
 - **Database:** SQLite + EF Core. Migrations are handled manually for `ALTER TABLE` operations.
 - **Core Features:**
-    - **Authentication & Authorization:** JWT-based authentication (register, login, user profile), BCrypt for password hashing, and role-based authorization (Admin, CompanyOwner, Broker, Agent, Owner, User). Auto-creates Company + Agent atomically on signup for CompanyOwner and Broker roles.
+    - **Authentication & Authorization:** JWT-based authentication with full Phase 1A refresh token system. Short-lived access tokens (15 min), opaque refresh tokens with SHA-256 hashing, rotation, reuse detection, and revocation. `POST /auth/refresh`, `POST /auth/logout`, `POST /auth/logout-all` endpoints. `rememberMe` extends refresh token lifetime to 30 days (vs 1 day default). BCrypt for password hashing. Role-based authorization (Admin, CompanyOwner, Broker, Agent, Owner, User). Auto-creates Company + Agent atomically on signup for CompanyOwner and Broker roles.
     - **Entity Management:** 12 core entities with `ISoftDeletable` interface implemented for logical deletion (User, Company, Property, Project).
     - **Property Module:** Public listing/detail, CRUD operations for dashboard, pagination, filtering.
     - **Project Module:** Public listing/detail, CRUD operations for dashboard, `IsPublished` flag. Includes fields like `StartingPrice`, `DeliveryDate`, `Lat/Lon`.

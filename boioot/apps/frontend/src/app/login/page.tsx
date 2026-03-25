@@ -17,6 +17,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -33,8 +34,14 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      const res = await authApi.login({ email, password });
-      login(res.token, res.user, res.expiresAt);
+      const res = await authApi.login({ email, password, rememberMe });
+      login(
+        res.token,
+        res.user,
+        res.expiresAt,
+        res.refreshToken,
+        res.refreshTokenExpiresAt
+      );
       // Resume the originating listing page if the user came from a protected action.
       const returnUrl = sessionStorage.getItem(AUTH_INTENT_KEY);
       sessionStorage.removeItem(AUTH_INTENT_KEY);
@@ -45,7 +52,6 @@ export default function LoginPage() {
           ? returnUrl
           : null;
       // Redirect staff (any user with admin permissions) to the admin area.
-      // Permission-based, not role-based: platform users have permissions[] = [].
       const isStaff = (res.user.permissions?.length ?? 0) > 0;
       router.push(safeReturn ?? (isStaff ? "/dashboard/admin" : "/dashboard"));
     } catch (err) {
@@ -62,9 +68,12 @@ export default function LoginPage() {
       <div className="form-card">
         <div className="login-page__logo">
           <Image
-            src="/logo-boioot.png" alt="بيوت"
-            width={120} height={48}
-            style={{ objectFit: "contain" }} priority
+            src="/logo-boioot.png"
+            alt="بيوت"
+            width={120}
+            height={48}
+            style={{ objectFit: "contain" }}
+            priority
           />
         </div>
         <h1 className="login-page__title">تسجيل الدخول</h1>
@@ -89,13 +98,27 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <label className="form-label" htmlFor="password" style={{ margin: 0 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <label
+                className="form-label"
+                htmlFor="password"
+                style={{ margin: 0 }}
+              >
                 كلمة المرور
               </label>
               <Link
                 href="/forgot-password"
-                style={{ fontSize: "0.82rem", color: "var(--color-primary)", textDecoration: "none" }}
+                style={{
+                  fontSize: "0.82rem",
+                  color: "var(--color-primary)",
+                  textDecoration: "none",
+                }}
               >
                 نسيت كلمة المرور؟
               </Link>
@@ -122,6 +145,35 @@ export default function LoginPage() {
             </div>
           </div>
 
+          <div
+            className="form-group"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              marginTop: "-0.25rem",
+            }}
+          >
+            <input
+              id="rememberMe"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              style={{ width: "1rem", height: "1rem", cursor: "pointer" }}
+            />
+            <label
+              htmlFor="rememberMe"
+              style={{
+                fontSize: "0.88rem",
+                color: "var(--color-text-secondary)",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              تذكّرني
+            </label>
+          </div>
+
           <button
             type="submit"
             className="btn btn-primary"
@@ -132,9 +184,19 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p style={{ textAlign: "center", marginTop: "1.25rem", fontSize: "0.88rem", color: "var(--color-text-secondary)" }}>
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: "1.25rem",
+            fontSize: "0.88rem",
+            color: "var(--color-text-secondary)",
+          }}
+        >
           ليس لديك حساب؟{" "}
-          <Link href="/register" style={{ color: "var(--color-primary)", fontWeight: 600 }}>
+          <Link
+            href="/register"
+            style={{ color: "var(--color-primary)", fontWeight: 600 }}
+          >
             إنشاء حساب جديد
           </Link>
         </p>

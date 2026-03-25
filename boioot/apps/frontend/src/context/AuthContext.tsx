@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { UserProfileResponse } from "@/types";
 import { tokenStorage, cleanExpiredSession } from "@/lib/token";
+import { authApi } from "@/features/auth/api";
 
 interface AuthState {
   user: UserProfileResponse | null;
@@ -19,7 +20,13 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (token: string, user: UserProfileResponse, expiresAt?: string) => void;
+  login: (
+    token: string,
+    user: UserProfileResponse,
+    expiresAt?: string,
+    refreshToken?: string,
+    refreshTokenExpiresAt?: string
+  ) => void;
   logout: () => void;
   setUser: (user: UserProfileResponse) => void;
   /**
@@ -51,17 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    // ── App startup cleanup ──────────────────────────────────────────────────
-    // Clears any expired session data from localStorage before doing anything.
-    // This handles the case where the user closed the tab with an active session
-    // that has since expired — they always start from a clean state.
+    // ── App startup cleanup ────────────────────────────────────────────────
+    // Clears expired sessions. Keeps the session alive if the access token
+    // is expired but the refresh token is still valid (silent refresh handles it).
     const wasExpired = cleanExpiredSession();
     if (wasExpired) {
       setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
       return;
     }
 
-    // ── Restore live session ─────────────────────────────────────────────────
+    // ── Restore live session ───────────────────────────────────────────────
     const token   = tokenStorage.getToken();
     const userRaw = tokenStorage.getUserRaw();
 
@@ -79,16 +85,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    (token: string, user: UserProfileResponse, expiresAt?: string) => {
+    (
+      token: string,
+      user: UserProfileResponse,
+      expiresAt?: string,
+      refreshToken?: string,
+      refreshTokenExpiresAt?: string
+    ) => {
       tokenStorage.setToken(token);
       tokenStorage.setUser(user);
-      if (expiresAt) tokenStorage.setExpiresAt(expiresAt);
+      if (expiresAt)              tokenStorage.setExpiresAt(expiresAt);
+      if (refreshToken)           tokenStorage.setRefreshToken(refreshToken);
+      if (refreshTokenExpiresAt)  tokenStorage.setRefreshTokenExpiresAt(refreshTokenExpiresAt);
       setState({ user, token, isLoading: false, isAuthenticated: true });
     },
     []
   );
 
   const logout = useCallback(() => {
+    // Best-effort server-side revocation of the refresh token
+    const refreshToken = tokenStorage.getRefreshToken();
+    if (refreshToken) {
+      authApi.logout(refreshToken).catch(() => {});
+    }
+
     tokenStorage.clear();
     setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
   }, []);
@@ -101,7 +121,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /**
    * Single permission check path — no role shortcuts.
    * All users (including Admin) are evaluated against their permissions[].
-   * Admin access works because the backend embeds Permissions.All in the Admin JWT.
    */
   const hasPermission = useCallback(
     (permission: string): boolean => {
