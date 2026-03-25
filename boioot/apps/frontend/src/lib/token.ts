@@ -90,3 +90,20 @@ export const tokenStorage = {
     this.removeExpiresAt();
   },
 };
+
+/**
+ * App startup cleanup.
+ * Call once on app mount (e.g. inside AuthProvider's useEffect).
+ * Removes any expired session data from localStorage so the app
+ * always starts from a clean, unauthenticated state when the token
+ * has expired — even if the page was never explicitly logged out.
+ *
+ * Returns true if a cleanup was performed (token was expired and removed).
+ */
+export function cleanExpiredSession(): boolean {
+  if (tokenStorage.isExpired()) {
+    tokenStorage.clear();
+    return true;
+  }
+  return false;
+}

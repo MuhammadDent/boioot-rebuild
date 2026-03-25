@@ -21,6 +21,44 @@ export class NetworkError extends Error {
   }
 }
 
+// ─── Session expiry message ───────────────────────────────────────────────────
+
+const SESSION_EXPIRED_MSG =
+  "انتهت صلاحية الجلسة، الرجاء تسجيل الدخول مرة أخرى";
+
+// ─── Central 401 handler ─────────────────────────────────────────────────────
+//
+// Differentiates between two 401 scenarios:
+//
+// 1. Authenticated session expired (token was in localStorage):
+//    → clear token + redirect to /login + throw session-expired ApiError.
+//
+// 2. Unauthenticated 401 (e.g. wrong login credentials, no stored token):
+//    → read the actual backend error message + throw that ApiError.
+//    → No redirect, no session-expired message — caller handles it normally.
+
+async function handle401(res: Response): Promise<never> {
+  const hadToken = !!tokenStorage.getToken();
+  tokenStorage.clear();
+
+  if (hadToken) {
+    // ── Expired / invalidated authenticated session ────────────────────────
+    if (typeof window !== "undefined") {
+      window.location.replace("/login");
+    }
+    throw new ApiError(SESSION_EXPIRED_MSG, 401, null);
+  }
+
+  // ── Unauthenticated 401 (login failure, etc.) ──────────────────────────
+  const payload = await res.json().catch(() => null);
+  const message =
+    payload?.error ??
+    payload?.message ??
+    payload?.title ??
+    "بيانات الدخول غير صحيحة";
+  throw new ApiError(message, 401, payload);
+}
+
 // ─── Core request ─────────────────────────────────────────────────────────────
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -43,6 +81,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      await handle401(res);
+    }
+
     const payload = await res.json().catch(() => null);
     const message =
       payload?.error ?? payload?.message ?? payload?.title ?? "حدث خطأ غير متوقع";
@@ -85,25 +127,33 @@ export const api = {
     return request<T>(path, { method: "DELETE" });
   },
 
-  postForm<T>(path: string, form: FormData): Promise<T> {
+  async postForm<T>(path: string, form: FormData): Promise<T> {
     const token = tokenStorage.getToken();
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    return fetch(`${apiConfig.baseUrl}${path}`, {
-      method: "POST",
-      headers,
-      body: form,
-    }).then(async res => {
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        const message = payload?.error ?? payload?.message ?? "حدث خطأ أثناء رفع الملف";
-        throw new ApiError(message, res.status, payload);
-      }
-      return res.json() as Promise<T>;
-    }).catch(err => {
-      if (err instanceof ApiError) throw err;
+
+    let res: Response;
+    try {
+      res = await fetch(`${apiConfig.baseUrl}${path}`, {
+        method: "POST",
+        headers,
+        body: form,
+      });
+    } catch {
       throw new NetworkError();
-    });
+    }
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        await handle401(res);
+      }
+      const payload = await res.json().catch(() => null);
+      const message =
+        payload?.error ?? payload?.message ?? "حدث خطأ أثناء رفع الملف";
+      throw new ApiError(message, res.status, payload);
+    }
+
+    return res.json() as Promise<T>;
   },
 };
 

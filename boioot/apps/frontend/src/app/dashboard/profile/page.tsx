@@ -1618,7 +1618,9 @@ export default function ProfilePage() {
           setFetchError("تعذّر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.");
         } else if (err instanceof ApiError) {
           if (err.status === 401) {
-            // Session expired or token invalid — clear it and redirect to login.
+            // api.ts already cleared the token and redirected to /login.
+            // Call logout() here as well to synchronise React state in case
+            // the window.location.replace navigation is still in flight.
             logout();
             router.replace("/login");
           } else if (err.status === 403) {

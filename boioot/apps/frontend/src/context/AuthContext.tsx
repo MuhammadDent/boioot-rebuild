@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { UserProfileResponse } from "@/types";
-import { tokenStorage } from "@/lib/token";
+import { tokenStorage, cleanExpiredSession } from "@/lib/token";
 
 interface AuthState {
   user: UserProfileResponse | null;
@@ -51,14 +51,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    const token   = tokenStorage.getToken();
-    const userRaw = tokenStorage.getUserRaw();
-
-    if (tokenStorage.isExpired()) {
-      tokenStorage.clear();
+    // ── App startup cleanup ──────────────────────────────────────────────────
+    // Clears any expired session data from localStorage before doing anything.
+    // This handles the case where the user closed the tab with an active session
+    // that has since expired — they always start from a clean state.
+    const wasExpired = cleanExpiredSession();
+    if (wasExpired) {
       setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
       return;
     }
+
+    // ── Restore live session ─────────────────────────────────────────────────
+    const token   = tokenStorage.getToken();
+    const userRaw = tokenStorage.getUserRaw();
 
     if (token && userRaw) {
       try {
