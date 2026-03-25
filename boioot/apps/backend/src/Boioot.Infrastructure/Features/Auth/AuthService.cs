@@ -100,6 +100,73 @@ public class AuthService : IAuthService
                 businessName, companyType, emailLower);
         }
 
+        // ── Auto-create Account + Free Subscription for all commercial roles ──
+        if (role is UserRole.CompanyOwner or UserRole.Owner or UserRole.Agent or UserRole.Broker)
+        {
+            var accountType = role switch
+            {
+                UserRole.CompanyOwner => AccountType.Company,
+                UserRole.Owner        => AccountType.Individual,
+                _                     => AccountType.Office,
+            };
+
+            var now = DateTime.UtcNow;
+
+            var account = new Account
+            {
+                Name               = request.FullName.Trim(),
+                AccountType        = accountType,
+                CreatedByUserId    = user.Id,
+                PrimaryAdminUserId = user.Id,
+                IsActive           = true,
+                CreatedAt          = now,
+                UpdatedAt          = now,
+            };
+            _context.Accounts.Add(account);
+
+            var accountUser = new AccountUser
+            {
+                AccountId            = account.Id,
+                UserId               = user.Id,
+                OrganizationUserRole = OrganizationUserRole.Admin,
+                IsPrimary            = true,
+                IsActive             = true,
+                JoinedAt             = now,
+            };
+            _context.AccountUsers.Add(accountUser);
+
+            var freePlanId = new Guid("00000001-0000-0000-0000-000000000000");
+
+            var freeSub = new Subscription
+            {
+                AccountId  = account.Id,
+                PlanId     = freePlanId,
+                Status     = SubscriptionStatus.Active,
+                StartDate  = now,
+                EndDate    = null,
+                IsActive   = true,
+                AutoRenew  = false,
+                PaymentRef = "free",
+                CreatedAt  = now,
+                UpdatedAt  = now,
+            };
+            _context.Subscriptions.Add(freeSub);
+
+            _context.SubscriptionHistories.Add(new SubscriptionHistory
+            {
+                SubscriptionId  = freeSub.Id,
+                EventType       = "created",
+                NewPlanId       = freePlanId,
+                Notes           = "تفعيل تلقائي للباقة المجانية عند التسجيل",
+                CreatedByUserId = user.Id,
+                CreatedAtUtc    = now,
+            });
+
+            _logger.LogInformation(
+                "Auto-created Account + Free subscription for {Email} (role={Role})",
+                emailLower, role);
+        }
+
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation("New user registered: {Email} | Role: {Role}", emailLower, user.Role);

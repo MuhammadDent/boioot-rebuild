@@ -486,9 +486,45 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
     public async Task<FreePlanActivationResponse> ActivateFreeAsync(
         Guid userId, Guid planId, CancellationToken ct = default)
     {
-        var accountId = await _accountResolver.ResolveAccountIdAsync(userId, ct)
-            ?? throw new BoiootException(
-                "لا يوجد حساب مرتبط بهذا المستخدم. يرجى إكمال إعداد الحساب أولاً.", 404);
+        var resolvedId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+
+        Guid accountId;
+        if (resolvedId is null)
+        {
+            // Auto-create account for users who registered before auto-account creation was added
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
+                ?? throw new BoiootException("المستخدم غير موجود.", 404);
+
+            var now = DateTime.UtcNow;
+            var account = new Account
+            {
+                Name               = user.FullName,
+                AccountType        = AccountType.Individual,
+                CreatedByUserId    = userId,
+                PrimaryAdminUserId = userId,
+                IsActive           = true,
+                CreatedAt          = now,
+                UpdatedAt          = now,
+            };
+            _db.Accounts.Add(account);
+
+            _db.AccountUsers.Add(new AccountUser
+            {
+                AccountId            = account.Id,
+                UserId               = userId,
+                OrganizationUserRole = OrganizationUserRole.Admin,
+                IsPrimary            = true,
+                IsActive             = true,
+                JoinedAt             = now,
+            });
+
+            await _db.SaveChangesAsync(ct);
+            accountId = account.Id;
+        }
+        else
+        {
+            accountId = resolvedId.Value;
+        }
 
         var plan = await _db.Plans.FirstOrDefaultAsync(p => p.Id == planId, ct)
             ?? throw new BoiootException("الخطة المطلوبة غير موجودة.", 404);

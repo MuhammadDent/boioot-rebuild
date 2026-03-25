@@ -10,7 +10,7 @@ namespace Boioot.Api.Controllers;
 /// Read: current state, history, upgrade intent.
 /// Write: change plan, cancel. No payment processing.
 /// </summary>
-[Authorize(Policy = "AdminOrCompanyOwnerOrAgent")]
+[Authorize]
 [Route("api/dashboard/subscription")]
 public class DashboardSubscriptionController : BaseController
 {
