@@ -356,6 +356,10 @@ export const adminApi = {
   /** POST /api/admin/plans */
   createPlan(payload: {
     name: string;
+    displayNameAr?: string;
+    displayNameEn?: string;
+    audienceType?: string;
+    tier?: string;
     description?: string;
     basePriceMonthly: number;
     basePriceYearly: number;
@@ -382,6 +386,10 @@ export const adminApi = {
   /** PUT /api/admin/plans/{id} */
   updatePlan(id: string, payload: {
     name: string;
+    displayNameAr?: string;
+    displayNameEn?: string;
+    audienceType?: string;
+    tier?: string;
     description?: string;
     basePriceMonthly: number;
     basePriceYearly: number;

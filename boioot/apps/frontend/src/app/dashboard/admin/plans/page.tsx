@@ -870,14 +870,15 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       if (isNew) {
         result = await adminApi.createPlan({
           name:                   name.trim(),
+          displayNameAr:          displayNameAr.trim() || undefined,
+          audienceType:           audienceType || undefined,
+          tier:                   tier || undefined,
           description:            description.trim() || undefined,
           basePriceMonthly:       parseFloat(priceMonthly) || 0,
           basePriceYearly:        parseFloat(priceYearly)  || 0,
           applicableAccountType:  applicableAccountType || undefined,
           planCategory:           planCategory || undefined,
-          displayNameAr:          displayNameAr.trim() || undefined,
-          audienceType:           audienceType || undefined,
-          tier:                   tier || undefined,
+          displayOrder:           parseInt(displayOrder) || 0,
           billingMode,
           badgeText:              badgeText.trim() || undefined,
           planColor:              planColor.trim() || undefined,
@@ -1111,17 +1112,16 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     />
                   </div>
                 </div>
-                {!isNew && (
-                  <div>
-                    <label style={labelStyle}>ترتيب العرض</label>
-                    <input
-                      type="number"
-                      value={displayOrder}
-                      onChange={e => setDisplayOrder(e.target.value)}
-                      style={inputStyle}
-                    />
-                  </div>
-                )}
+                <div>
+                  <label style={labelStyle}>ترتيب العرض</label>
+                  <input
+                    type="number"
+                    value={displayOrder}
+                    onChange={e => setDisplayOrder(e.target.value)}
+                    style={inputStyle}
+                    min={0}
+                  />
+                </div>
               </div>
             </CollapsibleSection>
 
