@@ -15,8 +15,11 @@ public static class SubscriptionKeys
     public const string MaxVideosPerListing  = "max_videos_per_listing";
     public const string MaxFeaturedSlots     = "max_featured_slots";
 
+    public const string MaxConversations     = "max_conversations";
+
     // ── Feature keys ──────────────────────────────────────────────────────
     public const string AnalyticsDashboard   = "analytics_dashboard";
+    public const string AdvancedReports      = "advanced_reports";
     public const string FeaturedListings     = "featured_listings";
     public const string ProjectManagement    = "project_management";
     public const string VideoUpload          = "video_upload";
@@ -26,4 +29,11 @@ public static class SubscriptionKeys
     public const string HomepageExposure     = "homepage_exposure";
     public const string PrioritySupport      = "priority_support";
     public const string InternalChat         = "internal_chat";
+    public const string LeadTracking         = "lead_tracking";
+    public const string LeadAssignment       = "lead_assignment";
+
+    // ── Access policy values ──────────────────────────────────────────────
+    public const string PolicyOpen        = "open";
+    public const string PolicySelfService = "self_service";
+    public const string PolicyAdminOnly   = "admin_only";
 }

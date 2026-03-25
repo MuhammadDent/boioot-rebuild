@@ -95,7 +95,19 @@ app.UseExceptionHandler(errorApp =>
         var error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
         context.Response.ContentType = "application/json";
 
-        if (error is PlanFeatureDisabledException featureEx)
+        if (error is PolicyDeniedException policyEx)
+        {
+            context.Response.StatusCode = policyEx.StatusCode;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                code          = policyEx.ErrorCode,
+                feature       = policyEx.FeatureKey,
+                policy        = policyEx.Policy,
+                message       = policyEx.Message,
+                adminRequired = policyEx.AdminRequired,
+            });
+        }
+        else if (error is PlanFeatureDisabledException featureEx)
         {
             context.Response.StatusCode = featureEx.StatusCode;
             await context.Response.WriteAsJsonAsync(new

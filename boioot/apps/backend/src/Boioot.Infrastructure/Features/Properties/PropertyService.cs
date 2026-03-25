@@ -671,6 +671,9 @@ public class PropertyService : IPropertyService
                                     ? System.Text.Json.JsonSerializer.Serialize(request.Features)
                                     : null,
             VideoUrl          = request.VideoUrl?.Trim(),
+            // ── Subscription linkage ──────────────────────────────────────────
+            // Set AccountId so limit enforcement (CanCreatePropertyAsync) counts correctly.
+            AccountId          = acctId,
             // ── Audit — server-side only, never from request body ─────────────
             CreatedByUserId    = userId.ToString(),
             CreatedByRole      = userRole,

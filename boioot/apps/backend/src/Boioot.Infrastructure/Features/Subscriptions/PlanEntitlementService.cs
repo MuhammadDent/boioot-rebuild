@@ -5,6 +5,7 @@ using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Boioot.Domain.Entities;
 
 namespace Boioot.Infrastructure.Features.Subscriptions;
 
@@ -273,6 +274,58 @@ public class PlanEntitlementService : IPlanEntitlementService
     {
         await ThrowIfSubscriptionExpiredAsync(accountId, ct);
         return await HasFeatureAsync(accountId, SubscriptionKeys.AnalyticsDashboard, ct);
+    }
+
+    // ── GetFeaturePolicyAsync ─────────────────────────────────────────────
+    public async Task<string?> GetFeaturePolicyAsync(
+        Guid accountId, string featureKey, CancellationToken ct = default)
+    {
+        try
+        {
+            var policy = await _db.Set<FeatureDefinition>()
+                .Where(fd => fd.Key == featureKey && fd.IsActive)
+                .Select(fd => fd.AccessPolicy)
+                .FirstOrDefaultAsync(ct);
+
+            return policy; // null → treat as "open"
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "DB error getting access policy for feature '{Key}' for account {AccountId}",
+                featureKey, accountId);
+            return null;
+        }
+    }
+
+    // ── EnsurePolicyAllowedAsync ──────────────────────────────────────────
+    public async Task EnsurePolicyAllowedAsync(
+        Guid accountId,
+        string featureKey,
+        string userMessage,
+        CancellationToken ct = default)
+    {
+        var policy = await GetFeaturePolicyAsync(accountId, featureKey, ct);
+
+        if (string.IsNullOrEmpty(policy)
+            || policy.Equals(SubscriptionKeys.PolicyOpen, StringComparison.OrdinalIgnoreCase)
+            || policy.Equals(SubscriptionKeys.PolicySelfService, StringComparison.OrdinalIgnoreCase))
+        {
+            return; // open or self-service → allowed
+        }
+
+        if (policy.Equals(SubscriptionKeys.PolicyAdminOnly, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(
+                "[Enforcement] Policy DENIED — feature '{Key}' is admin_only. AccountId={AccountId}",
+                featureKey, accountId);
+            throw new PolicyDeniedException(featureKey, policy, userMessage);
+        }
+
+        // Unknown policy → allow (fail-open for forward compatibility)
+        _logger.LogWarning(
+            "[Enforcement] Unknown access policy '{Policy}' for feature '{Key}'. Allowing by default.",
+            policy, featureKey);
     }
 
     // ── CanCreateProjectAsync ─────────────────────────────────────────────

@@ -69,6 +69,28 @@ public class MessagingService : IMessagingService
         // Gate only on the initiator's plan. If no account → allow (open users).
         await EnforceChatFeatureAsync(userId, ct);
 
+        // ── Subscription enforcement: max_conversations limit ─────────────
+        // Only enforce when the user has an account. Unlinked/free users are open.
+        var acctIdForLimit = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (acctIdForLimit.HasValue)
+        {
+            var limit = await _entitlement.GetLimitAsync(acctIdForLimit.Value, SubscriptionKeys.MaxConversations, ct);
+            if (limit > 0) // 0 = not defined (skip), -1 = unlimited (skip)
+            {
+                var currentCount = await _context.Conversations
+                    .CountAsync(c => c.User1Id == userId || c.User2Id == userId, ct);
+                if (currentCount >= (int)limit)
+                {
+                    _logger.LogWarning(
+                        "[Enforcement] LimitExceeded — max_conversations={Limit} reached for userId={UserId} (current={Count})",
+                        limit, userId, currentCount);
+                    throw new Boioot.Application.Exceptions.PlanLimitException(
+                        SubscriptionKeys.MaxConversations,
+                        $"لقد وصلت إلى الحد الأقصى من المحادثات ({limit}) في باقتك الحالية. يرجى ترقية باقتك للمزيد.");
+                }
+            }
+        }
+
         var recipientId = request.RecipientId!.Value;
 
         if (recipientId == userId)

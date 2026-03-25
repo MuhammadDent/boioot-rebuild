@@ -98,6 +98,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IAgentManagementService, AgentManagementService>();
         services.AddScoped<IPlanEntitlementService, PlanEntitlementService>();
+        services.AddScoped<ICurrentUserCapabilities, CurrentUserCapabilitiesService>();
         services.AddScoped<IAdminPlanService, AdminPlanService>();
         services.AddScoped<IAdminPlanPricingService, AdminPlanPricingService>();
         services.AddScoped<IAdminCatalogService, AdminCatalogService>();

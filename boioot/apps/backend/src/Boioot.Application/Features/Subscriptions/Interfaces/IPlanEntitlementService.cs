@@ -1,5 +1,10 @@
 namespace Boioot.Application.Features.Subscriptions.Interfaces;
 
+/// <summary>
+/// Account-centric entitlement service.
+/// All methods take <see cref="Guid" accountId"/> — use <see cref="ICurrentUserCapabilities"/>
+/// for the user-centric facade that resolves accountId automatically.
+/// </summary>
 public interface IPlanEntitlementService
 {
     /// <summary>
@@ -79,4 +84,21 @@ public interface IPlanEntitlementService
     /// Uses the "analytics_dashboard" feature key.
     /// </summary>
     Task<bool> CanUseAnalyticsAsync(Guid accountId, CancellationToken ct = default);
+
+    // ── Policy enforcement ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the access policy for a feature: "open", "admin_only", "self_service", or null (= "open").
+    /// "open"       = subscription plan enables it — anyone on the right plan can use it.
+    /// "admin_only" = only admin can grant this feature; user cannot self-enable.
+    /// "self_service" = user can toggle within their plan.
+    /// </summary>
+    Task<string?> GetFeaturePolicyAsync(Guid accountId, string featureKey, CancellationToken ct = default);
+
+    /// <summary>
+    /// Throws <see cref="Boioot.Application.Exceptions.PolicyDeniedException"/>
+    /// if the feature's AccessPolicy is "admin_only".
+    /// Call this before allowing any user-initiated action on policy-gated features.
+    /// </summary>
+    Task EnsurePolicyAllowedAsync(Guid accountId, string featureKey, string userMessage, CancellationToken ct = default);
 }

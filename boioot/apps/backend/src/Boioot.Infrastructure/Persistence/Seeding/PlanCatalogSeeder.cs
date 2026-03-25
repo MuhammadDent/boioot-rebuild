@@ -609,8 +609,8 @@ public sealed class PlanCatalogSeeder
             PL("c4000002-0000-0000-0000-000000000000", p02, ld7,  0), // Silver:           blocked
             PL("c4000003-0000-0000-0000-000000000000", p03, ld7,  1), // Gold:             1 video
             PL("c4000004-0000-0000-0000-000000000000", p04, ld7,  3), // Platinum:         3 videos
-            PL("c4000005-0000-0000-0000-000000000000", p05, ld7,  0), // OwnerPro:         blocked
-            PL("c4000006-0000-0000-0000-000000000000", p06, ld7,  0), // BrokerPro:        blocked
+            PL("c4000005-0000-0000-0000-000000000000", p05, ld7,  2), // OwnerAdvanced:    2 videos
+            PL("c4000006-0000-0000-0000-000000000000", p06, ld7,  0), // BrokerFree:       blocked
             PL("c4000007-0000-0000-0000-000000000000", p07, ld7,  1), // BrokerPremium:    1 video
             PL("c4000008-0000-0000-0000-000000000000", p08, ld7,  0), // OfficeStarter:    blocked
             PL("c4000009-0000-0000-0000-000000000000", p09, ld7,  2), // OfficeGrowth:     2 videos
