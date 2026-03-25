@@ -1996,10 +1996,30 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                     b.Property<bool>("AutoRenew")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("CanceledAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("CurrentPeriodEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CurrentPeriodStart")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalProvider")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalSubscriptionId")
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
@@ -2024,6 +2044,9 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("TrialEndsAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -2040,6 +2063,45 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("Subscriptions");
+                });
+
+            modelBuilder.Entity("Boioot.Domain.Entities.SubscriptionHistory", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NewPlanId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OldPlanId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubscriptionId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("SubscriptionId");
+
+                    b.ToTable("SubscriptionHistories");
                 });
 
             modelBuilder.Entity("Boioot.Domain.Entities.SubscriptionPaymentRequest", b =>
@@ -2723,7 +2785,41 @@ namespace Boioot.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Account");
 
+                    b.Navigation("History");
+
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("Boioot.Domain.Entities.SubscriptionHistory", b =>
+                {
+                    b.HasOne("Boioot.Domain.Entities.Subscription", "Subscription")
+                        .WithMany("History")
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Boioot.Domain.Entities.Plan", "OldPlan")
+                        .WithMany()
+                        .HasForeignKey("OldPlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Boioot.Domain.Entities.Plan", "NewPlan")
+                        .WithMany()
+                        .HasForeignKey("NewPlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Boioot.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Subscription");
+
+                    b.Navigation("OldPlan");
+
+                    b.Navigation("NewPlan");
+
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("Boioot.Domain.Entities.SubscriptionPaymentRequest", b =>

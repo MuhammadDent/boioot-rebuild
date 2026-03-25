@@ -42,6 +42,7 @@ public class BoiootDbContext : DbContext
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<AccountUser> AccountUsers => Set<AccountUser>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<SubscriptionHistory> SubscriptionHistories => Set<SubscriptionHistory>();
     public DbSet<FeatureDefinition> FeatureDefinitions => Set<FeatureDefinition>();
     public DbSet<LimitDefinition> LimitDefinitions => Set<LimitDefinition>();
     public DbSet<PlanFeature> PlanFeatures => Set<PlanFeature>();

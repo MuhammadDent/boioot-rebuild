@@ -28,6 +28,32 @@ public class Subscription : BaseEntity
     /// <summary>Whether the subscription should auto-renew at end of billing cycle.</summary>
     public bool AutoRenew { get; set; } = true;
 
+    // ── Phase 3A lifecycle fields ─────────────────────────────────────────────
+
+    /// <summary>UTC end of any free trial period. Null when no trial applies.</summary>
+    public DateTime? TrialEndsAt { get; set; }
+
+    /// <summary>Start of the current billing cycle (UTC). Null for free/trial-only subs.</summary>
+    public DateTime? CurrentPeriodStart { get; set; }
+
+    /// <summary>End of the current billing cycle (UTC). Null for free/open-ended subs.</summary>
+    public DateTime? CurrentPeriodEnd { get; set; }
+
+    /// <summary>When the subscription was cancelled (UTC). Null if not cancelled.</summary>
+    public DateTime? CanceledAt { get; set; }
+
+    /// <summary>When the subscription definitively ended (UTC). Null while still active.</summary>
+    public DateTime? EndedAt { get; set; }
+
+    /// <summary>Reserved for future payment gateway: e.g. "stripe", "paypal". Null = manual.</summary>
+    public string? ExternalProvider { get; set; }
+
+    /// <summary>External subscription reference ID from the payment gateway.</summary>
+    public string? ExternalSubscriptionId { get; set; }
+
+    // ── Navigation ────────────────────────────────────────────────────────────
+
     public Account Account { get; set; } = null!;
     public Plan Plan { get; set; } = null!;
+    public ICollection<SubscriptionHistory> History { get; set; } = [];
 }

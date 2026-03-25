@@ -3,11 +3,16 @@ namespace Boioot.Application.Features.Subscriptions.DTOs;
 /// <summary>
 /// Represents the caller's currently active subscription,
 /// including resolved plan entitlements for frontend feature-gating.
+/// Phase 3A: added lifecycle dates + full dynamic capability maps.
 /// </summary>
 public sealed class CurrentSubscriptionResponse
 {
-    public Guid   PlanId       { get; init; }
-    public string PlanName     { get; init; } = string.Empty;
+    public Guid   SubscriptionId { get; init; }
+    public Guid   PlanId         { get; init; }
+    public string PlanName       { get; init; } = string.Empty;
+    public string? PlanCode      { get; init; }
+    public string? AudienceType  { get; init; }
+    public string? Tier          { get; init; }
 
     /// <summary>The PlanPricing row in use. Null when defaulting to Free (no subscription).</summary>
     public Guid?  PricingId    { get; init; }
@@ -22,7 +27,17 @@ public sealed class CurrentSubscriptionResponse
     /// <summary>Subscription status string, or "Free" when no subscription exists.</summary>
     public string Status       { get; init; } = "Free";
 
-    // ── Feature entitlements ────────────────────────────────────────────────
+    public bool   IsActive     { get; init; }
+    public bool   AutoRenew    { get; init; }
+
+    // ── Lifecycle dates ─────────────────────────────────────────────────────
+    public DateTime  StartDate          { get; init; }
+    public DateTime? EndDate            { get; init; }
+    public DateTime? TrialEndsAt        { get; init; }
+    public DateTime? CurrentPeriodEnd   { get; init; }
+    public DateTime? CanceledAt         { get; init; }
+
+    // ── Backward-compat named entitlements (kept for existing consumers) ────
     /// <summary>True if the plan includes the analytics dashboard feature.</summary>
     public bool HasAnalyticsDashboard  { get; init; }
 
@@ -44,7 +59,6 @@ public sealed class CurrentSubscriptionResponse
     /// <summary>True if the plan includes project management.</summary>
     public bool HasProjectManagement   { get; init; }
 
-    // ── Limit entitlements ──────────────────────────────────────────────────
     /// <summary>Max active listings. -1 = unlimited, 0 = not available.</summary>
     public int MaxActiveListings   { get; init; }
 
@@ -56,4 +70,11 @@ public sealed class CurrentSubscriptionResponse
 
     /// <summary>Max featured slots. -1 = unlimited, 0 = none.</summary>
     public int MaxFeaturedSlots    { get; init; }
+
+    // ── Dynamic capability maps (Phase 3A — full resolution for Phase 3B enforcement) ──
+    /// <summary>All boolean feature flags for this plan. key → enabled.</summary>
+    public Dictionary<string, bool> Features { get; init; } = [];
+
+    /// <summary>All numeric limits for this plan. key → value (-1 = unlimited).</summary>
+    public Dictionary<string, int> Limits { get; init; } = [];
 }

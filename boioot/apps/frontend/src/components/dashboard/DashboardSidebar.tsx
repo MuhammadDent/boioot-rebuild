@@ -108,6 +108,7 @@ const SIDEBAR_CONFIG: Record<string, NavItem[]> = {
     ...BASE,
     { href: "/dashboard/my-listings",            label: "إعلاناتي",       exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "طلباتي",         exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/subscription",           label: "اشتراكي",        exact: true,  icon: ICONS.subscription },
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],
 
@@ -117,6 +118,7 @@ const SIDEBAR_CONFIG: Record<string, NavItem[]> = {
     { href: "/dashboard/clients",                label: "العملاء",        exact: false, icon: ICONS.clients      },
     { href: "/dashboard/my-listings",            label: "إعلاناتي",       exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "طلباتي",         exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/subscription",           label: "اشتراكي",        exact: true,  icon: ICONS.subscription },
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],
 
@@ -126,6 +128,7 @@ const SIDEBAR_CONFIG: Record<string, NavItem[]> = {
     { href: "/dashboard/team",                   label: "الفريق",         exact: false, icon: ICONS.team         },
     { href: "/dashboard/listings",               label: "الإعلانات",      exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "الطلبات",        exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/subscription",           label: "اشتراكي",        exact: true,  icon: ICONS.subscription },
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],
 
@@ -135,6 +138,7 @@ const SIDEBAR_CONFIG: Record<string, NavItem[]> = {
     { href: "/dashboard/projects",               label: "المشاريع",       exact: false, icon: ICONS.projects     },
     { href: "/dashboard/listings",               label: "الإعلانات",      exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "الطلبات",        exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/subscription",           label: "اشتراكي",        exact: true,  icon: ICONS.subscription },
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],
 

@@ -248,9 +248,31 @@ public sealed class SchemaEvolutionService
 
     private async Task ApplySubscriptionPatchesAsync(CancellationToken ct)
     {
-        await TryAlter("Subscriptions", "IsActive",   "INTEGER NOT NULL DEFAULT 1", ct);
-        await TryAlter("Subscriptions", "PricingId",  "TEXT",                       ct);
-        await TryAlter("Subscriptions", "AutoRenew",  "INTEGER NOT NULL DEFAULT 1", ct);
+        await TryAlter("Subscriptions", "IsActive",                "INTEGER NOT NULL DEFAULT 1", ct);
+        await TryAlter("Subscriptions", "PricingId",               "TEXT",                       ct);
+        await TryAlter("Subscriptions", "AutoRenew",               "INTEGER NOT NULL DEFAULT 1", ct);
+        // Phase 3A lifecycle fields
+        await TryAlter("Subscriptions", "Status",                  "TEXT NOT NULL DEFAULT 'Active'", ct);
+        await TryAlter("Subscriptions", "TrialEndsAt",             "TEXT",                           ct);
+        await TryAlter("Subscriptions", "CurrentPeriodStart",      "TEXT",                           ct);
+        await TryAlter("Subscriptions", "CurrentPeriodEnd",        "TEXT",                           ct);
+        await TryAlter("Subscriptions", "CanceledAt",              "TEXT",                           ct);
+        await TryAlter("Subscriptions", "EndedAt",                 "TEXT",                           ct);
+        await TryAlter("Subscriptions", "ExternalProvider",        "TEXT",                           ct);
+        await TryAlter("Subscriptions", "ExternalSubscriptionId",  "TEXT",                           ct);
+
+        // SubscriptionHistory table (Phase 3A audit log)
+        await TryExec(@"
+            CREATE TABLE IF NOT EXISTS ""SubscriptionHistories"" (
+                ""Id""              TEXT NOT NULL PRIMARY KEY,
+                ""SubscriptionId""  TEXT NOT NULL,
+                ""EventType""       TEXT NOT NULL,
+                ""OldPlanId""       TEXT,
+                ""NewPlanId""       TEXT,
+                ""Notes""           TEXT,
+                ""CreatedByUserId"" TEXT,
+                ""CreatedAtUtc""    TEXT NOT NULL
+            )", ct);
     }
 
     private async Task ApplyPlanPatchesAsync(CancellationToken ct)
