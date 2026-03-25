@@ -339,6 +339,15 @@ public sealed class SchemaEvolutionService
         // Drop stale indexes that referenced the old column name.
         await TryExec("DROP INDEX IF EXISTS ix_planfeatures_plan_feature", ct);
         await TryExec("DROP INDEX IF EXISTS ix_planfeatures_planid", ct);
+
+        // Phase 3A hardening: access policy on feature definitions.
+        await TryAlter("FeatureDefinitions", "AccessPolicy", "TEXT", ct);
+
+        // Set "admin_only" for features that are granted by admin, not by subscription plan.
+        await TryExec(
+            "UPDATE FeatureDefinitions SET AccessPolicy = 'admin_only' " +
+            "WHERE \"Key\" IN ('verified_badge', 'homepage_exposure') AND (AccessPolicy IS NULL OR AccessPolicy = '')",
+            ct);
     }
 
     // ── SQLite-specific index patches ─────────────────────────────────────────

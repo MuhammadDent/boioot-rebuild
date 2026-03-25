@@ -1,0 +1,139 @@
+The subscription core is now working, which is good.
+
+However, before moving to enforcement (Phase 3B), we need to complete and harden the subscription model.
+
+IMPORTANT:
+Do NOT add new UI.
+Do NOT start enforcement yet.
+Do NOT add payment integration.
+
+We need to complete the subscription domain so it is fully SaaS-ready.
+
+REQUIREMENTS:
+
+1) Expand subscription status system
+
+Support:
+- trialing
+- active
+- canceled
+- expired
+- pending
+- past_due
+
+Ensure:
+- status is stored properly
+- transitions are consistent
+- history records status changes
+
+---
+
+2) Add full period handling
+
+Ensure AccountSubscription includes and uses:
+
+- CurrentPeriodStartUtc
+- CurrentPeriodEndUtc
+- TrialEndsAtUtc
+- EndsAtUtc
+
+Add logic:
+- determine if subscription is active based on dates
+- determine if expired automatically
+- prepare for renewal logic (even if not implemented yet)
+
+---
+
+3) Return full plan capabilities from subscription API
+
+VERY IMPORTANT:
+
+GET /api/dashboard/subscription/current must return:
+
+- plan info
+- status
+- features
+- limits
+- policies
+
+Use existing plan + features + limits system (based on Excel mapping).
+
+Example response:
+
+{
+  "plan": {...},
+  "status": "active",
+  "features": {
+    "video_upload": true,
+    "crm_basic": true
+  },
+  "limits": {
+    "max_listings": 10,
+    "max_images_per_listing": 20
+  },
+  "policies": {
+    "verified_badge": "admin_only"
+  }
+}
+
+---
+
+4) Add helper methods in SubscriptionService
+
+- isActive(subscription)
+- isTrial(subscription)
+- isExpired(subscription)
+- getCurrentPlanCapabilities(accountId)
+
+---
+
+5) Ensure FREE plan is always valid
+
+- Free plan should:
+  - always be assignable
+  - have no expiration (or very long period)
+  - act as fallback if subscription is missing
+
+---
+
+6) Improve history tracking
+
+Ensure SubscriptionHistory records:
+
+- created
+- assigned
+- upgraded
+- downgraded
+- canceled
+- expired
+- trial_started
+- trial_converted
+
+---
+
+7) Validation tests
+
+Report results for:
+
+1. New user gets free subscription
+2. Subscription current endpoint returns full capabilities
+3. Expired subscription is detected correctly
+4. Status transitions work correctly
+5. History records all events
+6. Free plan fallback works
+
+DELIVERABLE:
+
+- updated entities
+- updated service logic
+- updated API response shape
+- sample responses
+- test results
+
+IMPORTANT:
+
+This step is REQUIRED before enforcement.
+
+Do not skip capability mapping.
+Do not return only plan name and status.
+We need full feature/limit/policy data from subscription.

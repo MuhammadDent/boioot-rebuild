@@ -3,7 +3,7 @@ namespace Boioot.Application.Features.Subscriptions.DTOs;
 /// <summary>
 /// Represents the caller's currently active subscription,
 /// including resolved plan entitlements for frontend feature-gating.
-/// Phase 3A: added lifecycle dates + full dynamic capability maps.
+/// Phase 3A: full lifecycle dates + dynamic capability maps (features, limits, policies).
 /// </summary>
 public sealed class CurrentSubscriptionResponse
 {
@@ -31,50 +31,54 @@ public sealed class CurrentSubscriptionResponse
     public bool   AutoRenew    { get; init; }
 
     // ── Lifecycle dates ─────────────────────────────────────────────────────
-    public DateTime  StartDate          { get; init; }
-    public DateTime? EndDate            { get; init; }
-    public DateTime? TrialEndsAt        { get; init; }
-    public DateTime? CurrentPeriodEnd   { get; init; }
-    public DateTime? CanceledAt         { get; init; }
+    public DateTime  StartDate           { get; init; }
+    public DateTime? EndDate             { get; init; }
+    public DateTime? TrialEndsAt         { get; init; }
+    public DateTime? CurrentPeriodStart  { get; init; }
+    public DateTime? CurrentPeriodEnd    { get; init; }
+    public DateTime? CanceledAt          { get; init; }
+    public DateTime? EndedAt             { get; init; }
+
+    // ── Computed state helpers (derived from dates + status) ────────────────
+    /// <summary>True if the subscription is currently in an active trial period.</summary>
+    public bool IsTrial   { get; init; }
+    /// <summary>True if the subscription has expired (EndDate passed or status = Expired).</summary>
+    public bool IsExpired { get; init; }
+    /// <summary>True if the subscription is cancelled.</summary>
+    public bool IsCanceled { get; init; }
 
     // ── Backward-compat named entitlements (kept for existing consumers) ────
-    /// <summary>True if the plan includes the analytics dashboard feature.</summary>
     public bool HasAnalyticsDashboard  { get; init; }
-
-    /// <summary>True if the plan allows video upload on listings.</summary>
     public bool HasVideoUpload         { get; init; }
-
-    /// <summary>True if the plan allows featured/promoted listings.</summary>
     public bool HasFeaturedListings    { get; init; }
-
-    /// <summary>True if the plan includes the WhatsApp contact button.</summary>
     public bool HasWhatsappContact     { get; init; }
-
-    /// <summary>True if the plan includes the verified badge.</summary>
     public bool HasVerifiedBadge       { get; init; }
-
-    /// <summary>True if the plan includes homepage exposure.</summary>
     public bool HasHomepageExposure    { get; init; }
-
-    /// <summary>True if the plan includes project management.</summary>
     public bool HasProjectManagement   { get; init; }
 
     /// <summary>Max active listings. -1 = unlimited, 0 = not available.</summary>
     public int MaxActiveListings   { get; init; }
-
     /// <summary>Max images per listing. -1 = unlimited, 0 = not defined.</summary>
     public int MaxImagesPerListing { get; init; }
-
     /// <summary>Max agents. -1 = unlimited, 0 = not available.</summary>
     public int MaxAgents           { get; init; }
-
     /// <summary>Max featured slots. -1 = unlimited, 0 = none.</summary>
     public int MaxFeaturedSlots    { get; init; }
 
     // ── Dynamic capability maps (Phase 3A — full resolution for Phase 3B enforcement) ──
+
     /// <summary>All boolean feature flags for this plan. key → enabled.</summary>
     public Dictionary<string, bool> Features { get; init; } = [];
 
     /// <summary>All numeric limits for this plan. key → value (-1 = unlimited).</summary>
     public Dictionary<string, int> Limits { get; init; } = [];
+
+    /// <summary>
+    /// Access policies for non-default features.
+    /// key → policy string.
+    /// "open"       = enabled by the plan automatically (not shown here — default).
+    /// "admin_only" = can only be granted by admin, not self-serviceable.
+    /// Only features with non-open policies appear in this map.
+    /// </summary>
+    public Dictionary<string, string> Policies { get; init; } = [];
 }

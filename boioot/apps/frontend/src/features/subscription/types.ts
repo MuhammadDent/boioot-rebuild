@@ -13,12 +13,18 @@ export interface CurrentSubscriptionResponse {
   status:         string;
   isActive:       boolean;
   autoRenew:      boolean;
+  // ── Computed state ────────────────────────────────────────────────────────
+  isTrial:    boolean;
+  isExpired:  boolean;
+  isCanceled: boolean;
   // ── Lifecycle dates ──────────────────────────────────────────────────────
-  startDate:         string;
-  endDate:           string | null;
-  trialEndsAt:       string | null;
-  currentPeriodEnd:  string | null;
-  canceledAt:        string | null;
+  startDate:          string;
+  endDate:            string | null;
+  trialEndsAt:        string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd:   string | null;
+  canceledAt:         string | null;
+  endedAt:            string | null;
   // ── Feature entitlements (named — backward compat) ───────────────────────
   hasAnalyticsDashboard:  boolean;
   hasVideoUpload:         boolean;
@@ -32,9 +38,15 @@ export interface CurrentSubscriptionResponse {
   maxImagesPerListing:    number;
   maxAgents:              number;
   maxFeaturedSlots:       number;
-  // ── Dynamic maps (Phase 3A) ───────────────────────────────────────────────
+  // ── Dynamic capability maps (Phase 3A hardened) ───────────────────────────
   features: Record<string, boolean>;
   limits:   Record<string, number>;
+  /**
+   * Access policies for non-default features.
+   * Only features with policy != "open" appear here.
+   * e.g. { "verified_badge": "admin_only" }
+   */
+  policies: Record<string, string>;
 }
 
 export interface SubscriptionHistoryDto {

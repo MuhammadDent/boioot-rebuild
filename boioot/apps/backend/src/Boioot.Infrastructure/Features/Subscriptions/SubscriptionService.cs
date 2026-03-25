@@ -8,8 +8,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Boioot.Infrastructure.Features.Subscriptions;
 
 /// <summary>
-/// Full subscription lifecycle service — Phase 3A.
-/// Handles queries, assignment, plan changes, and cancellation.
+/// Full subscription lifecycle service — Phase 3A hardened.
+/// Handles queries, assignment, plan changes, cancellation, and capability resolution.
+/// Auto-detects and marks expired subscriptions on read.
 /// Does NOT process payments or gateway webhooks.
 /// </summary>
 public sealed class SubscriptionService : ISubscriptionService
@@ -26,7 +27,7 @@ public sealed class SubscriptionService : ISubscriptionService
         _resolver = resolver;
     }
 
-    // ── GetCurrentAsync ───────────────────────────────────────────────────────
+    // ── GetCurrentAsync (user-facing) ─────────────────────────────────────────
 
     public async Task<CurrentSubscriptionResponse?> GetCurrentAsync(
         Guid userId, CancellationToken ct = default)
@@ -35,16 +36,30 @@ public sealed class SubscriptionService : ISubscriptionService
         if (accountId is null)
             return null;
 
+        return await GetCurrentPlanCapabilitiesAsync(accountId.Value, ct);
+    }
+
+    // ── GetCurrentPlanCapabilitiesAsync (by accountId — for enforcement) ──────
+
+    public async Task<CurrentSubscriptionResponse?> GetCurrentPlanCapabilitiesAsync(
+        Guid accountId, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+
+        // 1. Auto-detect and expire stale subscriptions first
+        await ExpireStaleSubscriptionsAsync(accountId, now, ct);
+
+        // 2. Fetch the best active subscription
         var sub = await _db.Subscriptions
             .AsNoTracking()
             .Include(s => s.Plan)
             .Where(s =>
-                s.AccountId == accountId.Value &&
+                s.AccountId == accountId &&
                 s.IsActive &&
                 (s.Status == SubscriptionStatus.Trial ||
                  s.Status == SubscriptionStatus.Active ||
                  s.Status == SubscriptionStatus.Pending) &&
-                (s.EndDate == null || s.EndDate > DateTime.UtcNow))
+                (s.EndDate == null || s.EndDate > now))
             .OrderByDescending(s => s.StartDate)
             .FirstOrDefaultAsync(ct);
 
@@ -129,8 +144,8 @@ public sealed class SubscriptionService : ISubscriptionService
             };
         }
 
-        var reason  = targetRank > currentRank ? "upgrade" : "downgrade";
-        var verb    = targetRank > currentRank ? "ترقية" : "تخفيض";
+        var reason = targetRank > currentRank ? "upgrade" : "downgrade";
+        var verb   = targetRank > currentRank ? "ترقية" : "تخفيض";
 
         return new UpgradeIntentResponse
         {
@@ -169,45 +184,54 @@ public sealed class SubscriptionService : ISubscriptionService
             .FirstOrDefaultAsync(p => p.Id == request.PlanId && p.IsActive, ct)
             ?? throw new KeyNotFoundException("الباقة غير موجودة أو غير نشطة");
 
-        // Deactivate any existing active subscriptions for this account
         var existingSubs = await _db.Subscriptions
             .Where(s => s.AccountId == request.AccountId && s.IsActive)
             .ToListAsync(ct);
 
         Guid? oldPlanId = null;
+        var now = DateTime.UtcNow;
+
         foreach (var existing in existingSubs)
         {
             oldPlanId = existing.PlanId;
             existing.IsActive = false;
-            existing.EndedAt  = DateTime.UtcNow;
+            existing.EndedAt  = now;
             if (existing.Status != SubscriptionStatus.Cancelled)
                 existing.Status = SubscriptionStatus.Expired;
         }
 
-        var now    = DateTime.UtcNow;
         var isFree = plan.Id == FreePlanId || plan.BasePriceMonthly == 0;
 
         var sub = new Subscription
         {
-            AccountId            = request.AccountId,
-            PlanId               = request.PlanId,
-            PricingId            = request.PricingId,
-            Status               = isFree ? SubscriptionStatus.Active : SubscriptionStatus.Active,
-            StartDate            = now,
-            IsActive             = true,
-            AutoRenew            = !isFree,
-            CurrentPeriodStart   = now,
-            CurrentPeriodEnd     = isFree ? null : now.AddMonths(1),
+            AccountId          = request.AccountId,
+            PlanId             = request.PlanId,
+            PricingId          = request.PricingId,
+            Status             = SubscriptionStatus.Active,
+            StartDate          = now,
+            IsActive           = true,
+            AutoRenew          = !isFree,
+            CurrentPeriodStart = now,
+            CurrentPeriodEnd   = isFree ? null : now.AddMonths(1),
+            CreatedAt          = now,
+            UpdatedAt          = now,
         };
 
         _db.Subscriptions.Add(sub);
 
-        // Determine event type
-        var eventType = oldPlanId is null
-            ? "assigned"
-            : (await _db.Plans.AsNoTracking().FirstOrDefaultAsync(p => p.Id == oldPlanId, ct))?.Rank < plan.Rank
-                ? "upgraded"
-                : "assigned";
+        // Determine correct event type
+        string eventType;
+        if (oldPlanId is null)
+        {
+            eventType = "assigned";
+        }
+        else
+        {
+            var oldPlan = await _db.Plans.AsNoTracking()
+                .Select(p => new { p.Id, p.Rank })
+                .FirstOrDefaultAsync(p => p.Id == oldPlanId.Value, ct);
+            eventType = (oldPlan?.Rank ?? 0) < plan.Rank ? "upgraded" : "assigned";
+        }
 
         _db.SubscriptionHistories.Add(new SubscriptionHistory
         {
@@ -268,12 +292,16 @@ public sealed class SubscriptionService : ISubscriptionService
             AutoRenew          = !isFree,
             CurrentPeriodStart = now,
             CurrentPeriodEnd   = isFree ? null : now.AddMonths(1),
+            CreatedAt          = now,
+            UpdatedAt          = now,
         };
         _db.Subscriptions.Add(newSub);
 
         string eventType;
         if (oldPlanId is null)
+        {
             eventType = "created";
+        }
         else
         {
             var oldRank = (await _db.Plans.AsNoTracking()
@@ -323,14 +351,15 @@ public sealed class SubscriptionService : ISubscriptionService
             .FirstOrDefaultAsync(ct)
             ?? throw new InvalidOperationException("لا يوجد اشتراك نشط ليتم إلغاؤه");
 
-        var now = DateTime.UtcNow;
+        var now      = DateTime.UtcNow;
         var oldPlanId = sub.PlanId;
 
-        sub.Status     = SubscriptionStatus.Cancelled;
-        sub.IsActive   = false;
+        sub.Status    = SubscriptionStatus.Cancelled;
+        sub.IsActive  = false;
         sub.CanceledAt = now;
-        sub.EndedAt    = now;
-        sub.AutoRenew  = false;
+        sub.EndedAt   = now;
+        sub.AutoRenew = false;
+        sub.UpdatedAt = now;
 
         _db.SubscriptionHistories.Add(new SubscriptionHistory
         {
@@ -345,7 +374,6 @@ public sealed class SubscriptionService : ISubscriptionService
 
         await _db.SaveChangesAsync(ct);
 
-        // Return the Free plan response since the sub is now cancelled
         return await BuildFreeResponseAsync(ct);
     }
 
@@ -451,17 +479,59 @@ public sealed class SubscriptionService : ISubscriptionService
 
         return rows.Select(h => new SubscriptionHistoryDto
         {
-            Id           = h.Id,
-            EventType    = h.EventType,
-            OldPlanName  = h.OldPlanId.HasValue && planNames.TryGetValue(h.OldPlanId.Value, out var op) ? op : null,
-            NewPlanName  = h.NewPlanId.HasValue && planNames.TryGetValue(h.NewPlanId.Value, out var np) ? np : null,
-            Notes        = h.Notes,
-            CreatedAtUtc = h.CreatedAtUtc,
+            Id            = h.Id,
+            EventType     = h.EventType,
+            OldPlanName   = h.OldPlanId.HasValue && planNames.TryGetValue(h.OldPlanId.Value, out var op) ? op : null,
+            NewPlanName   = h.NewPlanId.HasValue && planNames.TryGetValue(h.NewPlanId.Value, out var np) ? np : null,
+            Notes         = h.Notes,
+            CreatedAtUtc  = h.CreatedAtUtc,
             CreatedByName = h.CreatedByUserId.HasValue && userNames.TryGetValue(h.CreatedByUserId.Value, out var un) ? un : null,
         }).ToList();
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    // ── Private: auto-expiry detection ────────────────────────────────────────
+
+    /// <summary>
+    /// Finds subscriptions where IsActive=true, status is Active/Trial, but EndDate has passed.
+    /// Marks them as Expired and writes a history event. Called before every read.
+    /// </summary>
+    private async Task ExpireStaleSubscriptionsAsync(
+        Guid accountId, DateTime now, CancellationToken ct)
+    {
+        var stale = await _db.Subscriptions
+            .Where(s =>
+                s.AccountId == accountId &&
+                s.IsActive  &&
+                (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial) &&
+                s.EndDate != null &&
+                s.EndDate < now)
+            .ToListAsync(ct);
+
+        if (stale.Count == 0) return;
+
+        foreach (var s in stale)
+        {
+            s.IsActive  = false;
+            s.Status    = SubscriptionStatus.Expired;
+            s.EndedAt   = s.EndDate ?? now;
+            s.UpdatedAt = now;
+
+            _db.SubscriptionHistories.Add(new SubscriptionHistory
+            {
+                SubscriptionId  = s.Id,
+                EventType       = "expired",
+                OldPlanId       = s.PlanId,
+                NewPlanId       = null,
+                Notes           = "انتهاء تلقائي بناءً على تاريخ انتهاء الاشتراك",
+                CreatedByUserId = null,
+                CreatedAtUtc    = now,
+            });
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
+    // ── Private: build responses ──────────────────────────────────────────────
 
     private async Task<CurrentSubscriptionResponse> BuildFreeResponseAsync(CancellationToken ct)
     {
@@ -485,6 +555,9 @@ public sealed class SubscriptionService : ISubscriptionService
             Status           = "Free",
             IsActive         = true,
             AutoRenew        = false,
+            IsTrial          = false,
+            IsExpired        = false,
+            IsCanceled       = false,
             StartDate        = DateTime.MinValue,
             // Backward-compat
             HasAnalyticsDashboard = ent.Feat("analytics_dashboard"),
@@ -501,6 +574,7 @@ public sealed class SubscriptionService : ISubscriptionService
             // Dynamic maps
             Features = ent.Features,
             Limits   = ent.Limits,
+            Policies = ent.Policies,
         };
     }
 
@@ -510,27 +584,39 @@ public sealed class SubscriptionService : ISubscriptionService
         PlanPricing? pricing,
         PlanEntitlements ent)
     {
+        var now       = DateTime.UtcNow;
+        var isTrial   = sub.Status == SubscriptionStatus.Trial
+                        && (sub.TrialEndsAt == null || sub.TrialEndsAt > now);
+        var isExpired = sub.Status == SubscriptionStatus.Expired
+                        || (sub.EndDate.HasValue && sub.EndDate < now);
+        var isCanceled = sub.Status == SubscriptionStatus.Cancelled;
+
         return new CurrentSubscriptionResponse
         {
-            SubscriptionId    = sub.Id,
-            PlanId            = plan.Id,
-            PlanName          = plan.DisplayNameAr ?? plan.Name,
-            PlanCode          = plan.Code,
-            AudienceType      = plan.AudienceType,
-            Tier              = plan.Tier,
-            PricingId         = pricing?.Id,
-            BillingCycle      = pricing?.BillingCycle ?? "Monthly",
-            PriceAmount       = pricing?.PriceAmount  ?? 0,
-            CurrencyCode      = pricing?.CurrencyCode  ?? "SYP",
-            Rank              = plan.Rank,
-            Status            = sub.Status.ToString(),
-            IsActive          = sub.IsActive,
-            AutoRenew         = sub.AutoRenew,
-            StartDate         = sub.StartDate,
-            EndDate           = sub.EndDate,
-            TrialEndsAt       = sub.TrialEndsAt,
-            CurrentPeriodEnd  = sub.CurrentPeriodEnd,
-            CanceledAt        = sub.CanceledAt,
+            SubscriptionId     = sub.Id,
+            PlanId             = plan.Id,
+            PlanName           = plan.DisplayNameAr ?? plan.Name,
+            PlanCode           = plan.Code,
+            AudienceType       = plan.AudienceType,
+            Tier               = plan.Tier,
+            PricingId          = pricing?.Id,
+            BillingCycle       = pricing?.BillingCycle ?? "Monthly",
+            PriceAmount        = pricing?.PriceAmount  ?? 0,
+            CurrencyCode       = pricing?.CurrencyCode ?? "SYP",
+            Rank               = plan.Rank,
+            Status             = sub.Status.ToString(),
+            IsActive           = sub.IsActive,
+            AutoRenew          = sub.AutoRenew,
+            IsTrial            = isTrial,
+            IsExpired          = isExpired,
+            IsCanceled         = isCanceled,
+            StartDate          = sub.StartDate,
+            EndDate            = sub.EndDate,
+            TrialEndsAt        = sub.TrialEndsAt,
+            CurrentPeriodStart = sub.CurrentPeriodStart,
+            CurrentPeriodEnd   = sub.CurrentPeriodEnd,
+            CanceledAt         = sub.CanceledAt,
+            EndedAt            = sub.EndedAt,
             // Backward-compat
             HasAnalyticsDashboard = ent.Feat("analytics_dashboard"),
             HasVideoUpload        = ent.Feat("video_upload"),
@@ -546,8 +632,11 @@ public sealed class SubscriptionService : ISubscriptionService
             // Dynamic maps
             Features = ent.Features,
             Limits   = ent.Limits,
+            Policies = ent.Policies,
         };
     }
+
+    // ── Private: entitlement loading ──────────────────────────────────────────
 
     private async Task<PlanEntitlements> LoadPlanEntitlementsAsync(Guid planId, CancellationToken ct)
     {
@@ -555,7 +644,7 @@ public sealed class SubscriptionService : ISubscriptionService
             from pf in _db.Set<PlanFeature>()
             where pf.SubscriptionPlanId == planId
             join fd in _db.Set<FeatureDefinition>() on pf.FeatureDefinitionId equals fd.Id
-            select new { fd.Key, pf.IsEnabled }
+            select new { fd.Key, pf.IsEnabled, fd.AccessPolicy }
         ).ToListAsync(ct);
 
         var limits = await (
@@ -565,14 +654,22 @@ public sealed class SubscriptionService : ISubscriptionService
             select new { ld.Key, pl.Value }
         ).ToListAsync(ct);
 
-        return new PlanEntitlements(
-            features.ToDictionary(x => x.Key, x => x.IsEnabled),
-            limits.ToDictionary(x => x.Key, x => (int)x.Value));
+        var featureMap = features.ToDictionary(x => x.Key, x => x.IsEnabled);
+        var limitMap   = limits.ToDictionary(x => x.Key, x => (int)x.Value);
+
+        // Build policies map: only include features with non-open (non-null) access policies.
+        var policyMap = features
+            .Where(x => !string.IsNullOrEmpty(x.AccessPolicy)
+                        && !x.AccessPolicy.Equals("open", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(x => x.Key, x => x.AccessPolicy!);
+
+        return new PlanEntitlements(featureMap, limitMap, policyMap);
     }
 
     private sealed record PlanEntitlements(
-        Dictionary<string, bool> Features,
-        Dictionary<string, int>  Limits)
+        Dictionary<string, bool>   Features,
+        Dictionary<string, int>    Limits,
+        Dictionary<string, string> Policies)
     {
         public bool Feat(string key)  => Features.TryGetValue(key, out var v) && v;
         public int  Limit(string key) => Limits.TryGetValue(key, out var v) ? v : 0;

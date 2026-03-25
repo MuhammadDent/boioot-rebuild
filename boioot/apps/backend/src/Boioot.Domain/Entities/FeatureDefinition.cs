@@ -53,4 +53,13 @@ public class FeatureDefinition : BaseEntity
 
     /// <summary>Display order in admin catalog and pricing pages. Lower = first.</summary>
     public int SortOrder { get; set; } = 0;
+
+    /// <summary>
+    /// Access policy for this feature. Controls how it can be activated.
+    /// "open"         = activates automatically with the subscription plan (default).
+    /// "admin_only"   = can only be granted by an admin — not self-serviceable.
+    /// "self_service" = user can toggle this themselves (within plan limits).
+    /// Null defaults to "open".
+    /// </summary>
+    public string? AccessPolicy { get; set; }
 }
