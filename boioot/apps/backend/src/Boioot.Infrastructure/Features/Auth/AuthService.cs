@@ -269,6 +269,80 @@ public class AuthService : IAuthService
         _logger.LogInformation("[LogoutAll] Revoked {Count} active token(s) for user {UserId}.", active.Count, userId);
     }
 
+    // ── Session management (Phase 1B) ─────────────────────────────────────────
+
+    public async Task<IReadOnlyList<SessionResponse>> GetSessionsAsync(
+        Guid userId,
+        string? currentTokenHash = null,
+        CancellationToken ct = default)
+    {
+        var now     = DateTime.UtcNow;
+        var records = await _context.UserRefreshTokens
+            .Where(t => t.UserId == userId)
+            .OrderByDescending(t => t.CreatedAtUtc)
+            .ToListAsync(ct);
+
+        return records.Select(t => new SessionResponse
+        {
+            Id           = t.Id,
+            IsCurrent    = currentTokenHash != null && t.TokenHash == currentTokenHash,
+            IsActive     = t.RevokedAtUtc == null && t.ExpiresAtUtc > now,
+            CreatedAtUtc = t.CreatedAtUtc,
+            ExpiresAtUtc = t.ExpiresAtUtc,
+            RevokedAtUtc = t.RevokedAtUtc,
+            CreatedByIp  = t.CreatedByIp,
+            UserAgent    = t.UserAgent,
+        }).ToList();
+    }
+
+    public async Task RevokeSessionByIdAsync(
+        Guid sessionId,
+        Guid userId,
+        string? ipAddress = null,
+        CancellationToken ct = default)
+    {
+        var token = await _context.UserRefreshTokens
+            .FirstOrDefaultAsync(t => t.Id == sessionId && t.UserId == userId, ct);
+
+        if (token is null)
+            throw new BoiootException("الجلسة غير موجودة أو لا تخصك", 404);
+
+        if (token.IsRevoked)
+            return; // already revoked — idempotent
+
+        token.RevokedAtUtc = DateTime.UtcNow;
+        token.RevokedByIp  = ipAddress;
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("[Sessions] Session {SessionId} revoked by user {UserId}.", sessionId, userId);
+    }
+
+    public async Task RevokeOtherSessionsAsync(
+        Guid userId,
+        string? currentTokenHash,
+        string? ipAddress = null,
+        CancellationToken ct = default)
+    {
+        var now    = DateTime.UtcNow;
+        var others = await _context.UserRefreshTokens
+            .Where(t => t.UserId == userId
+                        && t.RevokedAtUtc == null
+                        && t.ExpiresAtUtc > now
+                        && t.TokenHash != currentTokenHash)
+            .ToListAsync(ct);
+
+        foreach (var token in others)
+        {
+            token.RevokedAtUtc = now;
+            token.RevokedByIp  = ipAddress;
+        }
+
+        if (others.Count > 0)
+            await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("[Sessions] Revoked {Count} other session(s) for user {UserId}.", others.Count, userId);
+    }
+
     // ── Profile ───────────────────────────────────────────────────────────────
 
     public async Task<UserProfileResponse> GetProfileAsync(Guid userId, CancellationToken ct = default)

@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { AuthResponse, UserProfileResponse } from "@/types";
+import type { AuthResponse, UserProfileResponse, SessionResponse } from "@/types";
 
 export interface LoginPayload {
   email: string;
@@ -44,21 +44,22 @@ export const authApi = {
   },
 
   /**
-   * Exchange a refresh token for a new access + refresh token pair.
-   * Called automatically by the silent refresh flow in api.ts — consumers
-   * generally do not need to call this directly.
+   * Exchange the HttpOnly refresh cookie for a new access token.
+   * The cookie is sent automatically by the browser — no token in the body.
+   * Called automatically by the silent refresh flow in api.ts.
    */
-  refresh(refreshToken: string): Promise<AuthResponse> {
-    return api.post<AuthResponse>("/auth/refresh", { refreshToken });
+  refresh(): Promise<AuthResponse> {
+    return api.post<AuthResponse>("/auth/refresh", {});
   },
 
   /**
-   * Revoke the current refresh token (single device logout).
-   * Best-effort — UI should clear local session regardless of outcome.
+   * Revoke the current refresh cookie (single device logout).
+   * Server reads the cookie directly; no token needed in the body.
+   * Best-effort — UI clears local state regardless of outcome.
    */
-  async logout(refreshToken: string): Promise<void> {
+  async logout(): Promise<void> {
     try {
-      await api.post<void>("/auth/logout", { refreshToken });
+      await api.post<void>("/auth/logout", {});
     } catch {
       // Idempotent — server may already have revoked it
     }
@@ -66,7 +67,7 @@ export const authApi = {
 
   /**
    * Revoke ALL active refresh tokens for the current user (all devices).
-   * Requires a valid access token.
+   * Requires a valid access token (sent via Authorization header).
    */
   async logoutAll(): Promise<void> {
     try {
@@ -74,5 +75,19 @@ export const authApi = {
     } catch {
       // Best effort
     }
+  },
+
+  // ── Session management ────────────────────────────────────────────────────
+
+  getSessions(): Promise<SessionResponse[]> {
+    return api.get<SessionResponse[]>("/auth/sessions");
+  },
+
+  revokeSession(sessionId: string): Promise<void> {
+    return api.delete<void>(`/auth/sessions/${sessionId}`);
+  },
+
+  revokeOtherSessions(): Promise<void> {
+    return api.delete<void>("/auth/sessions/others");
   },
 };

@@ -49,9 +49,22 @@ export interface AuthResponse {
   token: string;
   tokenType: string;
   expiresAt: string;
-  refreshToken?: string;
-  refreshTokenExpiresAt?: string;
+  /** Phase 1B: always null — refresh token lives in HttpOnly cookie. */
+  refreshToken?: string | null;
+  /** Phase 1B: always null — expiry tracked server-side. */
+  refreshTokenExpiresAt?: string | null;
   user: UserProfileResponse;
+}
+
+export interface SessionResponse {
+  id: string;
+  isCurrent: boolean;
+  isActive: boolean;
+  createdAtUtc: string;
+  expiresAtUtc: string;
+  revokedAtUtc: string | null;
+  createdByIp: string | null;
+  userAgent: string | null;
 }
 
 export interface PagedResult<T> {

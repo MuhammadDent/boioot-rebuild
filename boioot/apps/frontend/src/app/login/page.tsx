@@ -35,13 +35,7 @@ export default function LoginPage() {
 
     try {
       const res = await authApi.login({ email, password, rememberMe });
-      login(
-        res.token,
-        res.user,
-        res.expiresAt,
-        res.refreshToken,
-        res.refreshTokenExpiresAt
-      );
+      login(res.token, res.user, res.expiresAt);
       // Resume the originating listing page if the user came from a protected action.
       const returnUrl = sessionStorage.getItem(AUTH_INTENT_KEY);
       sessionStorage.removeItem(AUTH_INTENT_KEY);

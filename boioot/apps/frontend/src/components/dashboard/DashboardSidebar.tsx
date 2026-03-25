@@ -73,14 +73,18 @@ const ICONS = {
   system: (
     <Ic d={<><circle cx="12" cy="12" r="3" /><path d="M19.07 4.93a10 10 0 0 1 1.41 13.4M4.93 19.07A10 10 0 0 1 3.52 5.67M19.07 19.07a10 10 0 0 1-13.4 1.41M5.67 3.52A10 10 0 0 1 19.07 4.93" /></>} />
   ),
+  sessions: (
+    <Ic d={<><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>} />
+  ),
 };
 
 // ─── Shared base items (لوحة + ملف + رسائل) ──────────────────────────────────
 
 const BASE: NavItem[] = [
-  { href: "/dashboard",         label: "لوحة التحكم",   exact: true,  icon: ICONS.dashboard },
-  { href: "/dashboard/profile", label: "الملف الشخصي",  exact: true,  icon: ICONS.profile   },
-  { href: "/dashboard/messages",label: "الرسائل",        exact: false, icon: ICONS.messages  },
+  { href: "/dashboard",          label: "لوحة التحكم",   exact: true,  icon: ICONS.dashboard },
+  { href: "/dashboard/profile",  label: "الملف الشخصي",  exact: true,  icon: ICONS.profile   },
+  { href: "/dashboard/sessions", label: "الجلسات النشطة", exact: true,  icon: ICONS.sessions  },
+  { href: "/dashboard/messages", label: "الرسائل",        exact: false, icon: ICONS.messages  },
 ];
 
 // ─── Per-role sidebar configuration ──────────────────────────────────────────

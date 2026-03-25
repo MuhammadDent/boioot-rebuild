@@ -10,8 +10,13 @@ public interface IAuthService
     Task<UserProfileResponse> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default);
     Task<UserProfileResponse> ChangeEmailAsync(Guid userId, ChangeEmailRequest request, CancellationToken ct = default);
 
-    // ── Phase 1A: Refresh token operations ───────────────────────────────────
+    // ── Refresh token operations (Phase 1A / 1B) ─────────────────────────────
     Task<AuthResponse> RefreshAsync(string refreshToken, string? ipAddress = null, string? userAgent = null, CancellationToken ct = default);
     Task RevokeRefreshTokenAsync(string refreshToken, string? ipAddress = null, CancellationToken ct = default);
     Task RevokeAllRefreshTokensAsync(Guid userId, string? ipAddress = null, CancellationToken ct = default);
+
+    // ── Phase 1B: Session management ─────────────────────────────────────────
+    Task<IReadOnlyList<SessionResponse>> GetSessionsAsync(Guid userId, string? currentTokenHash = null, CancellationToken ct = default);
+    Task RevokeSessionByIdAsync(Guid sessionId, Guid userId, string? ipAddress = null, CancellationToken ct = default);
+    Task RevokeOtherSessionsAsync(Guid userId, string? currentTokenHash, string? ipAddress = null, CancellationToken ct = default);
 }

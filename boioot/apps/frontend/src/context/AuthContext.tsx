@@ -20,12 +20,14 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
+  /**
+   * Called after a successful login or register response.
+   * Phase 1B: refresh token is in the HttpOnly cookie — do not pass it here.
+   */
   login: (
     token: string,
     user: UserProfileResponse,
-    expiresAt?: string,
-    refreshToken?: string,
-    refreshTokenExpiresAt?: string
+    expiresAt?: string
   ) => void;
   logout: () => void;
   setUser: (user: UserProfileResponse) => void;
@@ -59,10 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // ── App startup cleanup ────────────────────────────────────────────────
-    // Clears expired sessions. Keeps the session alive if the access token
-    // is expired but the refresh token is still valid (silent refresh handles it).
-    const wasExpired = cleanExpiredSession();
-    if (wasExpired) {
+    // Phase 1B: cleanExpiredSession() only clears when NO access token is
+    // stored. If the access token is expired the cookie-based silent refresh
+    // will renew it on the next protected API call.
+    const hadNoSession = cleanExpiredSession();
+    if (hadNoSession) {
       setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
       return;
     }
@@ -85,30 +88,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    (
-      token: string,
-      user: UserProfileResponse,
-      expiresAt?: string,
-      refreshToken?: string,
-      refreshTokenExpiresAt?: string
-    ) => {
+    (token: string, user: UserProfileResponse, expiresAt?: string) => {
       tokenStorage.setToken(token);
       tokenStorage.setUser(user);
-      if (expiresAt)              tokenStorage.setExpiresAt(expiresAt);
-      if (refreshToken)           tokenStorage.setRefreshToken(refreshToken);
-      if (refreshTokenExpiresAt)  tokenStorage.setRefreshTokenExpiresAt(refreshTokenExpiresAt);
+      if (expiresAt) tokenStorage.setExpiresAt(expiresAt);
       setState({ user, token, isLoading: false, isAuthenticated: true });
     },
     []
   );
 
   const logout = useCallback(() => {
-    // Best-effort server-side revocation of the refresh token
-    const refreshToken = tokenStorage.getRefreshToken();
-    if (refreshToken) {
-      authApi.logout(refreshToken).catch(() => {});
-    }
-
+    // Best-effort server-side revocation (server reads HttpOnly cookie)
+    authApi.logout().catch(() => {});
     tokenStorage.clear();
     setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
   }, []);
@@ -118,10 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, user }));
   }, []);
 
-  /**
-   * Single permission check path — no role shortcuts.
-   * All users (including Admin) are evaluated against their permissions[].
-   */
   const hasPermission = useCallback(
     (permission: string): boolean => {
       if (!state.user) return false;
@@ -130,9 +117,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [state.user]
   );
 
-  /**
-   * Returns true if the user holds at least one of the listed permissions.
-   */
   const hasAnyPermission = useCallback(
     (permissions: string[]): boolean => {
       if (!state.user) return false;

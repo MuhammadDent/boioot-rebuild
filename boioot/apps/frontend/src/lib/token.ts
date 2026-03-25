@@ -1,8 +1,11 @@
-const TOKEN_KEY                  = "boioot_token";
-const USER_KEY                   = "boioot_user";
-const EXPIRES_KEY                = "boioot_expires_at";
-const REFRESH_TOKEN_KEY          = "boioot_refresh_token";
-const REFRESH_TOKEN_EXPIRES_KEY  = "boioot_refresh_token_expires_at";
+const TOKEN_KEY    = "boioot_token";
+const USER_KEY     = "boioot_user";
+const EXPIRES_KEY  = "boioot_expires_at";
+
+// Phase 1B: refresh token is now an HttpOnly cookie — never stored in JS.
+// These keys are listed here only for the one-time migration cleanup below.
+const _LEGACY_REFRESH_TOKEN_KEY         = "boioot_refresh_token";
+const _LEGACY_REFRESH_TOKEN_EXPIRES_KEY = "boioot_refresh_token_expires_at";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -12,8 +15,6 @@ export const tokenStorage = {
   TOKEN_KEY,
   USER_KEY,
   EXPIRES_KEY,
-  REFRESH_TOKEN_KEY,
-  REFRESH_TOKEN_EXPIRES_KEY,
 
   // ── Access Token ──────────────────────────────────────────
   getToken(): string | null {
@@ -49,30 +50,6 @@ export const tokenStorage = {
   },
   removeExpiresAt(): void {
     localStorage.removeItem(EXPIRES_KEY);
-  },
-
-  // ── Refresh Token ─────────────────────────────────────────
-  getRefreshToken(): string | null {
-    if (!isBrowser()) return null;
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
-  },
-  setRefreshToken(token: string): void {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token);
-  },
-  removeRefreshToken(): void {
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-  },
-
-  // ── Refresh Token Expiry ──────────────────────────────────
-  getRefreshTokenExpiresAt(): string | null {
-    if (!isBrowser()) return null;
-    return localStorage.getItem(REFRESH_TOKEN_EXPIRES_KEY);
-  },
-  setRefreshTokenExpiresAt(expiresAt: string): void {
-    localStorage.setItem(REFRESH_TOKEN_EXPIRES_KEY, expiresAt);
-  },
-  removeRefreshTokenExpiresAt(): void {
-    localStorage.removeItem(REFRESH_TOKEN_EXPIRES_KEY);
   },
 
   /**
@@ -123,54 +100,44 @@ export const tokenStorage = {
     return this.isExpired();
   },
 
-  /** Returns true if the refresh token is absent or expired. */
-  isRefreshTokenExpired(): boolean {
-    const raw = this.getRefreshTokenExpiresAt();
-    if (!raw) return true;
-    const d = new Date(raw);
-    if (isNaN(d.getTime())) return true;
-    return d <= new Date();
-  },
-
   // ── Clear all ─────────────────────────────────────────────
   clear(): void {
     this.removeToken();
     this.removeUser();
     this.removeExpiresAt();
-    this.removeRefreshToken();
-    this.removeRefreshTokenExpiresAt();
+    // Also purge any Phase 1A legacy refresh token keys that may be in storage
+    localStorage.removeItem(_LEGACY_REFRESH_TOKEN_KEY);
+    localStorage.removeItem(_LEGACY_REFRESH_TOKEN_EXPIRES_KEY);
   },
 };
 
 /**
  * App startup cleanup.
  *
- * Clears the session ONLY when there is no valid path to recovery:
- *  - No tokens stored at all.
- *  - Access token expired AND refresh token also expired/absent.
+ * Phase 1B: refresh token lives in an HttpOnly cookie — we cannot inspect it
+ * from JavaScript. Startup cleanup only clears when there is no access token
+ * stored at all. If the access token is expired, we leave it in place; the
+ * silent refresh flow will exchange the cookie for a fresh access token on the
+ * first protected API call.
  *
- * If the access token is expired but the refresh token is still valid,
- * the session is kept alive — silent refresh will renew it on the next request.
+ * Also purges any Phase 1A legacy refresh token keys from localStorage.
  *
- * Returns true if a cleanup was performed.
+ * Returns true if a full cleanup was performed (i.e. the user has no session).
  */
 export function cleanExpiredSession(): boolean {
-  const hasToken        = !!tokenStorage.getToken();
-  const accessExpired   = tokenStorage.isExpired();
-  const hasRefresh      = !!tokenStorage.getRefreshToken();
-  const refreshExpired  = tokenStorage.isRefreshTokenExpired();
+  if (!isBrowser()) return false;
 
+  // Remove Phase 1A legacy keys unconditionally
+  localStorage.removeItem(_LEGACY_REFRESH_TOKEN_KEY);
+  localStorage.removeItem(_LEGACY_REFRESH_TOKEN_EXPIRES_KEY);
+
+  const hasToken = !!tokenStorage.getToken();
   if (!hasToken) {
-    // Nothing stored → ensure everything is clear
     tokenStorage.clear();
     return true;
   }
 
-  if (accessExpired && (!hasRefresh || refreshExpired)) {
-    // Access expired and no way to refresh → clear everything
-    tokenStorage.clear();
-    return true;
-  }
-
+  // Access token present (even if expired) → keep the session alive.
+  // The cookie-based silent refresh will handle renewal on next API call.
   return false;
 }
