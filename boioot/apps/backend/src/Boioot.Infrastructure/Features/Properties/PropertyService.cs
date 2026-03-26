@@ -237,9 +237,21 @@ public class PropertyService : IPropertyService
         {
             var canCreate = await _entitlement.CanCreatePropertyAsync(accountId.Value, ct);
             if (!canCreate)
+            {
+                var planLimit   = (int)await _entitlement.GetLimitAsync(accountId.Value, SubscriptionKeys.MaxActiveListings, ct);
+                var activeCount = await _context.Properties
+                    .Where(p => p.AccountId == accountId.Value
+                             && p.IsDeleted == false
+                             && (p.Status == PropertyStatus.Available || p.Status == PropertyStatus.Inactive))
+                    .CountAsync(ct);
+                var planCode    = await _entitlement.GetActivePlanCodeAsync(accountId.Value, ct);
                 throw new PlanLimitException(
                     SubscriptionKeys.MaxActiveListings,
-                    "لقد وصلت إلى الحد الأقصى من الإعلانات في خطتك الحالية. يرجى ترقية خطتك للمتابعة.");
+                    "لقد وصلت إلى الحد الأقصى من الإعلانات في خطتك الحالية. يرجى ترقية خطتك للمتابعة.",
+                    currentValue:      activeCount,
+                    planLimit:         planLimit,
+                    suggestedPlanCode: SubscriptionKeys.GetOfficeSuggestedUpgrade(planCode));
+            }
 
             // Enforce video_upload feature + max_videos_per_listing limit
             if (!string.IsNullOrWhiteSpace(request.VideoUrl))

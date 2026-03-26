@@ -77,6 +77,9 @@ public class BoiootDbContext : DbContext
     public DbSet<VerificationRequest>  VerificationRequests  => Set<VerificationRequest>();
     public DbSet<VerificationDocument> VerificationDocuments => Set<VerificationDocument>();
 
+    // ── Monetization Phase 1 ──────────────────────────────────────────────────
+    public DbSet<LeadUnlock> LeadUnlocks => Set<LeadUnlock>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BoiootDbContext).Assembly);

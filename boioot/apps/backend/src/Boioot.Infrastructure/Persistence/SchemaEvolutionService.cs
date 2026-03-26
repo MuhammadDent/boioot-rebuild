@@ -61,6 +61,7 @@ public sealed class SchemaEvolutionService
         await ApplyPlanFeaturePatchesAsync(ct);
         await ApplyUserTagsPatchesAsync(ct);
         await ApplyVerificationRequestsPatchesAsync(ct);
+        await ApplyMonetizationPhase1PatchesAsync(ct);
 
         await ApplySqliteIndexPatchesAsync(ct);
         await ApplyWalCheckpointAsync(ct);
@@ -538,6 +539,64 @@ public sealed class SchemaEvolutionService
 
         await TryExec(@"CREATE INDEX IF NOT EXISTS IX_VerificationDocuments_RequestId
             ON ""VerificationDocuments""(""VerificationRequestId"")", ct, warnOnError: true);
+    }
+
+    // ── Monetization Phase 1 (Lead Unlock table + correct office plan limits) ──
+
+    private async Task ApplyMonetizationPhase1PatchesAsync(CancellationToken ct)
+    {
+        // Create LeadUnlocks table (idempotent — CREATE TABLE IF NOT EXISTS)
+        await TryExec(@"
+            CREATE TABLE IF NOT EXISTS LeadUnlocks (
+                Id                TEXT NOT NULL PRIMARY KEY,
+                UnlockerAccountId TEXT NOT NULL,
+                PropertyId        TEXT NOT NULL,
+                UnlockType        TEXT NOT NULL DEFAULT 'PerLead',
+                UnlockedAt        TEXT NOT NULL DEFAULT (datetime('now')),
+                ExpiresAt         TEXT,
+                PricePaid         REAL,
+                CreatedAt         TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (PropertyId) REFERENCES Properties(Id)
+            )", ct, warnOnError: true);
+
+        await TryExec(@"CREATE INDEX IF NOT EXISTS IX_LeadUnlocks_UnlockerAccountId
+            ON LeadUnlocks(UnlockerAccountId)", ct, warnOnError: true);
+        await TryExec(@"CREATE INDEX IF NOT EXISTS IX_LeadUnlocks_PropertyId
+            ON LeadUnlocks(PropertyId)", ct, warnOnError: true);
+        await TryExec(@"CREATE INDEX IF NOT EXISTS IX_LeadUnlocks_Account_Month
+            ON LeadUnlocks(UnlockerAccountId, UnlockedAt)", ct, warnOnError: true);
+
+        // ── Correct office_free (00000008) limits to Phase 1 target values ──────
+        // Previously seeded as 100 listings / 20 agents; corrected to 3 / 1.
+        await TryExec(@"
+            UPDATE PlanLimits
+            SET Value = 3
+            WHERE SubscriptionPlanId = '00000008-0000-0000-0000-000000000000'
+              AND LimitDefinitionId  = 'add00001-0000-0000-0000-000000000000'",
+            ct, warnOnError: true);
+
+        await TryExec(@"
+            UPDATE PlanLimits
+            SET Value = 1
+            WHERE SubscriptionPlanId = '00000008-0000-0000-0000-000000000000'
+              AND LimitDefinitionId  = 'add00002-0000-0000-0000-000000000000'",
+            ct, warnOnError: true);
+
+        // ── Correct office_basic (00000009) limits ────────────────────────────
+        // Previously seeded as -1 (unlimited); corrected to 20 / 5.
+        await TryExec(@"
+            UPDATE PlanLimits
+            SET Value = 20
+            WHERE SubscriptionPlanId = '00000009-0000-0000-0000-000000000000'
+              AND LimitDefinitionId  = 'add00001-0000-0000-0000-000000000000'",
+            ct, warnOnError: true);
+
+        await TryExec(@"
+            UPDATE PlanLimits
+            SET Value = 5
+            WHERE SubscriptionPlanId = '00000009-0000-0000-0000-000000000000'
+              AND LimitDefinitionId  = 'add00002-0000-0000-0000-000000000000'",
+            ct, warnOnError: true);
     }
 
     // ── Helper methods ────────────────────────────────────────────────────────

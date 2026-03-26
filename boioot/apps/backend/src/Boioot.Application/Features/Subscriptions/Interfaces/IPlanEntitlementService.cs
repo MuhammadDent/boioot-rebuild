@@ -101,4 +101,10 @@ public interface IPlanEntitlementService
     /// Call this before allowing any user-initiated action on policy-gated features.
     /// </summary>
     Task EnsurePolicyAllowedAsync(Guid accountId, string featureKey, string userMessage, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the Code of the currently active plan for the account, or null when no active subscription.
+    /// Used by enforcement points to build suggestedPlanCode in PlanLimitException.
+    /// </summary>
+    Task<string?> GetActivePlanCodeAsync(Guid accountId, CancellationToken ct = default);
 }

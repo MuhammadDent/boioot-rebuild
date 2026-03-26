@@ -360,4 +360,17 @@ public class PlanEntitlementService : IPlanEntitlementService
 
         return projectCount < (int)limit;
     }
+
+    // ── GetActivePlanCodeAsync ────────────────────────────────────────────────
+    public async Task<string?> GetActivePlanCodeAsync(Guid accountId, CancellationToken ct = default)
+    {
+        var planId = await GetActivePlanIdAsync(accountId, ct);
+        if (planId is null) return null;
+
+        return await _db.Plans
+            .AsNoTracking()
+            .Where(p => p.Id == planId.Value)
+            .Select(p => p.Code)
+            .FirstOrDefaultAsync(ct);
+    }
 }

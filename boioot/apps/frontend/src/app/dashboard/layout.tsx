@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getRoleCategory } from "@/features/admin/constants";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import UpsellModal from "@/components/dashboard/UpsellModal";
 
 // ─── DashboardLayout ──────────────────────────────────────────────────────────
 //
@@ -67,6 +68,7 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+      <UpsellModal />
     </div>
   );
 }

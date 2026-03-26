@@ -115,6 +115,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISiteContentService, SiteContentService>();
         services.AddScoped<IVerificationRequestService, VerificationRequestService>();
 
+        // ── Monetization Phase 1 ─────────────────────────────────────────────
+        services.AddScoped<Boioot.Application.Features.LeadUnlocks.ILeadUnlockService,
+                           Boioot.Infrastructure.Features.LeadUnlocks.LeadUnlockService>();
+
         // ── Billing providers ──────────────────────────────────────────────────
         // Both registered as IBillingProvider — BillingService injects IEnumerable<IBillingProvider>
         // and selects the correct one based on the plan's BillingMode field.

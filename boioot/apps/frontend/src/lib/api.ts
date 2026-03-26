@@ -14,6 +14,33 @@ export class ApiError extends Error {
   }
 }
 
+// Thrown (and also dispatched as a DOM CustomEvent) when the backend returns
+// HTTP 422 with errorCode === "PLAN_LIMIT_EXCEEDED".
+export interface PlanLimitPayload {
+  code:              string;  // "PLAN_LIMIT_EXCEEDED"
+  limitKey:          string;
+  message:           string;
+  upgradeRequired:   boolean;
+  currentValue?:     number;
+  planLimit?:        number;
+  suggestedPlanCode?: string;
+}
+
+export class PlanLimitError extends ApiError {
+  public readonly planPayload: PlanLimitPayload;
+  constructor(payload: PlanLimitPayload) {
+    super(payload.message, 422, payload);
+    this.name = "PlanLimitError";
+    this.planPayload = payload;
+  }
+}
+
+// Dispatch a "upsell:trigger" CustomEvent on window so any mounted modal can pick it up.
+function dispatchUpsellTrigger(payload: PlanLimitPayload): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("upsell:trigger", { detail: payload }));
+}
+
 export class NetworkError extends Error {
   constructor() {
     super("تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.");
@@ -152,6 +179,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const payload = await res.json().catch(() => null);
+
+    // ── Plan limit interception ──────────────────────────────────────────────
+    if (res.status === 422 && payload?.code === "PLAN_LIMIT_EXCEEDED") {
+      const planPayload = payload as PlanLimitPayload;
+      dispatchUpsellTrigger(planPayload);
+      throw new PlanLimitError(planPayload);
+    }
+
     const message =
       payload?.error ?? payload?.message ?? payload?.title ?? "حدث خطأ غير متوقع";
     throw new ApiError(message, res.status, payload);
@@ -240,6 +275,14 @@ export const api = {
 
     if (!res.ok) {
       const payload = await res.json().catch(() => null);
+
+      // ── Plan limit interception ────────────────────────────────────────────
+      if (res.status === 422 && payload?.code === "PLAN_LIMIT_EXCEEDED") {
+        const planPayload = payload as PlanLimitPayload;
+        dispatchUpsellTrigger(planPayload);
+        throw new PlanLimitError(planPayload);
+      }
+
       const message =
         payload?.error ?? payload?.message ?? "حدث خطأ أثناء رفع الملف";
       throw new ApiError(message, res.status, payload);

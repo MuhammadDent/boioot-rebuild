@@ -16,6 +16,7 @@ public static class SubscriptionKeys
     public const string MaxFeaturedSlots     = "max_featured_slots";
 
     public const string MaxConversations     = "max_conversations";
+    public const string MonthlyLeadUnlocks   = "monthly_lead_unlocks";
 
     // ── Feature keys ──────────────────────────────────────────────────────
     public const string AnalyticsDashboard   = "analytics_dashboard";
@@ -36,4 +37,15 @@ public static class SubscriptionKeys
     public const string PolicyOpen        = "open";
     public const string PolicySelfService = "self_service";
     public const string PolicyAdminOnly   = "admin_only";
+
+    // ── Office tier upgrade path ──────────────────────────────────────────
+    /// <summary>
+    /// Returns the next plan code in the office upgrade path.
+    /// Returns "office_basic" as a safe default when plan is unknown or free.
+    /// </summary>
+    public static string GetOfficeSuggestedUpgrade(string? currentPlanCode) => currentPlanCode switch
+    {
+        "office_basic" => "office_advanced",
+        _              => "office_basic",
+    };
 }

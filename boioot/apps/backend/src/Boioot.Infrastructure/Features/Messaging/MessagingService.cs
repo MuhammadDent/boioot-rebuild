@@ -84,9 +84,13 @@ public class MessagingService : IMessagingService
                     _logger.LogWarning(
                         "[Enforcement] LimitExceeded — max_conversations={Limit} reached for userId={UserId} (current={Count})",
                         limit, userId, currentCount);
+                    var planCode = await _entitlement.GetActivePlanCodeAsync(acctIdForLimit.Value, ct);
                     throw new Boioot.Application.Exceptions.PlanLimitException(
                         SubscriptionKeys.MaxConversations,
-                        $"لقد وصلت إلى الحد الأقصى من المحادثات ({limit}) في باقتك الحالية. يرجى ترقية باقتك للمزيد.");
+                        $"لقد وصلت إلى الحد الأقصى من المحادثات ({limit}) في باقتك الحالية. يرجى ترقية باقتك للمزيد.",
+                        currentValue:      currentCount,
+                        planLimit:         (int)limit,
+                        suggestedPlanCode: SubscriptionKeys.GetOfficeSuggestedUpgrade(planCode));
                 }
             }
         }

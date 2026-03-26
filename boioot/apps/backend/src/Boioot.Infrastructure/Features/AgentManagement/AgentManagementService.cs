@@ -46,9 +46,15 @@ public class AgentManagementService : IAgentManagementService
         {
             var canAdd = await _entitlement.CanAddAgentAsync(accountId.Value, ct);
             if (!canAdd)
+            {
+                var planLimit = (int)await _entitlement.GetLimitAsync(accountId.Value, SubscriptionKeys.MaxAgents, ct);
+                var planCode  = await _entitlement.GetActivePlanCodeAsync(accountId.Value, ct);
                 throw new PlanLimitException(
                     SubscriptionKeys.MaxAgents,
-                    "لقد وصلت إلى الحد الأقصى لعدد الوكلاء في خطتك الحالية. يرجى ترقية خطتك لإضافة المزيد.");
+                    "لقد وصلت إلى الحد الأقصى لعدد الوكلاء في خطتك الحالية. يرجى ترقية خطتك لإضافة المزيد.",
+                    planLimit:         planLimit,
+                    suggestedPlanCode: SubscriptionKeys.GetOfficeSuggestedUpgrade(planCode));
+            }
         }
         // accountId == null → allow (no active account membership found)
 

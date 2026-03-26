@@ -217,7 +217,9 @@ public sealed class PlanCatalogSeeder
             // Value 0 = no video upload allowed; ≥1 = number of videos per listing.
             // Currently the property schema supports one VideoUrl field, so value is
             // either 0 (blocked) or 1 (allowed) for most plans.
-            LD("add00007-0000-0000-0000-000000000000", "max_videos_per_listing", "الحد الأقصى للفيديوهات لكل إعلان","عدد مقاطع الفيديو المسموح بها في الإعلان الواحد (0 = محجوب)", "فيديو", "integer", "listing"),
+            LD("add00007-0000-0000-0000-000000000000", "max_videos_per_listing",  "الحد الأقصى للفيديوهات لكل إعلان",  "عدد مقاطع الفيديو المسموح بها في الإعلان الواحد (0 = محجوب)", "فيديو",      "integer", "listing"),
+            LD("add00008-0000-0000-0000-000000000000", "max_conversations",        "الحد الأقصى للمحادثات",               "عدد المحادثات المتزامنة المسموح بها للحساب (-1 = غير محدود)",   "محادثة",     "integer", "account"),
+            LD("add00009-0000-0000-0000-000000000000", "monthly_lead_unlocks",     "فتح بيانات التواصل الشهري",           "عدد مرات كشف بيانات التواصل المسموح بها شهرياً (-1 = غير محدود)", "فتح",       "integer", "account"),
         };
 
         var newLDs = catalog.Where(l => !existing.Contains(l.Key)).ToList();
@@ -508,6 +510,8 @@ public sealed class PlanCatalogSeeder
         const string ld5 = "add00005-0000-0000-0000-000000000000"; // max_images_per_listing
         const string ld6 = "add00006-0000-0000-0000-000000000000"; // max_featured_slots
         const string ld7 = "add00007-0000-0000-0000-000000000000"; // max_videos_per_listing (0=blocked)
+        const string ld8 = "add00008-0000-0000-0000-000000000000"; // max_conversations
+        const string ld9 = "add00009-0000-0000-0000-000000000000"; // monthly_lead_unlocks
 
         const string p01 = "00000001-0000-0000-0000-000000000000";
         const string p02 = "00000002-0000-0000-0000-000000000000";
@@ -633,6 +637,16 @@ public sealed class PlanCatalogSeeder
             PL("c6000005-0000-0000-0000-000000000000", p0d, ld5,  -1),
             PL("c6000006-0000-0000-0000-000000000000", p0d, ld6,  30),
             PL("c6000007-0000-0000-0000-000000000000", p0d, ld7,   3),
+            // ── Phase 1: max_conversations + monthly_lead_unlocks (ld8/ld9) ──────
+            // office_free  (08): 10 conversations, 0 lead unlocks/month
+            PL("c7000001-0000-0000-0000-000000000000", p08, ld8,  10),
+            PL("c7000002-0000-0000-0000-000000000000", p08, ld9,   0),
+            // office_basic (09): 50 conversations, 10 lead unlocks/month
+            PL("c7000003-0000-0000-0000-000000000000", p09, ld8,  50),
+            PL("c7000004-0000-0000-0000-000000000000", p09, ld9,  10),
+            // office_advanced (0d): unlimited conversations, unlimited lead unlocks
+            PL("c7000005-0000-0000-0000-000000000000", p0d, ld8,  -1),
+            PL("c7000006-0000-0000-0000-000000000000", p0d, ld9,  -1),
         };
     }
 

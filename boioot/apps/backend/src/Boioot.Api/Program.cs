@@ -123,10 +123,13 @@ app.UseExceptionHandler(errorApp =>
             context.Response.StatusCode = planEx.StatusCode;
             await context.Response.WriteAsJsonAsync(new
             {
-                code            = planEx.ErrorCode,
-                limit           = planEx.LimitKey,
-                message         = planEx.Message,
-                upgradeRequired = planEx.UpgradeRequired,
+                code              = planEx.ErrorCode,
+                limitKey          = planEx.LimitKey,
+                currentValue      = planEx.CurrentValue,
+                planLimit         = planEx.PlanLimit,
+                suggestedPlanCode = planEx.SuggestedPlanCode,
+                message           = planEx.Message,
+                upgradeRequired   = planEx.UpgradeRequired,
             });
         }
         else if (error is BoiootException boiootEx)
