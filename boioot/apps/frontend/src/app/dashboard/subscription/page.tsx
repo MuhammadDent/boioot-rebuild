@@ -358,7 +358,7 @@ function FreePlanDisplay() {
       {/* Upgrade paths */}
       <div style={{ marginBottom: "0.75rem" }}>
         <h2 style={{ margin: "0 0 0.35rem", fontSize: "1rem", fontWeight: 800, color: "#1a2e1a" }}>
-          ترقية الحساب
+          الباقات المتاحة
         </h2>
         <p style={{ margin: 0, fontSize: "0.83rem", color: "#64748b" }}>
           اختر نوع الحساب المناسب لنشاطك وابدأ رحلتك العقارية على بويوت
@@ -418,7 +418,7 @@ function FreePlanDisplay() {
                 fontSize: "0.82rem",
                 fontWeight: 700,
               }}>
-                ترقية الحساب ←
+                عرض الباقات ←
               </span>
             </div>
           </Link>

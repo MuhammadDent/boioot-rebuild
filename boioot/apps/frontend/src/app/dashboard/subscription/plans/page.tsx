@@ -790,9 +790,8 @@ function FreeSuccessModal({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-// Audience tab options shown to User role
+// Audience tab options shown to User role (seeker excluded — they're already on free tier)
 const USER_AUDIENCE_TABS: Array<{ key: string; label: string; icon: string }> = [
-  { key: "seeker",  label: "باحث عن عقار",       icon: "🔍" },
   { key: "owner",   label: "مالك عقار",           icon: "🏠" },
   { key: "broker",  label: "وسيط عقاري",          icon: "🤝" },
   { key: "office",  label: "مكتب عقاري",           icon: "🏢" },
@@ -818,11 +817,11 @@ export default function PlansPage() {
   const [freeActivatingId, setFreeActivatingId]   = useState<string | null>(null);
   const [freeSuccessPlan, setFreeSuccessPlan]     = useState<string | null>(null);
 
-  // Audience tab for User role — initialized from ?audience= query param (client-side)
-  const [userAudienceTab, setUserAudienceTab] = useState<string>("seeker");
+  // Audience tab for User role — initialized from ?audience= query param (client-side), defaults to "owner"
+  const [userAudienceTab, setUserAudienceTab] = useState<string>("owner");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const aud = params.get("audience") ?? "seeker";
+    const aud = params.get("audience") ?? "owner";
     if (USER_AUDIENCE_TABS.some(t => t.key === aud)) {
       setUserAudienceTab(aud);
     }
@@ -891,12 +890,10 @@ export default function PlansPage() {
       {/* Page header */}
       <div style={{ marginBottom: "1.75rem" }}>
         <h1 style={{ margin: 0, fontSize: "1.65rem", fontWeight: 800, color: "#1a2e1a" }}>
-          {isRegularUser ? "ترقية الحساب" : "باقات الاشتراك"}
+          باقات الاشتراك
         </h1>
         <p style={{ margin: "0.3rem 0 0", fontSize: "0.875rem", color: "#64748b" }}>
-          {isRegularUser
-            ? "اختر نوع الحساب المناسب لنشاطك وتصفّح الباقات المتاحة"
-            : "اختر الباقة المناسبة لنشاطك العقاري وابدأ الاشتراك الآن"}
+          اختر الباقة المناسبة لنشاطك العقاري وابدأ الاشتراك الآن
         </p>
       </div>
 
@@ -910,7 +907,7 @@ export default function PlansPage() {
             fontWeight: 600,
             letterSpacing: "0.03em",
           }}>
-            نوع الحساب
+            اختر نوع الباقة التي تريد الاشتراك بها
           </p>
           <div style={{
             display: "flex",
@@ -945,19 +942,17 @@ export default function PlansPage() {
               );
             })}
           </div>
-          {userAudienceTab !== "seeker" && (
-            <div style={{
-              marginTop: "0.75rem",
-              padding: "0.65rem 0.9rem",
-              backgroundColor: "#fffbeb",
-              border: "1.5px solid #fcd34d",
-              borderRadius: 9,
-              fontSize: "0.8rem",
-              color: "#92400e",
-            }}>
-              💡 بعد إتمام الدفع وتأكيده من فريق بويوت، سيتم ترقية نوع حسابك تلقائياً خلال 24 ساعة.
-            </div>
-          )}
+          <div style={{
+            marginTop: "0.75rem",
+            padding: "0.65rem 0.9rem",
+            backgroundColor: "#fffbeb",
+            border: "1.5px solid #fcd34d",
+            borderRadius: 9,
+            fontSize: "0.8rem",
+            color: "#92400e",
+          }}>
+            💡 بعد إتمام الدفع وتأكيده من فريق بويوت، سيتم ترقية نوع حسابك تلقائياً خلال 24 ساعة.
+          </div>
         </div>
       )}
 
