@@ -20,6 +20,48 @@ const ADD_NEW = "__add_new__";
 interface LocationCity { id: string; name: string; province: string; }
 interface LocationNeighborhood { id: string; name: string; city: string; }
 
+// ─── Safe location helpers ────────────────────────────────────────────────────
+
+/** Returns a trimmed string, never undefined/null. */
+function safeStr(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
+
+/** Locale-aware sort comparator that never crashes on missing names. */
+function safeLocaleCompare(a: string, b: string): number {
+  return (a || "").localeCompare(b || "", "ar");
+}
+
+/** Normalize a raw API city object — guarantees id + name are non-empty strings. */
+function normalizeCity(raw: Partial<LocationCity>, fallbackProvince: string): LocationCity | null {
+  const id   = safeStr(raw?.id);
+  const name = safeStr(raw?.name);
+  if (!id || !name) return null;
+  return { id, name, province: safeStr(raw?.province) || fallbackProvince };
+}
+
+/** Normalize a raw API neighborhood object. */
+function normalizeNeighborhood(raw: Partial<LocationNeighborhood>, fallbackCity: string): LocationNeighborhood | null {
+  const id   = safeStr(raw?.id);
+  const name = safeStr(raw?.name);
+  if (!id || !name) return null;
+  return { id, name, city: safeStr(raw?.city) || fallbackCity };
+}
+
+/** Deduplicate + sort an array of cities by name (safe). */
+function mergeCities(existing: LocationCity[], incoming: LocationCity): LocationCity[] {
+  const nameKey = incoming.name.toLowerCase();
+  const filtered = existing.filter(c => (c.name || "").toLowerCase() !== nameKey);
+  return [...filtered, incoming].sort((a, b) => safeLocaleCompare(a.name, b.name));
+}
+
+/** Deduplicate + sort an array of neighborhoods by name (safe). */
+function mergeNeighborhoods(existing: LocationNeighborhood[], incoming: LocationNeighborhood): LocationNeighborhood[] {
+  const nameKey = incoming.name.toLowerCase();
+  const filtered = existing.filter(n => (n.name || "").toLowerCase() !== nameKey);
+  return [...filtered, incoming].sort((a, b) => safeLocaleCompare(a.name, b.name));
+}
+
 // ─── Inline "Add new" field ───────────────────────────────────────────────────
 function AddNewField({
   placeholder,
@@ -125,7 +167,13 @@ export default function NewBuyerRequestPage() {
     if (!province) { setCities([]); return; }
     setCitiesLoading(true);
     api.get<LocationCity[]>(`/locations/cities?province=${encodeURIComponent(province)}`)
-      .then(data => setCities(Array.isArray(data) ? data : []))
+      .then(data => {
+        const safe = Array.isArray(data)
+          ? (data.map(c => normalizeCity(c, province)).filter(Boolean) as LocationCity[])
+              .sort((a, b) => safeLocaleCompare(a.name, b.name))
+          : [];
+        setCities(safe);
+      })
       .catch(() => setCities([]))
       .finally(() => setCitiesLoading(false));
   }, [province]);
@@ -137,7 +185,13 @@ export default function NewBuyerRequestPage() {
     if (!selectedCityName) { setNeighborhoods([]); return; }
     setNeighborhoodsLoading(true);
     api.get<LocationNeighborhood[]>(`/locations/neighborhoods?city=${encodeURIComponent(selectedCityName)}`)
-      .then(data => setNeighborhoods(Array.isArray(data) ? data : []))
+      .then(data => {
+        const safe = Array.isArray(data)
+          ? (data.map(n => normalizeNeighborhood(n, selectedCityName)).filter(Boolean) as LocationNeighborhood[])
+              .sort((a, b) => safeLocaleCompare(a.name, b.name))
+          : [];
+        setNeighborhoods(safe);
+      })
       .catch(() => setNeighborhoods([]))
       .finally(() => setNeighborhoodsLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,8 +216,9 @@ export default function NewBuyerRequestPage() {
         "/locations/cities",
         { name, province },
       );
-      const newCity: LocationCity = { id: result.id, name: result.name, province: result.province ?? province };
-      setCities(prev => [...prev.filter(c => c.name !== newCity.name), newCity].sort((a, b) => a.name.localeCompare(b.name, "ar")));
+      const newCity = normalizeCity(result, province);
+      if (!newCity) throw new Error("استجابة غير صالحة من الخادم");
+      setCities(prev => mergeCities(prev, newCity));
       setCityValue(newCity.name);
       setAddingCity(false);
     } catch (e) {
@@ -189,8 +244,9 @@ export default function NewBuyerRequestPage() {
         "/locations/neighborhoods",
         { name, city: selectedCityName },
       );
-      const newN: LocationNeighborhood = { id: result.id, name: result.name, city: result.city };
-      setNeighborhoods(prev => [...prev.filter(n => n.name !== newN.name), newN].sort((a, b) => a.name.localeCompare(b.name, "ar")));
+      const newN = normalizeNeighborhood(result, selectedCityName);
+      if (!newN) throw new Error("استجابة غير صالحة من الخادم");
+      setNeighborhoods(prev => mergeNeighborhoods(prev, newN));
       setNeighborhoodValue(newN.name);
       setAddingNeighborhood(false);
     } catch (e) {

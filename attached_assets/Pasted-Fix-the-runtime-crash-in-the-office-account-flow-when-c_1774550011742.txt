@@ -1,0 +1,70 @@
+Fix the runtime crash in the office account flow when creating a new request and adding a new city.
+
+Current error:
+Cannot read properties of undefined (reading 'localeCompare')
+
+File:
+src/app/dashboard/my-requests/new/page.tsx
+
+Problem context:
+After adding a new city from the request creation screen, the page crashes when updating the cities list.
+The crash happens in the sort logic because some city items may have undefined/null name values.
+
+Required fix:
+1) Find the code that updates cities after creating a new city.
+2) Make the state update fully defensive:
+   - Never assume city.name exists
+   - Normalize city objects before inserting into state
+   - Filter out invalid city items
+   - Sort safely using fallback strings
+
+3) Replace any unsafe sorting like:
+   a.name.localeCompare(b.name)
+with a safe version like:
+   (a?.name ?? '').localeCompare(b?.name ?? '', 'ar')
+
+4) Ensure the new city object is normalized before inserting:
+   - id must exist
+   - name must be a trimmed string
+   - province should fallback correctly
+   - do not insert malformed items into cities state
+
+5) Prevent duplicates by city name using normalized comparison:
+   - trim
+   - lowercase if needed
+   - optionally Arabic normalization if already used in the project
+
+6) Make the UI continue smoothly after adding a city:
+   - city dropdown/list updates correctly
+   - selected city value becomes the new city
+   - modal/form closes normally
+   - no crash
+
+7) Audit the same page for any other unsafe localeCompare / sort / map usage on location data:
+   - cities
+   - districts
+   - provinces
+   - any request form location arrays
+
+8) Add safe utility helpers if needed, for example:
+   - safeString(value)
+   - safeLocaleCompare(a, b)
+   - normalizeLocationName(name)
+
+9) Keep behavior compatible with all user roles, especially office account.
+
+10) After fixing, verify this scenario:
+   - login as office account
+   - open create new request page
+   - add a new city
+   - city appears in list
+   - city is auto-selected
+   - page does not crash
+   - request form remains usable
+
+Implementation quality requirements:
+- Do not patch only one line superficially
+- Fix root cause and harden the location state handling
+- Keep TypeScript types strict
+- Avoid breaking existing location master data flow
+- Return the exact changed code blocks and explain root cause briefly
