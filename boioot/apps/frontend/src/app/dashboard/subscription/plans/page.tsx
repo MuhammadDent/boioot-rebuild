@@ -790,6 +790,15 @@ function FreeSuccessModal({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+// Audience tab options shown to User role
+const USER_AUDIENCE_TABS: Array<{ key: string; label: string; icon: string }> = [
+  { key: "seeker",  label: "باحث عن عقار",       icon: "🔍" },
+  { key: "owner",   label: "مالك عقار",           icon: "🏠" },
+  { key: "broker",  label: "وسيط عقاري",          icon: "🤝" },
+  { key: "office",  label: "مكتب عقاري",           icon: "🏢" },
+  { key: "company", label: "شركة تطوير عقاري",    icon: "🏗️" },
+];
+
 export default function PlansPage() {
   const { user, isLoading } = useProtectedRoute();
   const router = useRouter();
@@ -808,6 +817,16 @@ export default function PlansPage() {
 
   const [freeActivatingId, setFreeActivatingId]   = useState<string | null>(null);
   const [freeSuccessPlan, setFreeSuccessPlan]     = useState<string | null>(null);
+
+  // Audience tab for User role — initialized from ?audience= query param (client-side)
+  const [userAudienceTab, setUserAudienceTab] = useState<string>("seeker");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const aud = params.get("audience") ?? "seeker";
+    if (USER_AUDIENCE_TABS.some(t => t.key === aud)) {
+      setUserAudienceTab(aud);
+    }
+  }, []);
 
   const loadPlans = useCallback(async () => {
     setPlansLoading(true);
@@ -852,8 +871,12 @@ export default function PlansPage() {
 
   if (isLoading || !user) return null;
 
-  // Derive the audience type for this user and filter plans accordingly
-  const audienceType = getAudienceTypeForUser(user.role, currentSub?.audienceType);
+  // For User role, derive audience type from the tab selector (not the default seeker filter)
+  const isRegularUser  = user.role === "User";
+  const audienceType   = isRegularUser
+    ? userAudienceTab
+    : getAudienceTypeForUser(user.role, currentSub?.audienceType);
+
   const visiblePlans = filterPlansForAudience(plans, audienceType)
     .slice()
     .sort((a, b) => (a.displayOrder ?? a.rank) - (b.displayOrder ?? b.rank));
@@ -868,12 +891,75 @@ export default function PlansPage() {
       {/* Page header */}
       <div style={{ marginBottom: "1.75rem" }}>
         <h1 style={{ margin: 0, fontSize: "1.65rem", fontWeight: 800, color: "#1a2e1a" }}>
-          باقات الاشتراك
+          {isRegularUser ? "ترقية الحساب" : "باقات الاشتراك"}
         </h1>
         <p style={{ margin: "0.3rem 0 0", fontSize: "0.875rem", color: "#64748b" }}>
-          اختر الباقة المناسبة لنشاطك العقاري وابدأ الاشتراك الآن
+          {isRegularUser
+            ? "اختر نوع الحساب المناسب لنشاطك وتصفّح الباقات المتاحة"
+            : "اختر الباقة المناسبة لنشاطك العقاري وابدأ الاشتراك الآن"}
         </p>
       </div>
+
+      {/* Audience type tabs — shown only for User role */}
+      {isRegularUser && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <p style={{
+            margin: "0 0 0.65rem",
+            fontSize: "0.78rem",
+            color: "#94a3b8",
+            fontWeight: 600,
+            letterSpacing: "0.03em",
+          }}>
+            نوع الحساب
+          </p>
+          <div style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}>
+            {USER_AUDIENCE_TABS.map(tab => {
+              const isActive = userAudienceTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setUserAudienceTab(tab.key)}
+                  type="button"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0.5rem 1rem",
+                    borderRadius: 10,
+                    border: isActive ? "1.5px solid #1a2e1a" : "1.5px solid #e2e8f0",
+                    backgroundColor: isActive ? "#1a2e1a" : "#fff",
+                    color: isActive ? "#fff" : "#475569",
+                    fontSize: "0.85rem",
+                    fontWeight: isActive ? 700 : 500,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          {userAudienceTab !== "seeker" && (
+            <div style={{
+              marginTop: "0.75rem",
+              padding: "0.65rem 0.9rem",
+              backgroundColor: "#fffbeb",
+              border: "1.5px solid #fcd34d",
+              borderRadius: 9,
+              fontSize: "0.8rem",
+              color: "#92400e",
+            }}>
+              💡 بعد إتمام الدفع وتأكيده من فريق بويوت، سيتم ترقية نوع حسابك تلقائياً خلال 24 ساعة.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Current subscription banner */}
       {currentSub && (

@@ -264,6 +264,57 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* ════════════════════════════════════════════════════════════
+          بطاقة ترقية الحساب  (User role only)
+          ════════════════════════════════════════════════════════════ */}
+      {user.role === "User" && (
+        <div style={{ marginBottom: "1.75rem" }}>
+          <div style={{
+            background: "linear-gradient(135deg, #1a2e1a 0%, #0d4a2e 100%)",
+            borderRadius: 16,
+            padding: "1.35rem 1.5rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "1rem",
+          }}>
+            <div>
+              <p style={{ margin: "0 0 0.25rem", fontSize: "0.78rem", color: "#86efac", fontWeight: 600 }}>
+                أنت على الباقة المجانية
+              </p>
+              <h3 style={{ margin: "0 0 0.3rem", fontSize: "1.05rem", fontWeight: 800, color: "#fff" }}>
+                ترقية الحساب — انشر عقاراتك الآن
+              </h3>
+              <p style={{ margin: 0, fontSize: "0.82rem", color: "#94a3b8", lineHeight: 1.5 }}>
+                اشترك كمالك أو وسيط أو مكتب عقاري وابدأ نشر إعلاناتك مع مزايا احترافية.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/subscription/plans"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.7rem 1.35rem",
+                backgroundColor: "#059669",
+                color: "#fff",
+                borderRadius: 12,
+                fontWeight: 700,
+                fontSize: "0.88rem",
+                textDecoration: "none",
+                flexShrink: 0,
+                boxShadow: "0 3px 10px rgba(5,150,105,0.4)",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              ترقية الحساب
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ════════════════════════════════════════════════════════════
           مؤشرات الأداء الرئيسية KPIs  (management roles only)

@@ -1,0 +1,159 @@
+We need to add a complete subscription and account upgrade flow for normal user accounts inside the dashboard.
+
+Current problem:
+In the regular user dashboard there is no:
+- "My Subscriptions" section
+- current plan visibility
+- upgrade account option
+- upgrade from normal user to paid/business plan
+- subscription management entry in sidebar
+- billing / payment / proof upload access
+
+Goal:
+Make subscription management available for normal users exactly as a core dashboard feature, not only for companies or other account types.
+
+========================================
+REQUIRED CHANGES
+========================================
+
+1) Add a new sidebar item in the user dashboard:
+- Arabic label: اشتراكاتي
+- English/internal meaning: My Subscriptions
+- icon suitable for plans / subscription / billing
+- visible for regular users
+- route example:
+  /dashboard/subscriptions
+or
+  /dashboard/my-subscriptions
+
+2) Build a dedicated subscriptions page for normal users that includes:
+
+A. Current account status card
+- current account type
+- current plan code
+- current plan display name
+- subscription status (active / expired / trial / free / pending)
+- renewal date if exists
+- usage summary
+
+B. Upgrade options
+Show clear upgrade cards/buttons for:
+- مالك
+- وسيط
+- مكتب عقاري
+- شركة
+Only show plans that are actually allowed by the business model.
+
+C. Current limits / entitlements
+Show what the user currently has, for example:
+- max listings
+- can post ads
+- can post requests
+- image upload limit
+- video upload
+- priority listing
+- chat/messages
+- analytics
+- verification eligibility
+- support level
+Use the actual subscription/plan feature source, not hardcoded fake values.
+
+D. Upgrade CTA
+Add clear buttons such as:
+- ترقية الحساب
+- تغيير الباقة
+- عرض الباقات
+- الدفع الآن
+- رفع إثبات الدفع
+depending on current state
+
+3) Add upgrade flow from normal user account
+A normal user should be able to:
+- stay as free seeker if desired
+- upgrade to owner
+- upgrade to broker
+- upgrade to office
+- upgrade to company if allowed by business rules
+
+4) If account upgrade requires additional profile completion:
+- show required steps before upgrade
+- for example: full name, phone, city, identity verification, broker license, office/company data
+- do not block silently
+- show user-friendly validation messages
+
+5) Payment / billing integration
+On subscription page include:
+- selected plan summary
+- price
+- billing cycle
+- payment methods
+- if manual payment/cash transfer/proof upload is supported, user must be able to upload receipt from this flow
+- show payment status:
+  pending / under review / paid / rejected
+
+6) Dashboard quick access
+Add a clear quick action card/button in the user dashboard homepage:
+- ترقية الحساب
+or
+- إدارة الاشتراك
+This button should open the subscriptions page.
+
+7) Preserve role logic
+Do not break current user roles.
+Instead:
+- keep current role/account type model intact
+- add upgrade path on top of it
+- ensure the UI works for regular user accounts
+- ensure permissions update correctly after successful subscription/upgrade
+
+8) Show free plan clearly
+If the user is on free/basic seeker mode, the page must explicitly show:
+- plan name
+- limitations
+- why upgrade is useful
+- available upgrade options
+
+9) Arabic-first UX
+All labels, titles, buttons, and empty states should be polished in Arabic.
+Example labels:
+- اشتراكاتي
+- الباقة الحالية
+- حالة الاشتراك
+- ترقية الحساب
+- تغيير الباقة
+- المميزات المتاحة
+- حدود الباقة
+- رفع إثبات الدفع
+- حالة الدفع
+
+10) Routing + visibility
+Ensure the new subscription page is:
+- accessible from user dashboard sidebar
+- accessible from dashboard home CTA
+- protected by auth
+- available for normal logged-in users
+
+11) Empty state handling
+If user has no active subscription record:
+- do not show broken page
+- show free plan / default status gracefully
+- show upgrade choices
+- no runtime errors
+
+12) Technical requirements
+- Do not hardcode plan data if there is already a centralized plan/subscription source
+- Reuse existing plan model, billing model, and feature matrix if present
+- Reuse existing payment receipt upload flow if it already exists
+- Make UI responsive
+- Do not break admin/company dashboards
+
+========================================
+DELIVERABLES
+========================================
+
+After implementation, report:
+1. Which files were created or changed
+2. New route name
+3. How normal users can upgrade their account now
+4. Whether payment proof upload is available from subscription page
+5. Whether free users can see their current plan and limits

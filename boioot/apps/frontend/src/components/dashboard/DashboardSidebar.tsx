@@ -124,8 +124,10 @@ const SIDEBAR_CONFIG: Record<string, NavEntry[]> = {
   // ── Regular user ──────────────────────────────────────────────────────────
   User: [
     ...BASE,
-    { href: "/dashboard/my-requests",      label: "طلباتي",         exact: false, icon: ICONS.requests     },
-    { href: "/dashboard/verification",     label: "التوثيق",        exact: false, icon: ICONS.verification },
+    { href: "/dashboard/my-requests",          label: "طلباتي",         exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/subscription",         label: "اشتراكاتي",      exact: true,  icon: ICONS.subscription },
+    { href: "/dashboard/subscription/plans",   label: "ترقية الحساب",   exact: false, icon: ICONS.subscription },
+    { href: "/dashboard/verification",         label: "التوثيق",        exact: false, icon: ICONS.verification },
   ],
 
   // ── Property owner ────────────────────────────────────────────────────────

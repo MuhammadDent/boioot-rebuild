@@ -198,6 +198,250 @@ function CancelModal({
   );
 }
 
+// ── FreePlanDisplay ───────────────────────────────────────────────────────────
+// Shown when the user is on the free / seeker plan with no active subscription
+
+const FREE_SEEKER_LIMITS = [
+  { icon: "🔍", label: "البحث عن عقارات",      value: "غير محدود" },
+  { icon: "💬", label: "التواصل مع الملاك",    value: "متاح"      },
+  { icon: "❤️", label: "المفضّلة",             value: "غير محدود" },
+  { icon: "📋", label: "إعلانات نشطة",          value: "غير متاح"  },
+  { icon: "🎥", label: "رفع الفيديو",           value: "غير متاح"  },
+  { icon: "⭐", label: "الإعلانات المميزة",     value: "غير متاح"  },
+  { icon: "📊", label: "لوحة التحليلات",        value: "غير متاح"  },
+];
+
+const UPGRADE_PATHS = [
+  {
+    icon: "🏠",
+    title: "مالك عقار",
+    subtitle: "Owner",
+    description: "انشر إعلاناتك العقارية مباشرةً وتواصل مع المستأجرين والمشترين.",
+    color: "#2563eb",
+    accent: "#dbeafe",
+    href: "/dashboard/subscription/plans?audience=owner",
+  },
+  {
+    icon: "🤝",
+    title: "وسيط عقاري",
+    subtitle: "Broker",
+    description: "أدر قوائم العملاء ونشر العروض بكفاءة عالية مع أدوات الوساطة.",
+    color: "#7c3aed",
+    accent: "#ede9fe",
+    href: "/dashboard/subscription/plans?audience=broker",
+  },
+  {
+    icon: "🏢",
+    title: "مكتب عقاري",
+    subtitle: "Office",
+    description: "أدر فريق وكلاء متعدد وابنِ علامتك التجارية المحلية على بويوت.",
+    color: "#0891b2",
+    accent: "#e0f2fe",
+    href: "/dashboard/subscription/plans?audience=office",
+  },
+  {
+    icon: "🏗️",
+    title: "شركة تطوير عقاري",
+    subtitle: "Company",
+    description: "أدر مشاريعك السكنية والتجارية وتواصل مع آلاف المشترين المحتملين.",
+    color: "#059669",
+    accent: "#d1fae5",
+    href: "/dashboard/subscription/plans?audience=company",
+  },
+];
+
+function FreePlanDisplay() {
+  return (
+    <div style={{ padding: "1.5rem 2rem", maxWidth: 820, direction: "rtl" }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: "1.75rem" }}>
+        <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800, color: "#1a2e1a" }}>
+          اشتراكاتي
+        </h1>
+        <p style={{ margin: "0.25rem 0 0", fontSize: "0.875rem", color: "#64748b" }}>
+          إدارة حسابك والترقية إلى نوع حساب أنسب لنشاطك
+        </p>
+      </div>
+
+      {/* Current plan card — free seeker */}
+      <div style={{
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        padding: "1.5rem",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+        border: "1.5px solid #e2e8f0",
+        marginBottom: "1.5rem",
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
+          <div>
+            <p style={{ margin: "0 0 0.3rem", fontSize: "0.78rem", color: "#94a3b8", fontWeight: 500 }}>
+              باقتك الحالية
+            </p>
+            <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#1a2e1a" }}>
+              الباقة المجانية
+            </h2>
+            <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
+              باحث عن عقار · Free Seeker
+            </p>
+          </div>
+          <span style={{
+            display: "inline-flex", alignItems: "center",
+            padding: "0.3rem 0.85rem",
+            borderRadius: 20,
+            fontSize: "0.78rem", fontWeight: 700,
+            backgroundColor: "#f0fdf4",
+            color: "#166534",
+            border: "1.5px solid #86efac",
+          }}>
+            مجاني
+          </span>
+        </div>
+
+        {/* Limits grid */}
+        <div style={{
+          borderTop: "1px solid #f1f5f9",
+          paddingTop: "1.25rem",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: "0.65rem",
+        }}>
+          {FREE_SEEKER_LIMITS.map(item => (
+            <div
+              key={item.label}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "0.5rem 0.75rem",
+                backgroundColor: "#f8fafc",
+                borderRadius: 9,
+                fontSize: "0.83rem",
+              }}
+            >
+              <span style={{ color: "#475569" }}>
+                {item.icon} {item.label}
+              </span>
+              <span style={{
+                fontWeight: 700,
+                color: item.value === "غير متاح"
+                  ? "#94a3b8"
+                  : item.value === "غير محدود" || item.value === "متاح"
+                    ? "#059669"
+                    : "#1e293b",
+              }}>
+                {item.value}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: "1.25rem", borderTop: "1px solid #f1f5f9", paddingTop: "1.1rem" }}>
+          <Link
+            href="/dashboard/subscription/plans"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "0.5rem",
+              padding: "0.65rem 1.35rem",
+              backgroundColor: "#1a2e1a",
+              color: "#fff",
+              borderRadius: 10,
+              fontWeight: 700,
+              fontSize: "0.9rem",
+              textDecoration: "none",
+            }}
+          >
+            عرض جميع الباقات
+          </Link>
+        </div>
+      </div>
+
+      {/* Upgrade paths */}
+      <div style={{ marginBottom: "0.75rem" }}>
+        <h2 style={{ margin: "0 0 0.35rem", fontSize: "1rem", fontWeight: 800, color: "#1a2e1a" }}>
+          ترقية الحساب
+        </h2>
+        <p style={{ margin: 0, fontSize: "0.83rem", color: "#64748b" }}>
+          اختر نوع الحساب المناسب لنشاطك وابدأ رحلتك العقارية على بويوت
+        </p>
+      </div>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+        gap: "1rem",
+        marginBottom: "1.5rem",
+      }}>
+        {UPGRADE_PATHS.map(path => (
+          <Link
+            key={path.subtitle}
+            href={path.href}
+            style={{ textDecoration: "none" }}
+          >
+            <div style={{
+              backgroundColor: "#fff",
+              borderRadius: 14,
+              padding: "1.25rem",
+              border: `1.5px solid ${path.accent}`,
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              cursor: "pointer",
+              transition: "box-shadow 0.15s",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
+                <div style={{
+                  width: 44, height: 44,
+                  borderRadius: 12,
+                  backgroundColor: path.accent,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "1.35rem",
+                  flexShrink: 0,
+                }}>
+                  {path.icon}
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#1a2e1a" }}>
+                    {path.title}
+                  </p>
+                  <p style={{ margin: 0, fontSize: "0.73rem", color: "#94a3b8" }}>
+                    {path.subtitle}
+                  </p>
+                </div>
+              </div>
+              <p style={{ margin: "0 0 1rem", fontSize: "0.83rem", color: "#475569", lineHeight: 1.6 }}>
+                {path.description}
+              </p>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: "0.3rem",
+                padding: "0.4rem 1rem",
+                borderRadius: 8,
+                backgroundColor: path.color,
+                color: "#fff",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+              }}>
+                ترقية الحساب ←
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Why upgrade note */}
+      <div style={{
+        backgroundColor: "#fffbeb",
+        border: "1.5px solid #fcd34d",
+        borderRadius: 12,
+        padding: "1rem 1.25rem",
+        fontSize: "0.83rem",
+        color: "#92400e",
+        lineHeight: 1.6,
+      }}>
+        💡 <strong>ملاحظة:</strong> بعد اختيار الباقة وإتمام عملية الدفع، سيقوم فريقنا بمراجعة طلبك وترقية حسابك خلال 24 ساعة.
+        يمكنك متابعة حالة طلبك من صفحة <strong>طلبات الدفع</strong>.
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function SubscriptionPage() {
@@ -262,26 +506,7 @@ export default function SubscriptionPage() {
   }
 
   if (!sub) {
-    return (
-      <div style={{ padding: "2rem", maxWidth: 640 }}>
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#1a2e1a", margin: "0 0 0.5rem" }}>
-          اشتراكي
-        </h1>
-        <p style={{ color: "#64748b", margin: "0 0 1.5rem" }}>
-          لا يوجد حساب مرتبط بمستخدمك. أنشئ حساباً أو انضم إلى منظمة للاستفادة من الخطط.
-        </p>
-        <Link
-          href="/dashboard/subscription/plans"
-          style={{
-            display: "inline-block", padding: "0.75rem 1.5rem",
-            backgroundColor: "#059669", color: "#fff",
-            borderRadius: 10, fontWeight: 700, textDecoration: "none", fontSize: "0.9rem",
-          }}
-        >
-          تصفّح الباقات
-        </Link>
-      </div>
-    );
+    return <FreePlanDisplay />;
   }
 
   const enabledFeatures = Object.entries(sub.features).filter(([, v]) => v);
