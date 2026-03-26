@@ -15,6 +15,7 @@ interface MobileNavDrawerProps {
   pathname: string;
   navLinks: NavItem[];
   isAuthenticated: boolean;
+  isAdminOrStaff?: boolean;
   onAddAd: () => void;
   onAddRequest: () => void;
 }
@@ -25,6 +26,7 @@ export default function MobileNavDrawer({
   pathname,
   navLinks,
   isAuthenticated,
+  isAdminOrStaff = false,
   onAddAd,
   onAddRequest,
 }: MobileNavDrawerProps) {
@@ -164,11 +166,11 @@ export default function MobileNavDrawer({
             <div className="mobile-drawer__divider" />
             <div className="mobile-drawer__auth">
               <Link
-                href="/dashboard"
+                href={isAdminOrStaff ? "/dashboard/admin" : "/dashboard"}
                 onClick={onClose}
                 className="mobile-drawer__login"
               >
-                لوحة التحكم
+                {isAdminOrStaff ? "العودة إلى لوحة التحكم" : "لوحة التحكم"}
               </Link>
             </div>
           </>

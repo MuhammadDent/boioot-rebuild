@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
 import MessagesIconBtn from "./MessagesIconBtn";
 import { useContent } from "@/context/ContentContext";
+import { getRoleCategory } from "@/features/admin/constants";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,17 @@ export default function Navbar() {
   }
 
   const onMessagesPage = pathname.startsWith("/dashboard/messages");
+
+  // Determine if the logged-in user is admin or staff
+  const roleCategory = user ? getRoleCategory(user.role) : "customer";
+  const isAdminOrStaff = roleCategory === "admin" || roleCategory === "staff";
+
+  // Profile href depends on role category
+  const profileHref = isAdminOrStaff ? "/dashboard/admin/profile" : "/dashboard/profile";
+
+  // Dashboard href and label depend on role category
+  const dashboardHref  = isAdminOrStaff ? "/dashboard/admin" : "/dashboard";
+  const dashboardLabel = isAdminOrStaff ? "العودة إلى لوحة التحكم" : "لوحة التحكم";
 
   return (
     <nav className="navbar">
@@ -99,11 +111,11 @@ export default function Navbar() {
                 <>
                   {!pathname.startsWith("/dashboard") && (
                     <Link
-                      href="/dashboard"
+                      href={dashboardHref}
                       className="btn btn-primary btn-sm"
                       style={{ textDecoration: "none", padding: "0.4rem 1rem" }}
                     >
-                      لوحة التحكم
+                      {dashboardLabel}
                     </Link>
                   )}
 
@@ -115,7 +127,7 @@ export default function Navbar() {
 
                   {/* Avatar */}
                   <Link
-                    href="/dashboard/profile"
+                    href={profileHref}
                     title="الملف الشخصي"
                     style={{
                       display: "inline-flex",
