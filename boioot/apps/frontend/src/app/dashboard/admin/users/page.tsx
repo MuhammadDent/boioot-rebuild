@@ -18,8 +18,6 @@ import {
 import {
   ADMIN_PAGE_SIZE,
   PLATFORM_ROLE_NAMES,
-  DIRECT_CUSTOMER_ROLES,
-  SUBORDINATE_ROLES,
   ROLE_LABELS,
   ROLE_BADGE,
   getRoleCategory,
@@ -29,125 +27,53 @@ import { normalizeError } from "@/lib/api";
 import { rbacApi, type RbacRole } from "@/features/admin/rbac/api";
 import type { AdminUserResponse, UserAnalyticsResponse } from "@/types";
 
-// ─── Saved Segments (localStorage) ─────────────────────────────────────────
-
-const SEGMENTS_KEY = "boioot_admin_user_segments";
-
-interface SavedSegment {
-  name: string;
-  filters: AdminUsersParams;
-}
-
-function loadSegments(): SavedSegment[] {
-  try {
-    return JSON.parse(localStorage.getItem(SEGMENTS_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveSegments(segs: SavedSegment[]) {
-  localStorage.setItem(SEGMENTS_KEY, JSON.stringify(segs));
-}
-
-// ─── CSV Export Helper ───────────────────────────────────────────────────────
-
-function exportToCsv(users: AdminUserResponse[]) {
-  const header = ["الاسم", "البريد الإلكتروني", "الهاتف", "الدور", "الحالة", "الخطة", "المقاطع", "آخر دخول", "تاريخ الإنشاء"];
-  const rows = users.map(u => [
-    u.fullName,
-    u.email,
-    u.phone ?? "",
-    ROLE_LABELS[u.role] ?? u.role,
-    u.isActive ? "نشط" : "غير نشط",
-    u.planName ?? "مجاني",
-    u.listingCount,
-    u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString("ar-SY") : "—",
-    new Date(u.createdAt).toLocaleDateString("ar-SY"),
-  ]);
-  const csv = [header, ...rows]
-    .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href = url;
-  a.download = `users-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminUsersPage() {
   const { user, isLoading } = useProtectedRoute({ requiredPermission: "users.view" });
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Read initial role from URL query (?role=Broker etc.)
   const initialRole = searchParams.get("role") ?? "";
 
+  // ── Data state ────────────────────────────────────────────────────────────
   const [users, setUsers]             = useState<AdminUserResponse[]>([]);
   const [roles, setRoles]             = useState<RbacRole[]>([]);
-  const [rolesLoading, setRolesLoading] = useState(true);
   const [page, setPage]               = useState(1);
   const [totalPages, setTotalPages]   = useState(1);
   const [totalCount, setTotalCount]   = useState(0);
   const [fetching, setFetching]       = useState(true);
   const [fetchError, setFetchError]   = useState("");
 
-  // Analytics
-  const [analytics, setAnalytics]   = useState<UserAnalyticsResponse | null>(null);
+  const [analytics, setAnalytics]         = useState<UserAnalyticsResponse | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(true);
 
-  // Action state
+  // ── Action state ──────────────────────────────────────────────────────────
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError]     = useState("");
   const [actionNotice, setActionNotice]   = useState("");
 
-  // Role quick-filter tabs
-  const [activeRoleTab, setActiveRoleTab] = useState(initialRole);
+  // ── Panels ────────────────────────────────────────────────────────────────
+  const [viewUser, setViewUser]   = useState<AdminUserResponse | null>(null);
+  const [editUser, setEditUser]   = useState<AdminUserResponse | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
-  // Filters (pending = UI, applied = last search)
-  const [pendingRole, setPendingRole]           = useState(initialRole);
-  const [pendingIsActive, setPendingIsActive]   = useState("");
-  const [pendingSearch, setPendingSearch]       = useState("");
+  // ── Filters ───────────────────────────────────────────────────────────────
+  const [activeRoleTab, setActiveRoleTab]         = useState(initialRole);
+  const [pendingRole, setPendingRole]             = useState(initialRole);
+  const [pendingIsActive, setPendingIsActive]     = useState("");
+  const [pendingSearch, setPendingSearch]         = useState("");
   const [pendingCreatedAfter, setPendingCreatedAfter]   = useState("");
   const [pendingCreatedBefore, setPendingCreatedBefore] = useState("");
-  const [pendingLastLogin, setPendingLastLogin] = useState("");
-  const [pendingTag, setPendingTag]             = useState("");
-  const [showFilters, setShowFilters]           = useState(true);
+  const [pendingLastLogin, setPendingLastLogin]   = useState("");
+  const [showFilters, setShowFilters]             = useState(true);
 
   const appliedFiltersRef = useRef<AdminUsersParams>({});
 
-  // Segments
-  const [segments, setSegments]   = useState<SavedSegment[]>([]);
-  const [segmentName, setSegmentName] = useState("");
-  const [showSaveSegment, setShowSaveSegment] = useState(false);
-
-  // All tags (for filter dropdown)
-  const [allTags, setAllTags] = useState<string[]>([]);
-
-  // Bulk selection
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkLoading, setBulkLoading] = useState(false);
-
-  // Create user panel
-  const [showCreate, setShowCreate]         = useState(false);
-  const [createFullName, setCreateFullName] = useState("");
-  const [createEmail, setCreateEmail]       = useState("");
-  const [createPassword, setCreatePassword] = useState("");
-  const [createPhone, setCreatePhone]       = useState("");
-  const [createRole, setCreateRole]         = useState("User");
-  const [createLoading, setCreateLoading]   = useState(false);
-  const [createError, setCreateError]       = useState("");
-
-  // ── Data loading ──────────────────────────────────────────────────────────
+  // ── Load data ─────────────────────────────────────────────────────────────
 
   const load = useCallback(async (p: number, params: AdminUsersParams = {}) => {
     setFetching(true);
     setFetchError("");
-    setSelected(new Set());
     try {
       const result = await adminApi.getUsers(p, ADMIN_PAGE_SIZE, params);
       setUsers(result.items);
@@ -165,58 +91,33 @@ export default function AdminUsersPage() {
     if (!isLoading && user) {
       load(1, {});
       rbacApi.getRoles()
-        .then(data => {
-          const customerRolesFromApi = data.filter(r => PLATFORM_ROLE_NAMES.has(r.name) && getRoleCategory(r.name) !== "admin").map(r => r.name);
-          console.log("[AdminUsers] customer roles for UI:", customerRolesFromApi);
-          setRoles(data);
-        })
-        .catch(() => {})
-        .finally(() => setRolesLoading(false));
+        .then(data => setRoles(data))
+        .catch(() => {});
       adminApi.getUserAnalytics()
-        .then(data => {
-          const customerByRole = Object.fromEntries(Object.entries(data.byRole).filter(([r]) => DIRECT_CUSTOMER_ROLES.has(r) || SUBORDINATE_ROLES.has(r)));
-          console.log("[AdminUsers] analytics byRole (customer-only):", customerByRole);
-          setAnalytics(data);
-        })
+        .then(setAnalytics)
         .catch(() => {});
-      adminApi.getAllTags()
-        .then(setAllTags)
-        .catch(() => {});
-      setSegments(loadSegments());
     }
   }, [isLoading, user, load]);
 
   if (isLoading || !user) return null;
 
-  // ── Role groups ───────────────────────────────────────────────────────────
-
-  // Customer roles only — Admin/staff never appear on this page.
-  // Internal accounts are managed in Team Management and Roles sections.
   const platformRoles = roles
     .filter(r => PLATFORM_ROLE_NAMES.has(r.name) && getRoleCategory(r.name) !== "admin")
     .sort((a, b) => {
       const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, Office: 3, Agent: 4, CompanyOwner: 5 };
       return (order[a.name] ?? 99) - (order[b.name] ?? 99);
     });
-  // Direct individual customers (User only — shown in own optgroup)
-  const userOnlyRoles = platformRoles.filter(r => r.name === "User");
-  // Business customer roles + subordinate agents — shown together under "الأعمال العقارية"
-  const businessRoles = platformRoles.filter(r =>
-    (getRoleCategory(r.name) === "customer" && r.name !== "User") ||
-    getRoleCategory(r.name) === "subordinate"
-  );
 
   // ── Filter handlers ───────────────────────────────────────────────────────
 
   function buildParams(): AdminUsersParams {
     const p: AdminUsersParams = {};
-    if (pendingRole)                 p.role          = pendingRole;
-    if (pendingIsActive !== "")      p.isActive       = pendingIsActive === "true";
-    if (pendingSearch.trim())        p.search         = pendingSearch.trim();
-    if (pendingCreatedAfter)         p.createdAfter   = pendingCreatedAfter;
-    if (pendingCreatedBefore)        p.createdBefore  = pendingCreatedBefore;
-    if (pendingLastLogin)            p.lastLoginAfter = pendingLastLogin;
-    if (pendingTag)                  p.tag            = pendingTag;
+    if (pendingRole)            p.role          = pendingRole;
+    if (pendingIsActive !== "") p.isActive       = pendingIsActive === "true";
+    if (pendingSearch.trim())   p.search         = pendingSearch.trim();
+    if (pendingCreatedAfter)    p.createdAfter   = pendingCreatedAfter;
+    if (pendingCreatedBefore)   p.createdBefore  = pendingCreatedBefore;
+    if (pendingLastLogin)       p.lastLoginAfter = pendingLastLogin;
     return p;
   }
 
@@ -230,8 +131,7 @@ export default function AdminUsersPage() {
 
   function handleReset() {
     setPendingRole(""); setPendingIsActive(""); setPendingSearch("");
-    setPendingCreatedAfter(""); setPendingCreatedBefore("");
-    setPendingLastLogin(""); setPendingTag("");
+    setPendingCreatedAfter(""); setPendingCreatedBefore(""); setPendingLastLogin("");
     setActiveRoleTab("");
     appliedFiltersRef.current = {};
     setActionError("");
@@ -248,85 +148,52 @@ export default function AdminUsersPage() {
     load(1, params);
   }
 
-  function applySegment(seg: SavedSegment) {
-    const f = seg.filters;
-    setPendingRole(f.role ?? "");
-    setActiveRoleTab(f.role ?? "");
-    setPendingIsActive(f.isActive !== undefined ? String(f.isActive) : "");
-    setPendingSearch(f.search ?? "");
-    setPendingCreatedAfter(f.createdAfter ?? "");
-    setPendingCreatedBefore(f.createdBefore ?? "");
-    setPendingLastLogin(f.lastLoginAfter ?? "");
-    setPendingTag(f.tag ?? "");
-    appliedFiltersRef.current = f;
-    load(1, f);
+  // ── Panel helpers ─────────────────────────────────────────────────────────
+
+  function openView(u: AdminUserResponse) {
+    setViewUser(u);
+    setEditUser(null);
+    setShowCreate(false);
   }
 
-  function handleSaveSegment() {
-    if (!segmentName.trim()) return;
-    const newSeg: SavedSegment = { name: segmentName.trim(), filters: buildParams() };
-    const updated = [...segments.filter(s => s.name !== newSeg.name), newSeg];
-    setSegments(updated);
-    saveSegments(updated);
-    setSegmentName("");
-    setShowSaveSegment(false);
-    showNotice("تم حفظ الشريحة");
+  function openEdit(u: AdminUserResponse) {
+    setEditUser(u);
+    setViewUser(null);
+    setShowCreate(false);
   }
 
-  function handleDeleteSegment(name: string) {
-    const updated = segments.filter(s => s.name !== name);
-    setSegments(updated);
-    saveSegments(updated);
-  }
+  // ── Action handlers ───────────────────────────────────────────────────────
 
-  // ── Bulk actions ──────────────────────────────────────────────────────────
-
-  function toggleSelect(id: string) {
-    setSelected(prev => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-  }
-
-  function toggleSelectAll() {
-    if (selected.size === users.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(users.map(u => u.id)));
-    }
-  }
-
-  async function handleBulkAction(action: "activate" | "deactivate" | "export") {
-    if (selected.size === 0 || bulkLoading) return;
-    setBulkLoading(true);
+  async function handleToggleVerify(targetId: string, currentIsVerified: boolean) {
+    if (actionLoading) return;
+    setActionLoading(`verify-${targetId}`);
     setActionError("");
     try {
-      const result = await adminApi.bulkUserAction(action, Array.from(selected));
-      if (action === "export" && result.exportData) {
-        exportToCsv(result.exportData);
-        showNotice(`تم تصدير ${result.exportData.length} مستخدم`);
-      } else {
-        showNotice(result.message);
-        await load(page, appliedFiltersRef.current);
-      }
-      setSelected(new Set());
+      const updated = currentIsVerified
+        ? await adminApi.unverifyUser(targetId)
+        : await adminApi.verifyUser(targetId);
+      setUsers(prev => prev.map(u => u.id === updated.id ? { ...u, ...updated } : u));
+      if (viewUser?.id === updated.id) setViewUser(prev => prev ? { ...prev, ...updated } : null);
+      if (editUser?.id === updated.id) setEditUser(prev => prev ? { ...prev, ...updated } : null);
+      showNotice(currentIsVerified
+        ? `تم إلغاء توثيق "${updated.fullName}"`
+        : `تم توثيق "${updated.fullName}" بنجاح`
+      );
     } catch (e) {
       setActionError(normalizeError(e));
     } finally {
-      setBulkLoading(false);
+      setActionLoading(null);
     }
   }
 
-  // ── Per-user actions ──────────────────────────────────────────────────────
-
   async function handleToggleStatus(targetId: string, currentIsActive: boolean) {
     if (actionLoading) return;
-    setActionLoading(targetId);
+    setActionLoading(`status-${targetId}`);
     setActionError("");
     try {
       const updated = await adminApi.updateUserStatus(targetId, !currentIsActive);
       setUsers(prev => prev.map(u => u.id === updated.id ? { ...u, isActive: updated.isActive } : u));
+      if (viewUser?.id === updated.id) setViewUser(prev => prev ? { ...prev, isActive: updated.isActive } : null);
     } catch (e) {
       setActionError(normalizeError(e));
     } finally {
@@ -343,32 +210,21 @@ export default function AdminUsersPage() {
     setActionLoading(`edit-${userId}`);
     setActionError("");
     try {
-      // 1. Always save name / email / phone
       let updated = await adminApi.updateAdminUser(userId, {
         fullName: data.fullName.trim() || undefined,
         email:    data.email.trim()    || undefined,
         phone:    data.phone.trim()    || undefined,
       });
-
-      // 2. Status change (only if different and not self)
       if (data.isActive !== original.isActive && userId !== user!.id) {
-        const statusResult = await adminApi.updateUserStatus(userId, data.isActive);
-        updated = { ...updated, isActive: statusResult.isActive };
+        const s = await adminApi.updateUserStatus(userId, data.isActive);
+        updated = { ...updated, isActive: s.isActive };
       }
-
-      // 3. Role change (only if different and not self)
       if (data.roleId && data.roleName !== original.role && userId !== user!.id) {
         await rbacApi.assignUserRole(userId, data.roleId);
         updated = { ...updated, role: data.roleName };
       }
-
-      setUsers(prev =>
-        prev.map(u =>
-          u.id === userId
-            ? { ...u, ...updated }
-            : u,
-        ),
-      );
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updated } : u));
+      setEditUser(null);
       showNotice(`تم حفظ بيانات "${updated.fullName}" بنجاح`);
     } catch (e) {
       setActionError(normalizeError(e));
@@ -377,143 +233,38 @@ export default function AdminUsersPage() {
     }
   }
 
-  async function handleVerify(targetId: string) {
-    if (actionLoading) return;
-    setActionLoading(`verify-${targetId}`);
+  async function handleCreateUser(data: {
+    fullName: string; email: string; password: string; phone: string; role: string;
+  }) {
+    setActionLoading("create");
     setActionError("");
     try {
-      const updated = await adminApi.verifyUser(targetId);
-      setUsers(prev => prev.map(u =>
-        u.id === updated.id
-          ? { ...u, isVerified: updated.isVerified, verifiedAt: updated.verifiedAt, verifiedBy: updated.verifiedBy }
-          : u
-      ));
-      showNotice(`تم توثيق المستخدم "${updated.fullName}" بنجاح`);
-    } catch (e) {
-      setActionError(normalizeError(e));
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function handleUnverify(targetId: string) {
-    if (actionLoading) return;
-    setActionLoading(`verify-${targetId}`);
-    setActionError("");
-    try {
-      const updated = await adminApi.unverifyUser(targetId);
-      setUsers(prev => prev.map(u =>
-        u.id === updated.id
-          ? { ...u, isVerified: updated.isVerified, verifiedAt: updated.verifiedAt, verifiedBy: updated.verifiedBy }
-          : u
-      ));
-      showNotice(`تم إلغاء توثيق "${updated.fullName}"`);
-    } catch (e) {
-      setActionError(normalizeError(e));
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function handleRoleChange(userId: string, roleId: string, roleName: string) {
-    setActionLoading(userId);
-    setActionError("");
-    try {
-      await rbacApi.assignUserRole(userId, roleId);
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: roleName } : u));
-      showNotice(`تم تغيير الدور إلى "${ROLE_LABELS[roleName] ?? roleName}"`);
-    } catch (e) {
-      setActionError(normalizeError(e));
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function handleAddTag(userId: string, tag: string) {
-    if (!tag.trim()) return;
-    setActionLoading(`tag-${userId}`);
-    try {
-      await adminApi.addUserTag(userId, tag.trim());
-      setUsers(prev => prev.map(u =>
-        u.id === userId && !u.tags.includes(tag.trim())
-          ? { ...u, tags: [...u.tags, tag.trim()] }
-          : u
-      ));
-      if (!allTags.includes(tag.trim())) setAllTags(prev => [...prev, tag.trim()].sort());
-    } catch (e) {
-      setActionError(normalizeError(e));
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function handleRemoveTag(userId: string, tag: string) {
-    setActionLoading(`tag-${userId}`);
-    try {
-      await adminApi.removeUserTag(userId, tag);
-      setUsers(prev => prev.map(u =>
-        u.id === userId ? { ...u, tags: u.tags.filter(t => t !== tag) } : u
-      ));
-    } catch (e) {
-      setActionError(normalizeError(e));
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  // ── Create user ───────────────────────────────────────────────────────────
-
-  function handleOpenCreate() {
-    setShowCreate(v => !v);
-    setCreateFullName(""); setCreateEmail("");
-    setCreatePassword(""); setCreatePhone("");
-    setCreateRole("User"); setCreateError("");
-  }
-
-  async function handleCreateUser(e: React.FormEvent) {
-    e.preventDefault();
-    if (createLoading) return;
-    setCreateLoading(true); setCreateError("");
-    try {
-      const created = await adminApi.createUser({
-        fullName: createFullName.trim(),
-        email: createEmail.trim(),
-        password: createPassword,
-        phone: createPhone.trim() || undefined,
-        role: createRole,
-      });
+      const created = await adminApi.createUser(data);
       setUsers(prev => [created, ...prev]);
       setTotalCount(c => c + 1);
       setShowCreate(false);
       showNotice(`تم إنشاء المستخدم "${created.fullName}" بنجاح`);
     } catch (e) {
-      setCreateError(normalizeError(e));
+      setActionError(normalizeError(e));
     } finally {
-      setCreateLoading(false);
+      setActionLoading(null);
     }
   }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   function showNotice(msg: string) {
     setActionNotice(msg);
     setTimeout(() => setActionNotice(""), 4000);
   }
 
-  const hasActiveFilters = !!(
-    pendingRole || pendingIsActive || pendingSearch ||
-    pendingCreatedAfter || pendingCreatedBefore || pendingLastLogin || pendingTag
-  );
-
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 1040, margin: "0 auto" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
 
         {/* ── Header ── */}
         <div style={{
-          marginBottom: "1.5rem",
+          marginBottom: "1.75rem",
           display: "flex", justifyContent: "space-between",
           alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem",
         }}>
@@ -531,559 +282,229 @@ export default function AdminUsersPage() {
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <button
               className="btn"
-              style={{ padding: "0.5rem 1rem", fontSize: "0.82rem" }}
+              style={{ padding: "0.5rem 1rem", fontSize: "0.85rem" }}
               onClick={() => setShowAnalytics(v => !v)}
             >
               {showAnalytics ? "إخفاء الإحصائيات" : "عرض الإحصائيات"}
             </button>
             <button
               className="btn btn-primary"
-              style={{ padding: "0.55rem 1.25rem" }}
-              onClick={handleOpenCreate}
+              style={{ padding: "0.5rem 1.25rem", fontSize: "0.9rem" }}
+              onClick={() => { setShowCreate(v => !v); setViewUser(null); setEditUser(null); setActionError(""); }}
             >
               {showCreate ? "✕ إلغاء" : "+ إضافة مستخدم"}
             </button>
           </div>
         </div>
 
-        {/* ── Role Quick-Filter Tabs ── */}
+        {/* ── Create form ── */}
+        {showCreate && (
+          <UserCreateForm
+            roles={platformRoles}
+            actionLoading={actionLoading === "create"}
+            onSave={handleCreateUser}
+            onCancel={() => setShowCreate(false)}
+          />
+        )}
+
+        {/* ── Edit panel ── */}
+        {editUser && (
+          <UserEditPanel
+            userData={editUser}
+            isSelf={editUser.id === user.id}
+            roles={platformRoles}
+            actionLoading={actionLoading}
+            onSave={handleEditSave}
+            onClose={() => setEditUser(null)}
+          />
+        )}
+
+        {/* ── View panel ── */}
+        {viewUser && (
+          <UserDetailsPanel
+            userData={viewUser}
+            isSelf={viewUser.id === user.id}
+            actionLoading={actionLoading}
+            onToggleVerify={handleToggleVerify}
+            onToggleStatus={handleToggleStatus}
+            onEdit={() => openEdit(viewUser)}
+            onViewProfile={() => router.push(`/dashboard/admin/users/${viewUser.id}`)}
+            onClose={() => setViewUser(null)}
+          />
+        )}
+
+        {/* ── Analytics ── */}
+        {showAnalytics && analytics && (
+          <div className="form-card" style={{ marginBottom: "1.25rem" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem" }}>
+              <StatPill label="الكل" value={analytics.totalUsers} />
+              <StatPill label="نشط" value={analytics.activeUsers} color="#16a34a" />
+              <StatPill label="غير نشط" value={analytics.inactiveUsers} color="#dc2626" />
+              {Object.entries(analytics.byRole)
+                .filter(([r]) => PLATFORM_ROLE_NAMES.has(r) && getRoleCategory(r) !== "admin")
+                .map(([r, count]) => (
+                  <StatPill key={r} label={ROLE_LABELS[r] ?? r} value={count} />
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Role tabs ── */}
         <div style={{
           display: "flex", gap: "0.35rem", flexWrap: "wrap",
           marginBottom: "1.25rem",
           borderBottom: "2px solid var(--color-border, #e2e8f0)",
-          paddingBottom: "0",
+          paddingBottom: 0,
         }}>
           {([
-            { role: "",             label: "الكل",               count: analytics?.totalUsers,               subordinate: false },
-            { role: "User",         label: "مستخدمون",           count: analytics?.byRole["User"],           subordinate: false },
-            { role: "Owner",        label: "ملاك عقار",          count: analytics?.byRole["Owner"],          subordinate: false },
-            { role: "Broker",       label: "وسطاء عقاريون",      count: analytics?.byRole["Broker"],         subordinate: false },
-            { role: "Office",       label: "مكاتب عقارية",       count: analytics?.byRole["Office"],         subordinate: false },
-            { role: "CompanyOwner", label: "شركات تطوير",        count: analytics?.byRole["CompanyOwner"],   subordinate: false },
-            { role: "Agent",        label: "وكلاء عقاريون",      count: analytics?.byRole["Agent"],          subordinate: true  },
-          ] as const).map((tab, i, arr) => {
+            { role: "",             label: "الكل",             count: analytics?.totalUsers },
+            { role: "User",         label: "مستخدمون",         count: analytics?.byRole["User"] },
+            { role: "Owner",        label: "ملاك عقار",        count: analytics?.byRole["Owner"] },
+            { role: "Broker",       label: "وسطاء",            count: analytics?.byRole["Broker"] },
+            { role: "Office",       label: "مكاتب عقارية",     count: analytics?.byRole["Office"] },
+            { role: "CompanyOwner", label: "شركات تطوير",      count: analytics?.byRole["CompanyOwner"] },
+            { role: "Agent",        label: "وكلاء",            count: analytics?.byRole["Agent"] },
+          ] as const).map(tab => {
             const isActive = activeRoleTab === tab.role;
-            // Separator before Agent (subordinate group)
-            const prevTab = arr[i - 1];
-            const showSeparator = tab.subordinate && prevTab && !prevTab.subordinate;
             return (
-              <span key={tab.role || "all"} style={{ display: "contents" }}>
-                {showSeparator && (
+              <button
+                key={tab.role || "all"}
+                onClick={() => handleRoleTabClick(tab.role)}
+                style={{
+                  padding: "0.5rem 0.9rem",
+                  fontSize: "0.82rem",
+                  fontWeight: isActive ? 700 : 500,
+                  background: "none",
+                  border: "none",
+                  borderBottom: isActive
+                    ? "2px solid var(--color-primary, #16a34a)"
+                    : "2px solid transparent",
+                  marginBottom: "-2px",
+                  cursor: "pointer",
+                  color: isActive
+                    ? "var(--color-primary, #16a34a)"
+                    : "var(--color-text-secondary, #64748b)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {tab.label}
+                {tab.count !== undefined && (
                   <span style={{
-                    alignSelf: "center",
-                    width: 1, height: 20,
-                    background: "var(--color-border, #e2e8f0)",
-                    margin: "0 0.1rem",
-                    flexShrink: 0,
-                  }} />
+                    marginRight: "0.35rem",
+                    fontSize: "0.72rem",
+                    color: isActive ? "var(--color-primary)" : "var(--color-text-secondary)",
+                    opacity: 0.8,
+                  }}>
+                    {tab.count}
+                  </span>
                 )}
-                <button
-                  onClick={() => handleRoleTabClick(tab.role)}
-                  style={{
-                    padding: "0.5rem 0.9rem",
-                    fontSize: "0.82rem",
-                    fontWeight: isActive ? 700 : 500,
-                    background: "none",
-                    border: "none",
-                    borderBottom: isActive
-                      ? `2px solid ${tab.subordinate ? "#d97706" : "var(--color-primary, #16a34a)"}`
-                      : "2px solid transparent",
-                    marginBottom: "-2px",
-                    cursor: "pointer",
-                    color: isActive
-                      ? (tab.subordinate ? "#d97706" : "var(--color-primary, #16a34a)")
-                      : tab.subordinate
-                      ? "#94a3b8"
-                      : "var(--color-text-secondary, #64748b)",
-                    whiteSpace: "nowrap",
-                    transition: "color 0.15s, border-color 0.15s",
-                    display: "flex", alignItems: "center", gap: "0.35rem",
-                  }}
-                >
-                  {tab.subordinate && !isActive && (
-                    <span style={{ fontSize: "0.65rem", opacity: 0.6 }}>↳</span>
-                  )}
-                  {tab.label}
-                  {tab.count != null && (
-                    <span style={{
-                      fontSize: "0.72rem",
-                      padding: "0.1rem 0.4rem",
-                      borderRadius: 99,
-                      background: isActive
-                        ? (tab.subordinate ? "#d97706" : "var(--color-primary, #16a34a)")
-                        : tab.subordinate ? "#fef3c7" : "#e2e8f0",
-                      color: isActive ? "#fff" : tab.subordinate ? "#92400e" : "#64748b",
-                      fontWeight: 600,
-                      minWidth: 18,
-                      textAlign: "center",
-                    }}>
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              </span>
+              </button>
             );
           })}
         </div>
 
-        {/* ── Analytics Panel ── */}
-        {showAnalytics && analytics && (
-          <div style={{
-            marginBottom: "1.25rem",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-            gap: "0.75rem",
-          }}>
-            {[
-              { label: "إجمالي المستخدمين", value: analytics.totalUsers, color: "#2563eb" },
-              { label: "مستخدمون نشطون", value: analytics.activeUsers, color: "#16a34a" },
-              { label: "غير نشطين", value: analytics.inactiveUsers, color: "#dc2626" },
-              { label: "جدد هذا الشهر", value: analytics.newThisMonth, color: "#7c3aed" },
-              { label: "جدد هذا الأسبوع", value: analytics.newThisWeek, color: "#d97706" },
-              { label: "نشطون (30 يوم)", value: analytics.loggedInLast30Days, color: "#0891b2" },
-            ].map(stat => (
-              <div
-                key={stat.label}
-                className="form-card"
-                style={{ padding: "0.9rem 1rem", textAlign: "center" }}
-              >
-                <div style={{ fontSize: "1.7rem", fontWeight: 700, color: stat.color }}>
-                  {stat.value}
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)", marginTop: "0.2rem" }}>
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Role distribution mini-chart ── */}
-        {showAnalytics && analytics && Object.keys(analytics.byRole).length > 0 && (
-          <div className="form-card" style={{ marginBottom: "1.25rem", padding: "1rem 1.25rem" }}>
-            <div style={{ fontSize: "0.85rem", fontWeight: 700, marginBottom: "0.75rem", color: "var(--color-text-primary)" }}>
-              توزيع المستخدمين حسب الدور
-            </div>
-
-            {/* Direct customers */}
-            <div style={{ marginBottom: "0.6rem" }}>
-              <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#16a34a", marginBottom: "0.35rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                عملاء مباشرون
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                {Object.entries(analytics.byRole)
-                  .filter(([role]) => DIRECT_CUSTOMER_ROLES.has(role))
-                  .sort(([a], [b]) => {
-                    const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, Office: 3, CompanyOwner: 4 };
-                    return (order[a] ?? 9) - (order[b] ?? 9);
-                  })
-                  .map(([role, count]) => (
-                    <button
-                      key={role}
-                      onClick={() => handleRoleTabClick(role)}
-                      className={ROLE_BADGE[role] ?? "badge badge-gray"}
-                      style={{ fontSize: "0.78rem", cursor: "pointer", border: "none" }}
-                    >
-                      {ROLE_LABELS[role] ?? role}: {count}
-                    </button>
-                  ))}
-              </div>
-            </div>
-
-            {/* Subordinate accounts */}
-            {Object.entries(analytics.byRole).some(([role]) => SUBORDINATE_ROLES.has(role)) && (
-              <div style={{ marginBottom: "0.6rem" }}>
-                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#d97706", marginBottom: "0.35rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  حسابات تابعة (تحت مكتب / شركة)
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                  {Object.entries(analytics.byRole)
-                    .filter(([role]) => SUBORDINATE_ROLES.has(role))
-                    .map(([role, count]) => (
-                      <button
-                        key={role}
-                        onClick={() => handleRoleTabClick(role)}
-                        className={ROLE_BADGE[role] ?? "badge badge-gray"}
-                        style={{ fontSize: "0.78rem", cursor: "pointer", border: "none", opacity: 0.85 }}
-                      >
-                        {ROLE_LABELS[role] ?? role}: {count}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            )}
-
-          </div>
-        )}
-
-        {/* ── Create User Panel ── */}
-        {showCreate && (
-          <div className="form-card" style={{ marginBottom: "1.5rem", padding: "1.5rem" }}>
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem", color: "var(--color-text-primary)" }}>
-              إضافة مستخدم جديد
-            </h2>
-            {createError && (
-              <div style={{
-                marginBottom: "1rem", padding: "0.65rem 1rem",
-                backgroundColor: "#fef2f2", border: "1px solid #fecaca",
-                borderRadius: 8, fontSize: "0.83rem", color: "#b91c1c",
-              }}>
-                {createError}
-              </div>
-            )}
-            <form onSubmit={handleCreateUser}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.9rem", marginBottom: "1rem" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  <label className="form-label" style={{ margin: 0 }}>الاسم الكامل *</label>
-                  <input
-                    className="form-input"
-                    placeholder="أحمد محمد"
-                    value={createFullName}
-                    onChange={e => setCreateFullName(e.target.value)}
-                    required
-                    disabled={createLoading}
-                    style={{ padding: "0.5rem 0.75rem" }}
-                  />
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  <label className="form-label" style={{ margin: 0 }}>البريد الإلكتروني *</label>
-                  <input
-                    className="form-input"
-                    type="email"
-                    placeholder="example@email.com"
-                    value={createEmail}
-                    onChange={e => setCreateEmail(e.target.value)}
-                    required
-                    disabled={createLoading}
-                    style={{ padding: "0.5rem 0.75rem", direction: "ltr", textAlign: "right" }}
-                  />
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  <label className="form-label" style={{ margin: 0 }}>كلمة المرور *</label>
-                  <input
-                    className="form-input"
-                    type="password"
-                    placeholder="8 أحرف على الأقل"
-                    value={createPassword}
-                    onChange={e => setCreatePassword(e.target.value)}
-                    required
-                    minLength={8}
-                    disabled={createLoading}
-                    style={{ padding: "0.5rem 0.75rem" }}
-                  />
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  <label className="form-label" style={{ margin: 0 }}>رقم الهاتف</label>
-                  <input
-                    className="form-input"
-                    type="tel"
-                    placeholder="+963..."
-                    value={createPhone}
-                    onChange={e => setCreatePhone(e.target.value)}
-                    disabled={createLoading}
-                    style={{ padding: "0.5rem 0.75rem", direction: "ltr", textAlign: "right" }}
-                  />
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                  <label className="form-label" style={{ margin: 0 }}>الدور</label>
-                  <select
-                    className="form-input"
-                    value={createRole}
-                    onChange={e => setCreateRole(e.target.value)}
-                    disabled={createLoading || rolesLoading}
-                    style={{ padding: "0.5rem 0.75rem" }}
-                  >
-                    {rolesLoading ? (
-                      <option>جارٍ التحميل...</option>
-                    ) : (
-                      <>
-                        {userOnlyRoles.length > 0 && (
-                          <optgroup label="المستخدمون">
-                            {userOnlyRoles.map(r => <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>)}
-                          </optgroup>
-                        )}
-                        {businessRoles.length > 0 && (
-                          <optgroup label="الأعمال العقارية">
-                            {businessRoles.map(r => <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>)}
-                          </optgroup>
-                        )}
-                      </>
-                    )}
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{ padding: "0.55rem 1.5rem" }}
-                  disabled={createLoading}
-                >
-                  {createLoading ? "جارٍ الإنشاء..." : "إنشاء المستخدم"}
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  style={{ padding: "0.55rem 1rem" }}
-                  onClick={handleOpenCreate}
-                  disabled={createLoading}
-                >
-                  إلغاء
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* ── Filter Panel ── */}
+        {/* ── Filter bar ── */}
         <div className="form-card" style={{ marginBottom: "1.25rem" }}>
-          <div
-            style={{
-              display: "flex", justifyContent: "space-between",
-              alignItems: "center", padding: "0.75rem 1.25rem",
-              cursor: "pointer", userSelect: "none",
-            }}
-            onClick={() => setShowFilters(v => !v)}
-          >
-            <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--color-text-primary)" }}>
-              الفلاتر {hasActiveFilters && <span style={{ color: "#2563eb" }}>●</span>}
-            </span>
-            <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
-              {showFilters ? "▲ إخفاء" : "▼ عرض"}
-            </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showFilters ? "0.85rem" : 0 }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--color-text-secondary)" }}>الفلاتر</span>
+            <button
+              className="btn"
+              style={{ padding: "0.25rem 0.65rem", fontSize: "0.78rem" }}
+              onClick={() => setShowFilters(v => !v)}
+            >
+              {showFilters ? "إخفاء" : "عرض"}
+            </button>
           </div>
 
           {showFilters && (
-            <div style={{ padding: "0 1.25rem 1.25rem" }}>
-
-              {/* Filter fields */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.75rem", marginBottom: "0.75rem" }}>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                  <label className="form-label" style={{ margin: 0, fontSize: "0.8rem" }}>بحث</label>
-                  <input
-                    className="form-input"
-                    placeholder="اسم أو بريد أو هاتف"
-                    value={pendingSearch}
-                    onChange={e => setPendingSearch(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleSearch()}
-                    style={{ padding: "0.4rem 0.65rem", fontSize: "0.83rem" }}
-                  />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                  <label className="form-label" style={{ margin: 0, fontSize: "0.8rem" }}>الدور</label>
-                  <select
-                    className="form-input"
-                    value={pendingRole}
-                    onChange={e => setPendingRole(e.target.value)}
-                    disabled={rolesLoading}
-                    style={{ padding: "0.4rem 0.65rem", fontSize: "0.83rem" }}
-                  >
-                    <option value="">الكل</option>
-                    {userOnlyRoles.map(r => <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>)}
-                    {businessRoles.map(r => <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>)}
-                  </select>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                  <label className="form-label" style={{ margin: 0, fontSize: "0.8rem" }}>الحالة</label>
-                  <select
-                    className="form-input"
-                    value={pendingIsActive}
-                    onChange={e => setPendingIsActive(e.target.value)}
-                    style={{ padding: "0.4rem 0.65rem", fontSize: "0.83rem" }}
-                  >
-                    <option value="">الكل</option>
-                    <option value="true">نشط</option>
-                    <option value="false">غير نشط</option>
-                  </select>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                  <label className="form-label" style={{ margin: 0, fontSize: "0.8rem" }}>تاريخ الإنشاء (من)</label>
-                  <input
-                    className="form-input"
-                    type="date"
-                    value={pendingCreatedAfter}
-                    onChange={e => setPendingCreatedAfter(e.target.value)}
-                    style={{ padding: "0.4rem 0.65rem", fontSize: "0.83rem" }}
-                  />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                  <label className="form-label" style={{ margin: 0, fontSize: "0.8rem" }}>تاريخ الإنشاء (إلى)</label>
-                  <input
-                    className="form-input"
-                    type="date"
-                    value={pendingCreatedBefore}
-                    onChange={e => setPendingCreatedBefore(e.target.value)}
-                    style={{ padding: "0.4rem 0.65rem", fontSize: "0.83rem" }}
-                  />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                  <label className="form-label" style={{ margin: 0, fontSize: "0.8rem" }}>آخر دخول (بعد)</label>
-                  <input
-                    className="form-input"
-                    type="date"
-                    value={pendingLastLogin}
-                    onChange={e => setPendingLastLogin(e.target.value)}
-                    style={{ padding: "0.4rem 0.65rem", fontSize: "0.83rem" }}
-                  />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                  <label className="form-label" style={{ margin: 0, fontSize: "0.8rem" }}>التاج</label>
-                  {allTags.length > 0 ? (
-                    <select
-                      className="form-input"
-                      value={pendingTag}
-                      onChange={e => setPendingTag(e.target.value)}
-                      style={{ padding: "0.4rem 0.65rem", fontSize: "0.83rem" }}
-                    >
-                      <option value="">الكل</option>
-                      {allTags.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  ) : (
-                    <input
-                      className="form-input"
-                      placeholder="اكتب تاجاً..."
-                      value={pendingTag}
-                      onChange={e => setPendingTag(e.target.value)}
-                      style={{ padding: "0.4rem 0.65rem", fontSize: "0.83rem" }}
-                    />
-                  )}
-                </div>
-
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: "1 1 180px" }}>
+                <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>بحث بالاسم أو البريد</label>
+                <input
+                  className="form-input"
+                  style={{ padding: "0.45rem 0.75rem" }}
+                  placeholder="اسم أو بريد..."
+                  value={pendingSearch}
+                  onChange={e => setPendingSearch(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleSearch()}
+                />
               </div>
 
-              {/* Filter actions */}
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                <button className="btn btn-primary" style={{ padding: "0.45rem 1.2rem", fontSize: "0.83rem" }} onClick={handleSearch}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: "1 1 140px" }}>
+                <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>الحالة</label>
+                <select
+                  className="form-input"
+                  style={{ padding: "0.45rem 0.75rem" }}
+                  value={pendingIsActive}
+                  onChange={e => setPendingIsActive(e.target.value)}
+                >
+                  <option value="">الكل</option>
+                  <option value="true">نشط</option>
+                  <option value="false">غير نشط</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: "1 1 140px" }}>
+                <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>الدور</label>
+                <select
+                  className="form-input"
+                  style={{ padding: "0.45rem 0.75rem" }}
+                  value={pendingRole}
+                  onChange={e => setPendingRole(e.target.value)}
+                >
+                  <option value="">الكل</option>
+                  {platformRoles.map(r => (
+                    <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: "1 1 140px" }}>
+                <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>تسجيل بعد</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  style={{ padding: "0.45rem 0.75rem" }}
+                  value={pendingCreatedAfter}
+                  onChange={e => setPendingCreatedAfter(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: "1 1 140px" }}>
+                <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>تسجيل قبل</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  style={{ padding: "0.45rem 0.75rem" }}
+                  value={pendingCreatedBefore}
+                  onChange={e => setPendingCreatedBefore(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button className="btn btn-primary" style={{ padding: "0.45rem 1.2rem" }} onClick={handleSearch}>
                   بحث
                 </button>
-                <button className="btn" style={{ padding: "0.45rem 1rem", fontSize: "0.83rem" }} onClick={handleReset}>
+                <button className="btn" style={{ padding: "0.45rem 1rem" }} onClick={handleReset}>
                   إعادة ضبط
                 </button>
-
-                <div style={{ marginRight: "auto", display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-                  {/* Saved segments dropdown */}
-                  {segments.length > 0 && (
-                    <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
-                      {segments.map(seg => (
-                        <span
-                          key={seg.name}
-                          style={{
-                            display: "inline-flex", alignItems: "center", gap: "0.3rem",
-                            padding: "0.25rem 0.6rem", borderRadius: 999,
-                            backgroundColor: "#eff6ff", border: "1px solid #bfdbfe",
-                            fontSize: "0.78rem", cursor: "pointer",
-                            color: "#1d4ed8",
-                          }}
-                          title={`تطبيق: ${seg.name}`}
-                        >
-                          <span onClick={() => applySegment(seg)}>{seg.name}</span>
-                          <span
-                            onClick={() => handleDeleteSegment(seg.name)}
-                            title="حذف"
-                            style={{ color: "#dc2626", cursor: "pointer", fontWeight: 700, marginRight: "0.2rem" }}
-                          >×</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {/* Save segment toggle */}
-                  {!showSaveSegment ? (
-                    <button
-                      className="btn"
-                      style={{ padding: "0.35rem 0.8rem", fontSize: "0.78rem" }}
-                      onClick={() => setShowSaveSegment(true)}
-                    >
-                      + حفظ شريحة
-                    </button>
-                  ) : (
-                    <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                      <input
-                        className="form-input"
-                        placeholder="اسم الشريحة..."
-                        value={segmentName}
-                        onChange={e => setSegmentName(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && handleSaveSegment()}
-                        style={{ padding: "0.35rem 0.6rem", fontSize: "0.78rem", width: 140 }}
-                        autoFocus
-                      />
-                      <button className="btn btn-primary" style={{ padding: "0.35rem 0.7rem", fontSize: "0.78rem" }} onClick={handleSaveSegment}>
-                        حفظ
-                      </button>
-                      <button className="btn" style={{ padding: "0.35rem 0.5rem", fontSize: "0.78rem" }} onClick={() => setShowSaveSegment(false)}>
-                        ✕
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* ── Notices ── */}
+        {/* ── Errors / Notices ── */}
         {actionNotice && (
           <div style={{
-            marginBottom: "0.75rem", padding: "0.65rem 1rem",
-            backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0",
-            borderRadius: 8, fontSize: "0.83rem", color: "#15803d", fontWeight: 600,
+            marginBottom: "1rem", padding: "0.65rem 1rem",
+            background: "#f0fdf4", border: "1px solid #bbf7d0",
+            borderRadius: "0.5rem", color: "#16a34a", fontSize: "0.88rem",
           }}>
             ✓ {actionNotice}
           </div>
         )}
         <InlineBanner message={actionError} />
         <InlineBanner message={fetchError} />
-
-        {/* ── Bulk Actions Bar ── */}
-        {selected.size > 0 && (
-          <div style={{
-            marginBottom: "0.75rem", padding: "0.75rem 1.25rem",
-            backgroundColor: "#eff6ff", border: "1px solid #bfdbfe",
-            borderRadius: 10, display: "flex", alignItems: "center",
-            gap: "0.75rem", flexWrap: "wrap",
-          }}>
-            <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1d4ed8" }}>
-              {selected.size} مستخدم محدد
-            </span>
-            <button
-              className="btn btn-primary"
-              style={{ padding: "0.35rem 0.9rem", fontSize: "0.8rem", backgroundColor: "#16a34a" }}
-              onClick={() => handleBulkAction("activate")}
-              disabled={bulkLoading}
-            >
-              تفعيل
-            </button>
-            <button
-              className="btn"
-              style={{ padding: "0.35rem 0.9rem", fontSize: "0.8rem", backgroundColor: "#fef2f2", borderColor: "#fecaca", color: "#b91c1c" }}
-              onClick={() => handleBulkAction("deactivate")}
-              disabled={bulkLoading}
-            >
-              تعطيل
-            </button>
-            <button
-              className="btn"
-              style={{ padding: "0.35rem 0.9rem", fontSize: "0.8rem" }}
-              onClick={() => handleBulkAction("export")}
-              disabled={bulkLoading}
-            >
-              تصدير CSV
-            </button>
-            <button
-              className="btn"
-              style={{ padding: "0.35rem 0.7rem", fontSize: "0.78rem", marginRight: "auto" }}
-              onClick={() => setSelected(new Set())}
-            >
-              إلغاء التحديد
-            </button>
-          </div>
-        )}
 
         {/* ── Loading ── */}
         {fetching && <LoadingRow />}
@@ -1097,23 +518,6 @@ export default function AdminUsersPage() {
           </div>
         )}
 
-        {/* ── Select All row ── */}
-        {!fetching && users.length > 1 && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: "0.5rem",
-            padding: "0.4rem 0.5rem", marginBottom: "0.35rem",
-            fontSize: "0.8rem", color: "var(--color-text-secondary)",
-          }}>
-            <input
-              type="checkbox"
-              checked={selected.size === users.length && users.length > 0}
-              onChange={toggleSelectAll}
-              style={{ cursor: "pointer", width: 16, height: 16 }}
-            />
-            <span>تحديد الكل ({users.length})</span>
-          </div>
-        )}
-
         {/* ── Users list ── */}
         {!fetching && users.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
@@ -1122,18 +526,11 @@ export default function AdminUsersPage() {
                 key={u.id}
                 userData={u}
                 isSelf={u.id === user.id}
-                roles={roles}
                 actionLoading={actionLoading}
-                isSelected={selected.has(u.id)}
-                onSelect={() => toggleSelect(u.id)}
-                onToggle={handleToggleStatus}
-                onRoleChange={handleRoleChange}
-                onAddTag={handleAddTag}
-                onRemoveTag={handleRemoveTag}
-                onViewProfile={() => router.push(`/dashboard/admin/users/${u.id}`)}
-                onVerify={handleVerify}
-                onUnverify={handleUnverify}
-                onEditSave={handleEditSave}
+                activeId={viewUser?.id ?? editUser?.id ?? null}
+                onToggleVerify={handleToggleVerify}
+                onView={() => openView(u)}
+                onEdit={() => openEdit(u)}
               />
             ))}
           </div>
@@ -1159,475 +556,587 @@ export default function AdminUsersPage() {
 function UserRow({
   userData: u,
   isSelf,
+  actionLoading,
+  activeId,
+  onToggleVerify,
+  onView,
+  onEdit,
+}: {
+  userData: AdminUserResponse;
+  isSelf: boolean;
+  actionLoading: string | null;
+  activeId: string | null;
+  onToggleVerify: (id: string, current: boolean) => void;
+  onView: () => void;
+  onEdit: () => void;
+}) {
+  const isThisLoading = actionLoading === `verify-${u.id}`;
+  const isActive = activeId === u.id;
+  const badgeClass = ROLE_BADGE[u.role] ?? "badge badge-gray";
+  const badgeLabel = ROLE_LABELS[u.role] ?? u.role;
+
+  return (
+    <div className="form-card" style={{
+      padding: "1rem 1.25rem",
+      border: isActive ? "2px solid var(--color-primary)" : undefined,
+    }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between",
+        alignItems: "flex-start", gap: "1rem", flexWrap: "wrap",
+      }}>
+
+        {/* ── Info ── */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            display: "flex", alignItems: "center",
+            gap: "0.5rem", marginBottom: "0.35rem", flexWrap: "wrap",
+          }}>
+            {u.profileImageUrl && (
+              <img
+                src={u.profileImageUrl} alt={u.fullName}
+                style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }}
+              />
+            )}
+            <p style={{ fontWeight: 700, fontSize: "1rem", margin: 0, color: "var(--color-text-primary)" }}>
+              {u.fullName}
+              {isSelf && (
+                <span style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", fontWeight: 400, marginRight: "0.4rem" }}>
+                  (أنت)
+                </span>
+              )}
+            </p>
+            <span className={badgeClass}>{badgeLabel}</span>
+            <span className={u.isVerified ? "badge badge-green" : "badge badge-gray"}>
+              {u.isVerified ? "✓ موثق" : "غير موثق"}
+            </span>
+            {!u.isActive && <span className="badge badge-red">معطَّل</span>}
+            {u.isDeleted && <span className="badge badge-red">محذوف</span>}
+          </div>
+
+          {u.email && (
+            <p style={{ margin: "0 0 0.15rem", fontSize: "0.83rem", color: "var(--color-text-secondary)" }} dir="ltr">
+              ✉️ {u.email}
+            </p>
+          )}
+          {u.phone && (
+            <p style={{ margin: "0 0 0.15rem", fontSize: "0.83rem", color: "var(--color-text-secondary)" }} dir="ltr">
+              📞 {u.phone}
+            </p>
+          )}
+          {u.lastLoginAt && (
+            <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+              آخر دخول: {new Date(u.lastLoginAt).toLocaleDateString("ar-SY")}
+            </p>
+          )}
+        </div>
+
+        {/* ── Actions ── */}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", flexShrink: 0 }}>
+          <button
+            className="btn"
+            style={{ padding: "0.4rem 0.85rem", fontSize: "0.82rem" }}
+            onClick={onView}
+          >
+            تفاصيل
+          </button>
+          <button
+            className="btn"
+            style={{ padding: "0.4rem 0.85rem", fontSize: "0.82rem" }}
+            onClick={onEdit}
+          >
+            تعديل
+          </button>
+          <button
+            className={u.isVerified ? "btn" : "btn btn-primary"}
+            style={{
+              padding: "0.4rem 0.85rem", fontSize: "0.82rem",
+              ...(u.isVerified ? {
+                border: "1.5px solid var(--color-border)",
+                backgroundColor: "transparent",
+                color: "var(--color-text-primary)",
+              } : {}),
+            }}
+            disabled={isThisLoading || !!actionLoading}
+            onClick={() => onToggleVerify(u.id, u.isVerified)}
+          >
+            {isThisLoading ? "..." : u.isVerified ? "إلغاء التوثيق" : "توثيق"}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── User Details Panel ───────────────────────────────────────────────────────
+
+function UserDetailsPanel({
+  userData: u,
+  isSelf,
+  actionLoading,
+  onToggleVerify,
+  onToggleStatus,
+  onEdit,
+  onViewProfile,
+  onClose,
+}: {
+  userData: AdminUserResponse;
+  isSelf: boolean;
+  actionLoading: string | null;
+  onToggleVerify: (id: string, current: boolean) => void;
+  onToggleStatus: (id: string, current: boolean) => void;
+  onEdit: () => void;
+  onViewProfile: () => void;
+  onClose: () => void;
+}) {
+  const isVerifyLoading = actionLoading === `verify-${u.id}`;
+  const isStatusLoading = actionLoading === `status-${u.id}`;
+  const badgeClass = ROLE_BADGE[u.role] ?? "badge badge-gray";
+  const badgeLabel = ROLE_LABELS[u.role] ?? u.role;
+
+  return (
+    <div className="form-card" style={{
+      marginBottom: "1.25rem",
+      border: "2px solid var(--color-primary)",
+      padding: "1.5rem",
+    }}>
+
+      {/* header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {u.profileImageUrl && (
+            <img
+              src={u.profileImageUrl} alt={u.fullName}
+              style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }}
+            />
+          )}
+          <div>
+            <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
+              {u.fullName}
+              {isSelf && <span style={{ fontSize: "0.78rem", fontWeight: 400, color: "var(--color-text-secondary)", marginRight: "0.5rem" }}>(أنت)</span>}
+            </h2>
+            <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.3rem", flexWrap: "wrap" }}>
+              <span className={badgeClass}>{badgeLabel}</span>
+              <span className={u.isVerified ? "badge badge-green" : "badge badge-gray"}>
+                {u.isVerified ? "✓ موثق" : "غير موثق"}
+              </span>
+              {!u.isActive && <span className="badge badge-red">معطَّل</span>}
+              {u.isDeleted && <span className="badge badge-red">محذوف</span>}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{ background: "none", border: "none", fontSize: "1.3rem", cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1 }}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* fields */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.25rem" }}>
+        <DetailField label="البريد الإلكتروني" value={u.email} dir="ltr" />
+        <DetailField label="الهاتف" value={u.phone} dir="ltr" />
+        <DetailField label="الحالة" value={u.isActive ? "نشط" : "معطَّل"} />
+        {u.lastLoginAt && (
+          <DetailField label="آخر دخول" value={new Date(u.lastLoginAt).toLocaleDateString("ar-SY")} />
+        )}
+        <DetailField label="تاريخ التسجيل" value={new Date(u.createdAt).toLocaleDateString("ar-SY")} />
+        {u.listingCount !== undefined && (
+          <DetailField label="العقارات" value={String(u.listingCount)} />
+        )}
+        {u.isVerified && u.verifiedAt && (
+          <DetailField label="تاريخ التوثيق" value={new Date(u.verifiedAt).toLocaleDateString("ar-SY")} />
+        )}
+        {u.planName && (
+          <DetailField label="الخطة" value={u.planName} />
+        )}
+      </div>
+
+      {/* actions */}
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <button
+          className="btn btn-primary"
+          style={{ padding: "0.45rem 1.1rem", fontSize: "0.88rem" }}
+          onClick={onEdit}
+        >
+          تعديل البيانات
+        </button>
+        <button
+          className={u.isVerified ? "btn" : "btn btn-primary"}
+          style={{
+            padding: "0.45rem 1.1rem", fontSize: "0.88rem",
+            ...(u.isVerified ? {
+              border: "1.5px solid var(--color-border)",
+              backgroundColor: "transparent",
+              color: "var(--color-text-primary)",
+            } : {}),
+          }}
+          disabled={isVerifyLoading || !!actionLoading}
+          onClick={() => onToggleVerify(u.id, u.isVerified)}
+        >
+          {isVerifyLoading ? "..." : u.isVerified ? "إلغاء التوثيق" : "توثيق الحساب"}
+        </button>
+        {!isSelf && (
+          <button
+            className="btn"
+            style={{
+              padding: "0.45rem 1.1rem", fontSize: "0.88rem",
+              ...(u.isActive ? {
+                backgroundColor: "#fef2f2", borderColor: "#fecaca", color: "#b91c1c",
+              } : {}),
+            }}
+            disabled={isStatusLoading || !!actionLoading}
+            onClick={() => onToggleStatus(u.id, u.isActive)}
+          >
+            {isStatusLoading ? "..." : u.isActive ? "تعطيل الحساب" : "تفعيل الحساب"}
+          </button>
+        )}
+        <button
+          className="btn"
+          style={{ padding: "0.45rem 1.1rem", fontSize: "0.88rem" }}
+          onClick={onViewProfile}
+        >
+          الملف الكامل ←
+        </button>
+      </div>
+
+    </div>
+  );
+}
+
+// ─── User Edit Panel ──────────────────────────────────────────────────────────
+
+function UserEditPanel({
+  userData: u,
+  isSelf,
   roles,
   actionLoading,
-  isSelected,
-  onSelect,
-  onToggle,
-  onRoleChange,
-  onAddTag,
-  onRemoveTag,
-  onViewProfile,
-  onVerify,
-  onUnverify,
-  onEditSave,
+  onSave,
+  onClose,
 }: {
   userData: AdminUserResponse;
   isSelf: boolean;
   roles: RbacRole[];
   actionLoading: string | null;
-  isSelected: boolean;
-  onSelect: () => void;
-  onToggle: (id: string, current: boolean) => void;
-  onRoleChange: (userId: string, roleId: string, roleName: string) => void;
-  onAddTag: (userId: string, tag: string) => void;
-  onRemoveTag: (userId: string, tag: string) => void;
-  onViewProfile: () => void;
-  onVerify: (id: string) => void;
-  onUnverify: (id: string) => void;
-  onEditSave: (
+  onSave: (
     userId: string,
     data: { fullName: string; email: string; phone: string; isActive: boolean; roleId: string; roleName: string },
     original: AdminUserResponse,
   ) => void;
+  onClose: () => void;
 }) {
-  const [showRoleEdit, setShowRoleEdit] = useState(false);
-  const [selectedRoleId, setSelectedRoleId] = useState("");
-  const [showTagInput, setShowTagInput] = useState(false);
-  const [newTag, setNewTag] = useState("");
+  const [fullName, setFullName]   = useState(u.fullName);
+  const [email, setEmail]         = useState(u.email);
+  const [phone, setPhone]         = useState(u.phone ?? "");
+  const [isActive, setIsActive]   = useState(u.isActive);
+  const [roleId, setRoleId]       = useState(() => roles.find(r => r.name === u.role)?.id ?? "");
 
-  // ── Edit form state ────────────────────────────────────────────────────────
-  const [showEdit, setShowEdit]         = useState(false);
-  const [editName, setEditName]         = useState("");
-  const [editEmail, setEditEmail]       = useState("");
-  const [editPhone, setEditPhone]       = useState("");
-  const [editIsActive, setEditIsActive] = useState(true);
-  const [editRoleId, setEditRoleId]     = useState("");
+  const isSaving = actionLoading === `edit-${u.id}`;
 
-  const isThisLoading   = actionLoading === u.id;
-  const isTagLoading    = actionLoading === `tag-${u.id}`;
-  const isVerifyLoading = actionLoading === `verify-${u.id}`;
-  const isEditLoading   = actionLoading === `edit-${u.id}`;
-
-  function openEdit() {
-    setEditName(u.fullName);
-    setEditEmail(u.email);
-    setEditPhone(u.phone ?? "");
-    setEditIsActive(u.isActive);
-    const currentRole = roles.find(r => r.name === u.role);
-    setEditRoleId(currentRole?.id ?? "");
-    setShowEdit(true);
-    setShowRoleEdit(false);
-    setShowTagInput(false);
-  }
-
-  function handleEditSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (isEditLoading) return;
-    const selectedRole = roles.find(r => r.id === editRoleId);
-    onEditSave(
-      u.id,
-      {
-        fullName:   editName,
-        email:      editEmail,
-        phone:      editPhone,
-        isActive:   editIsActive,
-        roleId:     editRoleId,
-        roleName:   selectedRole?.name ?? u.role,
-      },
-      u,
-    );
-    setShowEdit(false);
-  }
-
-  function handleRoleSubmit() {
-    if (!selectedRoleId) return;
-    const role = roles.find(r => r.id === selectedRoleId);
-    if (!role) return;
-    onRoleChange(u.id, selectedRoleId, role.name);
-    setShowRoleEdit(false);
-    setSelectedRoleId("");
-  }
-
-  function handleTagSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newTag.trim()) return;
-    onAddTag(u.id, newTag.trim());
-    setNewTag("");
-    setShowTagInput(false);
-  }
-
-  function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" });
+    if (isSaving) return;
+    const selectedRole = roles.find(r => r.id === roleId);
+    onSave(u.id, {
+      fullName,
+      email,
+      phone,
+      isActive,
+      roleId,
+      roleName: selectedRole?.name ?? u.role,
+    }, u);
   }
 
   return (
-    <div
-      className="form-card"
-      style={{
-        padding: "0.9rem 1.1rem",
-        borderRight: isSelected ? "3px solid #2563eb" : "3px solid transparent",
-        transition: "border-color 0.15s",
-      }}
-    >
-      <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
+    <div className="form-card" style={{
+      marginBottom: "1.25rem",
+      border: "2px solid var(--color-primary)",
+      padding: "1.5rem",
+    }}>
 
-        {/* Checkbox */}
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={onSelect}
-          style={{ cursor: "pointer", marginTop: "0.25rem", width: 16, height: 16, flexShrink: 0 }}
-        />
-
-        {/* Content */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-
-          {/* Top row: name + badges */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.3rem" }}>
-            <span
-              onClick={onViewProfile}
-              role="button"
-              title={`عرض ملف ${u.fullName}`}
-              style={{
-                fontWeight: 700, fontSize: "0.95rem",
-                color: "var(--color-primary)",
-                textDecoration: "underline", textDecorationStyle: "dotted",
-                cursor: "pointer",
-              }}
-            >
-              {u.fullName}
-            </span>
-            <span className={ROLE_BADGE[u.role] ?? "badge badge-gray"}>
-              {ROLE_LABELS[u.role] ?? u.role}
-            </span>
-            <span className={u.isActive ? "badge badge-green" : "badge badge-red"}>
-              {u.isActive ? "نشط" : "غير نشط"}
-            </span>
-            {u.isDeleted && <span className="badge badge-red">محذوف</span>}
-            {isSelf && <span className="badge badge-gray">أنت</span>}
-            {u.isVerified ? (
-              <span
-                className="badge badge-green"
-                title={u.verifiedAt ? `موثق منذ: ${new Date(u.verifiedAt).toLocaleDateString("ar-SY")}` : "موثق"}
-                style={{ fontSize: "0.72rem" }}
-              >
-                ✓ موثق
-              </span>
-            ) : (
-              <span className="badge badge-gray" style={{ fontSize: "0.72rem" }}>
-                غير موثق
-              </span>
-            )}
-            {u.planName && (
-              <span className="badge badge-blue" style={{ fontSize: "0.72rem" }}>
-                {u.planName}
-              </span>
-            )}
-          </div>
-
-          {/* Email + meta row */}
-          <div style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
-            <span style={{ direction: "ltr", display: "inline-block" }}>{u.email}</span>
-            {u.phone && <span style={{ marginRight: "0.75rem" }}>· {u.phone}</span>}
-          </div>
-
-          {/* Stats row */}
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", fontSize: "0.75rem", color: "var(--color-text-secondary)", marginBottom: "0.4rem" }}>
-            <span>تسجيل: {formatDate(u.createdAt)}</span>
-            {u.lastLoginAt && <span>آخر دخول: {formatDate(u.lastLoginAt)}</span>}
-            {u.listingCount > 0 && <span>عقارات: {u.listingCount}</span>}
-          </div>
-
-          {/* Tags */}
-          {(u.tags.length > 0 || showTagInput) && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.4rem", alignItems: "center" }}>
-              {u.tags.map(tag => (
-                <span
-                  key={tag}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: "0.2rem",
-                    padding: "0.15rem 0.5rem", borderRadius: 999,
-                    backgroundColor: "#fef3c7", border: "1px solid #fde68a",
-                    fontSize: "0.73rem", color: "#92400e",
-                  }}
-                >
-                  {tag}
-                  <button
-                    onClick={() => onRemoveTag(u.id, tag)}
-                    disabled={isTagLoading}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", padding: 0, lineHeight: 1, fontSize: "0.7rem", marginRight: "0.1rem" }}
-                    title="حذف التاج"
-                  >×</button>
-                </span>
-              ))}
-              {showTagInput && (
-                <form onSubmit={handleTagSubmit} style={{ display: "flex", gap: "0.25rem" }}>
-                  <input
-                    className="form-input"
-                    placeholder="تاج جديد..."
-                    value={newTag}
-                    onChange={e => setNewTag(e.target.value)}
-                    autoFocus
-                    style={{ padding: "0.15rem 0.5rem", fontSize: "0.75rem", width: 110 }}
-                  />
-                  <button type="submit" className="btn btn-primary" style={{ padding: "0.15rem 0.5rem", fontSize: "0.72rem" }}>
-                    إضافة
-                  </button>
-                  <button type="button" className="btn" style={{ padding: "0.15rem 0.4rem", fontSize: "0.72rem" }} onClick={() => setShowTagInput(false)}>
-                    ✕
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* Role editor */}
-          {showRoleEdit && (
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-              <select
-                className="form-input"
-                value={selectedRoleId}
-                onChange={e => setSelectedRoleId(e.target.value)}
-                style={{ padding: "0.35rem 0.6rem", fontSize: "0.8rem", minWidth: 160 }}
-              >
-                <option value="">اختر الدور...</option>
-                {roles.map(r => (
-                  <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] ?? r.name}</option>
-                ))}
-              </select>
-              <button
-                className="btn btn-primary"
-                style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
-                onClick={handleRoleSubmit}
-                disabled={!selectedRoleId || isThisLoading}
-              >
-                تأكيد
-              </button>
-              <button
-                className="btn"
-                style={{ padding: "0.35rem 0.6rem", fontSize: "0.8rem" }}
-                onClick={() => { setShowRoleEdit(false); setSelectedRoleId(""); }}
-              >
-                إلغاء
-              </button>
-            </div>
-          )}
-
-        </div>
-
-        {/* Actions */}
-        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", flexShrink: 0, alignItems: "flex-start" }}>
-          <button
-            className="btn"
-            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem" }}
-            onClick={() => { setShowTagInput(v => !v); setShowRoleEdit(false); setShowEdit(false); }}
-            disabled={isTagLoading}
-            title="إضافة تاج"
-          >
-            🏷
-          </button>
-          <button
-            className={showEdit ? "btn btn-primary" : "btn"}
-            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem" }}
-            onClick={() => { showEdit ? setShowEdit(false) : openEdit(); setShowTagInput(false); setShowRoleEdit(false); }}
-            disabled={isEditLoading}
-          >
-            {showEdit ? "✕ إغلاق" : "تعديل"}
-          </button>
-          <button
-            className="btn"
-            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem" }}
-            onClick={() => { setShowRoleEdit(v => !v); setShowTagInput(false); setShowEdit(false); }}
-            disabled={isThisLoading}
-          >
-            تغيير الدور
-          </button>
-          {u.isVerified ? (
-            <button
-              className="btn"
-              style={{
-                padding: "0.3rem 0.65rem", fontSize: "0.75rem",
-                backgroundColor: "#fef2f2",
-                borderColor: "#fecaca",
-                color: "#b91c1c",
-              }}
-              onClick={() => onUnverify(u.id)}
-              disabled={isVerifyLoading}
-              title="إلغاء التوثيق"
-            >
-              {isVerifyLoading ? "..." : "إلغاء التوثيق"}
-            </button>
-          ) : (
-            <button
-              className="btn"
-              style={{
-                padding: "0.3rem 0.65rem", fontSize: "0.75rem",
-                backgroundColor: "#f0fdf4",
-                borderColor: "#bbf7d0",
-                color: "#15803d",
-              }}
-              onClick={() => onVerify(u.id)}
-              disabled={isVerifyLoading}
-              title="توثيق المستخدم"
-            >
-              {isVerifyLoading ? "..." : "توثيق"}
-            </button>
-          )}
-          {!isSelf && (
-            <button
-              className={u.isActive ? "btn" : "btn btn-primary"}
-              style={{
-                padding: "0.3rem 0.65rem", fontSize: "0.75rem",
-                backgroundColor: u.isActive ? "#fef2f2" : undefined,
-                borderColor: u.isActive ? "#fecaca" : undefined,
-                color: u.isActive ? "#b91c1c" : undefined,
-              }}
-              onClick={() => onToggle(u.id, u.isActive)}
-              disabled={isThisLoading}
-            >
-              {isThisLoading ? "..." : (u.isActive ? "تعطيل" : "تفعيل")}
-            </button>
-          )}
-          <button
-            className="btn"
-            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem" }}
-            onClick={onViewProfile}
-          >
-            عرض
-          </button>
-        </div>
-
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+        <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
+          تعديل: {u.fullName}
+        </h2>
+        <button
+          onClick={onClose}
+          style={{ background: "none", border: "none", fontSize: "1.3rem", cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1 }}
+        >
+          ✕
+        </button>
       </div>
 
-      {/* ── Edit form panel ──────────────────────────────────────────────────── */}
-      {showEdit && (
-        <form
-          onSubmit={handleEditSubmit}
-          style={{
-            marginTop: "0.9rem",
-            padding: "1rem 1.1rem",
-            background: "var(--color-bg-secondary, #f8fafc)",
-            borderRadius: "0.5rem",
-            border: "1px solid var(--color-border, #e5e7eb)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.75rem",
-          }}
-        >
-          <p style={{ margin: 0, fontWeight: 700, fontSize: "0.85rem", color: "var(--color-text-secondary, #64748b)" }}>
-            تعديل بيانات المستخدم
-          </p>
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem", marginBottom: "1rem" }}>
 
-          {/* Row 1: Name + Email */}
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <div style={{ flex: "1 1 180px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary, #64748b)" }}>الاسم الكامل</label>
-              <input
-                className="form-input"
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                placeholder="الاسم الكامل"
-                style={{ padding: "0.4rem 0.65rem", fontSize: "0.85rem" }}
-                disabled={isEditLoading}
-                required
-              />
-            </div>
-            <div style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary, #64748b)" }}>البريد الإلكتروني</label>
-              <input
-                className="form-input"
-                type="email"
-                value={editEmail}
-                onChange={e => setEditEmail(e.target.value)}
-                placeholder="email@example.com"
-                dir="ltr"
-                style={{ padding: "0.4rem 0.65rem", fontSize: "0.85rem", direction: "ltr" }}
-                disabled={isEditLoading}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Row 2: Phone + Role */}
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <div style={{ flex: "1 1 150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary, #64748b)" }}>رقم الهاتف</label>
-              <input
-                className="form-input"
-                value={editPhone}
-                onChange={e => setEditPhone(e.target.value)}
-                placeholder="+963..."
-                dir="ltr"
-                style={{ padding: "0.4rem 0.65rem", fontSize: "0.85rem", direction: "ltr" }}
-                disabled={isEditLoading}
-              />
-            </div>
-            <div style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary, #64748b)" }}>
-                نوع الحساب
-                {isSelf && <span style={{ color: "#ef4444", fontSize: "0.72rem", marginRight: "0.3rem" }}>(لا يمكن تعديل حسابك)</span>}
-              </label>
-              <select
-                className="form-input"
-                value={editRoleId}
-                onChange={e => setEditRoleId(e.target.value)}
-                style={{ padding: "0.4rem 0.65rem", fontSize: "0.85rem" }}
-                disabled={isEditLoading || isSelf}
-              >
-                <option value="">اختر النوع...</option>
-                {roles.map(r => (
-                  <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] ?? r.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Row 3: Status checkbox */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <FormField label="الاسم الكامل *">
             <input
-              type="checkbox"
-              id={`edit-active-${u.id}`}
-              checked={editIsActive}
-              onChange={e => setEditIsActive(e.target.checked)}
-              disabled={isEditLoading || isSelf}
-              style={{ width: 16, height: 16, cursor: isSelf ? "not-allowed" : "pointer" }}
+              className="form-input"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              placeholder="الاسم الكامل"
+              required
+              disabled={isSaving}
             />
-            <label
-              htmlFor={`edit-active-${u.id}`}
-              style={{
-                fontSize: "0.83rem",
-                cursor: isSelf ? "not-allowed" : "pointer",
-                color: isSelf ? "var(--color-text-secondary, #94a3b8)" : undefined,
-              }}
-            >
-              الحساب نشط
-              {isSelf && <span style={{ fontSize: "0.72rem", color: "#94a3b8", marginRight: "0.3rem" }}>(لا يمكن تعديل حسابك)</span>}
-            </label>
-          </div>
+          </FormField>
 
-          {/* Row 4: Buttons */}
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ padding: "0.4rem 1rem", fontSize: "0.85rem" }}
-              disabled={isEditLoading}
+          <FormField label="البريد الإلكتروني *">
+            <input
+              className="form-input"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="email@example.com"
+              dir="ltr"
+              required
+              disabled={isSaving}
+            />
+          </FormField>
+
+          <FormField label="رقم الهاتف">
+            <input
+              className="form-input"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="+963..."
+              dir="ltr"
+              disabled={isSaving}
+            />
+          </FormField>
+
+          <FormField label={isSelf ? "نوع الحساب (لا يمكن تعديله)" : "نوع الحساب"}>
+            <select
+              className="form-input"
+              value={roleId}
+              onChange={e => setRoleId(e.target.value)}
+              disabled={isSaving || isSelf}
             >
-              {isEditLoading ? "جارٍ الحفظ..." : "حفظ التعديلات"}
-            </button>
-            <button
-              type="button"
-              className="btn"
-              style={{ padding: "0.4rem 0.75rem", fontSize: "0.85rem" }}
-              onClick={() => setShowEdit(false)}
-              disabled={isEditLoading}
+              <option value="">اختر النوع...</option>
+              {roles.map(r => (
+                <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] ?? r.name}</option>
+              ))}
+            </select>
+          </FormField>
+
+        </div>
+
+        {/* Active checkbox */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
+          <input
+            type="checkbox"
+            id={`edit-active-${u.id}`}
+            checked={isActive}
+            onChange={e => setIsActive(e.target.checked)}
+            disabled={isSaving || isSelf}
+            style={{ width: 16, height: 16, cursor: isSelf ? "not-allowed" : "pointer" }}
+          />
+          <label
+            htmlFor={`edit-active-${u.id}`}
+            style={{ fontSize: "0.88rem", cursor: isSelf ? "not-allowed" : "pointer" }}
+          >
+            الحساب نشط
+            {isSelf && <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginRight: "0.4rem" }}>(لا يمكن تعديل حسابك الخاص)</span>}
+          </label>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ padding: "0.45rem 1.25rem", fontSize: "0.88rem" }}
+            disabled={isSaving}
+          >
+            {isSaving ? "جارٍ الحفظ..." : "حفظ التعديلات"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            style={{ padding: "0.45rem 1rem", fontSize: "0.88rem" }}
+            onClick={onClose}
+            disabled={isSaving}
+          >
+            إلغاء
+          </button>
+        </div>
+      </form>
+
+    </div>
+  );
+}
+
+// ─── User Create Form ─────────────────────────────────────────────────────────
+
+function UserCreateForm({
+  roles,
+  actionLoading,
+  onSave,
+  onCancel,
+}: {
+  roles: RbacRole[];
+  actionLoading: boolean;
+  onSave: (data: { fullName: string; email: string; password: string; phone: string; role: string }) => void;
+  onCancel: () => void;
+}) {
+  const [fullName, setFullName]     = useState("");
+  const [email, setEmail]           = useState("");
+  const [password, setPassword]     = useState("");
+  const [phone, setPhone]           = useState("");
+  const [role, setRole]             = useState("User");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (actionLoading) return;
+    onSave({ fullName: fullName.trim(), email: email.trim(), password, phone: phone.trim(), role });
+  }
+
+  return (
+    <div className="form-card" style={{
+      marginBottom: "1.25rem",
+      border: "2px solid var(--color-primary)",
+      padding: "1.5rem",
+    }}>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+        <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
+          إضافة مستخدم جديد
+        </h2>
+        <button
+          onClick={onCancel}
+          style={{ background: "none", border: "none", fontSize: "1.3rem", cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1 }}
+        >
+          ✕
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem", marginBottom: "1rem" }}>
+
+          <FormField label="الاسم الكامل *">
+            <input
+              className="form-input"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              placeholder="الاسم الكامل"
+              required
+              disabled={actionLoading}
+            />
+          </FormField>
+
+          <FormField label="البريد الإلكتروني *">
+            <input
+              className="form-input"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="email@example.com"
+              dir="ltr"
+              required
+              disabled={actionLoading}
+            />
+          </FormField>
+
+          <FormField label="كلمة المرور *">
+            <input
+              className="form-input"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="كلمة المرور"
+              dir="ltr"
+              required
+              disabled={actionLoading}
+            />
+          </FormField>
+
+          <FormField label="الهاتف">
+            <input
+              className="form-input"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="+963..."
+              dir="ltr"
+              disabled={actionLoading}
+            />
+          </FormField>
+
+          <FormField label="نوع الحساب">
+            <select
+              className="form-input"
+              value={role}
+              onChange={e => setRole(e.target.value)}
+              disabled={actionLoading}
             >
-              إلغاء
-            </button>
-          </div>
-        </form>
-      )}
+              {roles.map(r => (
+                <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>
+              ))}
+            </select>
+          </FormField>
+
+        </div>
+
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ padding: "0.45rem 1.25rem", fontSize: "0.88rem" }}
+            disabled={actionLoading}
+          >
+            {actionLoading ? "جارٍ الإنشاء..." : "إنشاء الحساب"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            style={{ padding: "0.45rem 1rem", fontSize: "0.88rem" }}
+            onClick={onCancel}
+            disabled={actionLoading}
+          >
+            إلغاء
+          </button>
+        </div>
+      </form>
+
+    </div>
+  );
+}
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+function DetailField({ label, value, dir }: { label: string; value?: string | null; dir?: "ltr" | "rtl" }) {
+  if (!value) return null;
+  return (
+    <div>
+      <p style={{ margin: "0 0 0.2rem", fontSize: "0.78rem", fontWeight: 600, color: "var(--color-text-secondary)", textTransform: "uppercase" }}>
+        {label}
+      </p>
+      <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--color-text-primary)" }} dir={dir}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function FormField({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+      <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--color-text-secondary)" }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function StatPill({ label, value, color }: { label: string; value?: number; color?: string }) {
+  if (value === undefined) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 52 }}>
+      <span style={{ fontSize: "1.25rem", fontWeight: 700, color: color ?? "var(--color-text-primary)" }}>
+        {value.toLocaleString("ar")}
+      </span>
+      <span style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", marginTop: "0.1rem" }}>
+        {label}
+      </span>
     </div>
   );
 }
