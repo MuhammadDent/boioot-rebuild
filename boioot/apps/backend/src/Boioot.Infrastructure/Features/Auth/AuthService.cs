@@ -135,7 +135,16 @@ public class AuthService : IAuthService
             };
             _context.AccountUsers.Add(accountUser);
 
-            var freePlanId = new Guid("00000001-0000-0000-0000-000000000000");
+            // ── Assign the correct free/starter plan based on role + company type ──
+            var freePlanId = (role, request.CompanyType) switch
+            {
+                (UserRole.Owner,        _)                   => new Guid("00000003-0000-0000-0000-000000000000"), // owner_free
+                (UserRole.Broker,       _)                   => new Guid("00000006-0000-0000-0000-000000000000"), // broker_free
+                (UserRole.Agent,        _)                   => new Guid("00000008-0000-0000-0000-000000000000"), // office_free
+                (UserRole.CompanyOwner, "RealEstateOffice")  => new Guid("00000008-0000-0000-0000-000000000000"), // office_free
+                (UserRole.CompanyOwner, _)                   => new Guid("0000000a-0000-0000-0000-000000000000"), // company_basic (DeveloperCompany)
+                _                                            => new Guid("00000001-0000-0000-0000-000000000000"), // seeker_free (fallback)
+            };
 
             var freeSub = new Subscription
             {
@@ -157,7 +166,7 @@ public class AuthService : IAuthService
                 SubscriptionId  = freeSub.Id,
                 EventType       = "created",
                 NewPlanId       = freePlanId,
-                Notes           = "تفعيل تلقائي للباقة المجانية عند التسجيل",
+                Notes           = "تفعيل تلقائي للباقة الابتدائية عند التسجيل",
                 CreatedByUserId = user.Id,
                 CreatedAtUtc    = now,
             });

@@ -34,6 +34,7 @@ public sealed class PlanCatalogSeeder
         await SeedPlanPricingsAsync(ct);
         await ApplyPlanCorrectionsAsync(ct);
         await ApplyPlanNameNormalizationAsync(ct);
+        await CorrectMisassignedSubscriptionsAsync(ct);
         await SeedBlogSeoSettingsAsync(ct);
     }
 
@@ -859,6 +860,85 @@ public sealed class PlanCatalogSeeder
 
         await _ctx.SaveChangesAsync(ct);
         _log.LogInformation("Applied plan naming normalization to {Count} plans.", plans.Count);
+    }
+
+    // ── Correct mis-assigned subscriptions (seeker_free → role-correct plan) ──
+    // Runs on every startup; no-op when there is nothing to fix.
+
+    private async Task CorrectMisassignedSubscriptionsAsync(CancellationToken ct)
+    {
+        var seekerFreeId = Guid.Parse("00000001-0000-0000-0000-000000000000");
+
+        // Only look at active subscriptions pointing to seeker_free
+        var wrongSubs = await _ctx.Subscriptions
+            .IgnoreQueryFilters()
+            .Where(s => s.IsActive && s.PlanId == seekerFreeId)
+            .Include(s => s.Account)
+                .ThenInclude(a => a.AccountUsers)
+                    .ThenInclude(au => au.User)
+            .ToListAsync(ct);
+
+        int corrected = 0;
+
+        foreach (var sub in wrongSubs)
+        {
+            var primaryAdmin = sub.Account.AccountUsers
+                .FirstOrDefault(au => au.IsPrimary)?.User
+                ?? sub.Account.AccountUsers.FirstOrDefault()?.User;
+
+            if (primaryAdmin == null) continue;
+
+            // Seeker (User) accounts are correctly on seeker_free — skip them
+            if (primaryAdmin.Role == UserRole.User) continue;
+
+            Guid correctPlanId;
+
+            switch (sub.Account.AccountType)
+            {
+                case AccountType.Individual:
+                    // Owner registered as individual
+                    correctPlanId = Guid.Parse("00000003-0000-0000-0000-000000000000"); // owner_free
+                    break;
+
+                case AccountType.Office:
+                    // Broker (independent) gets broker_free; other office roles get office_free
+                    correctPlanId = primaryAdmin.Role == UserRole.Broker
+                        ? Guid.Parse("00000006-0000-0000-0000-000000000000") // broker_free
+                        : Guid.Parse("00000008-0000-0000-0000-000000000000"); // office_free
+                    break;
+
+                case AccountType.Company:
+                    // CompanyOwner: distinguish RealEstateOffice vs DeveloperCompany
+                    var agent = await _ctx.Agents
+                        .IgnoreQueryFilters()
+                        .Include(a => a.Company)
+                        .FirstOrDefaultAsync(a => a.UserId == primaryAdmin.Id, ct);
+
+                    correctPlanId = agent?.Company?.CompanyType == "RealEstateOffice"
+                        ? Guid.Parse("00000008-0000-0000-0000-000000000000") // office_free
+                        : Guid.Parse("0000000a-0000-0000-0000-000000000000"); // company_basic
+                    break;
+
+                default:
+                    continue;
+            }
+
+            sub.PlanId    = correctPlanId;
+            sub.UpdatedAt = DateTime.UtcNow;
+            corrected++;
+        }
+
+        if (corrected > 0)
+        {
+            await _ctx.SaveChangesAsync(ct);
+            _log.LogInformation(
+                "CorrectMisassignedSubscriptions: fixed {Count} subscription(s) from seeker_free to role-appropriate plan.",
+                corrected);
+        }
+        else
+        {
+            _log.LogDebug("CorrectMisassignedSubscriptions: no mis-assigned subscriptions found.");
+        }
     }
 
     // ── BlogSeoSettings (singleton) ───────────────────────────────────────────
