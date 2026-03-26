@@ -34,6 +34,17 @@ type NavItem = {
   badge?: number;
 };
 
+type NavDivider = {
+  divider: true;
+  label: string;
+};
+
+type NavEntry = NavItem | NavDivider;
+
+function isDivider(e: NavEntry): e is NavDivider {
+  return "divider" in e && e.divider === true;
+}
+
 // ─── Icon paths (reused across roles) ────────────────────────────────────────
 
 const ICONS = {
@@ -95,7 +106,7 @@ const BASE: NavItem[] = [
 // Each key matches the `role` string returned by the backend (case-sensitive).
 // To add a new role: add a new key + array here — no other code changes needed.
 
-const SIDEBAR_CONFIG: Record<string, NavItem[]> = {
+const SIDEBAR_CONFIG: Record<string, NavEntry[]> = {
 
   // ── Regular user ──────────────────────────────────────────────────────────
   User: [
@@ -145,13 +156,22 @@ const SIDEBAR_CONFIG: Record<string, NavItem[]> = {
   // ── Admin ─────────────────────────────────────────────────────────────────
   // Admin has a separate set — no profile/messages here (they use /dashboard/admin/*)
   Admin: [
-    { href: "/dashboard",               label: "لوحة التحكم",      exact: true,  icon: ICONS.dashboard },
-    { href: "/dashboard/admin/users",   label: "إدارة المستخدمين", exact: false, icon: ICONS.users     },
-    { href: "/dashboard/admin/companies",label: "الشركات",          exact: false, icon: ICONS.companies },
-    { href: "/dashboard/listings",      label: "الطلبات",           exact: false, icon: ICONS.requests  },
-    { href: "/dashboard/projects",      label: "المشاريع",          exact: false, icon: ICONS.projects  },
-    { href: "/dashboard/admin/content", label: "محتوى الموقع",     exact: false, icon: ICONS.content   },
-    { href: "/dashboard/admin/system",  label: "النظام",            exact: false, icon: ICONS.system    },
+    { href: "/dashboard", label: "لوحة التحكم", exact: true, icon: ICONS.dashboard },
+
+    // ── الأشخاص ──
+    { divider: true, label: "الأشخاص" },
+    { href: "/dashboard/admin/users",    label: "المستخدمون",  exact: false, icon: ICONS.users     },
+
+    // ── الأعمال ──
+    { divider: true, label: "الأعمال" },
+    { href: "/dashboard/admin/companies", label: "الشركات",    exact: false, icon: ICONS.companies },
+    { href: "/dashboard/listings",        label: "العقارات",   exact: false, icon: ICONS.listings  },
+    { href: "/dashboard/projects",        label: "المشاريع",   exact: false, icon: ICONS.projects  },
+
+    // ── الإدارة ──
+    { divider: true, label: "الإدارة" },
+    { href: "/dashboard/admin/content",   label: "محتوى الموقع", exact: false, icon: ICONS.content },
+    { href: "/dashboard/admin/system",    label: "النظام",        exact: false, icon: ICONS.system  },
   ],
 };
 
@@ -175,7 +195,7 @@ export default function DashboardSidebar({ open, onClose }: Props) {
     return exact ? pathname === href : pathname.startsWith(href);
   }
 
-  function visibleItems(): NavItem[] {
+  function visibleItems(): NavEntry[] {
     if (!user) return [];
     return SIDEBAR_CONFIG[user.role] ?? FALLBACK_ITEMS;
   }
@@ -203,25 +223,34 @@ export default function DashboardSidebar({ open, onClose }: Props) {
 
         {/* Nav items */}
         <nav className="dash-sbar__nav" aria-label="قائمة لوحة التحكم">
-          {visibleItems().map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className={[
-                "dash-sbar__link",
-                isActive(item.href, item.exact) ? "dash-sbar__link--active" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-              {item.badge != null && item.badge > 0 && (
-                <span className="dash-sbar__badge">{item.badge}</span>
-              )}
-            </Link>
-          ))}
+          {visibleItems().map((entry, i) => {
+            if (isDivider(entry)) {
+              return (
+                <div key={`divider-${i}`} className="dash-sbar__section-label">
+                  {entry.label}
+                </div>
+              );
+            }
+            return (
+              <Link
+                key={entry.href}
+                href={entry.href}
+                onClick={onClose}
+                className={[
+                  "dash-sbar__link",
+                  isActive(entry.href, entry.exact) ? "dash-sbar__link--active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {entry.icon}
+                <span>{entry.label}</span>
+                {entry.badge != null && entry.badge > 0 && (
+                  <span className="dash-sbar__badge">{entry.badge}</span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Footer: user info + logout */}

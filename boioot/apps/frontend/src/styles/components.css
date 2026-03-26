@@ -1360,6 +1360,20 @@
   background: var(--color-primary);
   border-radius: 3px 0 0 3px;
 }
+.dash-sbar__section-label {
+  padding: 1rem 1.25rem 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  user-select: none;
+}
+.dash-sbar__section-label:not(:first-child) {
+  margin-top: 0.25rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.9rem;
+}
 .dash-sbar__badge {
   margin-inline-start: auto;
   background: #dc2626;

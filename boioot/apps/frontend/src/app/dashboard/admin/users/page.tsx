@@ -99,6 +99,9 @@ export default function AdminUsersPage() {
   const [actionError, setActionError]     = useState("");
   const [actionNotice, setActionNotice]   = useState("");
 
+  // Role quick-filter tabs
+  const [activeRoleTab, setActiveRoleTab] = useState("");
+
   // Filters (pending = UI, applied = last search)
   const [pendingRole, setPendingRole]           = useState("");
   const [pendingIsActive, setPendingIsActive]   = useState("");
@@ -200,6 +203,7 @@ export default function AdminUsersPage() {
   function handleSearch() {
     const params = buildParams();
     appliedFiltersRef.current = params;
+    setActiveRoleTab(pendingRole);
     setActionError("");
     load(1, params);
   }
@@ -208,14 +212,26 @@ export default function AdminUsersPage() {
     setPendingRole(""); setPendingIsActive(""); setPendingSearch("");
     setPendingCreatedAfter(""); setPendingCreatedBefore("");
     setPendingLastLogin(""); setPendingTag("");
+    setActiveRoleTab("");
     appliedFiltersRef.current = {};
     setActionError("");
     load(1, {});
   }
 
+  function handleRoleTabClick(role: string) {
+    setActiveRoleTab(role);
+    setPendingRole(role);
+    const params: AdminUsersParams = { ...appliedFiltersRef.current, role: role || undefined };
+    if (!role) delete params.role;
+    appliedFiltersRef.current = params;
+    setActionError("");
+    load(1, params);
+  }
+
   function applySegment(seg: SavedSegment) {
     const f = seg.filters;
     setPendingRole(f.role ?? "");
+    setActiveRoleTab(f.role ?? "");
     setPendingIsActive(f.isActive !== undefined ? String(f.isActive) : "");
     setPendingSearch(f.search ?? "");
     setPendingCreatedAfter(f.createdAfter ?? "");
@@ -427,6 +443,62 @@ export default function AdminUsersPage() {
               {showCreate ? "✕ إلغاء" : "+ إضافة مستخدم"}
             </button>
           </div>
+        </div>
+
+        {/* ── Role Quick-Filter Tabs ── */}
+        <div style={{
+          display: "flex", gap: "0.35rem", flexWrap: "wrap",
+          marginBottom: "1.25rem",
+          borderBottom: "2px solid var(--color-border, #e2e8f0)",
+          paddingBottom: "0",
+        }}>
+          {([
+            { role: "",            label: "الكل",              count: analytics?.totalUsers },
+            { role: "User",        label: "مستخدمون",          count: analytics?.byRole["User"] },
+            { role: "Owner",       label: "ملاك",              count: analytics?.byRole["Owner"] },
+            { role: "Broker",      label: "مكاتب عقارية",      count: analytics?.byRole["Broker"] },
+            { role: "Agent",       label: "وكلاء",             count: analytics?.byRole["Agent"] },
+            { role: "CompanyOwner",label: "شركات تطوير",       count: analytics?.byRole["CompanyOwner"] },
+            { role: "Admin",       label: "إداريون",           count: analytics?.byRole["Admin"] },
+          ] as const).map(tab => {
+            const isActive = activeRoleTab === tab.role;
+            return (
+              <button
+                key={tab.role || "all"}
+                onClick={() => handleRoleTabClick(tab.role)}
+                style={{
+                  padding: "0.5rem 0.9rem",
+                  fontSize: "0.82rem",
+                  fontWeight: isActive ? 700 : 500,
+                  background: "none",
+                  border: "none",
+                  borderBottom: isActive ? "2px solid var(--color-primary, #16a34a)" : "2px solid transparent",
+                  marginBottom: "-2px",
+                  cursor: "pointer",
+                  color: isActive ? "var(--color-primary, #16a34a)" : "var(--color-text-secondary, #64748b)",
+                  whiteSpace: "nowrap",
+                  transition: "color 0.15s, border-color 0.15s",
+                  display: "flex", alignItems: "center", gap: "0.35rem",
+                }}
+              >
+                {tab.label}
+                {tab.count != null && (
+                  <span style={{
+                    fontSize: "0.72rem",
+                    padding: "0.1rem 0.4rem",
+                    borderRadius: 99,
+                    background: isActive ? "var(--color-primary, #16a34a)" : "#e2e8f0",
+                    color: isActive ? "#fff" : "#64748b",
+                    fontWeight: 600,
+                    minWidth: 18,
+                    textAlign: "center",
+                  }}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Analytics Panel ── */}
