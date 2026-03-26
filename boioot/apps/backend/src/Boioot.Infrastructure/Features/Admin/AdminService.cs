@@ -248,32 +248,7 @@ public class AdminService : IAdminService
             .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new KeyNotFoundException($"User {userId} not found");
 
-        return new AdminUserResponse
-        {
-            Id                         = user.Id,
-            FullName                   = user.FullName,
-            Email                      = user.Email,
-            Phone                      = user.Phone,
-            ProfileImageUrl            = user.ProfileImageUrl,
-            Role                       = user.Role.ToString(),
-            IsActive                   = user.IsActive,
-            IsDeleted                  = user.IsDeleted,
-            CreatedAt                  = user.CreatedAt,
-            UpdatedAt                  = user.UpdatedAt,
-            LastLoginAt                = user.LastLoginAt,
-            IsVerified                 = user.IsVerified,
-            VerifiedAt                 = user.VerifiedAt,
-            VerifiedBy                 = user.VerifiedBy,
-            VerificationStatus         = user.VerificationStatus.ToString(),
-            VerificationLevel          = user.VerificationLevel,
-            PhoneVerified              = user.PhoneVerified,
-            EmailVerified              = user.EmailVerified,
-            IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
-            BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
-            VerificationBadge          = user.VerificationBadge,
-            VerificationNotes          = user.VerificationNotes,
-            RejectionReason            = user.RejectionReason,
-        };
+        return MapToAdminUserResponse(user);
     }
 
     public async Task<AdminUserProfileResponse> GetAdminUserProfileAsync(Guid userId, CancellationToken ct = default)
@@ -416,32 +391,7 @@ public class AdminService : IAdminService
 
         _logger.LogInformation("Admin updated User {UserId} profile fields", userId);
 
-        return new AdminUserResponse
-        {
-            Id                         = user.Id,
-            FullName                   = user.FullName,
-            Email                      = user.Email,
-            Phone                      = user.Phone,
-            ProfileImageUrl            = user.ProfileImageUrl,
-            Role                       = user.Role.ToString(),
-            IsActive                   = user.IsActive,
-            IsDeleted                  = user.IsDeleted,
-            CreatedAt                  = user.CreatedAt,
-            UpdatedAt                  = user.UpdatedAt,
-            LastLoginAt                = user.LastLoginAt,
-            IsVerified                 = user.IsVerified,
-            VerifiedAt                 = user.VerifiedAt,
-            VerifiedBy                 = user.VerifiedBy,
-            VerificationStatus         = user.VerificationStatus.ToString(),
-            VerificationLevel          = user.VerificationLevel,
-            PhoneVerified              = user.PhoneVerified,
-            EmailVerified              = user.EmailVerified,
-            IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
-            BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
-            VerificationBadge          = user.VerificationBadge,
-            VerificationNotes          = user.VerificationNotes,
-            RejectionReason            = user.RejectionReason,
-        };
+        return MapToAdminUserResponse(user);
     }
 
     // ── User identity verification ────────────────────────────────────────────
@@ -457,47 +407,15 @@ public class AdminService : IAdminService
         if (!CustomerRoles.Contains(user.Role))
             throw new BoiootException("لا يمكن توثيق حسابات الإدارة والطاقم", 400);
 
-        user.IsVerified = true;
-        user.VerifiedAt = DateTime.UtcNow;
-        user.VerifiedBy = adminUserId.ToString();
-        user.UpdatedAt  = DateTime.UtcNow;
-
-        // Sync with multi-level system: promote to at least Basic
-        user.VerificationStatus = VerificationStatus.Verified;
-        if (user.VerificationLevel < (int)VerificationLevelValue.Basic)
-            user.VerificationLevel = (int)VerificationLevelValue.Basic;
+        var targetLevel = Math.Max(user.VerificationLevel, (int)VerificationLevelValue.Basic);
+        ApplyVerificationCore(user, VerificationStatus.Verified, targetLevel, adminUserId);
 
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation(
             "User {TargetUserId} verified by admin {AdminUserId}", targetUserId, adminUserId);
 
-        return new AdminUserResponse
-        {
-            Id                         = user.Id,
-            FullName                   = user.FullName,
-            Email                      = user.Email,
-            Phone                      = user.Phone,
-            ProfileImageUrl            = user.ProfileImageUrl,
-            Role                       = user.Role.ToString(),
-            IsActive                   = user.IsActive,
-            IsDeleted                  = user.IsDeleted,
-            CreatedAt                  = user.CreatedAt,
-            UpdatedAt                  = user.UpdatedAt,
-            LastLoginAt                = user.LastLoginAt,
-            IsVerified                 = user.IsVerified,
-            VerifiedAt                 = user.VerifiedAt,
-            VerifiedBy                 = user.VerifiedBy,
-            VerificationStatus         = user.VerificationStatus.ToString(),
-            VerificationLevel          = user.VerificationLevel,
-            PhoneVerified              = user.PhoneVerified,
-            EmailVerified              = user.EmailVerified,
-            IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
-            BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
-            VerificationBadge          = user.VerificationBadge,
-            VerificationNotes          = user.VerificationNotes,
-            RejectionReason            = user.RejectionReason,
-        };
+        return MapToAdminUserResponse(user);
     }
 
     public async Task<AdminUserResponse> UnverifyUserAsync(
@@ -511,46 +429,14 @@ public class AdminService : IAdminService
         if (!CustomerRoles.Contains(user.Role))
             throw new BoiootException("لا يمكن تعديل حسابات الإدارة والطاقم", 400);
 
-        user.IsVerified = false;
-        user.VerifiedAt = null;
-        user.VerifiedBy = adminUserId.ToString();
-        user.UpdatedAt  = DateTime.UtcNow;
-
-        // Sync with multi-level system: reset status and level
-        user.VerificationStatus = VerificationStatus.None;
-        user.VerificationLevel  = (int)VerificationLevelValue.None;
+        ApplyVerificationCore(user, VerificationStatus.None, (int)VerificationLevelValue.None, adminUserId);
 
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation(
             "User {TargetUserId} unverified by admin {AdminUserId}", targetUserId, adminUserId);
 
-        return new AdminUserResponse
-        {
-            Id                         = user.Id,
-            FullName                   = user.FullName,
-            Email                      = user.Email,
-            Phone                      = user.Phone,
-            ProfileImageUrl            = user.ProfileImageUrl,
-            Role                       = user.Role.ToString(),
-            IsActive                   = user.IsActive,
-            IsDeleted                  = user.IsDeleted,
-            CreatedAt                  = user.CreatedAt,
-            UpdatedAt                  = user.UpdatedAt,
-            LastLoginAt                = user.LastLoginAt,
-            IsVerified                 = user.IsVerified,
-            VerifiedAt                 = user.VerifiedAt,
-            VerifiedBy                 = user.VerifiedBy,
-            VerificationStatus         = user.VerificationStatus.ToString(),
-            VerificationLevel          = user.VerificationLevel,
-            PhoneVerified              = user.PhoneVerified,
-            EmailVerified              = user.EmailVerified,
-            IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
-            BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
-            VerificationBadge          = user.VerificationBadge,
-            VerificationNotes          = user.VerificationNotes,
-            RejectionReason            = user.RejectionReason,
-        };
+        return MapToAdminUserResponse(user);
     }
 
     public async Task<PagedResult<AdminAgentResponse>> GetAdminAgentsAsync(
@@ -1959,13 +1845,19 @@ public class AdminService : IAdminService
         if (!CustomerRoles.Contains(user.Role))
             throw new BoiootException("لا يمكن تعديل توثيق حسابات الإدارة والطاقم", 400);
 
-        if (request.VerificationStatus is not null &&
-            Enum.TryParse<VerificationStatus>(request.VerificationStatus, out var vs))
-            user.VerificationStatus = vs;
+        // Resolve status + level from request (fall back to current values if not supplied)
+        var newStatus = request.VerificationStatus is not null
+            && Enum.TryParse<VerificationStatus>(request.VerificationStatus, out var vs)
+            ? vs : user.VerificationStatus;
 
-        if (request.VerificationLevel is not null)
-            user.VerificationLevel = Math.Clamp(request.VerificationLevel.Value, 0, 4);
+        var newLevel = request.VerificationLevel is not null
+            ? request.VerificationLevel.Value
+            : user.VerificationLevel;
 
+        // Single source of truth: IsVerified + VerifiedAt/By are always set here
+        ApplyVerificationCore(user, newStatus, newLevel, adminUserId);
+
+        // Apply remaining fields that are outside core verification logic
         if (request.PhoneVerified is not null)
             user.PhoneVerified = request.PhoneVerified.Value;
 
@@ -1981,27 +1873,17 @@ public class AdminService : IAdminService
             user.BusinessVerificationStatus = bvs;
 
         if (request.VerificationBadge is not null)
-            user.VerificationBadge = string.IsNullOrWhiteSpace(request.VerificationBadge) ? null : request.VerificationBadge.Trim();
+            user.VerificationBadge = string.IsNullOrWhiteSpace(request.VerificationBadge)
+                ? null : request.VerificationBadge.Trim();
 
         if (request.VerificationNotes is not null)
-            user.VerificationNotes = string.IsNullOrWhiteSpace(request.VerificationNotes) ? null : request.VerificationNotes.Trim();
+            user.VerificationNotes = string.IsNullOrWhiteSpace(request.VerificationNotes)
+                ? null : request.VerificationNotes.Trim();
 
         if (request.RejectionReason is not null)
-            user.RejectionReason = string.IsNullOrWhiteSpace(request.RejectionReason) ? null : request.RejectionReason.Trim();
+            user.RejectionReason = string.IsNullOrWhiteSpace(request.RejectionReason)
+                ? null : request.RejectionReason.Trim();
 
-        // Keep legacy IsVerified in sync
-        user.IsVerified = user.VerificationStatus is VerificationStatus.Verified or VerificationStatus.PartiallyVerified;
-        if (user.IsVerified && user.VerifiedBy is null)
-        {
-            user.VerifiedAt = DateTime.UtcNow;
-            user.VerifiedBy = adminUserId.ToString();
-        }
-        else if (!user.IsVerified)
-        {
-            user.VerifiedAt = null;
-        }
-
-        user.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation(
@@ -2029,6 +1911,67 @@ public class AdminService : IAdminService
         VerificationNotes          = user.VerificationNotes,
         RejectionReason            = user.RejectionReason,
         UpdatedAt                  = user.UpdatedAt,
+    };
+
+    // ── Unified verification helpers ──────────────────────────────────────────
+
+    /// <summary>
+    /// Single source of truth for all verification state changes.
+    /// Computes IsVerified from VerificationStatus and manages VerifiedAt/By.
+    /// Every code path that changes verification MUST go through this method.
+    /// </summary>
+    private static void ApplyVerificationCore(
+        User user, VerificationStatus status, int level, Guid adminUserId)
+    {
+        user.VerificationStatus = status;
+        user.VerificationLevel  = Math.Clamp(level, 0, 4);
+
+        // IsVerified is ALWAYS derived from VerificationStatus — never set directly
+        user.IsVerified = status is VerificationStatus.Verified
+                                 or VerificationStatus.PartiallyVerified;
+
+        if (user.IsVerified)
+        {
+            user.VerifiedAt ??= DateTime.UtcNow;   // preserve original timestamp on re-verify
+            user.VerifiedBy   = adminUserId.ToString();
+        }
+        else
+        {
+            user.VerifiedAt = null;
+        }
+
+        user.UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Maps a User entity to AdminUserResponse.
+    /// Centralises all field assignments — no more copy-paste blocks.
+    /// </summary>
+    private static AdminUserResponse MapToAdminUserResponse(User user) => new()
+    {
+        Id                         = user.Id,
+        FullName                   = user.FullName,
+        Email                      = user.Email,
+        Phone                      = user.Phone,
+        ProfileImageUrl            = user.ProfileImageUrl,
+        Role                       = user.Role.ToString(),
+        IsActive                   = user.IsActive,
+        IsDeleted                  = user.IsDeleted,
+        CreatedAt                  = user.CreatedAt,
+        UpdatedAt                  = user.UpdatedAt,
+        LastLoginAt                = user.LastLoginAt,
+        IsVerified                 = user.IsVerified,
+        VerifiedAt                 = user.VerifiedAt,
+        VerifiedBy                 = user.VerifiedBy,
+        VerificationStatus         = user.VerificationStatus.ToString(),
+        VerificationLevel          = user.VerificationLevel,
+        PhoneVerified              = user.PhoneVerified,
+        EmailVerified              = user.EmailVerified,
+        IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
+        BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
+        VerificationBadge          = user.VerificationBadge,
+        VerificationNotes          = user.VerificationNotes,
+        RejectionReason            = user.RejectionReason,
     };
 
     private class UserTagRowFull
