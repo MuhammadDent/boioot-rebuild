@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { dashboardSummaryApi } from "@/features/dashboard/summary/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
-import { ROLE_LABELS } from "@/features/admin/constants";
+import { ROLE_LABELS, getRoleCategory } from "@/features/admin/constants";
 import { hasPermission } from "@/lib/permissions";
 import { formatPrice, LISTING_TYPE_LABELS } from "@/features/properties/constants";
 import type { DashboardSummary, DashboardAnalytics, FavoriteResponse } from "@/types";
 import { api, ApiError } from "@/lib/api";
 
-const SUMMARY_ROLES = ["Admin", "CompanyOwner", "Broker", "Agent"] as const;
+const SUMMARY_ROLES = ["CompanyOwner", "Broker", "Office", "Agent"] as const;
 type SummaryRole = (typeof SUMMARY_ROLES)[number];
 function canSeeSummary(role: string): role is SummaryRole {
   return (SUMMARY_ROLES as readonly string[]).includes(role);
@@ -20,6 +21,17 @@ function canSeeSummary(role: string): role is SummaryRole {
 
 export default function DashboardPage() {
   const { user, isLoading } = useProtectedRoute();
+  const router = useRouter();
+
+  // ── Dashboard separation guard ──────────────────────────────────────────────
+  // Admin and staff users must use /dashboard/admin, not the customer dashboard.
+  useEffect(() => {
+    if (isLoading || !user) return;
+    const category = getRoleCategory(user.role);
+    if (category === "admin" || category === "staff") {
+      router.replace("/dashboard/admin");
+    }
+  }, [isLoading, user, router]);
 
   const [summary, setSummary]             = useState<DashboardSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -116,7 +128,9 @@ export default function DashboardPage() {
     }
   }, [user]);
 
+  // Block render while redirecting admin/staff users
   if (isLoading || !user) return null;
+  if (getRoleCategory(user.role) === "admin" || getRoleCategory(user.role) === "staff") return null;
 
   const isManagementRole = canSeeSummary(user.role);
   const isCompanyOrAdmin = hasPermission(user, "projects.create");
@@ -136,7 +150,7 @@ export default function DashboardPage() {
           letterSpacing: "-0.025em",
           color: "#1a2e1a",
         }}>
-          لوحة التحكم
+          لوحة التحكم (حسابي)
         </h1>
         <p style={{ margin: "0.3rem 0 0", fontSize: "0.875rem", color: "#64748b" }}>
           مرحباً، {user.fullName}

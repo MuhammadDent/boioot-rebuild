@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { getRoleCategory } from "@/features/admin/constants";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminToolbar from "@/components/admin/AdminToolbar";
 import AdminBreadcrumb from "@/components/admin/AdminBreadcrumb";
@@ -39,9 +40,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    const isAdminRole = user.role === "Admin";
+    // Customer and subordinate users must use /dashboard, not /dashboard/admin
+    const category = getRoleCategory(user.role);
     const hasAnyAdminPermission = (user.permissions?.length ?? 0) > 0;
-    if (!isAdminRole && !hasAnyAdminPermission) {
+    if (category === "customer" || category === "subordinate") {
+      redirected.current = true;
+      router.replace("/dashboard");
+      return;
+    }
+    // Staff without any RBAC permissions also blocked
+    if (category === "staff" && !hasAnyAdminPermission) {
       redirected.current = true;
       router.replace("/dashboard");
     }

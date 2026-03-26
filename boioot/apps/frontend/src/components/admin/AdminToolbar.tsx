@@ -80,6 +80,18 @@ export default function AdminToolbar() {
         Backoffice
       </span>
 
+      {/* Admin dashboard title */}
+      <span
+        style={{
+          fontSize: "0.78rem",
+          fontWeight: 600,
+          color: "#94a3b8",
+          letterSpacing: "-0.01em",
+        }}
+      >
+        لوحة التحكم (الإدارة)
+      </span>
+
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
