@@ -104,6 +104,16 @@ const BASE: NavItem[] = [
   { href: "/dashboard/messages", label: "الرسائل",        exact: false, icon: ICONS.messages  },
 ];
 
+// ─── Account-type access helper ───────────────────────────────────────────────
+//
+// Centralised check for project-module access.
+// Only Company accounts (developer companies) have access to Projects.
+// Office accounts share the CompanyOwner role but are NOT allowed.
+
+export function canAccessProjects(accountType?: string | null): boolean {
+  return accountType === "Company";
+}
+
 // ─── Per-role sidebar configuration ──────────────────────────────────────────
 //
 // Each key matches the `role` string returned by the backend (case-sensitive).
@@ -150,10 +160,12 @@ const SIDEBAR_CONFIG: Record<string, NavEntry[]> = {
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],
 
-  // ── Company owner / developer ─────────────────────────────────────────────
+  // ── Company owner (developer company) ────────────────────────────────────
+  // Projects are ONLY shown for CompanyOwner with accountType === "Company".
+  // Office accounts (CompanyOwner + accountType === "Office") must NOT see Projects.
+  // visibleItems() injects the "المشاريع" entry conditionally.
   CompanyOwner: [
     ...BASE,
-    { href: "/dashboard/projects",               label: "المشاريع",       exact: false, icon: ICONS.projects     },
     { href: "/dashboard/listings",               label: "الإعلانات",      exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "الطلبات",        exact: false, icon: ICONS.requests     },
     { href: "/dashboard/verification",           label: "التوثيق",        exact: false, icon: ICONS.verification },
@@ -205,7 +217,28 @@ export default function DashboardSidebar({ open, onClose }: Props) {
 
   function visibleItems(): NavEntry[] {
     if (!user) return [];
-    return SIDEBAR_CONFIG[user.role] ?? FALLBACK_ITEMS;
+
+    const items = SIDEBAR_CONFIG[user.role] ?? FALLBACK_ITEMS;
+
+    // Inject "المشاريع" for CompanyOwner ONLY when accountType === "Company".
+    // Office accounts share CompanyOwner role but must NOT see this section.
+    if (user.role === "CompanyOwner" && canAccessProjects(user.accountType)) {
+      const projectsEntry: NavItem = {
+        href: "/dashboard/projects",
+        label: "المشاريع",
+        exact: false,
+        icon: ICONS.projects,
+      };
+      // Insert after the BASE items (index 4 = right after BASE[3] = messages)
+      const baseLen = BASE.length; // 4 items
+      return [
+        ...items.slice(0, baseLen),
+        projectsEntry,
+        ...items.slice(baseLen),
+      ];
+    }
+
+    return items;
   }
 
   function handleLogout() {

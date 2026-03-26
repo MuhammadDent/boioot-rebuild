@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { canAccessProjects } from "@/components/dashboard/DashboardSidebar";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { dashboardProjectsApi } from "@/features/dashboard/projects/api";
 import ProjectForm from "@/components/dashboard/projects/ProjectForm";
@@ -17,6 +18,13 @@ export default function NewProjectPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
+
+  // ── Access guard ── Office accounts must not reach this page.
+  useEffect(() => {
+    if (!isLoading && user && user.role === "CompanyOwner" && !canAccessProjects(user.accountType)) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, user, router]);
 
   async function handleSubmit(
     data: CreateProjectRequest | UpdateProjectRequest

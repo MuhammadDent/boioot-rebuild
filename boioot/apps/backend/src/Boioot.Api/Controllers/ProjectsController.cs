@@ -29,7 +29,10 @@ public class ProjectsController : BaseController
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrCompanyOwner")]
+    // Write operations — restricted to Admin OR CompanyOwner with account_type=Company.
+    // Office accounts share the CompanyOwner role but must NOT manage projects.
+
+    [Authorize(Policy = "CompanyProjectsOnly")]
     [HttpPost]
     [RequestSizeLimit(104_857_600)]
     public async Task<IActionResult> Create([FromBody] CreateProjectRequest request, CancellationToken ct)
@@ -38,7 +41,7 @@ public class ProjectsController : BaseController
         return StatusCode(201, result);
     }
 
-    [Authorize(Policy = "AdminOrCompanyOwner")]
+    [Authorize(Policy = "CompanyProjectsOnly")]
     [HttpPut("{id:guid}")]
     [RequestSizeLimit(104_857_600)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectRequest request, CancellationToken ct)
@@ -47,7 +50,7 @@ public class ProjectsController : BaseController
         return Ok(result);
     }
 
-    [Authorize(Policy = "AdminOrCompanyOwner")]
+    [Authorize(Policy = "CompanyProjectsOnly")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {

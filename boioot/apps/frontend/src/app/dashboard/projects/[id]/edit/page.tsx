@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { canAccessProjects } from "@/components/dashboard/DashboardSidebar";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
@@ -30,6 +31,13 @@ export default function EditProjectPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
+
+  // ── Access guard ── Office accounts must not reach this page.
+  useEffect(() => {
+    if (!isLoading && user && user.role === "CompanyOwner" && !canAccessProjects(user.accountType)) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, user, router]);
 
   useEffect(() => {
     if (isLoading || !user || !id) return;

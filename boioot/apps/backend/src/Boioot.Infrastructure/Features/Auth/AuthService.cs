@@ -290,15 +290,16 @@ public class AuthService : IAuthService
         _logger.LogInformation("[Refresh] Token rotated for user {UserId}.", user.Id);
 
         var permissions  = await ResolvePermissionsAsync(user, ct);
+        var accountType  = await ResolveAccountTypeAsync(user, ct);
         var accessExpiry = DateTime.UtcNow.AddMinutes(GetAccessTokenExpiryMinutes());
 
         return new AuthResponse
         {
-            Token                = GenerateToken(user, accessExpiry, permissions),
+            Token                = GenerateToken(user, accessExpiry, permissions, accountType),
             ExpiresAt            = accessExpiry,
             RefreshToken         = newRawToken,
             RefreshTokenExpiresAt = newExpiresAt,
-            User                 = MapToProfileResponse(user, permissions),
+            User                 = MapToProfileResponse(user, permissions, accountType),
         };
     }
 
@@ -435,7 +436,8 @@ public class AuthService : IAuthService
             throw new BoiootException("الحساب غير مفعّل", 403);
 
         var permissions = await ResolvePermissionsAsync(user, ct);
-        return MapToProfileResponse(user, permissions);
+        var accountType = await ResolveAccountTypeAsync(user, ct);
+        return MapToProfileResponse(user, permissions, accountType);
     }
 
     public async Task<UserProfileResponse> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default)
@@ -482,7 +484,8 @@ public class AuthService : IAuthService
         _logger.LogInformation("Profile updated for user: {UserId}", userId);
 
         var permissions = await ResolvePermissionsAsync(user, ct);
-        return MapToProfileResponse(user, permissions);
+        var accountType = await ResolveAccountTypeAsync(user, ct);
+        return MapToProfileResponse(user, permissions, accountType);
     }
 
     // ── Change email (secure: password confirmation + uniqueness) ─────────────
@@ -515,7 +518,8 @@ public class AuthService : IAuthService
         _logger.LogInformation("Email changed (secure flow) for user: {UserId}", userId);
 
         var permissions = await ResolvePermissionsAsync(user, ct);
-        return MapToProfileResponse(user, permissions);
+        var accountType = await ResolveAccountTypeAsync(user, ct);
+        return MapToProfileResponse(user, permissions, accountType);
     }
 
     // ── Permission resolution ──────────────────────────────────────────────────
@@ -585,6 +589,7 @@ public class AuthService : IAuthService
         CancellationToken ct)
     {
         var permissions  = await ResolvePermissionsAsync(user, ct);
+        var accountType  = await ResolveAccountTypeAsync(user, ct);
         var accessExpiry = DateTime.UtcNow.AddMinutes(GetAccessTokenExpiryMinutes());
 
         var (rawRefreshToken, tokenHash, refreshExpiry) = GenerateRefreshToken(rememberMe);
@@ -605,17 +610,17 @@ public class AuthService : IAuthService
 
         return new AuthResponse
         {
-            Token                 = GenerateToken(user, accessExpiry, permissions),
+            Token                 = GenerateToken(user, accessExpiry, permissions, accountType),
             ExpiresAt             = accessExpiry,
             RefreshToken          = rawRefreshToken,
             RefreshTokenExpiresAt = refreshExpiry,
-            User                  = MapToProfileResponse(user, permissions),
+            User                  = MapToProfileResponse(user, permissions, accountType),
         };
     }
 
     // ── JWT generation ─────────────────────────────────────────────────────────
 
-    private string GenerateToken(User user, DateTime expiresAt, IReadOnlyList<string> permissions)
+    private string GenerateToken(User user, DateTime expiresAt, IReadOnlyList<string> permissions, string? accountType = null)
     {
         var key         = _configuration["Jwt:Key"]!;
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
@@ -631,6 +636,9 @@ public class AuthService : IAuthService
             new(ClaimTypes.Role,               roleStr),
             new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString())
         };
+
+        if (accountType is not null)
+            claims.Add(new Claim("account_type", accountType));
 
         foreach (var perm in permissions)
             claims.Add(new Claim("permission", perm));
@@ -714,7 +722,10 @@ public class AuthService : IAuthService
     private int GetRefreshTokenRememberMeExpiryDays() =>
         int.TryParse(_configuration["Jwt:RefreshTokenRememberMeExpiryDays"], out var days) ? days : 30;
 
-    private static UserProfileResponse MapToProfileResponse(User user, IReadOnlyList<string> permissions)
+    private static UserProfileResponse MapToProfileResponse(
+        User user,
+        IReadOnlyList<string> permissions,
+        string? accountType = null)
     {
         return new UserProfileResponse
         {
@@ -727,6 +738,31 @@ public class AuthService : IAuthService
             ProfileImageUrl = user.ProfileImageUrl,
             CreatedAt       = user.CreatedAt,
             Permissions     = permissions,
+            AccountType     = accountType,
         };
+    }
+
+    // ── Account type resolver ─────────────────────────────────────────────────
+    //
+    // Only CompanyOwner / Agent / Broker / Owner users have an Account row.
+    // For Admin and User roles, returns null (no account).
+
+    private async Task<string?> ResolveAccountTypeAsync(User user, CancellationToken ct)
+    {
+        if (user.Role is not (UserRole.CompanyOwner or UserRole.Agent or UserRole.Broker or UserRole.Owner))
+            return null;
+
+        var acctType = await _context.AccountUsers
+            .Where(au => au.UserId == user.Id && au.IsActive)
+            .Join(
+                _context.Accounts,
+                au => au.AccountId,
+                a  => a.Id,
+                (au, a) => a.AccountType)
+            .FirstOrDefaultAsync(ct);
+
+        // AccountType is a value-type enum — ToString() gives "Company", "Office", etc.
+        // Use the default enum name so Office accounts see "Office" (not "RealEstateOffice").
+        return acctType == default ? null : acctType.ToString();
     }
 }

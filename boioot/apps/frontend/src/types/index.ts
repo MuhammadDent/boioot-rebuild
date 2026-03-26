@@ -26,6 +26,13 @@ export interface UserProfileResponse {
   createdAt: string;
   /** Permissions granted by the backend based on the user's role. */
   permissions: string[];
+  /**
+   * The type of the user's primary account.
+   * Only set for roles that have an account (CompanyOwner, Agent, etc.)
+   * Values: "Company" | "Office" | "Individual" | null/undefined
+   * Use this to gate features that are account-type-specific (e.g. Projects).
+   */
+  accountType?: string | null;
 }
 
 export interface FavoriteResponse {

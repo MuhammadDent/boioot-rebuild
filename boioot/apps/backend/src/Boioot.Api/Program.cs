@@ -70,6 +70,14 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOrCompanyOwnerOrAgent", policy =>
         policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Agent, RoleNames.Broker));
 
+    // ── Projects: only Admin OR CompanyOwner with account_type=Company ────────
+    // Office accounts also have CompanyOwner role but must NOT access Projects.
+    options.AddPolicy("CompanyProjectsOnly", policy =>
+        policy.RequireAssertion(ctx =>
+            ctx.User.IsInRole(RoleNames.Admin) ||
+            (ctx.User.IsInRole(RoleNames.CompanyOwner) &&
+             ctx.User.FindFirst("account_type")?.Value == "Company")));
+
     // ── Legacy blog policies — retained for backward compatibility ─────────────
     // AdminBlogController now uses [RequirePermission] directly, but we keep
     // these so any external callers or older attributes don't break.

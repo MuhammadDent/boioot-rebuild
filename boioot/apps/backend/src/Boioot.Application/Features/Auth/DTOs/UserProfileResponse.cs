@@ -17,4 +17,11 @@ public class UserProfileResponse
     /// Frontend uses this list as the source of truth for UI visibility.
     /// </summary>
     public IReadOnlyList<string> Permissions { get; set; } = Array.Empty<string>();
+
+    /// <summary>
+    /// The type of the user's primary account: "Company", "Office", "Individual", etc.
+    /// Only populated for CompanyOwner / Agent / Owner roles that have an account.
+    /// Used by the frontend to gate account-type-specific features (e.g. Projects module).
+    /// </summary>
+    public string? AccountType { get; set; }
 }

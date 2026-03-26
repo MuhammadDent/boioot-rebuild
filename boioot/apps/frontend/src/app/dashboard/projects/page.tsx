@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import {
   dashboardProjectsApi,
@@ -15,6 +16,7 @@ import {
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
+import { canAccessProjects } from "@/components/dashboard/DashboardSidebar";
 import { normalizeError } from "@/lib/api";
 import { hasPermission } from "@/lib/permissions";
 import type { DashboardProjectItem } from "@/types";
@@ -22,6 +24,7 @@ import type { DashboardProjectItem } from "@/types";
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardProjectsPage() {
+  const router = useRouter();
   const { user, isLoading } = useProtectedRoute({
     allowedRoles: ["Admin", "CompanyOwner"],
   });
@@ -35,6 +38,13 @@ export default function DashboardProjectsPage() {
   const [fetchError, setFetchError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
+
+  // ── Access guard ── Office accounts must not reach this page.
+  useEffect(() => {
+    if (!isLoading && user && user.role === "CompanyOwner" && !canAccessProjects(user.accountType)) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, user, router]);
 
   // "projects.create" → CompanyOwner, Admin (see PLATFORM_ROLE_PERMISSIONS in rbac.ts).
   const canManage = hasPermission(user, "projects.create");
