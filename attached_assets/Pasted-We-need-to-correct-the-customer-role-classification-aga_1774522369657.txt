@@ -1,0 +1,83 @@
+We need to correct the customer role classification again.
+
+IMPORTANT BUSINESS CLARIFICATION
+
+The customer group must include real-estate brokers as well.
+Previously, brokers were omitted or confused with agents.
+
+CORRECT CUSTOMER ROLE MODEL
+
+1) Direct customer roles (primary monetizable accounts)
+These are direct platform customers who can subscribe themselves:
+- User
+- Owner
+- Broker
+- Office
+- CompanyOwner / DevelopmentCompany
+
+2) Child / subordinate roles
+These are linked accounts created under higher business accounts:
+- Agent
+
+IMPORTANT DIFFERENCE
+- Broker is a direct customer account with permissions similar to Office but with lower limits
+- Broker CANNOT create agents
+- Agent is a subordinate account created by Offices or Companies
+- Agent is not equivalent to Broker
+
+GOAL
+Update the admin/customer classification so brokers are clearly included in customers,
+while agents are treated as subordinate business members.
+
+REQUIRED CHANGES
+
+1) Customer role classification
+Customer roles must include:
+- User
+- Owner
+- Broker
+- Office
+- CompanyOwner
+
+2) Agent handling
+- Agent must remain visible in the system
+- But classify Agent as a subordinate/member role, not the same as a primary monetizable customer role
+
+3) Customer filters
+In the customer directory, support filtering by:
+- الكل
+- مستخدم
+- مالك عقار
+- وسيط عقاري
+- مكتب عقاري
+- شركة تطوير
+- وكلاء عقاريون
+
+But internally distinguish:
+- primary/direct customers
+- subordinate/child accounts
+
+4) Analytics and monetization logic
+- Broker must be counted as a direct monetizable customer
+- Agent must not be counted the same way as Broker in subscription analytics
+- Offices and Companies may have child Agent accounts under them
+
+5) Permissions/business logic
+Reflect the business difference:
+- Broker: similar to Office, but with smaller limits, no agent creation
+- Office: can create agents
+- Company: can create/manage agents
+- Agent: subordinate account only
+
+6) UI labels
+Use clear Arabic labels:
+- Broker = وسيط عقاري
+- Agent = وكيل عقاري
+- Office = مكتب عقاري
+- CompanyOwner = شركة تطوير (or the business-approved Arabic label)
+
+DELIVERABLES
+- Update role classification
+- Include Broker correctly in customer roles
+- Distinguish Broker from Agent in filters, analytics, and business logic
+- Confirm which roles are direct customers vs subordinate accounts

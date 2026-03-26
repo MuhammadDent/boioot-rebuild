@@ -18,6 +18,8 @@ import {
 import {
   ADMIN_PAGE_SIZE,
   PLATFORM_ROLE_NAMES,
+  DIRECT_CUSTOMER_ROLES,
+  SUBORDINATE_ROLES,
   ROLE_LABELS,
   ROLE_BADGE,
   getRoleCategory,
@@ -457,50 +459,74 @@ export default function AdminUsersPage() {
           paddingBottom: "0",
         }}>
           {([
-            { role: "",            label: "الكل",              count: analytics?.totalUsers },
-            { role: "User",        label: "مستخدمون",          count: analytics?.byRole["User"] },
-            { role: "Owner",       label: "ملاك",              count: analytics?.byRole["Owner"] },
-            { role: "Broker",      label: "مكاتب عقارية",      count: analytics?.byRole["Broker"] },
-            { role: "Agent",       label: "وكلاء",             count: analytics?.byRole["Agent"] },
-            { role: "CompanyOwner",label: "شركات تطوير",       count: analytics?.byRole["CompanyOwner"] },
-            { role: "Admin",       label: "إداريون",           count: analytics?.byRole["Admin"] },
-          ] as const).map(tab => {
+            { role: "",             label: "الكل",               count: analytics?.totalUsers,               subordinate: false },
+            { role: "User",         label: "مستخدمون",           count: analytics?.byRole["User"],           subordinate: false },
+            { role: "Owner",        label: "ملاك عقار",          count: analytics?.byRole["Owner"],          subordinate: false },
+            { role: "Broker",       label: "وسطاء عقاريون",      count: analytics?.byRole["Broker"],         subordinate: false },
+            { role: "CompanyOwner", label: "شركات تطوير",        count: analytics?.byRole["CompanyOwner"],   subordinate: false },
+            { role: "Agent",        label: "وكلاء عقاريون",      count: analytics?.byRole["Agent"],          subordinate: true  },
+            { role: "Admin",        label: "إداريون",            count: analytics?.byRole["Admin"],          subordinate: false },
+          ] as const).map((tab, i, arr) => {
             const isActive = activeRoleTab === tab.role;
+            // Separator before Agent (subordinate group)
+            const prevTab = arr[i - 1];
+            const showSeparator = tab.subordinate && prevTab && !prevTab.subordinate;
             return (
-              <button
-                key={tab.role || "all"}
-                onClick={() => handleRoleTabClick(tab.role)}
-                style={{
-                  padding: "0.5rem 0.9rem",
-                  fontSize: "0.82rem",
-                  fontWeight: isActive ? 700 : 500,
-                  background: "none",
-                  border: "none",
-                  borderBottom: isActive ? "2px solid var(--color-primary, #16a34a)" : "2px solid transparent",
-                  marginBottom: "-2px",
-                  cursor: "pointer",
-                  color: isActive ? "var(--color-primary, #16a34a)" : "var(--color-text-secondary, #64748b)",
-                  whiteSpace: "nowrap",
-                  transition: "color 0.15s, border-color 0.15s",
-                  display: "flex", alignItems: "center", gap: "0.35rem",
-                }}
-              >
-                {tab.label}
-                {tab.count != null && (
+              <span key={tab.role || "all"} style={{ display: "contents" }}>
+                {showSeparator && (
                   <span style={{
-                    fontSize: "0.72rem",
-                    padding: "0.1rem 0.4rem",
-                    borderRadius: 99,
-                    background: isActive ? "var(--color-primary, #16a34a)" : "#e2e8f0",
-                    color: isActive ? "#fff" : "#64748b",
-                    fontWeight: 600,
-                    minWidth: 18,
-                    textAlign: "center",
-                  }}>
-                    {tab.count}
-                  </span>
+                    alignSelf: "center",
+                    width: 1, height: 20,
+                    background: "var(--color-border, #e2e8f0)",
+                    margin: "0 0.1rem",
+                    flexShrink: 0,
+                  }} />
                 )}
-              </button>
+                <button
+                  onClick={() => handleRoleTabClick(tab.role)}
+                  style={{
+                    padding: "0.5rem 0.9rem",
+                    fontSize: "0.82rem",
+                    fontWeight: isActive ? 700 : 500,
+                    background: "none",
+                    border: "none",
+                    borderBottom: isActive
+                      ? `2px solid ${tab.subordinate ? "#d97706" : "var(--color-primary, #16a34a)"}`
+                      : "2px solid transparent",
+                    marginBottom: "-2px",
+                    cursor: "pointer",
+                    color: isActive
+                      ? (tab.subordinate ? "#d97706" : "var(--color-primary, #16a34a)")
+                      : tab.subordinate
+                      ? "#94a3b8"
+                      : "var(--color-text-secondary, #64748b)",
+                    whiteSpace: "nowrap",
+                    transition: "color 0.15s, border-color 0.15s",
+                    display: "flex", alignItems: "center", gap: "0.35rem",
+                  }}
+                >
+                  {tab.subordinate && !isActive && (
+                    <span style={{ fontSize: "0.65rem", opacity: 0.6 }}>↳</span>
+                  )}
+                  {tab.label}
+                  {tab.count != null && (
+                    <span style={{
+                      fontSize: "0.72rem",
+                      padding: "0.1rem 0.4rem",
+                      borderRadius: 99,
+                      background: isActive
+                        ? (tab.subordinate ? "#d97706" : "var(--color-primary, #16a34a)")
+                        : tab.subordinate ? "#fef3c7" : "#e2e8f0",
+                      color: isActive ? "#fff" : tab.subordinate ? "#92400e" : "#64748b",
+                      fontWeight: 600,
+                      minWidth: 18,
+                      textAlign: "center",
+                    }}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              </span>
             );
           })}
         </div>
@@ -540,16 +566,75 @@ export default function AdminUsersPage() {
         {/* ── Role distribution mini-chart ── */}
         {showAnalytics && analytics && Object.keys(analytics.byRole).length > 0 && (
           <div className="form-card" style={{ marginBottom: "1.25rem", padding: "1rem 1.25rem" }}>
-            <div style={{ fontSize: "0.85rem", fontWeight: 700, marginBottom: "0.6rem", color: "var(--color-text-primary)" }}>
+            <div style={{ fontSize: "0.85rem", fontWeight: 700, marginBottom: "0.75rem", color: "var(--color-text-primary)" }}>
               توزيع المستخدمين حسب الدور
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {Object.entries(analytics.byRole).map(([role, count]) => (
-                <span key={role} className={ROLE_BADGE[role] ?? "badge badge-gray"} style={{ fontSize: "0.78rem" }}>
-                  {ROLE_LABELS[role] ?? role}: {count}
-                </span>
-              ))}
+
+            {/* Direct customers */}
+            <div style={{ marginBottom: "0.6rem" }}>
+              <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#16a34a", marginBottom: "0.35rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                عملاء مباشرون
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                {Object.entries(analytics.byRole)
+                  .filter(([role]) => DIRECT_CUSTOMER_ROLES.has(role))
+                  .sort(([a], [b]) => {
+                    const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, CompanyOwner: 3 };
+                    return (order[a] ?? 9) - (order[b] ?? 9);
+                  })
+                  .map(([role, count]) => (
+                    <button
+                      key={role}
+                      onClick={() => handleRoleTabClick(role)}
+                      className={ROLE_BADGE[role] ?? "badge badge-gray"}
+                      style={{ fontSize: "0.78rem", cursor: "pointer", border: "none" }}
+                    >
+                      {ROLE_LABELS[role] ?? role}: {count}
+                    </button>
+                  ))}
+              </div>
             </div>
+
+            {/* Subordinate accounts */}
+            {Object.entries(analytics.byRole).some(([role]) => SUBORDINATE_ROLES.has(role)) && (
+              <div style={{ marginBottom: "0.6rem" }}>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#d97706", marginBottom: "0.35rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  حسابات تابعة (تحت مكتب / شركة)
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                  {Object.entries(analytics.byRole)
+                    .filter(([role]) => SUBORDINATE_ROLES.has(role))
+                    .map(([role, count]) => (
+                      <button
+                        key={role}
+                        onClick={() => handleRoleTabClick(role)}
+                        className={ROLE_BADGE[role] ?? "badge badge-gray"}
+                        style={{ fontSize: "0.78rem", cursor: "pointer", border: "none", opacity: 0.85 }}
+                      >
+                        {ROLE_LABELS[role] ?? role}: {count}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Other roles (Admin, Staff) */}
+            {Object.entries(analytics.byRole).some(([role]) => !DIRECT_CUSTOMER_ROLES.has(role) && !SUBORDINATE_ROLES.has(role)) && (
+              <div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#64748b", marginBottom: "0.35rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  أخرى
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                  {Object.entries(analytics.byRole)
+                    .filter(([role]) => !DIRECT_CUSTOMER_ROLES.has(role) && !SUBORDINATE_ROLES.has(role))
+                    .map(([role, count]) => (
+                      <span key={role} className={ROLE_BADGE[role] ?? "badge badge-gray"} style={{ fontSize: "0.78rem" }}>
+                        {ROLE_LABELS[role] ?? role}: {count}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

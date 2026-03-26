@@ -15,13 +15,34 @@ export const PLATFORM_ROLE_NAMES = new Set([
 ]);
 
 /**
- * Derive a display category for a role name.
- * Returns: "admin" | "business" | "user" | "staff"
+ * Primary / direct customer roles — the accounts that subscribe and pay
+ * for the platform directly. Brokers are included here.
  */
-export function getRoleCategory(name: string): "admin" | "business" | "user" | "staff" {
+export const DIRECT_CUSTOMER_ROLES = new Set([
+  "User",
+  "Owner",
+  "Broker",
+  "CompanyOwner",
+]);
+
+/**
+ * Subordinate / child roles — accounts created under a parent business account.
+ * They are NOT independent monetizable customers.
+ */
+export const SUBORDINATE_ROLES = new Set([
+  "Agent",
+]);
+
+/**
+ * Derive a display category for a role name.
+ * Returns: "admin" | "customer" | "subordinate" | "staff"
+ */
+export function getRoleCategory(
+  name: string,
+): "admin" | "customer" | "subordinate" | "staff" {
   if (name === "Admin") return "admin";
-  if (name === "User") return "user";
-  if (["CompanyOwner", "Broker", "Agent", "Owner"].includes(name)) return "business";
+  if (DIRECT_CUSTOMER_ROLES.has(name)) return "customer";
+  if (SUBORDINATE_ROLES.has(name)) return "subordinate";
   return "staff";
 }
 
@@ -29,7 +50,7 @@ export const ROLE_LABELS: Record<string, string> = {
   // Platform roles
   Admin:            "مدير النظام",
   CompanyOwner:     "شركة تطوير",
-  Broker:           "مكتب عقاري",
+  Broker:           "وسيط عقاري",
   Agent:            "وكيل عقاري",
   Owner:            "مالك عقار",
   User:             "مستخدم",

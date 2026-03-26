@@ -89,8 +89,8 @@ function exportCSV(a: DashboardAnalytics | null, users: number, brokers: number,
   const rows = [
     ["المقياس", "القيمة"],
     ["إجمالي المستخدمين", users],
-    ["الوسطاء", brokers],
-    ["الشركات", companies],
+    ["وسطاء عقاريون", brokers],
+    ["شركات تطوير", companies],
     ["إجمالي الإعلانات", a.totalListings],
     ["الإعلانات النشطة", a.activeListings],
     ["الإعلانات غير النشطة", a.inactiveListings],
@@ -100,7 +100,6 @@ function exportCSV(a: DashboardAnalytics | null, users: number, brokers: number,
     ["الطلبات الجديدة", a.newRequests],
     ["إجمالي المشاهدات", a.totalViews],
     ["المشاريع", a.totalProjects],
-    ["الوسطاء", a.totalAgents],
     ["إعلانات تحتاج اهتمام", a.attentionListings?.length ?? 0],
   ];
   const csv = rows.map((r) => r.join(",")).join("\n");
@@ -407,7 +406,7 @@ export default function AdminOverviewPage() {
           value={loading ? "—" : fmt(users)}
           href="/dashboard/admin/users"
           accent="#2563eb"
-          breakdown={!loading ? [{ label: "وسيط", value: brokers, color: "#7c3aed" }, { label: "شركة", value: companies, color: "#0891b2" }, { label: "أفراد", value: regularUsers, color: "#64748b" }] : undefined}
+          breakdown={!loading ? [{ label: "وسيط عقاري", value: brokers, color: "#7c3aed" }, { label: "شركة تطوير", value: companies, color: "#0891b2" }, { label: "أفراد", value: regularUsers, color: "#64748b" }] : undefined}
           icon={<Ico d={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>} />}
         />
         <KpiCard
@@ -437,7 +436,7 @@ export default function AdminOverviewPage() {
         />
         <KpiCard
           label="الوسطاء"
-          value={loading ? "—" : fmt(a?.totalAgents ?? 0)}
+          value={loading ? "—" : fmt(brokers)}
           href="/dashboard/admin/users?role=Broker"
           accent="#0891b2"
           icon={<Ico d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />}
