@@ -66,6 +66,40 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         var plan = await _db.Plans.FirstOrDefaultAsync(p => p.Id == dto.PlanId, ct)
             ?? throw new BoiootException("الخطة المطلوبة غير موجودة.", 404);
 
+        // FIX-6: Validate plan–role (audience) compatibility
+        if (!string.IsNullOrWhiteSpace(plan.AudienceType))
+        {
+            var userRole = await _db.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.Role)
+                .FirstOrDefaultAsync(ct);
+
+            // For CompanyOwner, distinguish Office vs Company via Account.AccountType
+            var accountType = (userRole == UserRole.CompanyOwner || userRole == UserRole.Agent)
+                ? await _db.Accounts
+                    .Where(a => a.Id == accountId)
+                    .Select(a => (AccountType?)a.AccountType)
+                    .FirstOrDefaultAsync(ct)
+                : null;
+
+            var audienceLower = plan.AudienceType.ToLowerInvariant();
+            var compatible = audienceLower switch
+            {
+                "seeker"  => userRole == UserRole.User,
+                "owner"   => userRole == UserRole.Owner,
+                "broker"  => userRole == UserRole.Broker,
+                "office"  => (userRole == UserRole.CompanyOwner && accountType == AccountType.Office)
+                          || userRole == UserRole.Agent,
+                "company" => userRole == UserRole.CompanyOwner && accountType == AccountType.Company,
+                _         => false,
+            };
+
+            if (!compatible)
+                throw new BoiootException(
+                    $"الخطة المطلوبة ('{plan.DisplayNameAr ?? plan.Name}') غير متوافقة مع نوع حسابك. يرجى اختيار خطة مناسبة لدورك.",
+                    422);
+        }
+
         // FIX-5: Resolve amount — must be > 0, no silent fallback
         decimal amount   = 0m;
         string  currency = "USD";

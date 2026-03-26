@@ -105,9 +105,11 @@ public class AuthService : IAuthService
         {
             var accountType = role switch
             {
-                UserRole.CompanyOwner => AccountType.Company,
                 UserRole.Owner        => AccountType.Individual,
-                _                     => AccountType.Office,
+                UserRole.CompanyOwner => request.CompanyType == "RealEstateOffice"
+                                          ? AccountType.Office
+                                          : AccountType.Company,
+                _                     => AccountType.Office, // Agent, Broker
             };
 
             var now = DateTime.UtcNow;
