@@ -1,0 +1,223 @@
+We need to fix the mobile navigation architecture in the Boioot frontend.
+
+TECH STACK
+- Next.js 16 (App Router)
+- TypeScript
+- Tailwind CSS
+- Full RTL Arabic support
+
+CURRENT ISSUE
+On mobile view, the main navigation toggle (hamburger) is missing.
+As a result, users cannot access the primary navigation links on small screens.
+
+GOAL
+Implement a robust, reusable, production-ready responsive header/navigation system for mobile
+WITHOUT breaking the existing desktop layout or RTL behavior.
+
+==================================================
+ARCHITECTURE REQUIREMENTS
+==================================================
+
+1) Find the shared public header/navbar component
+- Do NOT patch only the blog page
+- Do NOT create duplicate header implementations
+- Fix the shared public site header so all public pages inherit the solution
+
+2) Respect Next.js App Router architecture
+- If the current header is a Server Component, keep static layout there
+- Move only the interactive mobile menu logic into a dedicated Client Component if needed
+- Avoid unnecessary client conversion of the whole layout
+- Avoid hydration mismatch
+
+3) Use clean component separation
+Recommended structure:
+- PublicHeader.tsx                → shared shell/layout
+- MobileNavToggle.tsx             → client component for button + state
+- MobileNavDrawer.tsx or MobileNavMenu.tsx → client component for panel/drawer
+- navigation config source        → single source of truth for nav items
+
+4) Use a single navigation config
+Create or reuse a central nav config array so desktop nav and mobile nav use the same source.
+Example fields:
+- label
+- href
+- type (link/button)
+- priority/order
+- visibility
+
+This prevents mismatch between desktop and mobile menus.
+
+==================================================
+RESPONSIVE BEHAVIOR
+==================================================
+
+5) Desktop behavior
+- On lg/xl screens, keep the current full navigation visible
+- Keep existing desktop design as much as possible
+- Do not remove current CTA buttons unless necessary
+- Preserve current header balance and branding
+
+6) Mobile / tablet behavior
+- Hide inline desktop nav on small screens
+- Show a visible hamburger toggle instead
+- The toggle must be easy to tap and clearly visible in RTL layout
+- Use proper responsive classes, e.g. hide/show logic that actually matches Tailwind breakpoints
+- Ensure no accidental hidden class or conflicting flex utility hides the button
+
+7) Mobile menu presentation
+Implement a professional mobile menu using ONE of these:
+- slide-down panel below header
+OR
+- right-side drawer for RTL (preferred)
+
+Preferred solution:
+- RTL-aware side drawer opening from the right side
+- Smooth transition
+- Backdrop overlay
+- High z-index
+- Clean spacing and hierarchy
+
+==================================================
+MENU CONTENT
+==================================================
+
+8) The mobile menu must include all important public navigation items
+At minimum:
+- الرئيسية
+- الإيجار اليومي
+- المشاريع
+- الطلبات
+- المدونة
+- أضف إعلان
+- أضف طلب
+- تسجيل الدخول
+- إنشاء حساب
+
+9) CTA treatment
+- “أضف إعلان” and “أضف طلب” must remain visually prominent
+- They can appear as full-width action buttons inside the mobile menu
+- “تسجيل الدخول” and “إنشاء حساب” should also be accessible and visually clear
+- Keep hierarchy professional, not cluttered
+
+==================================================
+RTL + UX REQUIREMENTS
+==================================================
+
+10) RTL support is mandatory
+- Drawer should open from the right side in Arabic mode
+- Text alignment should be right-aligned
+- Icon spacing should respect RTL
+- Button/icon order should look natural in Arabic UI
+- Navigation list order should be intentional and consistent
+
+11) Accessibility requirements
+- Hamburger button must be a real button element
+- Add:
+  - aria-label="فتح القائمة"
+  - aria-expanded
+  - aria-controls
+- Drawer/menu must support keyboard navigation
+- ESC key closes the menu
+- Clicking overlay closes the menu
+- Clicking any menu link closes the menu
+- Focus handling should be safe and predictable
+
+12) Scroll and interaction behavior
+- Prevent body scroll while drawer is open
+- Ensure page content behind overlay does not remain interactable
+- Ensure menu is not clipped by parent overflow hidden containers
+
+==================================================
+TAILWIND / IMPLEMENTATION RULES
+==================================================
+
+13) Tailwind implementation
+- Use clean responsive utilities:
+  - desktop nav hidden on mobile
+  - mobile toggle hidden on desktop
+- Verify breakpoints such as:
+  - <640
+  - 768
+  - 1024+
+- Avoid conflicting class combinations
+- Ensure z-index is high enough for header, drawer, and overlay
+
+14) Styling direction
+- Keep visual language consistent with Boioot
+- Clean SaaS real-estate aesthetic
+- No random colors
+- Respect current green/brand accents
+- Rounded corners, subtle shadows, clean borders
+- Touch-friendly spacing for menu items
+- Do not over-design
+
+15) State management
+- Use local component state only unless a shared store is already justified
+- Keep logic simple and maintainable
+- Close menu automatically on route change/navigation
+
+==================================================
+DEBUG / ROOT CAUSE ANALYSIS
+==================================================
+
+16) Before implementing, identify why the toggle is missing
+Check for:
+- wrong responsive breakpoint classes
+- conditional rendering bug
+- header section hidden on mobile
+- icon/button rendered outside visible container
+- z-index issue
+- overflow clipping
+- desktop-only nav code with no mobile fallback
+- RTL layout pushing the button out of view
+
+17) Fix the root cause, not just the symptom
+Do not add a random button in one page.
+Repair the header architecture properly.
+
+==================================================
+TESTING REQUIREMENTS
+==================================================
+
+18) Test on these breakpoints/pages
+Breakpoints:
+- 375px
+- 768px
+- 1024px
+
+Pages:
+- الرئيسية
+- المدونة
+- الطلبات
+- الإيجار اليومي
+- المشاريع
+
+19) Confirm these behaviors
+- Hamburger appears on mobile
+- Desktop nav remains visible on desktop
+- Mobile menu opens correctly
+- Mobile menu closes correctly
+- Overlay works
+- ESC closes menu
+- Clicking a link closes menu
+- RTL layout remains correct
+- No layout jump or broken header
+- No hydration errors in console
+
+==================================================
+DELIVERABLES
+==================================================
+
+20) After implementation, report:
+- which files/components were updated
+- what the root cause was
+- how the mobile nav architecture now works
+- what breakpoints were tested
+- whether all public pages using the shared header now support mobile navigation
+
+IMPORTANT
+- Do not implement a one-page workaround
+- Do not break desktop
+- Do not break RTL
+- Do not convert the whole layout to client unnecessarily
+- Build it as a reusable shared Next.js + TypeScript + Tailwind solution
