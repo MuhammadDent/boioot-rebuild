@@ -16,8 +16,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.FullName).IsRequired().HasMaxLength(150);
         builder.Property(u => u.Email).IsRequired().HasMaxLength(200);
         builder.Property(u => u.Phone).HasMaxLength(30);
-        builder.Property(u => u.PasswordHash).IsRequired().HasMaxLength(500);
         builder.Property(u => u.Role).HasConversion<string>().HasMaxLength(50);
+
+        // Multi-level verification enums — stored as TEXT strings
+        builder.Property(u => u.VerificationStatus).HasConversion<string>().HasMaxLength(30);
+        builder.Property(u => u.IdentityVerificationStatus).HasConversion<string>().HasMaxLength(30);
+        builder.Property(u => u.BusinessVerificationStatus).HasConversion<string>().HasMaxLength(30);
 
         builder.HasIndex(u => u.Email).IsUnique();
 

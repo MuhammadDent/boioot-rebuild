@@ -128,6 +128,60 @@ export const BLOG_STATUS_BADGE: Record<string, string> = {
 
 export const BLOG_POST_PAGE_SIZE = 20;
 
+// ── Multi-level verification ───────────────────────────────────────────────
+
+export const VERIFICATION_STATUS_LABELS: Record<string, string> = {
+  None:             "غير محدد",
+  Pending:          "قيد المراجعة",
+  PartiallyVerified:"موثق جزئياً",
+  Verified:         "موثق",
+  Rejected:         "مرفوض",
+};
+
+export const VERIFICATION_STATUS_BADGE: Record<string, string> = {
+  None:             "badge badge-gray",
+  Pending:          "badge badge-yellow",
+  PartiallyVerified:"badge badge-light-blue",
+  Verified:         "badge badge-green",
+  Rejected:         "badge badge-red",
+};
+
+export const VERIFICATION_LEVEL_LABELS: Record<number, string> = {
+  0: "لا يوجد",
+  1: "أساسي",
+  2: "هوية",
+  3: "أعمال",
+  4: "موثوق",
+};
+
+export const IDENTITY_VERIFICATION_STATUS_LABELS: Record<string, string> = {
+  None:     "لا يوجد",
+  Pending:  "قيد المراجعة",
+  Approved: "مقبول",
+  Rejected: "مرفوض",
+};
+
+export const IDENTITY_VERIFICATION_STATUS_BADGE: Record<string, string> = {
+  None:     "badge badge-gray",
+  Pending:  "badge badge-yellow",
+  Approved: "badge badge-green",
+  Rejected: "badge badge-red",
+};
+
+export const BUSINESS_VERIFICATION_STATUS_LABELS: Record<string, string> = {
+  None:     "لا يوجد",
+  Pending:  "قيد المراجعة",
+  Approved: "مقبول",
+  Rejected: "مرفوض",
+};
+
+export const BUSINESS_VERIFICATION_STATUS_BADGE: Record<string, string> = {
+  None:     "badge badge-gray",
+  Pending:  "badge badge-yellow",
+  Approved: "badge badge-green",
+  Rejected: "badge badge-red",
+};
+
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
   Pending:  "معلقة",
   Paid:     "مدفوعة",

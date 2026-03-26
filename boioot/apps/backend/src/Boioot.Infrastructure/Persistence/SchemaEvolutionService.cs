@@ -165,6 +165,17 @@ public sealed class SchemaEvolutionService
         await TryAlter("Users", "VerifiedAt",         "TEXT",                        ct);
         await TryAlter("Users", "VerifiedBy",         "TEXT",                        ct);
 
+        // Multi-level verification (Phase 2)
+        await TryAlter("Users", "VerificationStatus",         "TEXT NOT NULL DEFAULT 'None'", ct);
+        await TryAlter("Users", "VerificationLevel",          "INTEGER NOT NULL DEFAULT 0",   ct);
+        await TryAlter("Users", "PhoneVerified",              "INTEGER NOT NULL DEFAULT 0",   ct);
+        await TryAlter("Users", "EmailVerified",              "INTEGER NOT NULL DEFAULT 0",   ct);
+        await TryAlter("Users", "IdentityVerificationStatus", "TEXT NOT NULL DEFAULT 'None'", ct);
+        await TryAlter("Users", "BusinessVerificationStatus", "TEXT NOT NULL DEFAULT 'None'", ct);
+        await TryAlter("Users", "VerificationBadge",          "TEXT",                         ct);
+        await TryAlter("Users", "VerificationNotes",          "TEXT",                         ct);
+        await TryAlter("Users", "RejectionReason",            "TEXT",                         ct);
+
         // Backfill TrialListingsUsed for existing User-role accounts using EF.
         try
         {

@@ -419,6 +419,47 @@ export interface AdminUserResponse {
   isVerified: boolean;
   verifiedAt?: string;
   verifiedBy?: string;
+  // Multi-level verification
+  verificationStatus: string;
+  verificationLevel: number;
+  phoneVerified: boolean;
+  emailVerified: boolean;
+  identityVerificationStatus: string;
+  businessVerificationStatus: string;
+  verificationBadge?: string;
+  verificationNotes?: string;
+  rejectionReason?: string;
+}
+
+export interface UserVerificationResponse {
+  userId: string;
+  fullName: string;
+  role: string;
+  isVerified: boolean;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  verificationStatus: string;
+  verificationLevel: number;
+  phoneVerified: boolean;
+  emailVerified: boolean;
+  identityVerificationStatus: string;
+  businessVerificationStatus: string;
+  verificationBadge?: string;
+  verificationNotes?: string;
+  rejectionReason?: string;
+  updatedAt: string;
+}
+
+export interface UpdateUserVerificationRequest {
+  verificationStatus?: string;
+  verificationLevel?: number;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
+  identityVerificationStatus?: string;
+  businessVerificationStatus?: string;
+  verificationBadge?: string;
+  verificationNotes?: string;
+  rejectionReason?: string;
 }
 
 export interface UserAnalyticsResponse {

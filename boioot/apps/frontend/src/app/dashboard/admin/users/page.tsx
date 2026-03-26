@@ -21,6 +21,13 @@ import {
   ROLE_LABELS,
   ROLE_BADGE,
   getRoleCategory,
+  VERIFICATION_STATUS_LABELS,
+  VERIFICATION_STATUS_BADGE,
+  VERIFICATION_LEVEL_LABELS,
+  IDENTITY_VERIFICATION_STATUS_LABELS,
+  IDENTITY_VERIFICATION_STATUS_BADGE,
+  BUSINESS_VERIFICATION_STATUS_LABELS,
+  BUSINESS_VERIFICATION_STATUS_BADGE,
 } from "@/features/admin/constants";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
@@ -53,9 +60,10 @@ export default function AdminUsersPage() {
   const [actionNotice, setActionNotice]   = useState("");
 
   // ── Panels ────────────────────────────────────────────────────────────────
-  const [viewUser, setViewUser]   = useState<AdminUserResponse | null>(null);
-  const [editUser, setEditUser]   = useState<AdminUserResponse | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const [viewUser, setViewUser]         = useState<AdminUserResponse | null>(null);
+  const [editUser, setEditUser]         = useState<AdminUserResponse | null>(null);
+  const [verifyUser, setVerifyUser]     = useState<AdminUserResponse | null>(null);
+  const [showCreate, setShowCreate]     = useState(false);
 
   // ── Filters ───────────────────────────────────────────────────────────────
   const [activeRoleTab, setActiveRoleTab]         = useState(initialRole);
@@ -153,32 +161,53 @@ export default function AdminUsersPage() {
   function openView(u: AdminUserResponse) {
     setViewUser(u);
     setEditUser(null);
+    setVerifyUser(null);
     setShowCreate(false);
   }
 
   function openEdit(u: AdminUserResponse) {
     setEditUser(u);
     setViewUser(null);
+    setVerifyUser(null);
+    setShowCreate(false);
+  }
+
+  function openVerify(u: AdminUserResponse) {
+    setVerifyUser(u);
+    setViewUser(null);
+    setEditUser(null);
     setShowCreate(false);
   }
 
   // ── Action handlers ───────────────────────────────────────────────────────
 
-  async function handleToggleVerify(targetId: string, currentIsVerified: boolean) {
+  async function handleVerificationSave(
+    userId: string,
+    data: import("@/types").UpdateUserVerificationRequest,
+  ) {
     if (actionLoading) return;
-    setActionLoading(`verify-${targetId}`);
+    setActionLoading(`verif-${userId}`);
     setActionError("");
     try {
-      const updated = currentIsVerified
-        ? await adminApi.unverifyUser(targetId)
-        : await adminApi.verifyUser(targetId);
-      setUsers(prev => prev.map(u => u.id === updated.id ? { ...u, ...updated } : u));
-      if (viewUser?.id === updated.id) setViewUser(prev => prev ? { ...prev, ...updated } : null);
-      if (editUser?.id === updated.id) setEditUser(prev => prev ? { ...prev, ...updated } : null);
-      showNotice(currentIsVerified
-        ? `تم إلغاء توثيق "${updated.fullName}"`
-        : `تم توثيق "${updated.fullName}" بنجاح`
-      );
+      const updated = await adminApi.updateUserVerification(userId, data);
+      const patch: Partial<AdminUserResponse> = {
+        isVerified:                 updated.isVerified,
+        verifiedAt:                 updated.verifiedAt,
+        verifiedBy:                 updated.verifiedBy,
+        verificationStatus:         updated.verificationStatus,
+        verificationLevel:          updated.verificationLevel,
+        phoneVerified:              updated.phoneVerified,
+        emailVerified:              updated.emailVerified,
+        identityVerificationStatus: updated.identityVerificationStatus,
+        businessVerificationStatus: updated.businessVerificationStatus,
+        verificationBadge:          updated.verificationBadge,
+        verificationNotes:          updated.verificationNotes,
+        rejectionReason:            updated.rejectionReason,
+      };
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...patch } : u));
+      setVerifyUser(prev => prev ? { ...prev, ...patch } : null);
+      if (viewUser?.id === userId) setViewUser(prev => prev ? { ...prev, ...patch } : null);
+      showNotice(`تم تحديث التوثيق لـ "${updated.fullName}" بنجاح`);
     } catch (e) {
       setActionError(normalizeError(e));
     } finally {
@@ -319,15 +348,25 @@ export default function AdminUsersPage() {
           />
         )}
 
+        {/* ── Verification panel ── */}
+        {verifyUser && (
+          <UserVerificationPanel
+            userData={verifyUser}
+            actionLoading={actionLoading}
+            onSave={handleVerificationSave}
+            onClose={() => setVerifyUser(null)}
+          />
+        )}
+
         {/* ── View panel ── */}
         {viewUser && (
           <UserDetailsPanel
             userData={viewUser}
             isSelf={viewUser.id === user.id}
             actionLoading={actionLoading}
-            onToggleVerify={handleToggleVerify}
             onToggleStatus={handleToggleStatus}
             onEdit={() => openEdit(viewUser)}
+            onOpenVerify={() => openVerify(viewUser)}
             onViewProfile={() => router.push(`/dashboard/admin/users/${viewUser.id}`)}
             onClose={() => setViewUser(null)}
           />
@@ -527,8 +566,8 @@ export default function AdminUsersPage() {
                 userData={u}
                 isSelf={u.id === user.id}
                 actionLoading={actionLoading}
-                activeId={viewUser?.id ?? editUser?.id ?? null}
-                onToggleVerify={handleToggleVerify}
+                activeId={viewUser?.id ?? editUser?.id ?? verifyUser?.id ?? null}
+                onOpenVerify={() => openVerify(u)}
                 onView={() => openView(u)}
                 onEdit={() => openEdit(u)}
               />
@@ -558,7 +597,7 @@ function UserRow({
   isSelf,
   actionLoading,
   activeId,
-  onToggleVerify,
+  onOpenVerify,
   onView,
   onEdit,
 }: {
@@ -566,14 +605,15 @@ function UserRow({
   isSelf: boolean;
   actionLoading: string | null;
   activeId: string | null;
-  onToggleVerify: (id: string, current: boolean) => void;
+  onOpenVerify: () => void;
   onView: () => void;
   onEdit: () => void;
 }) {
-  const isThisLoading = actionLoading === `verify-${u.id}`;
   const isActive = activeId === u.id;
   const badgeClass = ROLE_BADGE[u.role] ?? "badge badge-gray";
   const badgeLabel = ROLE_LABELS[u.role] ?? u.role;
+  const vsBadge = VERIFICATION_STATUS_BADGE[u.verificationStatus ?? "None"] ?? "badge badge-gray";
+  const vsLabel = VERIFICATION_STATUS_LABELS[u.verificationStatus ?? "None"] ?? "غير محدد";
 
   return (
     <div className="form-card" style={{
@@ -606,9 +646,12 @@ function UserRow({
               )}
             </p>
             <span className={badgeClass}>{badgeLabel}</span>
-            <span className={u.isVerified ? "badge badge-green" : "badge badge-gray"}>
-              {u.isVerified ? "✓ موثق" : "غير موثق"}
-            </span>
+            <span className={vsBadge}>{vsLabel}</span>
+            {u.verificationLevel > 0 && (
+              <span className="badge badge-gray" style={{ fontSize: "0.72rem" }}>
+                مستوى {VERIFICATION_LEVEL_LABELS[u.verificationLevel] ?? u.verificationLevel}
+              </span>
+            )}
             {!u.isActive && <span className="badge badge-red">معطَّل</span>}
             {u.isDeleted && <span className="badge badge-red">محذوف</span>}
           </div>
@@ -647,19 +690,11 @@ function UserRow({
             تعديل
           </button>
           <button
-            className={u.isVerified ? "btn" : "btn btn-primary"}
-            style={{
-              padding: "0.4rem 0.85rem", fontSize: "0.82rem",
-              ...(u.isVerified ? {
-                border: "1.5px solid var(--color-border)",
-                backgroundColor: "transparent",
-                color: "var(--color-text-primary)",
-              } : {}),
-            }}
-            disabled={isThisLoading || !!actionLoading}
-            onClick={() => onToggleVerify(u.id, u.isVerified)}
+            className="btn btn-primary"
+            style={{ padding: "0.4rem 0.85rem", fontSize: "0.82rem" }}
+            onClick={onOpenVerify}
           >
-            {isThisLoading ? "..." : u.isVerified ? "إلغاء التوثيق" : "توثيق"}
+            التوثيق
           </button>
         </div>
 
@@ -674,25 +709,26 @@ function UserDetailsPanel({
   userData: u,
   isSelf,
   actionLoading,
-  onToggleVerify,
   onToggleStatus,
   onEdit,
+  onOpenVerify,
   onViewProfile,
   onClose,
 }: {
   userData: AdminUserResponse;
   isSelf: boolean;
   actionLoading: string | null;
-  onToggleVerify: (id: string, current: boolean) => void;
   onToggleStatus: (id: string, current: boolean) => void;
   onEdit: () => void;
+  onOpenVerify: () => void;
   onViewProfile: () => void;
   onClose: () => void;
 }) {
-  const isVerifyLoading = actionLoading === `verify-${u.id}`;
   const isStatusLoading = actionLoading === `status-${u.id}`;
   const badgeClass = ROLE_BADGE[u.role] ?? "badge badge-gray";
   const badgeLabel = ROLE_LABELS[u.role] ?? u.role;
+  const vsBadge = VERIFICATION_STATUS_BADGE[u.verificationStatus ?? "None"] ?? "badge badge-gray";
+  const vsLabel = VERIFICATION_STATUS_LABELS[u.verificationStatus ?? "None"] ?? "غير محدد";
 
   return (
     <div className="form-card" style={{
@@ -717,9 +753,12 @@ function UserDetailsPanel({
             </h2>
             <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.3rem", flexWrap: "wrap" }}>
               <span className={badgeClass}>{badgeLabel}</span>
-              <span className={u.isVerified ? "badge badge-green" : "badge badge-gray"}>
-                {u.isVerified ? "✓ موثق" : "غير موثق"}
-              </span>
+              <span className={vsBadge}>{vsLabel}</span>
+              {u.verificationLevel > 0 && (
+                <span className="badge badge-gray" style={{ fontSize: "0.72rem" }}>
+                  مستوى {VERIFICATION_LEVEL_LABELS[u.verificationLevel] ?? u.verificationLevel}
+                </span>
+              )}
               {!u.isActive && <span className="badge badge-red">معطَّل</span>}
               {u.isDeleted && <span className="badge badge-red">محذوف</span>}
             </div>
@@ -763,19 +802,11 @@ function UserDetailsPanel({
           تعديل البيانات
         </button>
         <button
-          className={u.isVerified ? "btn" : "btn btn-primary"}
-          style={{
-            padding: "0.45rem 1.1rem", fontSize: "0.88rem",
-            ...(u.isVerified ? {
-              border: "1.5px solid var(--color-border)",
-              backgroundColor: "transparent",
-              color: "var(--color-text-primary)",
-            } : {}),
-          }}
-          disabled={isVerifyLoading || !!actionLoading}
-          onClick={() => onToggleVerify(u.id, u.isVerified)}
+          className="btn btn-primary"
+          style={{ padding: "0.45rem 1.1rem", fontSize: "0.88rem" }}
+          onClick={onOpenVerify}
         >
-          {isVerifyLoading ? "..." : u.isVerified ? "إلغاء التوثيق" : "توثيق الحساب"}
+          إدارة التوثيق
         </button>
         {!isSelf && (
           <button
@@ -1137,6 +1168,228 @@ function StatPill({ label, value, color }: { label: string; value?: number; colo
       <span style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", marginTop: "0.1rem" }}>
         {label}
       </span>
+    </div>
+  );
+}
+
+// ─── User Verification Panel ──────────────────────────────────────────────────
+
+function UserVerificationPanel({
+  userData: u,
+  actionLoading,
+  onSave,
+  onClose,
+}: {
+  userData: AdminUserResponse;
+  actionLoading: string | null;
+  onSave: (userId: string, data: import("@/types").UpdateUserVerificationRequest) => void;
+  onClose: () => void;
+}) {
+  const isSaving = actionLoading === `verif-${u.id}`;
+
+  const [verificationStatus,         setVerificationStatus]         = useState(u.verificationStatus ?? "None");
+  const [verificationLevel,          setVerificationLevel]          = useState(String(u.verificationLevel ?? 0));
+  const [phoneVerified,              setPhoneVerified]              = useState(u.phoneVerified ?? false);
+  const [emailVerified,              setEmailVerified]              = useState(u.emailVerified ?? false);
+  const [identityVerificationStatus, setIdentityVerificationStatus] = useState(u.identityVerificationStatus ?? "None");
+  const [businessVerificationStatus, setBusinessVerificationStatus] = useState(u.businessVerificationStatus ?? "None");
+  const [verificationBadge,          setVerificationBadge]          = useState(u.verificationBadge ?? "");
+  const [verificationNotes,          setVerificationNotes]          = useState(u.verificationNotes ?? "");
+  const [rejectionReason,            setRejectionReason]            = useState(u.rejectionReason ?? "");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (isSaving) return;
+    onSave(u.id, {
+      verificationStatus,
+      verificationLevel:          Number(verificationLevel),
+      phoneVerified,
+      emailVerified,
+      identityVerificationStatus,
+      businessVerificationStatus,
+      verificationBadge:  verificationBadge.trim()  || undefined,
+      verificationNotes:  verificationNotes.trim()  || undefined,
+      rejectionReason:    rejectionReason.trim()    || undefined,
+    });
+  }
+
+  const selectStyle: React.CSSProperties = {
+    width: "100%", padding: "0.45rem 0.65rem", fontSize: "0.88rem",
+    borderRadius: 6, border: "1.5px solid var(--color-border)",
+    backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)",
+    appearance: "none", cursor: "pointer",
+  };
+
+  return (
+    <div className="form-card" style={{
+      marginBottom: "1.25rem",
+      border: "2px solid var(--color-primary)",
+      padding: "1.5rem",
+    }}>
+
+      {/* header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
+            إدارة التوثيق — {u.fullName}
+          </h2>
+          <p style={{ margin: "0.2rem 0 0", fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
+            {ROLE_LABELS[u.role] ?? u.role} · {u.email}
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          style={{ background: "none", border: "none", fontSize: "1.3rem", cursor: "pointer", color: "var(--color-text-secondary)", lineHeight: 1 }}
+        >
+          ✕
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem", marginBottom: "1.25rem" }}>
+
+          {/* Verification Status */}
+          <FormField label="حالة التوثيق">
+            <select
+              style={selectStyle}
+              value={verificationStatus}
+              onChange={e => setVerificationStatus(e.target.value)}
+              disabled={isSaving}
+            >
+              {Object.entries(VERIFICATION_STATUS_LABELS).map(([val, lbl]) => (
+                <option key={val} value={val}>{lbl}</option>
+              ))}
+            </select>
+          </FormField>
+
+          {/* Verification Level */}
+          <FormField label="مستوى التوثيق">
+            <select
+              style={selectStyle}
+              value={verificationLevel}
+              onChange={e => setVerificationLevel(e.target.value)}
+              disabled={isSaving}
+            >
+              {Object.entries(VERIFICATION_LEVEL_LABELS).map(([val, lbl]) => (
+                <option key={val} value={val}>{lbl}</option>
+              ))}
+            </select>
+          </FormField>
+
+          {/* Identity Verification Status */}
+          <FormField label="حالة توثيق الهوية">
+            <select
+              style={selectStyle}
+              value={identityVerificationStatus}
+              onChange={e => setIdentityVerificationStatus(e.target.value)}
+              disabled={isSaving}
+            >
+              {Object.entries(IDENTITY_VERIFICATION_STATUS_LABELS).map(([val, lbl]) => (
+                <option key={val} value={val}>{lbl}</option>
+              ))}
+            </select>
+          </FormField>
+
+          {/* Business Verification Status */}
+          <FormField label="حالة توثيق النشاط التجاري">
+            <select
+              style={selectStyle}
+              value={businessVerificationStatus}
+              onChange={e => setBusinessVerificationStatus(e.target.value)}
+              disabled={isSaving}
+            >
+              {Object.entries(BUSINESS_VERIFICATION_STATUS_LABELS).map(([val, lbl]) => (
+                <option key={val} value={val}>{lbl}</option>
+              ))}
+            </select>
+          </FormField>
+
+          {/* Verification Badge */}
+          <FormField label="شارة التوثيق (نص)">
+            <input
+              className="form-input"
+              value={verificationBadge}
+              onChange={e => setVerificationBadge(e.target.value)}
+              placeholder="مثال: وسيط موثوق"
+              disabled={isSaving}
+            />
+          </FormField>
+
+          {/* Checkboxes */}
+          <FormField label="التحقق من الاتصال">
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", paddingTop: "0.3rem" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.88rem", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={phoneVerified}
+                  onChange={e => setPhoneVerified(e.target.checked)}
+                  disabled={isSaving}
+                />
+                الهاتف موثَّق
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.88rem", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={emailVerified}
+                  onChange={e => setEmailVerified(e.target.checked)}
+                  disabled={isSaving}
+                />
+                البريد موثَّق
+              </label>
+            </div>
+          </FormField>
+
+        </div>
+
+        {/* Notes & Rejection Reason */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.25rem" }}>
+          <FormField label="ملاحظات داخلية (للمشرفين)">
+            <textarea
+              className="form-input"
+              value={verificationNotes}
+              onChange={e => setVerificationNotes(e.target.value)}
+              placeholder="ملاحظات داخلية..."
+              rows={3}
+              disabled={isSaving}
+              style={{ resize: "vertical", fontFamily: "inherit" }}
+            />
+          </FormField>
+          <FormField label="سبب الرفض (إن وُجد)">
+            <textarea
+              className="form-input"
+              value={rejectionReason}
+              onChange={e => setRejectionReason(e.target.value)}
+              placeholder="سبب رفض التوثيق..."
+              rows={3}
+              disabled={isSaving}
+              style={{ resize: "vertical", fontFamily: "inherit" }}
+            />
+          </FormField>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ padding: "0.45rem 1.2rem", fontSize: "0.88rem" }}
+            disabled={isSaving}
+          >
+            {isSaving ? "جارٍ الحفظ..." : "حفظ التوثيق"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            style={{ padding: "0.45rem 1rem", fontSize: "0.88rem" }}
+            onClick={onClose}
+            disabled={isSaving}
+          >
+            إلغاء
+          </button>
+        </div>
+
+      </form>
+
     </div>
   );
 }

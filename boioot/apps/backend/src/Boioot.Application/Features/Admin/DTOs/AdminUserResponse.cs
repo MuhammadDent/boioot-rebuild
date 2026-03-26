@@ -18,10 +18,21 @@ public class AdminUserResponse
     public string PlanStatus { get; set; } = "None";
     public List<string> Tags { get; set; } = [];
 
-    // ── Identity verification ─────────────────────────────────────────────────
+    // ── Legacy verification (backward compat) ─────────────────────────────────
     public bool IsVerified { get; set; }
     public DateTime? VerifiedAt { get; set; }
     public string? VerifiedBy { get; set; }
+
+    // ── Multi-level verification ──────────────────────────────────────────────
+    public string VerificationStatus          { get; set; } = "None";
+    public int    VerificationLevel           { get; set; } = 0;
+    public bool   PhoneVerified               { get; set; }
+    public bool   EmailVerified               { get; set; }
+    public string IdentityVerificationStatus  { get; set; } = "None";
+    public string BusinessVerificationStatus  { get; set; } = "None";
+    public string? VerificationBadge          { get; set; }
+    public string? VerificationNotes          { get; set; }
+    public string? RejectionReason            { get; set; }
 }
 
 public class UserAnalyticsResponse

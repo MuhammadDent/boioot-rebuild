@@ -125,6 +125,15 @@ public class AdminService : IAdminService
                 u.IsVerified,
                 u.VerifiedAt,
                 u.VerifiedBy,
+                u.VerificationStatus,
+                u.VerificationLevel,
+                u.PhoneVerified,
+                u.EmailVerified,
+                u.IdentityVerificationStatus,
+                u.BusinessVerificationStatus,
+                u.VerificationBadge,
+                u.VerificationNotes,
+                u.RejectionReason,
             })
             .ToListAsync(ct);
 
@@ -207,9 +216,18 @@ public class AdminService : IAdminService
                 PlanName        = planInfo.Item1,
                 PlanStatus      = planInfo.Item2,
                 Tags            = tagsMap.TryGetValue(u.Id, out var tags) ? tags : [],
-                IsVerified      = u.IsVerified,
-                VerifiedAt      = u.VerifiedAt,
-                VerifiedBy      = u.VerifiedBy,
+                IsVerified                 = u.IsVerified,
+                VerifiedAt                 = u.VerifiedAt,
+                VerifiedBy                 = u.VerifiedBy,
+                VerificationStatus         = u.VerificationStatus.ToString(),
+                VerificationLevel          = u.VerificationLevel,
+                PhoneVerified              = u.PhoneVerified,
+                EmailVerified              = u.EmailVerified,
+                IdentityVerificationStatus = u.IdentityVerificationStatus.ToString(),
+                BusinessVerificationStatus = u.BusinessVerificationStatus.ToString(),
+                VerificationBadge          = u.VerificationBadge,
+                VerificationNotes          = u.VerificationNotes,
+                RejectionReason            = u.RejectionReason,
             };
         }).ToList();
 
@@ -232,20 +250,29 @@ public class AdminService : IAdminService
 
         return new AdminUserResponse
         {
-            Id              = user.Id,
-            FullName        = user.FullName,
-            Email           = user.Email,
-            Phone           = user.Phone,
-            ProfileImageUrl = user.ProfileImageUrl,
-            Role            = user.Role.ToString(),
-            IsActive        = user.IsActive,
-            IsDeleted       = user.IsDeleted,
-            CreatedAt       = user.CreatedAt,
-            UpdatedAt       = user.UpdatedAt,
-            LastLoginAt     = user.LastLoginAt,
-            IsVerified      = user.IsVerified,
-            VerifiedAt      = user.VerifiedAt,
-            VerifiedBy      = user.VerifiedBy,
+            Id                         = user.Id,
+            FullName                   = user.FullName,
+            Email                      = user.Email,
+            Phone                      = user.Phone,
+            ProfileImageUrl            = user.ProfileImageUrl,
+            Role                       = user.Role.ToString(),
+            IsActive                   = user.IsActive,
+            IsDeleted                  = user.IsDeleted,
+            CreatedAt                  = user.CreatedAt,
+            UpdatedAt                  = user.UpdatedAt,
+            LastLoginAt                = user.LastLoginAt,
+            IsVerified                 = user.IsVerified,
+            VerifiedAt                 = user.VerifiedAt,
+            VerifiedBy                 = user.VerifiedBy,
+            VerificationStatus         = user.VerificationStatus.ToString(),
+            VerificationLevel          = user.VerificationLevel,
+            PhoneVerified              = user.PhoneVerified,
+            EmailVerified              = user.EmailVerified,
+            IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
+            BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
+            VerificationBadge          = user.VerificationBadge,
+            VerificationNotes          = user.VerificationNotes,
+            RejectionReason            = user.RejectionReason,
         };
     }
 
@@ -391,20 +418,29 @@ public class AdminService : IAdminService
 
         return new AdminUserResponse
         {
-            Id              = user.Id,
-            FullName        = user.FullName,
-            Email           = user.Email,
-            Phone           = user.Phone,
-            ProfileImageUrl = user.ProfileImageUrl,
-            Role            = user.Role.ToString(),
-            IsActive        = user.IsActive,
-            IsDeleted       = user.IsDeleted,
-            CreatedAt       = user.CreatedAt,
-            UpdatedAt       = user.UpdatedAt,
-            LastLoginAt     = user.LastLoginAt,
-            IsVerified      = user.IsVerified,
-            VerifiedAt      = user.VerifiedAt,
-            VerifiedBy      = user.VerifiedBy,
+            Id                         = user.Id,
+            FullName                   = user.FullName,
+            Email                      = user.Email,
+            Phone                      = user.Phone,
+            ProfileImageUrl            = user.ProfileImageUrl,
+            Role                       = user.Role.ToString(),
+            IsActive                   = user.IsActive,
+            IsDeleted                  = user.IsDeleted,
+            CreatedAt                  = user.CreatedAt,
+            UpdatedAt                  = user.UpdatedAt,
+            LastLoginAt                = user.LastLoginAt,
+            IsVerified                 = user.IsVerified,
+            VerifiedAt                 = user.VerifiedAt,
+            VerifiedBy                 = user.VerifiedBy,
+            VerificationStatus         = user.VerificationStatus.ToString(),
+            VerificationLevel          = user.VerificationLevel,
+            PhoneVerified              = user.PhoneVerified,
+            EmailVerified              = user.EmailVerified,
+            IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
+            BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
+            VerificationBadge          = user.VerificationBadge,
+            VerificationNotes          = user.VerificationNotes,
+            RejectionReason            = user.RejectionReason,
         };
     }
 
@@ -426,6 +462,11 @@ public class AdminService : IAdminService
         user.VerifiedBy = adminUserId.ToString();
         user.UpdatedAt  = DateTime.UtcNow;
 
+        // Sync with multi-level system: promote to at least Basic
+        user.VerificationStatus = VerificationStatus.Verified;
+        if (user.VerificationLevel < (int)VerificationLevelValue.Basic)
+            user.VerificationLevel = (int)VerificationLevelValue.Basic;
+
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation(
@@ -433,20 +474,29 @@ public class AdminService : IAdminService
 
         return new AdminUserResponse
         {
-            Id              = user.Id,
-            FullName        = user.FullName,
-            Email           = user.Email,
-            Phone           = user.Phone,
-            ProfileImageUrl = user.ProfileImageUrl,
-            Role            = user.Role.ToString(),
-            IsActive        = user.IsActive,
-            IsDeleted       = user.IsDeleted,
-            CreatedAt       = user.CreatedAt,
-            UpdatedAt       = user.UpdatedAt,
-            LastLoginAt     = user.LastLoginAt,
-            IsVerified      = user.IsVerified,
-            VerifiedAt      = user.VerifiedAt,
-            VerifiedBy      = user.VerifiedBy,
+            Id                         = user.Id,
+            FullName                   = user.FullName,
+            Email                      = user.Email,
+            Phone                      = user.Phone,
+            ProfileImageUrl            = user.ProfileImageUrl,
+            Role                       = user.Role.ToString(),
+            IsActive                   = user.IsActive,
+            IsDeleted                  = user.IsDeleted,
+            CreatedAt                  = user.CreatedAt,
+            UpdatedAt                  = user.UpdatedAt,
+            LastLoginAt                = user.LastLoginAt,
+            IsVerified                 = user.IsVerified,
+            VerifiedAt                 = user.VerifiedAt,
+            VerifiedBy                 = user.VerifiedBy,
+            VerificationStatus         = user.VerificationStatus.ToString(),
+            VerificationLevel          = user.VerificationLevel,
+            PhoneVerified              = user.PhoneVerified,
+            EmailVerified              = user.EmailVerified,
+            IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
+            BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
+            VerificationBadge          = user.VerificationBadge,
+            VerificationNotes          = user.VerificationNotes,
+            RejectionReason            = user.RejectionReason,
         };
     }
 
@@ -466,6 +516,10 @@ public class AdminService : IAdminService
         user.VerifiedBy = adminUserId.ToString();
         user.UpdatedAt  = DateTime.UtcNow;
 
+        // Sync with multi-level system: reset status and level
+        user.VerificationStatus = VerificationStatus.None;
+        user.VerificationLevel  = (int)VerificationLevelValue.None;
+
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation(
@@ -473,20 +527,29 @@ public class AdminService : IAdminService
 
         return new AdminUserResponse
         {
-            Id              = user.Id,
-            FullName        = user.FullName,
-            Email           = user.Email,
-            Phone           = user.Phone,
-            ProfileImageUrl = user.ProfileImageUrl,
-            Role            = user.Role.ToString(),
-            IsActive        = user.IsActive,
-            IsDeleted       = user.IsDeleted,
-            CreatedAt       = user.CreatedAt,
-            UpdatedAt       = user.UpdatedAt,
-            LastLoginAt     = user.LastLoginAt,
-            IsVerified      = user.IsVerified,
-            VerifiedAt      = user.VerifiedAt,
-            VerifiedBy      = user.VerifiedBy,
+            Id                         = user.Id,
+            FullName                   = user.FullName,
+            Email                      = user.Email,
+            Phone                      = user.Phone,
+            ProfileImageUrl            = user.ProfileImageUrl,
+            Role                       = user.Role.ToString(),
+            IsActive                   = user.IsActive,
+            IsDeleted                  = user.IsDeleted,
+            CreatedAt                  = user.CreatedAt,
+            UpdatedAt                  = user.UpdatedAt,
+            LastLoginAt                = user.LastLoginAt,
+            IsVerified                 = user.IsVerified,
+            VerifiedAt                 = user.VerifiedAt,
+            VerifiedBy                 = user.VerifiedBy,
+            VerificationStatus         = user.VerificationStatus.ToString(),
+            VerificationLevel          = user.VerificationLevel,
+            PhoneVerified              = user.PhoneVerified,
+            EmailVerified              = user.EmailVerified,
+            IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
+            BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
+            VerificationBadge          = user.VerificationBadge,
+            VerificationNotes          = user.VerificationNotes,
+            RejectionReason            = user.RejectionReason,
         };
     }
 
@@ -1870,6 +1933,103 @@ public class AdminService : IAdminService
             return [];
         }
     }
+
+    // ── Multi-level verification ──────────────────────────────────────────────
+
+    public async Task<UserVerificationResponse> GetUserVerificationAsync(
+        Guid userId, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new BoiootException("المستخدم غير موجود", 404);
+
+        return MapToVerificationResponse(user);
+    }
+
+    public async Task<UserVerificationResponse> UpdateUserVerificationAsync(
+        Guid adminUserId, Guid userId, UpdateUserVerificationRequest request, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new BoiootException("المستخدم غير موجود", 404);
+
+        if (!CustomerRoles.Contains(user.Role))
+            throw new BoiootException("لا يمكن تعديل توثيق حسابات الإدارة والطاقم", 400);
+
+        if (request.VerificationStatus is not null &&
+            Enum.TryParse<VerificationStatus>(request.VerificationStatus, out var vs))
+            user.VerificationStatus = vs;
+
+        if (request.VerificationLevel is not null)
+            user.VerificationLevel = Math.Clamp(request.VerificationLevel.Value, 0, 4);
+
+        if (request.PhoneVerified is not null)
+            user.PhoneVerified = request.PhoneVerified.Value;
+
+        if (request.EmailVerified is not null)
+            user.EmailVerified = request.EmailVerified.Value;
+
+        if (request.IdentityVerificationStatus is not null &&
+            Enum.TryParse<IdentityVerificationStatus>(request.IdentityVerificationStatus, out var idvs))
+            user.IdentityVerificationStatus = idvs;
+
+        if (request.BusinessVerificationStatus is not null &&
+            Enum.TryParse<BusinessVerificationStatus>(request.BusinessVerificationStatus, out var bvs))
+            user.BusinessVerificationStatus = bvs;
+
+        if (request.VerificationBadge is not null)
+            user.VerificationBadge = string.IsNullOrWhiteSpace(request.VerificationBadge) ? null : request.VerificationBadge.Trim();
+
+        if (request.VerificationNotes is not null)
+            user.VerificationNotes = string.IsNullOrWhiteSpace(request.VerificationNotes) ? null : request.VerificationNotes.Trim();
+
+        if (request.RejectionReason is not null)
+            user.RejectionReason = string.IsNullOrWhiteSpace(request.RejectionReason) ? null : request.RejectionReason.Trim();
+
+        // Keep legacy IsVerified in sync
+        user.IsVerified = user.VerificationStatus is VerificationStatus.Verified or VerificationStatus.PartiallyVerified;
+        if (user.IsVerified && user.VerifiedBy is null)
+        {
+            user.VerifiedAt = DateTime.UtcNow;
+            user.VerifiedBy = adminUserId.ToString();
+        }
+        else if (!user.IsVerified)
+        {
+            user.VerifiedAt = null;
+        }
+
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Admin {AdminId} updated verification for user {UserId}: status={Status} level={Level}",
+            adminUserId, userId, user.VerificationStatus, user.VerificationLevel);
+
+        return MapToVerificationResponse(user);
+    }
+
+    private static UserVerificationResponse MapToVerificationResponse(User user) => new()
+    {
+        UserId                     = user.Id,
+        FullName                   = user.FullName,
+        Role                       = user.Role.ToString(),
+        IsVerified                 = user.IsVerified,
+        VerifiedAt                 = user.VerifiedAt,
+        VerifiedBy                 = user.VerifiedBy,
+        VerificationStatus         = user.VerificationStatus.ToString(),
+        VerificationLevel          = user.VerificationLevel,
+        PhoneVerified              = user.PhoneVerified,
+        EmailVerified              = user.EmailVerified,
+        IdentityVerificationStatus = user.IdentityVerificationStatus.ToString(),
+        BusinessVerificationStatus = user.BusinessVerificationStatus.ToString(),
+        VerificationBadge          = user.VerificationBadge,
+        VerificationNotes          = user.VerificationNotes,
+        RejectionReason            = user.RejectionReason,
+        UpdatedAt                  = user.UpdatedAt,
+    };
 
     private class UserTagRowFull
     {

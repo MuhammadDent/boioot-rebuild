@@ -146,6 +146,17 @@ export const adminApi = {
     return api.post(`/admin/users/${userId}/unverify`, {});
   },
 
+  getUserVerification(userId: string): Promise<import("@/types").UserVerificationResponse> {
+    return api.get(`/admin/users/${userId}/verification`);
+  },
+
+  updateUserVerification(
+    userId: string,
+    data: import("@/types").UpdateUserVerificationRequest,
+  ): Promise<import("@/types").UserVerificationResponse> {
+    return api.put(`/admin/users/${userId}/verification`, data);
+  },
+
   getCompanies(
     page: number,
     pageSize: number,

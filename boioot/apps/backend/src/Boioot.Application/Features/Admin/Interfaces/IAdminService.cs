@@ -117,4 +117,8 @@ public interface IAdminService
     // User identity verification (admin-controlled)
     Task<AdminUserResponse> VerifyUserAsync(Guid adminUserId, Guid targetUserId, CancellationToken ct = default);
     Task<AdminUserResponse> UnverifyUserAsync(Guid adminUserId, Guid targetUserId, CancellationToken ct = default);
+
+    // Multi-level verification management
+    Task<UserVerificationResponse> GetUserVerificationAsync(Guid userId, CancellationToken ct = default);
+    Task<UserVerificationResponse> UpdateUserVerificationAsync(Guid adminUserId, Guid userId, UpdateUserVerificationRequest request, CancellationToken ct = default);
 }

@@ -1,0 +1,205 @@
+We want to upgrade the current simple user verification system into a more professional multi-level verification system.
+
+========================================
+GOAL
+====
+
+Replace the current basic verification model with a scalable trust/verification architecture suitable for a real estate SaaS platform.
+
+The current system already supports:
+
+* IsVerified
+* VerifiedAt
+* VerifiedBy
+
+We now want to evolve this into a richer verification system.
+
+========================================
+TARGET VERIFICATION MODEL
+=========================
+
+We need multiple verification dimensions:
+
+1. Basic verification
+
+* Email verified
+* Phone verified
+
+2. Identity verification
+
+* National ID / Passport / Residence / identity proof
+* Manual admin review
+
+3. Business / professional verification
+   Depending on user type:
+
+* Owner
+* Broker
+* Office
+* Company
+
+4. Final trust level / badge
+   Examples:
+
+* None
+* Basic
+* Identity Verified
+* Business Verified
+* Trusted
+* Official Agency
+* Trusted Office
+* Trusted Company
+
+========================================
+PHASE 1 SCOPE
+=============
+
+In this phase, do NOT build full file upload workflows yet.
+
+First, upgrade the backend/data model to support richer verification states.
+
+========================================
+DATABASE CHANGES
+================
+
+Keep existing fields if already used:
+
+* IsVerified
+* VerifiedAt
+* VerifiedBy
+
+Add new fields to User (or equivalent clean architecture if better):
+
+* VerificationStatus
+* VerificationLevel
+* PhoneVerified
+* EmailVerified
+* IdentityVerificationStatus
+* BusinessVerificationStatus
+* VerificationBadge
+* VerificationNotes
+* RejectionReason
+
+Recommended enums / statuses:
+
+VerificationStatus:
+
+* None
+* Pending
+* PartiallyVerified
+* Verified
+* Rejected
+
+VerificationLevel:
+
+* 0 None
+* 1 Basic
+* 2 Identity
+* 3 Business
+* 4 Trusted
+
+IdentityVerificationStatus:
+
+* None
+* Pending
+* Approved
+* Rejected
+
+BusinessVerificationStatus:
+
+* None
+* Pending
+* Approved
+* Rejected
+
+========================================
+BUSINESS RULES
+==============
+
+1. If only email/phone are verified:
+
+* VerificationLevel = Basic
+
+2. If identity is approved:
+
+* VerificationLevel >= Identity
+
+3. If business/professional verification is approved for broker/office/company:
+
+* VerificationLevel >= Business
+
+4. Final IsVerified should remain compatible with existing code:
+
+* true when user reaches an approved verification level according to business rules
+* false otherwise
+
+5. Keep backward compatibility with current verification endpoints if possible
+
+========================================
+BACKEND REQUIREMENTS
+====================
+
+Add/update admin logic to support:
+
+* updating verification status
+* updating verification level
+* setting verification badge
+* storing verification notes
+* storing rejection reason
+
+Do not build fake logic.
+This must be real backend implementation.
+
+========================================
+ADMIN API
+=========
+
+Add or extend admin endpoints for verification management.
+
+Possible patterns:
+
+* GET /api/admin/users/{id}/verification
+* PUT /api/admin/users/{id}/verification
+* POST /api/admin/users/{id}/verify
+* POST /api/admin/users/{id}/unverify
+
+Adjust to project conventions if needed.
+
+========================================
+UI / ADMIN PANEL
+================
+
+Update admin user management so each user can show:
+
+* current verification status
+* verification level
+* phone/email verification state
+* identity verification state
+* business verification state
+* badge if assigned
+
+Do not fully redesign the whole UI yet.
+Only add the necessary foundation.
+
+========================================
+IMPORTANT ARCHITECTURE RULES
+============================
+
+* Keep code reusable
+* Keep compatibility with current verify/unverify flow
+* Do not hardcode role-specific hacks in frontend
+* Backend remains source of truth
+* Must work for Owner / Broker / Office / Company and general users
+
+========================================
+DELIVERABLE
+===========
+
+After implementation, report:
+
+1. DB changes
+2. enums/status model used
+3. backend logic added/updated
+4. endpoints added/updated
+5. how backward compatibility was preserved
+6. what is ready now for future document-based verification

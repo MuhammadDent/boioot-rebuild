@@ -277,6 +277,30 @@ public class AdminController : BaseController
         return Ok(result);
     }
 
+    // ── Multi-level verification ──────────────────────────────────────────────
+
+    [HttpGet("users/{userId:guid}/verification")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetUserVerification(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetUserVerificationAsync(userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPut("users/{userId:guid}/verification")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateUserVerification(
+        Guid userId,
+        [FromBody] UpdateUserVerificationRequest request,
+        CancellationToken ct = default)
+    {
+        var adminId = GetUserId();
+        var result  = await _admin.UpdateUserVerificationAsync(adminId, userId, request, ct);
+        return Ok(result);
+    }
+
     // ── Companies ─────────────────────────────────────────────────────────────
 
     [HttpPost("companies")]
