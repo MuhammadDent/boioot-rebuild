@@ -411,6 +411,23 @@ export interface AdminUserResponse {
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
+  lastLoginAt?: string;
+  listingCount: number;
+  planName?: string;
+  planStatus: string;
+  tags: string[];
+}
+
+export interface UserAnalyticsResponse {
+  totalUsers: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  deletedUsers: number;
+  newThisMonth: number;
+  newThisWeek: number;
+  loggedInLast30Days: number;
+  byRole: Record<string, number>;
+  byPlan: Record<string, number>;
 }
 
 export interface AdminUserProfileResponse {

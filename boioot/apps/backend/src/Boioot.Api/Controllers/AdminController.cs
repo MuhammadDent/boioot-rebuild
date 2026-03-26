@@ -40,9 +40,71 @@ public class AdminController : BaseController
         [FromQuery] int pageSize = 20,
         [FromQuery] UserRole? role = null,
         [FromQuery] bool? isActive = null,
+        [FromQuery] string? search = null,
+        [FromQuery] DateTime? createdAfter = null,
+        [FromQuery] DateTime? createdBefore = null,
+        [FromQuery] DateTime? lastLoginAfter = null,
+        [FromQuery] string? tag = null,
         CancellationToken ct = default)
     {
-        var result = await _admin.GetUsersAsync(page, pageSize, role, isActive, ct);
+        var result = await _admin.GetUsersAsync(
+            page, pageSize, role, isActive,
+            search, createdAfter, createdBefore, lastLoginAfter, tag,
+            ct);
+        return Ok(result);
+    }
+
+    [HttpGet("users/analytics")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetUserAnalytics(CancellationToken ct = default)
+    {
+        var result = await _admin.GetUserAnalyticsAsync(ct);
+        return Ok(result);
+    }
+
+    [HttpPost("users/bulk")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> BulkUserAction(
+        [FromBody] BulkUserActionRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.BulkUserActionAsync(GetUserId(), request, ct);
+        return Ok(result);
+    }
+
+    [HttpGet("users/{userId:guid}/tags")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetUserTags(Guid userId, CancellationToken ct = default)
+    {
+        var result = await _admin.GetUserTagsAsync(userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("users/{userId:guid}/tags")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> AddUserTag(
+        Guid userId,
+        [FromBody] AddUserTagRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.AddUserTagAsync(userId, request.Tag, ct);
+        return Ok(result);
+    }
+
+    [HttpDelete("users/{userId:guid}/tags/{tag}")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> RemoveUserTag(
+        Guid userId, string tag, CancellationToken ct = default)
+    {
+        await _admin.RemoveUserTagAsync(userId, tag, ct);
+        return NoContent();
+    }
+
+    [HttpGet("users/tags")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetAllTags(CancellationToken ct = default)
+    {
+        var result = await _admin.GetAllTagsAsync(ct);
         return Ok(result);
     }
 

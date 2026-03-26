@@ -10,7 +10,16 @@ namespace Boioot.Application.Features.Admin.Interfaces;
 public interface IAdminService
 {
     Task<PagedResult<AdminUserResponse>> GetUsersAsync(
-        int page, int pageSize, UserRole? role, bool? isActive, CancellationToken ct = default);
+        int page,
+        int pageSize,
+        UserRole? role,
+        bool? isActive,
+        string? search,
+        DateTime? createdAfter,
+        DateTime? createdBefore,
+        DateTime? lastLoginAfter,
+        string? tag,
+        CancellationToken ct = default);
 
     Task<AdminUserResponse> GetAdminUserAsync(Guid userId, CancellationToken ct = default);
 
@@ -91,4 +100,17 @@ public interface IAdminService
 
     // Property status management
     Task UpdatePropertyStatusAsync(Guid propertyId, PropertyStatus status, CancellationToken ct = default);
+
+    // User analytics
+    Task<UserAnalyticsResponse> GetUserAnalyticsAsync(CancellationToken ct = default);
+
+    // Bulk user actions
+    Task<BulkUserActionResponse> BulkUserActionAsync(
+        Guid adminUserId, BulkUserActionRequest request, CancellationToken ct = default);
+
+    // User tags
+    Task<List<UserTagResponse>> GetUserTagsAsync(Guid userId, CancellationToken ct = default);
+    Task<UserTagResponse> AddUserTagAsync(Guid userId, string tag, CancellationToken ct = default);
+    Task RemoveUserTagAsync(Guid userId, string tag, CancellationToken ct = default);
+    Task<List<string>> GetAllTagsAsync(CancellationToken ct = default);
 }

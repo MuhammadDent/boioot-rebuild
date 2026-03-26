@@ -22,6 +22,11 @@ public class User : BaseEntity, ISoftDeletable
     /// </summary>
     public int TrialListingsUsed { get; set; } = 0;
 
+    /// <summary>
+    /// UTC timestamp of the last successful login. Set by AuthService on login.
+    /// </summary>
+    public DateTime? LastLoginAt { get; set; }
+
     public Agent? Agent { get; set; }
     public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<AccountUser> AccountUsers { get; set; } = [];

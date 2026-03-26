@@ -25,7 +25,16 @@ public class AdminService : IAdminService
     }
 
     public async Task<PagedResult<AdminUserResponse>> GetUsersAsync(
-        int page, int pageSize, UserRole? role, bool? isActive, CancellationToken ct = default)
+        int page,
+        int pageSize,
+        UserRole? role,
+        bool? isActive,
+        string? search,
+        DateTime? createdAfter,
+        DateTime? createdBefore,
+        DateTime? lastLoginAfter,
+        string? tag,
+        CancellationToken ct = default)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 50);
@@ -40,28 +49,150 @@ public class AdminService : IAdminService
         if (isActive.HasValue)
             query = query.Where(u => u.IsActive == isActive.Value);
 
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.ToLowerInvariant();
+            query = query.Where(u =>
+                u.FullName.ToLower().Contains(s) ||
+                u.Email.ToLower().Contains(s) ||
+                (u.Phone != null && u.Phone.Contains(s)));
+        }
+
+        if (createdAfter.HasValue)
+            query = query.Where(u => u.CreatedAt >= createdAfter.Value);
+
+        if (createdBefore.HasValue)
+            query = query.Where(u => u.CreatedAt <= createdBefore.Value);
+
+        if (lastLoginAfter.HasValue)
+            query = query.Where(u => u.LastLoginAt != null && u.LastLoginAt >= lastLoginAfter.Value);
+
+        // Tag filter — if a tag is specified, filter to users who have it
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            var tagLower = tag.ToLowerInvariant().Replace("'", "''");
+            var taggedUserIdStrs = await _context.Database
+                .SqlQueryRaw<string>($"SELECT UserId FROM UserTags WHERE lower(Tag) = '{tagLower}'")
+                .ToListAsync(ct);
+            var taggedGuids = taggedUserIdStrs
+                .Select(s => Guid.TryParse(s, out var g) ? g : (Guid?)null)
+                .Where(g => g.HasValue)
+                .Select(g => g!.Value)
+                .ToList();
+            query = query.Where(u => taggedGuids.Contains(u.Id));
+        }
+
         var total = await query.CountAsync(ct);
 
-        var items = await query
+        var rawItems = await query
             .OrderByDescending(u => u.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(u => new AdminUserResponse
+            .Select(u => new
             {
-                Id = u.Id,
-                FullName = u.FullName,
-                Email = u.Email,
-                Phone = u.Phone,
-                ProfileImageUrl = u.ProfileImageUrl,
-                Role = u.Role.ToString(),
-                IsActive = u.IsActive,
-                IsDeleted = u.IsDeleted,
-                CreatedAt = u.CreatedAt,
-                UpdatedAt = u.UpdatedAt
+                u.Id,
+                u.FullName,
+                u.Email,
+                u.Phone,
+                u.ProfileImageUrl,
+                u.Role,
+                u.IsActive,
+                u.IsDeleted,
+                u.CreatedAt,
+                u.UpdatedAt,
+                u.LastLoginAt,
             })
             .ToListAsync(ct);
 
+        // Enrich with listing count, plan info, and tags
+        var userIds = rawItems.Select(u => u.Id).ToList();
+        var userIdStrs = userIds.Select(id => id.ToString()).ToList();
+
+        // Listing count per user
+        var listingCounts = await _context.Properties
+            .IgnoreQueryFilters()
+            .Where(p => userIdStrs.Contains(p.CreatedByUserId))
+            .GroupBy(p => p.CreatedByUserId)
+            .Select(g => new { UserId = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        var listingCountMap = listingCounts.ToDictionary(x => x.UserId, x => x.Count);
+
+        // Plan info via Account
+        var accountUsers = await _context.AccountUsers
+            .Include(au => au.Account)
+                .ThenInclude(a => a.Subscriptions.Where(s => s.IsActive))
+                    .ThenInclude(s => s.Plan)
+            .Where(au => userIds.Contains(au.UserId))
+            .ToListAsync(ct);
+
+        var planMap = new Dictionary<Guid, (string? PlanName, string PlanStatus)>();
+        foreach (var au in accountUsers)
+        {
+            if (planMap.ContainsKey(au.UserId)) continue;
+            var activeSub = au.Account?.Subscriptions?.FirstOrDefault(s => s.IsActive);
+            if (activeSub is not null)
+            {
+                planMap[au.UserId] = (activeSub.Plan?.DisplayNameAr ?? activeSub.Plan?.Name, activeSub.Status.ToString());
+            }
+        }
+
+        // Tags per user (raw SQL since UserTags has no EF entity)
+        var tagsMap = new Dictionary<Guid, List<string>>();
+        if (userIdStrs.Count > 0)
+        {
+            try
+            {
+                var idList = string.Join(",", userIdStrs.Select(id => $"'{id.Replace("'", "''")}'"));
+                var allTagRows = await _context.Database
+                    .SqlQueryRaw<UserTagRow>($"SELECT UserId, Tag FROM UserTags WHERE UserId IN ({idList})")
+                    .ToListAsync(ct);
+                foreach (var row in allTagRows)
+                {
+                    if (!Guid.TryParse(row.UserId, out var uid)) continue;
+                    if (!tagsMap.TryGetValue(uid, out var list))
+                    {
+                        list = [];
+                        tagsMap[uid] = list;
+                    }
+                    list.Add(row.Tag);
+                }
+            }
+            catch
+            {
+                // Table may not exist yet on first startup
+            }
+        }
+
+        var items = rawItems.Select(u =>
+        {
+            var planInfo = planMap.TryGetValue(u.Id, out var p) ? p : (null, "None");
+            return new AdminUserResponse
+            {
+                Id              = u.Id,
+                FullName        = u.FullName,
+                Email           = u.Email,
+                Phone           = u.Phone,
+                ProfileImageUrl = u.ProfileImageUrl,
+                Role            = u.Role.ToString(),
+                IsActive        = u.IsActive,
+                IsDeleted       = u.IsDeleted,
+                CreatedAt       = u.CreatedAt,
+                UpdatedAt       = u.UpdatedAt,
+                LastLoginAt     = u.LastLoginAt,
+                ListingCount    = listingCountMap.TryGetValue(u.Id.ToString(), out var lc) ? lc : 0,
+                PlanName        = planInfo.Item1,
+                PlanStatus      = planInfo.Item2,
+                Tags            = tagsMap.TryGetValue(u.Id, out var tags) ? tags : [],
+            };
+        }).ToList();
+
         return new PagedResult<AdminUserResponse>(items, page, pageSize, total);
+    }
+
+    private class UserTagRow
+    {
+        public string UserId { get; set; } = "";
+        public string Tag { get; set; } = "";
     }
 
     public async Task<AdminUserResponse> GetAdminUserAsync(Guid userId, CancellationToken ct = default)
@@ -84,6 +215,7 @@ public class AdminService : IAdminService
             IsDeleted       = user.IsDeleted,
             CreatedAt       = user.CreatedAt,
             UpdatedAt       = user.UpdatedAt,
+            LastLoginAt     = user.LastLoginAt,
         };
     }
 
@@ -1393,5 +1525,197 @@ public class AdminService : IAdminService
         property.Status    = status;
         property.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
+    }
+
+    // ── Analytics ──────────────────────────────────────────────────────────────
+
+    public async Task<UserAnalyticsResponse> GetUserAnalyticsAsync(CancellationToken ct = default)
+    {
+        var now   = DateTime.UtcNow;
+        var week  = now.AddDays(-7);
+        var month = now.AddMonths(-1);
+        var last30 = now.AddDays(-30);
+
+        var allUsers = await _context.Users
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Select(u => new { u.Role, u.IsActive, u.IsDeleted, u.CreatedAt, u.LastLoginAt })
+            .ToListAsync(ct);
+
+        var byRole = allUsers
+            .GroupBy(u => u.Role.ToString())
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        // Plan stats via subscriptions
+        var planStats = new Dictionary<string, int>();
+        try
+        {
+            var subs = await _context.Set<Boioot.Domain.Entities.Subscription>()
+                .Include(s => s.Plan)
+                .Where(s => s.IsActive)
+                .Select(s => new { PlanName = s.Plan != null ? (s.Plan.DisplayNameAr ?? s.Plan.Name) : "Free" })
+                .ToListAsync(ct);
+            planStats = subs.GroupBy(s => s.PlanName).ToDictionary(g => g.Key, g => g.Count());
+        }
+        catch { }
+
+        return new UserAnalyticsResponse
+        {
+            TotalUsers         = allUsers.Count,
+            ActiveUsers        = allUsers.Count(u => u.IsActive && !u.IsDeleted),
+            InactiveUsers      = allUsers.Count(u => !u.IsActive && !u.IsDeleted),
+            DeletedUsers       = allUsers.Count(u => u.IsDeleted),
+            NewThisWeek        = allUsers.Count(u => u.CreatedAt >= week),
+            NewThisMonth       = allUsers.Count(u => u.CreatedAt >= month),
+            LoggedInLast30Days = allUsers.Count(u => u.LastLoginAt.HasValue && u.LastLoginAt >= last30),
+            ByRole             = byRole,
+            ByPlan             = planStats,
+        };
+    }
+
+    // ── Bulk actions ───────────────────────────────────────────────────────────
+
+    public async Task<BulkUserActionResponse> BulkUserActionAsync(
+        Guid adminUserId, BulkUserActionRequest request, CancellationToken ct = default)
+    {
+        if (request.UserIds.Count == 0)
+            throw new BoiootException("لم يتم تحديد أي مستخدمين", 400);
+
+        if (request.Action == "export")
+        {
+            var exportUsers = await _context.Users
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(u => request.UserIds.Contains(u.Id))
+                .Select(u => new AdminUserResponse
+                {
+                    Id              = u.Id,
+                    FullName        = u.FullName,
+                    Email           = u.Email,
+                    Phone           = u.Phone,
+                    Role            = u.Role.ToString(),
+                    IsActive        = u.IsActive,
+                    IsDeleted       = u.IsDeleted,
+                    CreatedAt       = u.CreatedAt,
+                    UpdatedAt       = u.UpdatedAt,
+                    LastLoginAt     = u.LastLoginAt,
+                })
+                .ToListAsync(ct);
+            return new BulkUserActionResponse
+            {
+                Affected   = exportUsers.Count,
+                Message    = $"تم تصدير {exportUsers.Count} مستخدم",
+                ExportData = exportUsers,
+            };
+        }
+
+        var users = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => request.UserIds.Contains(u.Id))
+            .ToListAsync(ct);
+
+        bool newStatus = request.Action switch
+        {
+            "activate"   => true,
+            "deactivate" => false,
+            _            => throw new BoiootException("الإجراء غير معروف", 400),
+        };
+
+        int affected = 0;
+        foreach (var u in users)
+        {
+            if (u.Id == adminUserId) continue; // don't touch own account
+            u.IsActive  = newStatus;
+            u.UpdatedAt = DateTime.UtcNow;
+            affected++;
+        }
+
+        await _context.SaveChangesAsync(ct);
+
+        var label = newStatus ? "تفعيل" : "تعطيل";
+        return new BulkUserActionResponse
+        {
+            Affected = affected,
+            Message  = $"تم {label} {affected} مستخدم بنجاح",
+        };
+    }
+
+    // ── User tags ──────────────────────────────────────────────────────────────
+
+    public async Task<List<UserTagResponse>> GetUserTagsAsync(Guid userId, CancellationToken ct = default)
+    {
+        var userIdStr = userId.ToString().Replace("'", "''");
+        try
+        {
+            var rows = await _context.Database
+                .SqlQueryRaw<UserTagRowFull>($"SELECT Tag, CreatedAt FROM UserTags WHERE UserId = '{userIdStr}' ORDER BY CreatedAt")
+                .ToListAsync(ct);
+
+            return rows.Select(r => new UserTagResponse
+            {
+                Tag       = r.Tag,
+                CreatedAt = DateTime.TryParse(r.CreatedAt, out var dt) ? dt : DateTime.UtcNow,
+            }).ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    public async Task<UserTagResponse> AddUserTagAsync(Guid userId, string tag, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(tag) || tag.Length > 50)
+            throw new BoiootException("التاج غير صالح (1-50 حرف)", 400);
+
+        var user = await _context.Users.IgnoreQueryFilters().AnyAsync(u => u.Id == userId, ct);
+        if (!user) throw new BoiootException("المستخدم غير موجود", 404);
+
+        var tagClean  = tag.Trim().Replace("'", "''");
+        var userIdStr = userId.ToString();
+        var newId     = Guid.NewGuid().ToString();
+        var now       = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+
+        try
+        {
+            await _context.Database.ExecuteSqlRawAsync(
+                $"INSERT OR IGNORE INTO UserTags (Id, UserId, Tag, CreatedAt) VALUES ('{newId}', '{userIdStr}', '{tagClean}', '{now}')",
+                ct);
+        }
+        catch (Exception ex)
+        {
+            throw new BoiootException("تعذّر إضافة التاج: " + ex.Message, 500);
+        }
+
+        return new UserTagResponse { Tag = tag.Trim(), CreatedAt = DateTime.UtcNow };
+    }
+
+    public async Task RemoveUserTagAsync(Guid userId, string tag, CancellationToken ct = default)
+    {
+        var tagClean  = tag.Trim().Replace("'", "''");
+        var userIdStr = userId.ToString();
+        await _context.Database.ExecuteSqlRawAsync(
+            $"DELETE FROM UserTags WHERE UserId = '{userIdStr}' AND lower(Tag) = lower('{tagClean}')",
+            ct);
+    }
+
+    public async Task<List<string>> GetAllTagsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            return await _context.Database
+                .SqlQueryRaw<string>("SELECT DISTINCT Tag FROM UserTags ORDER BY Tag")
+                .ToListAsync(ct);
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private class UserTagRowFull
+    {
+        public string Tag { get; set; } = "";
+        public string CreatedAt { get; set; } = "";
     }
 }

@@ -204,6 +204,8 @@ public class AuthService : IAuthService
             "User logged in: {Email} | Role: {Role} | RememberMe: {RememberMe}",
             emailLower, user.Role, request.RememberMe);
 
+        user.LastLoginAt = DateTime.UtcNow;
+
         return await BuildAuthResponseAsync(user, request.RememberMe, ipAddress, userAgent, ct);
     }
 

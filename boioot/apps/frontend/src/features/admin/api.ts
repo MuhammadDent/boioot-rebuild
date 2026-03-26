@@ -26,6 +26,11 @@ export interface AdminUsersParams {
   /** Admin | CompanyOwner | Agent | User — empty string means "all" */
   role?: string;
   isActive?: boolean;
+  search?: string;
+  createdAfter?: string;
+  createdBefore?: string;
+  lastLoginAfter?: string;
+  tag?: string;
 }
 
 export interface AdminCompaniesParams {
@@ -81,9 +86,41 @@ export const adminApi = {
     params: AdminUsersParams = {},
   ): Promise<PagedResult<AdminUserResponse>> {
     const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (params.role)                    qs.set("role", params.role);
-    if (params.isActive !== undefined)  qs.set("isActive", String(params.isActive));
+    if (params.role)                     qs.set("role", params.role);
+    if (params.isActive !== undefined)   qs.set("isActive", String(params.isActive));
+    if (params.search)                   qs.set("search", params.search);
+    if (params.createdAfter)             qs.set("createdAfter", params.createdAfter);
+    if (params.createdBefore)            qs.set("createdBefore", params.createdBefore);
+    if (params.lastLoginAfter)           qs.set("lastLoginAfter", params.lastLoginAfter);
+    if (params.tag)                      qs.set("tag", params.tag);
     return api.get(`/admin/users?${qs}`);
+  },
+
+  getUserAnalytics(): Promise<import("@/types").UserAnalyticsResponse> {
+    return api.get("/admin/users/analytics");
+  },
+
+  bulkUserAction(
+    action: "activate" | "deactivate" | "export",
+    userIds: string[],
+  ): Promise<{ affected: number; message: string; exportData?: AdminUserResponse[] }> {
+    return api.post("/admin/users/bulk", { action, userIds });
+  },
+
+  getUserTags(userId: string): Promise<{ tag: string; createdAt: string }[]> {
+    return api.get(`/admin/users/${userId}/tags`);
+  },
+
+  addUserTag(userId: string, tag: string): Promise<{ tag: string; createdAt: string }> {
+    return api.post(`/admin/users/${userId}/tags`, { tag });
+  },
+
+  removeUserTag(userId: string, tag: string): Promise<void> {
+    return api.delete(`/admin/users/${userId}/tags/${encodeURIComponent(tag)}`);
+  },
+
+  getAllTags(): Promise<string[]> {
+    return api.get("/admin/users/tags");
   },
 
   getAdminUser(userId: string): Promise<AdminUserResponse> {

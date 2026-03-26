@@ -59,6 +59,7 @@ public sealed class SchemaEvolutionService
         await ApplyFeatureDefinitionPatchesAsync(ct);
         await ApplyPlanNamingPatchesAsync(ct);
         await ApplyPlanFeaturePatchesAsync(ct);
+        await ApplyUserTagsPatchesAsync(ct);
 
         await ApplySqliteIndexPatchesAsync(ct);
         await ApplyWalCheckpointAsync(ct);
@@ -157,6 +158,7 @@ public sealed class SchemaEvolutionService
     {
         await TryAlter("Users", "ProfileImageUrl",    "TEXT",                        ct);
         await TryAlter("Users", "TrialListingsUsed",  "INTEGER NOT NULL DEFAULT 0",  ct);
+        await TryAlter("Users", "LastLoginAt",        "TEXT",                        ct);
 
         // Backfill TrialListingsUsed for existing User-role accounts using EF.
         try
@@ -447,6 +449,21 @@ public sealed class SchemaEvolutionService
         {
             _log.LogWarning("ClearAllPools failed (non-fatal): {msg}", ex.Message);
         }
+    }
+
+    private async Task ApplyUserTagsPatchesAsync(CancellationToken ct)
+    {
+        await TryExec(@"
+            CREATE TABLE IF NOT EXISTS UserTags (
+                Id          TEXT NOT NULL PRIMARY KEY,
+                UserId      TEXT NOT NULL,
+                Tag         TEXT NOT NULL,
+                CreatedAt   TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (UserId) REFERENCES Users(Id)
+            )", ct, warnOnError: true);
+
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_UserTags_UserId ON UserTags(UserId)", ct, warnOnError: true);
+        await TryExec("CREATE UNIQUE INDEX IF NOT EXISTS IX_UserTags_User_Tag ON UserTags(UserId, Tag)", ct, warnOnError: true);
     }
 
     // ── Helper methods ────────────────────────────────────────────────────────
