@@ -2,6 +2,8 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Features.Billing.Interfaces;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Application.Features.Admin.Interfaces;
+using Boioot.Application.Features.VerificationRequests.Interfaces;
+using Boioot.Infrastructure.Features.VerificationRequests;
 using Boioot.Application.Features.AgentManagement.Interfaces;
 using Boioot.Application.Features.Auth.Interfaces;
 using Boioot.Application.Features.Blog.Interfaces;
@@ -111,6 +113,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILocationMasterService, LocationMasterService>();
         services.AddScoped<IUserNotificationService, NotificationService>();
         services.AddScoped<ISiteContentService, SiteContentService>();
+        services.AddScoped<IVerificationRequestService, VerificationRequestService>();
 
         // ── Billing providers ──────────────────────────────────────────────────
         // Both registered as IBillingProvider — BillingService injects IEnumerable<IBillingProvider>

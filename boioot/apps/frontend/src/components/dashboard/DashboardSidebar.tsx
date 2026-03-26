@@ -90,6 +90,9 @@ const ICONS = {
   content: (
     <Ic d={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></>} />
   ),
+  verification: (
+    <Ic d={<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><polyline points="9 11 12 14 22 4" /></>} />
+  ),
 };
 
 // ─── Shared base items (لوحة + ملف + رسائل) ──────────────────────────────────
@@ -111,7 +114,8 @@ const SIDEBAR_CONFIG: Record<string, NavEntry[]> = {
   // ── Regular user ──────────────────────────────────────────────────────────
   User: [
     ...BASE,
-    { href: "/dashboard/my-requests", label: "طلباتي",  exact: false, icon: ICONS.requests },
+    { href: "/dashboard/my-requests",      label: "طلباتي",         exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/verification",     label: "التوثيق",        exact: false, icon: ICONS.verification },
   ],
 
   // ── Property owner ────────────────────────────────────────────────────────
@@ -119,6 +123,7 @@ const SIDEBAR_CONFIG: Record<string, NavEntry[]> = {
     ...BASE,
     { href: "/dashboard/my-listings",            label: "إعلاناتي",       exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "طلباتي",         exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/verification",           label: "التوثيق",        exact: false, icon: ICONS.verification },
     { href: "/dashboard/subscription",           label: "اشتراكي",        exact: true,  icon: ICONS.subscription },
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],
@@ -129,6 +134,7 @@ const SIDEBAR_CONFIG: Record<string, NavEntry[]> = {
     { href: "/dashboard/clients",                label: "العملاء",        exact: false, icon: ICONS.clients      },
     { href: "/dashboard/my-listings",            label: "إعلاناتي",       exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "طلباتي",         exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/verification",           label: "التوثيق",        exact: false, icon: ICONS.verification },
     { href: "/dashboard/subscription",           label: "اشتراكي",        exact: true,  icon: ICONS.subscription },
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],
@@ -139,6 +145,7 @@ const SIDEBAR_CONFIG: Record<string, NavEntry[]> = {
     { href: "/dashboard/team",                   label: "الفريق",         exact: false, icon: ICONS.team         },
     { href: "/dashboard/listings",               label: "الإعلانات",      exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "الطلبات",        exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/verification",           label: "التوثيق",        exact: false, icon: ICONS.verification },
     { href: "/dashboard/subscription",           label: "اشتراكي",        exact: true,  icon: ICONS.subscription },
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],
@@ -149,6 +156,7 @@ const SIDEBAR_CONFIG: Record<string, NavEntry[]> = {
     { href: "/dashboard/projects",               label: "المشاريع",       exact: false, icon: ICONS.projects     },
     { href: "/dashboard/listings",               label: "الإعلانات",      exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "الطلبات",        exact: false, icon: ICONS.requests     },
+    { href: "/dashboard/verification",           label: "التوثيق",        exact: false, icon: ICONS.verification },
     { href: "/dashboard/subscription",           label: "اشتراكي",        exact: true,  icon: ICONS.subscription },
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],

@@ -60,6 +60,7 @@ public sealed class SchemaEvolutionService
         await ApplyPlanNamingPatchesAsync(ct);
         await ApplyPlanFeaturePatchesAsync(ct);
         await ApplyUserTagsPatchesAsync(ct);
+        await ApplyVerificationRequestsPatchesAsync(ct);
 
         await ApplySqliteIndexPatchesAsync(ct);
         await ApplyWalCheckpointAsync(ct);
@@ -480,6 +481,49 @@ public sealed class SchemaEvolutionService
 
         await TryExec("CREATE INDEX IF NOT EXISTS IX_UserTags_UserId ON UserTags(UserId)", ct, warnOnError: true);
         await TryExec("CREATE UNIQUE INDEX IF NOT EXISTS IX_UserTags_User_Tag ON UserTags(UserId, Tag)", ct, warnOnError: true);
+    }
+
+    private async Task ApplyVerificationRequestsPatchesAsync(CancellationToken ct)
+    {
+        await TryExec(@"
+            CREATE TABLE IF NOT EXISTS ""VerificationRequests"" (
+                ""Id""               TEXT NOT NULL PRIMARY KEY,
+                ""UserId""           TEXT NOT NULL,
+                ""VerificationType"" TEXT NOT NULL DEFAULT 'Identity',
+                ""Status""           TEXT NOT NULL DEFAULT 'Draft',
+                ""SubmittedAt""      TEXT,
+                ""ReviewedAt""       TEXT,
+                ""ReviewedBy""       TEXT,
+                ""UserNotes""        TEXT,
+                ""AdminNotes""       TEXT,
+                ""RejectionReason""  TEXT,
+                ""CreatedAt""        TEXT NOT NULL DEFAULT (datetime('now')),
+                ""UpdatedAt""        TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (""UserId"") REFERENCES ""Users""(""Id"")
+            )", ct, warnOnError: true);
+
+        await TryExec(@"CREATE INDEX IF NOT EXISTS IX_VerificationRequests_UserId
+            ON ""VerificationRequests""(""UserId"")", ct, warnOnError: true);
+        await TryExec(@"CREATE INDEX IF NOT EXISTS IX_VerificationRequests_Status
+            ON ""VerificationRequests""(""Status"")", ct, warnOnError: true);
+
+        await TryExec(@"
+            CREATE TABLE IF NOT EXISTS ""VerificationDocuments"" (
+                ""Id""                      TEXT NOT NULL PRIMARY KEY,
+                ""VerificationRequestId""   TEXT NOT NULL,
+                ""DocumentType""            TEXT NOT NULL DEFAULT 'Other',
+                ""FileName""                TEXT NOT NULL DEFAULT '',
+                ""FileUrl""                 TEXT NOT NULL DEFAULT '',
+                ""MimeType""                TEXT,
+                ""Status""                  TEXT NOT NULL DEFAULT 'Pending',
+                ""Notes""                   TEXT,
+                ""CreatedAt""               TEXT NOT NULL DEFAULT (datetime('now')),
+                ""UpdatedAt""               TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (""VerificationRequestId"") REFERENCES ""VerificationRequests""(""Id"")
+            )", ct, warnOnError: true);
+
+        await TryExec(@"CREATE INDEX IF NOT EXISTS IX_VerificationDocuments_RequestId
+            ON ""VerificationDocuments""(""VerificationRequestId"")", ct, warnOnError: true);
     }
 
     // ── Helper methods ────────────────────────────────────────────────────────

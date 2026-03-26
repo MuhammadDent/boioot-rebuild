@@ -112,6 +112,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <Icon path={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>} />,
       },
       {
+        href: "/dashboard/admin/verification-requests",
+        label: "طلبات التوثيق",
+        permission: "users.view",
+        icon: <Icon path={<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><polyline points="9 11 12 14 22 4" /></>} />,
+      },
+      {
         href: "/dashboard/admin/companies",
         label: "الشركات",
         permission: "companies.view",

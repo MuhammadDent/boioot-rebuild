@@ -73,6 +73,10 @@ public class BoiootDbContext : DbContext
     public DbSet<RbacRolePermission> RbacRolePermissions => Set<RbacRolePermission>();
     public DbSet<RbacUserRole>       RbacUserRoles       => Set<RbacUserRole>();
 
+    // ── Verification Requests ──────────────────────────────────────────────────
+    public DbSet<VerificationRequest>  VerificationRequests  => Set<VerificationRequest>();
+    public DbSet<VerificationDocument> VerificationDocuments => Set<VerificationDocument>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BoiootDbContext).Assembly);
