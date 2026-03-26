@@ -31,6 +31,7 @@ public class DataSeeder
         await SeedAdminUserRoleAsync();
         await SeedSamplePropertiesAsync();
         await SeedPropertyAmenitiesAsync();
+        await SeedOfficeTestUserAsync();
     }
 
     private async Task SeedPropertyAmenitiesAsync()
@@ -106,6 +107,38 @@ public class DataSeeder
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Admin user seeded: {Email}", emailLower);
+    }
+
+    // ── Office test user seed ─────────────────────────────────────────────────
+
+    private async Task SeedOfficeTestUserAsync()
+    {
+        const string officeEmail = "office@boioot.sy";
+
+        var exists = await _context.Users
+            .IgnoreQueryFilters()
+            .AnyAsync(u => u.Email == officeEmail);
+
+        if (exists)
+        {
+            _logger.LogDebug("[Seed] Office test user already exists — skipping.");
+            return;
+        }
+
+        var officeUser = new User
+        {
+            FullName     = "مكتب العقارات الوطنية",
+            Email        = officeEmail,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123456"),
+            Role         = UserRole.Office,
+            UserCode     = "OFF-0001",
+            IsActive     = true,
+            Phone        = "+963911000001",
+        };
+
+        _context.Users.Add(officeUser);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("[Seed] Office test user seeded: {Email}", officeEmail);
     }
 
     // ── Admin UserRole assignment (DB-driven RBAC) ────────────────────────────

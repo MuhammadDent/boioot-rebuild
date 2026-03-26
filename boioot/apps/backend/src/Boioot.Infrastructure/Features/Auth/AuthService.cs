@@ -668,6 +668,7 @@ public class AuthService : IAuthService
         {
             UserRole.Owner        => "OWN",
             UserRole.Broker       => "BRK",
+            UserRole.Office       => "OFF",
             UserRole.Agent        => "AGT",
             UserRole.CompanyOwner => "CO",
             UserRole.Admin        => "ADM",

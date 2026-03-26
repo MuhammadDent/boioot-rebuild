@@ -165,11 +165,18 @@ export default function AdminUsersPage() {
     if (!isLoading && user) {
       load(1, {});
       rbacApi.getRoles()
-        .then(setRoles)
+        .then(data => {
+          console.log("[AdminUsers] roles fetched from API:", data.map(r => r.name));
+          console.log("[AdminUsers] platform roles (filtered):", data.filter(r => PLATFORM_ROLE_NAMES.has(r.name)).map(r => r.name));
+          setRoles(data);
+        })
         .catch(() => {})
         .finally(() => setRolesLoading(false));
       adminApi.getUserAnalytics()
-        .then(setAnalytics)
+        .then(data => {
+          console.log("[AdminUsers] analytics byRole:", data.byRole);
+          setAnalytics(data);
+        })
         .catch(() => {});
       adminApi.getAllTags()
         .then(setAllTags)

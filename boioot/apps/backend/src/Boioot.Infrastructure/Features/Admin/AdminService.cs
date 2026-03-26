@@ -1546,6 +1546,14 @@ public class AdminService : IAdminService
             .GroupBy(u => u.Role.ToString())
             .ToDictionary(g => g.Key, g => g.Count());
 
+        // Ensure every known UserRole appears in the response (even if 0 users).
+        // This is critical for the frontend to render all tabs and filter options.
+        foreach (var roleName in Enum.GetNames<UserRole>())
+        {
+            if (!byRole.ContainsKey(roleName))
+                byRole[roleName] = 0;
+        }
+
         // Plan stats via subscriptions
         var planStats = new Dictionary<string, int>();
         try
