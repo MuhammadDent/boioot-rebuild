@@ -135,6 +135,14 @@ export const adminApi = {
     return api.put(`/admin/users/${userId}`, data);
   },
 
+  verifyUser(userId: string): Promise<AdminUserResponse> {
+    return api.post(`/admin/users/${userId}/verify`, {});
+  },
+
+  unverifyUser(userId: string): Promise<AdminUserResponse> {
+    return api.post(`/admin/users/${userId}/unverify`, {});
+  },
+
   getCompanies(
     page: number,
     pageSize: number,

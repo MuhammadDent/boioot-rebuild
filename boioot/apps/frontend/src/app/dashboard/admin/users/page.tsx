@@ -334,6 +334,44 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleVerify(targetId: string) {
+    if (actionLoading) return;
+    setActionLoading(`verify-${targetId}`);
+    setActionError("");
+    try {
+      const updated = await adminApi.verifyUser(targetId);
+      setUsers(prev => prev.map(u =>
+        u.id === updated.id
+          ? { ...u, isVerified: updated.isVerified, verifiedAt: updated.verifiedAt, verifiedBy: updated.verifiedBy }
+          : u
+      ));
+      showNotice(`تم توثيق المستخدم "${updated.fullName}" بنجاح`);
+    } catch (e) {
+      setActionError(normalizeError(e));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleUnverify(targetId: string) {
+    if (actionLoading) return;
+    setActionLoading(`verify-${targetId}`);
+    setActionError("");
+    try {
+      const updated = await adminApi.unverifyUser(targetId);
+      setUsers(prev => prev.map(u =>
+        u.id === updated.id
+          ? { ...u, isVerified: updated.isVerified, verifiedAt: updated.verifiedAt, verifiedBy: updated.verifiedBy }
+          : u
+      ));
+      showNotice(`تم إلغاء توثيق "${updated.fullName}"`);
+    } catch (e) {
+      setActionError(normalizeError(e));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   async function handleRoleChange(userId: string, roleId: string, roleName: string) {
     setActionLoading(userId);
     setActionError("");
@@ -1050,6 +1088,8 @@ export default function AdminUsersPage() {
                 onAddTag={handleAddTag}
                 onRemoveTag={handleRemoveTag}
                 onViewProfile={() => router.push(`/dashboard/admin/users/${u.id}`)}
+                onVerify={handleVerify}
+                onUnverify={handleUnverify}
               />
             ))}
           </div>
@@ -1084,6 +1124,8 @@ function UserRow({
   onAddTag,
   onRemoveTag,
   onViewProfile,
+  onVerify,
+  onUnverify,
 }: {
   userData: AdminUserResponse;
   isSelf: boolean;
@@ -1096,13 +1138,16 @@ function UserRow({
   onAddTag: (userId: string, tag: string) => void;
   onRemoveTag: (userId: string, tag: string) => void;
   onViewProfile: () => void;
+  onVerify: (id: string) => void;
+  onUnverify: (id: string) => void;
 }) {
   const [showRoleEdit, setShowRoleEdit] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTag, setNewTag] = useState("");
-  const isThisLoading = actionLoading === u.id;
-  const isTagLoading  = actionLoading === `tag-${u.id}`;
+  const isThisLoading   = actionLoading === u.id;
+  const isTagLoading    = actionLoading === `tag-${u.id}`;
+  const isVerifyLoading = actionLoading === `verify-${u.id}`;
 
   function handleRoleSubmit() {
     if (!selectedRoleId) return;
@@ -1170,6 +1215,19 @@ function UserRow({
             </span>
             {u.isDeleted && <span className="badge badge-red">محذوف</span>}
             {isSelf && <span className="badge badge-gray">أنت</span>}
+            {u.isVerified ? (
+              <span
+                className="badge badge-green"
+                title={u.verifiedAt ? `موثق منذ: ${new Date(u.verifiedAt).toLocaleDateString("ar-SY")}` : "موثق"}
+                style={{ fontSize: "0.72rem" }}
+              >
+                ✓ موثق
+              </span>
+            ) : (
+              <span className="badge badge-gray" style={{ fontSize: "0.72rem" }}>
+                غير موثق
+              </span>
+            )}
             {u.planName && (
               <span className="badge badge-blue" style={{ fontSize: "0.72rem" }}>
                 {u.planName}
@@ -1286,6 +1344,37 @@ function UserRow({
           >
             تغيير الدور
           </button>
+          {u.isVerified ? (
+            <button
+              className="btn"
+              style={{
+                padding: "0.3rem 0.65rem", fontSize: "0.75rem",
+                backgroundColor: "#fef2f2",
+                borderColor: "#fecaca",
+                color: "#b91c1c",
+              }}
+              onClick={() => onUnverify(u.id)}
+              disabled={isVerifyLoading}
+              title="إلغاء التوثيق"
+            >
+              {isVerifyLoading ? "..." : "إلغاء التوثيق"}
+            </button>
+          ) : (
+            <button
+              className="btn"
+              style={{
+                padding: "0.3rem 0.65rem", fontSize: "0.75rem",
+                backgroundColor: "#f0fdf4",
+                borderColor: "#bbf7d0",
+                color: "#15803d",
+              }}
+              onClick={() => onVerify(u.id)}
+              disabled={isVerifyLoading}
+              title="توثيق المستخدم"
+            >
+              {isVerifyLoading ? "..." : "توثيق"}
+            </button>
+          )}
           {!isSelf && (
             <button
               className={u.isActive ? "btn" : "btn btn-primary"}

@@ -416,6 +416,9 @@ export interface AdminUserResponse {
   planName?: string;
   planStatus: string;
   tags: string[];
+  isVerified: boolean;
+  verifiedAt?: string;
+  verifiedBy?: string;
 }
 
 export interface UserAnalyticsResponse {
@@ -451,6 +454,9 @@ export interface AdminUserProfileResponse {
   remainingListings: number;
   subscriptionStatus?: string;
   subscriptionEndDate?: string;
+  isVerified: boolean;
+  verifiedAt?: string;
+  verifiedBy?: string;
 }
 
 export interface AdminBrokerResponse {
