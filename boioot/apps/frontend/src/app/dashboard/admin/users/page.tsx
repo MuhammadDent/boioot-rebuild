@@ -189,10 +189,12 @@ export default function AdminUsersPage() {
 
   // ── Role groups ───────────────────────────────────────────────────────────
 
+  // Customer roles only — Admin/staff never appear on this page.
+  // Internal accounts are managed in Team Management and Roles sections.
   const platformRoles = roles
-    .filter(r => PLATFORM_ROLE_NAMES.has(r.name))
+    .filter(r => PLATFORM_ROLE_NAMES.has(r.name) && getRoleCategory(r.name) !== "admin")
     .sort((a, b) => {
-      const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, Office: 3, Agent: 4, CompanyOwner: 5, Admin: 6 };
+      const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, Office: 3, Agent: 4, CompanyOwner: 5 };
       return (order[a.name] ?? 99) - (order[b.name] ?? 99);
     });
   // Direct individual customers (User only — shown in own optgroup)
@@ -202,7 +204,6 @@ export default function AdminUsersPage() {
     (getRoleCategory(r.name) === "customer" && r.name !== "User") ||
     getRoleCategory(r.name) === "subordinate"
   );
-  const adminRoles    = platformRoles.filter(r => getRoleCategory(r.name) === "admin");
 
   // ── Filter handlers ───────────────────────────────────────────────────────
 
@@ -478,7 +479,6 @@ export default function AdminUsersPage() {
             { role: "Office",       label: "مكاتب عقارية",       count: analytics?.byRole["Office"],         subordinate: false },
             { role: "CompanyOwner", label: "شركات تطوير",        count: analytics?.byRole["CompanyOwner"],   subordinate: false },
             { role: "Agent",        label: "وكلاء عقاريون",      count: analytics?.byRole["Agent"],          subordinate: true  },
-            { role: "Admin",        label: "إداريون",            count: analytics?.byRole["Admin"],          subordinate: false },
           ] as const).map((tab, i, arr) => {
             const isActive = activeRoleTab === tab.role;
             // Separator before Agent (subordinate group)
@@ -742,11 +742,6 @@ export default function AdminUsersPage() {
                             {businessRoles.map(r => <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>)}
                           </optgroup>
                         )}
-                        {adminRoles.length > 0 && (
-                          <optgroup label="الإدارة">
-                            {adminRoles.map(r => <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>)}
-                          </optgroup>
-                        )}
                       </>
                     )}
                   </select>
@@ -823,7 +818,6 @@ export default function AdminUsersPage() {
                     <option value="">الكل</option>
                     {userOnlyRoles.map(r => <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>)}
                     {businessRoles.map(r => <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>)}
-                    {adminRoles.map(r => <option key={r.id} value={r.name}>{ROLE_LABELS[r.name] ?? r.name}</option>)}
                   </select>
                 </div>
 

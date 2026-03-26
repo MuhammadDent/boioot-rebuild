@@ -24,6 +24,19 @@ public class AdminService : IAdminService
         _logger = logger;
     }
 
+    // ── Customer roles that appear on the Users (customer directory) page ──────
+    // Admin and any internal staff roles are excluded from this page.
+    // Internal accounts are managed exclusively in Team Management and Roles sections.
+    private static readonly HashSet<UserRole> CustomerRoles =
+    [
+        UserRole.User,
+        UserRole.Owner,
+        UserRole.Broker,
+        UserRole.Office,
+        UserRole.Agent,
+        UserRole.CompanyOwner,
+    ];
+
     public async Task<PagedResult<AdminUserResponse>> GetUsersAsync(
         int page,
         int pageSize,
@@ -43,8 +56,16 @@ public class AdminService : IAdminService
             .IgnoreQueryFilters()
             .AsNoTracking();
 
-        if (role.HasValue)
+        if (role.HasValue && CustomerRoles.Contains(role.Value))
+        {
+            // Explicit customer-role filter
             query = query.Where(u => u.Role == role.Value);
+        }
+        else
+        {
+            // Default: show all customer roles only — never show internal/admin accounts
+            query = query.Where(u => CustomerRoles.Contains(u.Role));
+        }
 
         if (isActive.HasValue)
             query = query.Where(u => u.IsActive == isActive.Value);
@@ -1536,9 +1557,12 @@ public class AdminService : IAdminService
         var month = now.AddMonths(-1);
         var last30 = now.AddDays(-30);
 
+        // Customer directory analytics: excludes Admin and internal staff.
+        // Internal accounts are tracked separately in Team Management.
         var allUsers = await _context.Users
             .IgnoreQueryFilters()
             .AsNoTracking()
+            .Where(u => CustomerRoles.Contains(u.Role))
             .Select(u => new { u.Role, u.IsActive, u.IsDeleted, u.CreatedAt, u.LastLoginAt })
             .ToListAsync(ct);
 
@@ -1546,10 +1570,11 @@ public class AdminService : IAdminService
             .GroupBy(u => u.Role.ToString())
             .ToDictionary(g => g.Key, g => g.Count());
 
-        // Ensure every known UserRole appears in the response (even if 0 users).
+        // Ensure every known CUSTOMER role appears in the response (even if 0 users).
         // This is critical for the frontend to render all tabs and filter options.
-        foreach (var roleName in Enum.GetNames<UserRole>())
+        foreach (var role in CustomerRoles)
         {
+            var roleName = role.ToString();
             if (!byRole.ContainsKey(roleName))
                 byRole[roleName] = 0;
         }
