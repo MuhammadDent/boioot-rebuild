@@ -234,7 +234,7 @@ export default function AdminToolbar() {
 
             {/* Profile link */}
             <Link
-              href="/dashboard/profile"
+              href="/dashboard/admin/profile"
               onClick={() => setMenuOpen(false)}
               style={{
                 display: "flex",

@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { getRoleCategory } from "@/features/admin/constants";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 
 // ─── DashboardLayout ──────────────────────────────────────────────────────────
 //
-// Admin routes (/dashboard/admin/*) have their own full-screen layout —
-// they receive children pass-through only.
-// All other dashboard routes use the new header + sidebar shell.
+// Two strict zones:
+//   /dashboard/admin/*  → AdminLayout (handled by its own layout.tsx, pass-through here)
+//   /dashboard/*        → CustomerLayout (DashboardHeader + DashboardSidebar)
+//
+// Guard: Admin and Staff users are redirected to /dashboard/admin for ALL
+// customer routes — they must never see the customer shell.
 
 export default function DashboardLayout({
   children,
@@ -17,12 +22,37 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isAdminRoute = pathname.startsWith("/dashboard/admin");
-
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+  const redirected = useRef(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const isAdminRoute = pathname.startsWith("/dashboard/admin");
+
+  // ── Guard: redirect Admin/Staff out of the customer zone ──────────────────
+  useEffect(() => {
+    if (isAdminRoute) return; // admin layout handles its own guards
+    if (isLoading || redirected.current) return;
+    if (!user) return; // unauthenticated — useProtectedRoute handles /login redirect
+
+    const category = getRoleCategory(user.role);
+    if (category === "admin" || category === "staff") {
+      redirected.current = true;
+      router.replace("/dashboard/admin");
+    }
+  }, [isAdminRoute, isLoading, user, router]);
+
+  // Admin routes: pass through to /dashboard/admin/layout.tsx
   if (isAdminRoute) {
     return <>{children}</>;
+  }
+
+  // While redirecting admin/staff, render nothing to avoid flash
+  if (!isLoading && user) {
+    const category = getRoleCategory(user.role);
+    if (category === "admin" || category === "staff") {
+      return null;
+    }
   }
 
   return (
