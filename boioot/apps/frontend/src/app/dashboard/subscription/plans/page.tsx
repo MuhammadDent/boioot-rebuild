@@ -20,6 +20,11 @@ import {
 import { normalizeError } from "@/lib/api";
 import type { PublicPricingItem, PublicPricingEntry } from "@/features/pricing/types";
 import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
+import {
+  getAudienceTypeForUser,
+  filterPlansForAudience,
+  AUDIENCE_TYPE_LABEL,
+} from "@/features/pricing/planCompatibility";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -672,6 +677,8 @@ export default function PlansPage() {
   const [cycle, setCycle]             = useState<"Monthly" | "Yearly">("Monthly");
   const [currentSub, setCurrentSub]   = useState<CurrentSubscriptionResponse | null>(null);
 
+  const [subLoading, setSubLoading]           = useState(true);
+
   const [checkoutPlan, setCheckoutPlan]       = useState<PublicPricingItem | null>(null);
   const [checkoutPricing, setCheckoutPricing] = useState<PublicPricingEntry | null>(null);
   const [successMethod, setSuccessMethod]     = useState<string | null>(null);
@@ -700,7 +707,8 @@ export default function PlansPage() {
     if (!user) return;
     subscriptionApi.getCurrent()
       .then(sub => setCurrentSub(sub))
-      .catch(() => setCurrentSub(null));
+      .catch(() => setCurrentSub(null))
+      .finally(() => setSubLoading(false));
   }, [user]);
 
   async function handleActivateFree(planId: string) {
@@ -721,17 +729,13 @@ export default function PlansPage() {
 
   if (isLoading || !user) return null;
 
-  // Group plans by account type / category
-  const grouped = plans.reduce<Record<string, PublicPricingItem[]>>((acc, p) => {
-    const key = p.applicableAccountType ?? p.planCategory ?? "عام";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(p);
-    return acc;
-  }, {});
+  // Derive the audience type for this user and filter plans accordingly
+  const audienceType = getAudienceTypeForUser(user.role, currentSub?.audienceType);
+  const visiblePlans = filterPlansForAudience(plans, audienceType)
+    .slice()
+    .sort((a, b) => (a.displayOrder ?? a.rank) - (b.displayOrder ?? b.rank));
 
-  const groups = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
-
-  const hasBothCycles = plans.some(p =>
+  const hasBothCycles = visiblePlans.some(p =>
     p.pricing.some(pr => pr.billingCycle === "Yearly")
   );
 
@@ -835,8 +839,8 @@ export default function PlansPage() {
         </div>
       )}
 
-      {/* Loading */}
-      {plansLoading && (
+      {/* Loading skeleton */}
+      {(plansLoading || subLoading) && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem" }}>
           {[0, 1, 2].map(i => (
             <div
@@ -875,39 +879,51 @@ export default function PlansPage() {
         </div>
       )}
 
-      {/* Plans grid — grouped */}
-      {!plansLoading && !plansError && groups.map(([groupName, groupPlans]) => (
-        <div key={groupName} style={{ marginBottom: "2.5rem" }}>
-          {groups.length > 1 && (
-            <p style={{ margin: "0 0 1rem", fontSize: "0.82rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              {groupName}
-            </p>
-          )}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-            gap: "1rem",
-          }}>
-            {groupPlans
-              .sort((a, b) => (a.displayOrder ?? a.rank) - (b.displayOrder ?? b.rank))
-              .map(plan => (
-                <PlanCard
-                  key={plan.planId}
-                  plan={plan}
-                  cycle={cycle}
-                  currentPlanId={currentSub?.planId ?? null}
-                  onChoose={(p, pricing) => {
-                    setCheckoutPlan(p);
-                    setCheckoutPricing(pricing);
-                    setSuccessMethod(null);
-                  }}
-                  onActivateFree={handleActivateFree}
-                  freeActivatingId={freeActivatingId}
-                />
-              ))}
-          </div>
+      {/* Empty state — no compatible plans found */}
+      {!plansLoading && !subLoading && !plansError && visiblePlans.length === 0 && (
+        <div style={{
+          textAlign: "center",
+          padding: "4rem 1.5rem",
+          backgroundColor: "#f8fafc",
+          borderRadius: 16,
+          border: "1.5px dashed #e2e8f0",
+        }}>
+          <p style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>📭</p>
+          <p style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1a2e1a" }}>
+            لا توجد باقات متاحة لنوع حسابك حالياً
+          </p>
+          <p style={{ margin: "0.4rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
+            {audienceType
+              ? `نوع حسابك: ${AUDIENCE_TYPE_LABEL[audienceType] ?? audienceType}`
+              : "تواصل مع الدعم لمعرفة الباقات المتاحة"}
+          </p>
         </div>
-      ))}
+      )}
+
+      {/* Plans grid — filtered to current user's audience type only */}
+      {!plansLoading && !subLoading && !plansError && visiblePlans.length > 0 && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+          gap: "1rem",
+        }}>
+          {visiblePlans.map(plan => (
+            <PlanCard
+              key={plan.planId}
+              plan={plan}
+              cycle={cycle}
+              currentPlanId={currentSub?.planId ?? null}
+              onChoose={(p, pricing) => {
+                setCheckoutPlan(p);
+                setCheckoutPricing(pricing);
+                setSuccessMethod(null);
+              }}
+              onActivateFree={handleActivateFree}
+              freeActivatingId={freeActivatingId}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Info footer */}
       {!plansLoading && !plansError && (

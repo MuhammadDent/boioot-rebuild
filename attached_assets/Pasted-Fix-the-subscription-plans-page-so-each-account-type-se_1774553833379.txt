@@ -1,0 +1,129 @@
+Fix the subscription plans page so each account type sees only its own compatible plans.
+
+Current issue:
+Even after improving role/plan validation, an Office account still sees plans belonging to other account types on the subscription page.
+Example: office account can still see owner / broker / seeker / company plans.
+
+This is incorrect.
+Plan visibility must be fully isolated by account type.
+
+========================================
+GOAL
+========================================
+
+On the subscription/pricing page, show ONLY the plans allowed for the currently logged-in account type.
+
+Examples:
+- Seeker account → only seeker_free
+- Owner account → only owner_free / owner_basic / owner_pro
+- Broker account → only broker_free / broker_basic / broker_pro
+- Office account → only office_free / office_basic / office_pro
+- Company account → only company_enterprise
+
+No cross-account plans should appear in the UI.
+
+========================================
+REQUIRED FIX
+========================================
+
+1) Audit the subscription page rendering logic
+Find where the plans list is fetched/rendered for:
+- /dashboard/subscription
+- pricing cards
+- plan picker
+- upgrade page
+- any reusable plan list component
+
+2) Filter plans by current account type before rendering
+Do not render all public plans and rely on click validation later.
+The filtering must happen before display.
+
+3) Use a single centralized compatibility source
+Use or create shared helpers such as:
+- getAllowedPlansForAccountType(accountType)
+- isPlanAllowedForAccountType(accountType, planCode)
+- filterPlansForAccountType(accountType, plans)
+
+Do not duplicate role-plan mapping in multiple UI files.
+
+4) Correct mapping rules
+Use only this mapping:
+
+Seeker:
+- seeker_free
+
+Owner:
+- owner_free
+- owner_basic
+- owner_pro
+
+Broker:
+- broker_free
+- broker_basic
+- broker_pro
+
+Office:
+- office_free
+- office_basic
+- office_pro
+
+Company:
+- company_enterprise
+
+5) Hide incompatible plans completely
+Do NOT:
+- show them disabled
+- show them with warning
+- show them and reject later
+They should not appear at all for the wrong account type.
+
+6) Keep current plan visible correctly
+If the logged-in user already has a valid current plan, show it normally.
+But the selectable/visible alternatives must remain restricted to that same account type only.
+
+7) Fix all related UI areas
+Apply the same filtering in:
+- dashboard subscription page
+- onboarding plan selection
+- upgrade modal
+- public/private pricing components used after login
+- any mobile card slider / carousel version
+
+8) Protect against stale client state
+If plans are fetched from API:
+- filter on backend if appropriate
+- also filter again on frontend for safety
+Never trust client state alone.
+
+9) Improve empty/error handling
+If account type has no matching plans:
+- show a clear localized fallback message
+- do not show unrelated plans
+
+10) Visual cleanup
+After filtering, ensure layout still looks correct:
+- no empty columns
+- no broken sliders
+- no strange ordering
+- cards ordered properly within the account type only
+
+========================================
+STRICT REQUIREMENTS
+========================================
+
+- Fix display logic, not only click validation
+- Do not show plans for other roles
+- Keep backend validation intact
+- Keep plan code naming consistent with official SaaS structure
+- Ensure Arabic UI labels still match the filtered plans correctly
+
+========================================
+DELIVERABLES
+========================================
+
+Return:
+1) Root cause of why cross-role plans were still displayed
+2) Files changed
+3) Exact filtering logic added
+4) Which pages/components now enforce isolation
+5) Verified screenshots or test results for seeker / owner / broker / office / company

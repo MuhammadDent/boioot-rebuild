@@ -7,6 +7,10 @@ import type { UpgradeIntentResponse } from "@/features/subscription/types";
 import { pricingApi } from "@/features/pricing/api";
 import { subscriptionApi } from "@/features/subscription/api";
 import { normalizeError } from "@/lib/api";
+import {
+  getAudienceTypeForUser,
+  filterPlansForAudience,
+} from "@/features/pricing/planCompatibility";
 import BillingToggle, { type BillingCycle } from "@/components/pricing/BillingToggle";
 import PricingCard from "@/components/pricing/PricingCard";
 import PricingComparisonTable from "@/components/pricing/PricingComparisonTable";
@@ -236,16 +240,21 @@ export default function PricingPage() {
 
   // ── Derived ──────────────────────────────────────────────────────────────────
 
-  const individualPlans   = filterByCategory(plans, "Individual");
-  const professionalPlans = filterByCategory(plans, "Business");
-  const developerPlans    = filterByCategory(plans, "Developer");
-  const otherPlans        = plans.filter(
+  // When logged in, show only the plans relevant to this user's audience type.
+  // When not logged in (no currentSub), show all plans (marketing page).
+  const audienceType = getAudienceTypeForUser(undefined, currentSub?.audienceType);
+  const visiblePlans = filterPlansForAudience(plans, audienceType);
+
+  const individualPlans   = filterByCategory(visiblePlans, "Individual");
+  const professionalPlans = filterByCategory(visiblePlans, "Business");
+  const developerPlans    = filterByCategory(visiblePlans, "Developer");
+  const otherPlans        = visiblePlans.filter(
     (p) => !["Individual", "Business", "Developer"].includes(p.planCategory ?? "")
   );
 
-  const avgSaving = plans.length
+  const avgSaving = visiblePlans.length
     ? Math.round(
-        plans
+        visiblePlans
           .map((p) => {
             const m = p.pricing.find((x) => x.billingCycle === "Monthly");
             const y = p.pricing.find((x) => x.billingCycle === "Yearly");
@@ -254,7 +263,7 @@ export default function PricingPage() {
           })
           .filter(Boolean)
           .reduce((a, b) => a + b, 0) /
-          (plans.filter((p) => {
+          (visiblePlans.filter((p) => {
             const m = p.pricing.find((x) => x.billingCycle === "Monthly");
             return m && m.priceAmount > 0;
           }).length || 1)
@@ -392,7 +401,7 @@ export default function PricingPage() {
 
             {/* ── Task 2: Comparison table ── */}
             <PricingComparisonTable
-              plans={plans}
+              plans={visiblePlans}
               currentSubscription={currentSub}
             />
           </>
