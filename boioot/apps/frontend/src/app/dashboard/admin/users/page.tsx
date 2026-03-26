@@ -6,7 +6,7 @@ import {
   useRef,
   useCallback,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
@@ -80,6 +80,10 @@ function exportToCsv(users: AdminUserResponse[]) {
 export default function AdminUsersPage() {
   const { user, isLoading } = useProtectedRoute({ requiredPermission: "users.view" });
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Read initial role from URL query (?role=Broker etc.)
+  const initialRole = searchParams.get("role") ?? "";
 
   const [users, setUsers]             = useState<AdminUserResponse[]>([]);
   const [roles, setRoles]             = useState<RbacRole[]>([]);
@@ -100,10 +104,10 @@ export default function AdminUsersPage() {
   const [actionNotice, setActionNotice]   = useState("");
 
   // Role quick-filter tabs
-  const [activeRoleTab, setActiveRoleTab] = useState("");
+  const [activeRoleTab, setActiveRoleTab] = useState(initialRole);
 
   // Filters (pending = UI, applied = last search)
-  const [pendingRole, setPendingRole]           = useState("");
+  const [pendingRole, setPendingRole]           = useState(initialRole);
   const [pendingIsActive, setPendingIsActive]   = useState("");
   const [pendingSearch, setPendingSearch]       = useState("");
   const [pendingCreatedAfter, setPendingCreatedAfter]   = useState("");

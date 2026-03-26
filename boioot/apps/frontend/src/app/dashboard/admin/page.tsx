@@ -438,7 +438,7 @@ export default function AdminOverviewPage() {
         <KpiCard
           label="الوسطاء"
           value={loading ? "—" : fmt(a?.totalAgents ?? 0)}
-          href="/dashboard/admin/brokers"
+          href="/dashboard/admin/users?role=Broker"
           accent="#0891b2"
           icon={<Ico d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />}
         />

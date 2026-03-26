@@ -84,7 +84,7 @@ export default function BrokerProfilePage() {
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
       <div style={{ maxWidth: 760, margin: "0 auto" }}>
 
-        <DashboardBackLink href="/dashboard/admin/brokers" label="← قائمة الوسطاء" />
+        <DashboardBackLink href="/dashboard/admin/users?role=Broker" label="← الوسطاء" />
 
         {fetching && <LoadingRow />}
         {error && <InlineBanner message={error} />}
