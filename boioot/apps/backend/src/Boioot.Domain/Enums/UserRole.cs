@@ -7,5 +7,6 @@ public enum UserRole
     Broker,
     Agent,
     CompanyOwner,
-    Admin
+    Admin,
+    Office,
 }

@@ -9,25 +9,30 @@ export const PLATFORM_ROLE_NAMES = new Set([
   "Admin",
   "CompanyOwner",
   "Broker",
+  "Office",
   "Agent",
   "Owner",
   "User",
 ]);
 
 /**
- * Primary / direct customer roles — the accounts that subscribe and pay
- * for the platform directly. Brokers are included here.
+ * Primary / direct customer roles — independent accounts that subscribe
+ * and pay for the platform directly.
+ * - Broker  (وسيط عقاري)  : individual broker, no sub-agents
+ * - Office  (مكتب عقاري)  : real-estate office, can create agents
+ * - CompanyOwner (شركة تطوير): development company, can create agents
  */
 export const DIRECT_CUSTOMER_ROLES = new Set([
   "User",
   "Owner",
   "Broker",
+  "Office",
   "CompanyOwner",
 ]);
 
 /**
- * Subordinate / child roles — accounts created under a parent business account.
- * They are NOT independent monetizable customers.
+ * Subordinate / child roles — created under a parent business account.
+ * NOT independent monetizable customers.
  */
 export const SUBORDINATE_ROLES = new Set([
   "Agent",
@@ -35,7 +40,10 @@ export const SUBORDINATE_ROLES = new Set([
 
 /**
  * Derive a display category for a role name.
- * Returns: "admin" | "customer" | "subordinate" | "staff"
+ * "admin"       = Admin
+ * "customer"    = direct-paying customer (User, Owner, Broker, Office, CompanyOwner)
+ * "subordinate" = child account under a business (Agent)
+ * "staff"       = internal staff RBAC roles
  */
 export function getRoleCategory(
   name: string,
@@ -51,6 +59,7 @@ export const ROLE_LABELS: Record<string, string> = {
   Admin:            "مدير النظام",
   CompanyOwner:     "شركة تطوير",
   Broker:           "وسيط عقاري",
+  Office:           "مكتب عقاري",
   Agent:            "وكيل عقاري",
   Owner:            "مالك عقار",
   User:             "مستخدم",
@@ -67,6 +76,7 @@ export const ROLE_BADGE: Record<string, string> = {
   // Platform roles
   Admin:            "badge badge-red",
   CompanyOwner:     "badge badge-blue",
+  Office:           "badge badge-light-blue",
   Broker:           "badge badge-violet",
   Agent:            "badge badge-yellow",
   Owner:            "badge badge-green",

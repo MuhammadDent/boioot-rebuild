@@ -185,11 +185,16 @@ export default function AdminUsersPage() {
   const platformRoles = roles
     .filter(r => PLATFORM_ROLE_NAMES.has(r.name))
     .sort((a, b) => {
-      const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, Agent: 3, CompanyOwner: 4, Admin: 5 };
+      const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, Office: 3, Agent: 4, CompanyOwner: 5, Admin: 6 };
       return (order[a.name] ?? 99) - (order[b.name] ?? 99);
     });
-  const businessRoles = platformRoles.filter(r => getRoleCategory(r.name) === "business");
-  const userOnlyRoles = platformRoles.filter(r => getRoleCategory(r.name) === "user");
+  // Direct individual customers (User only — shown in own optgroup)
+  const userOnlyRoles = platformRoles.filter(r => r.name === "User");
+  // Business customer roles + subordinate agents — shown together under "الأعمال العقارية"
+  const businessRoles = platformRoles.filter(r =>
+    (getRoleCategory(r.name) === "customer" && r.name !== "User") ||
+    getRoleCategory(r.name) === "subordinate"
+  );
   const adminRoles    = platformRoles.filter(r => getRoleCategory(r.name) === "admin");
 
   // ── Filter handlers ───────────────────────────────────────────────────────
@@ -463,6 +468,7 @@ export default function AdminUsersPage() {
             { role: "User",         label: "مستخدمون",           count: analytics?.byRole["User"],           subordinate: false },
             { role: "Owner",        label: "ملاك عقار",          count: analytics?.byRole["Owner"],          subordinate: false },
             { role: "Broker",       label: "وسطاء عقاريون",      count: analytics?.byRole["Broker"],         subordinate: false },
+            { role: "Office",       label: "مكاتب عقارية",       count: analytics?.byRole["Office"],         subordinate: false },
             { role: "CompanyOwner", label: "شركات تطوير",        count: analytics?.byRole["CompanyOwner"],   subordinate: false },
             { role: "Agent",        label: "وكلاء عقاريون",      count: analytics?.byRole["Agent"],          subordinate: true  },
             { role: "Admin",        label: "إداريون",            count: analytics?.byRole["Admin"],          subordinate: false },
@@ -579,7 +585,7 @@ export default function AdminUsersPage() {
                 {Object.entries(analytics.byRole)
                   .filter(([role]) => DIRECT_CUSTOMER_ROLES.has(role))
                   .sort(([a], [b]) => {
-                    const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, CompanyOwner: 3 };
+                    const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, Office: 3, CompanyOwner: 4 };
                     return (order[a] ?? 9) - (order[b] ?? 9);
                   })
                   .map(([role, count]) => (

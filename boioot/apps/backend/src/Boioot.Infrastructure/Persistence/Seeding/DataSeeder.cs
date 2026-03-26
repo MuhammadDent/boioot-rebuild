@@ -215,7 +215,7 @@ public class DataSeeder
     [
         "Admin", "AdminManager", "CustomerSupport", "TechnicalSupport",
         "ContentEditor", "SeoSpecialist", "MarketingStaff",
-        "CompanyOwner", "Broker", "Agent", "Owner", "User",
+        "CompanyOwner", "Office", "Broker", "Agent", "Owner", "User",
     ];
 
     private static readonly string[] PermissionKeys =
@@ -281,6 +281,14 @@ public class DataSeeder
         [
             "properties.view", "properties.create", "properties.edit", "properties.delete",
             "projects.view", "projects.create", "projects.edit", "projects.delete",
+            "agents.view", "agents.manage",
+            "requests.view", "requests.create",
+            "dashboard.view",
+        ],
+
+        ["Office"] =
+        [
+            "properties.view", "properties.create", "properties.edit", "properties.delete",
             "agents.view", "agents.manage",
             "requests.view", "requests.create",
             "dashboard.view",
