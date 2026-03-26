@@ -33,7 +33,15 @@ export const AVAILABLE_METHODS = [
   "other_manual",
 ];
 
-/** Methods that require or encourage a receipt upload */
+/** All manual payment methods — every one supports optional proof upload */
+export const MANUAL_METHODS = new Set([
+  "bank_transfer",
+  "cash_to_sales_rep",
+  "receipt_upload",
+  "other_manual",
+]);
+
+/** Methods where proof upload is strongly recommended (shown with emphasis) */
 export const RECEIPT_METHODS = new Set(["bank_transfer", "receipt_upload"]);
 
 // ── Status labels + colours ───────────────────────────────────────────────────

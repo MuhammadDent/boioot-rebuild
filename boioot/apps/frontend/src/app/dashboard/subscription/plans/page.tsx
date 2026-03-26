@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { pricingApi } from "@/features/pricing/api";
@@ -11,13 +11,15 @@ import {
   PAYMENT_METHOD_DESC,
   PAYMENT_METHOD_ICON,
   AVAILABLE_METHODS,
+  MANUAL_METHODS,
+  RECEIPT_METHODS,
   CYCLE_LABELS,
 } from "@/features/subscriptionPayments/constants";
 import {
   formatLimitValue,
   BILLING_CYCLE_LABELS,
 } from "@/features/pricing/labels";
-import { normalizeError } from "@/lib/api";
+import { api, normalizeError } from "@/lib/api";
 import type { PublicPricingItem, PublicPricingEntry } from "@/features/pricing/types";
 import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
 import {
@@ -233,13 +235,44 @@ function CheckoutModal({
   const [paymentMethod, setPaymentMethod]     = useState(AVAILABLE_METHODS[0]);
   const [customerNote, setCustomerNote]       = useState("");
   const [salesRep, setSalesRep]               = useState("");
+  const [proofFile, setProofFile]             = useState<File | null>(null);
   const [submitting, setSubmitting]           = useState(false);
+  const [submitPhase, setSubmitPhase]         = useState<"idle" | "creating" | "uploading" | "attaching">("idle");
   const [error, setError]                     = useState<string | null>(null);
+  const fileInputRef                          = useRef<HTMLInputElement>(null);
+
+  const isReceiptRequired = RECEIPT_METHODS.has(paymentMethod);
+  const isManualMethod    = MANUAL_METHODS.has(paymentMethod);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null;
+    if (!f) { setProofFile(null); return; }
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(f.type)) {
+      setError("نوع الملف غير مدعوم. يُقبل JPG أو PNG أو PDF فقط.");
+      e.target.value = "";
+      return;
+    }
+    if (f.size > 10 * 1024 * 1024) {
+      setError("حجم الملف يتجاوز 10MB.");
+      e.target.value = "";
+      return;
+    }
+    setError(null);
+    setProofFile(f);
+  }
 
   async function handleSubmit() {
+    // Validate required proof for bank transfer / receipt_upload
+    if (isReceiptRequired && !proofFile) {
+      setError("يرجى رفع صورة الإيصال أو ملف الإثبات قبل الإرسال.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
+      // Phase 1: create the payment request
+      setSubmitPhase("creating");
       const result = await paymentRequestsApi.create({
         planId:       plan.planId,
         pricingId:    selectedPricing.pricingId,
@@ -251,12 +284,33 @@ function CheckoutModal({
             ? salesRep.trim()
             : undefined,
       });
+
+      // Phase 2 & 3: upload proof file and attach receipt if file was selected
+      if (proofFile) {
+        setSubmitPhase("uploading");
+        const form = new FormData();
+        form.append("file", proofFile);
+        const { url } = await api.postForm<{ url: string; fileName: string }>("/upload/proof", form);
+
+        setSubmitPhase("attaching");
+        await paymentRequestsApi.uploadReceipt(result.id, { receiptImageUrl: url });
+      }
+
       onSuccess(result.id, paymentMethod);
     } catch (err) {
       setError(normalizeError(err));
     } finally {
       setSubmitting(false);
+      setSubmitPhase("idle");
     }
+  }
+
+  function getSubmitLabel() {
+    if (!submitting) return "إرسال طلب الاشتراك";
+    if (submitPhase === "creating")   return "جارٍ إنشاء الطلب...";
+    if (submitPhase === "uploading")  return "جارٍ رفع ملف الإثبات...";
+    if (submitPhase === "attaching")  return "جارٍ إرفاق الإيصال...";
+    return "جارٍ الإرسال...";
   }
 
   return (
@@ -413,6 +467,75 @@ function CheckoutModal({
           </div>
         )}
 
+        {/* Proof / receipt file upload — all manual methods */}
+        {isManualMethod && (
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{
+              display: "block",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              color: "#374151",
+              marginBottom: "0.4rem",
+            }}>
+              {isReceiptRequired ? "إيصال الدفع (مطلوب)" : "ملف الإثبات (اختياري)"}
+              <span style={{ fontSize: "0.74rem", fontWeight: 400, color: "#94a3b8", marginRight: "0.4rem" }}>
+                JPG · PNG · PDF · حد أقصى 10MB
+              </span>
+            </label>
+
+            {/* Drop / click zone */}
+            <div
+              onClick={() => !submitting && fileInputRef.current?.click()}
+              style={{
+                border: `2px dashed ${proofFile ? "#059669" : isReceiptRequired ? "#f59e0b" : "#cbd5e1"}`,
+                borderRadius: 10,
+                padding: "1rem",
+                textAlign: "center",
+                cursor: submitting ? "default" : "pointer",
+                backgroundColor: proofFile ? "#f0fdf4" : "#fafafa",
+                transition: "border-color 0.15s",
+              }}
+            >
+              {proofFile ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem" }}>
+                  <span style={{ fontSize: "1.4rem" }}>
+                    {proofFile.type === "application/pdf" ? "📄" : "🖼️"}
+                  </span>
+                  <span style={{ fontSize: "0.85rem", color: "#166534", fontWeight: 600 }}>
+                    {proofFile.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); setProofFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                    disabled={submitting}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      color: "#dc2626", fontSize: "1rem", lineHeight: 1, padding: 0,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <span style={{ fontSize: "1.6rem", display: "block", marginBottom: "0.35rem" }}>📎</span>
+                  <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
+                    انقر لاختيار ملف الإيصال أو الإثبات
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+          </div>
+        )}
+
         {/* Customer note */}
         <div style={{ marginBottom: "1.25rem" }}>
           <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "#374151", marginBottom: "0.4rem" }}>
@@ -502,7 +625,7 @@ function CheckoutModal({
               cursor: submitting ? "default" : "pointer",
             }}
           >
-            {submitting ? "جارٍ الإرسال..." : "إرسال طلب الاشتراك"}
+            {getSubmitLabel()}
           </button>
         </div>
       </div>
@@ -944,9 +1067,10 @@ export default function PlansPage() {
         </div>
       )}
 
-      {/* Checkout modal */}
+      {/* Checkout modal — keyed on planId+pricingId to force clean remount on plan change */}
       {checkoutPlan && checkoutPricing && !successMethod && (
         <CheckoutModal
+          key={`${checkoutPlan.planId}-${checkoutPricing.pricingId}`}
           plan={checkoutPlan}
           initialPricing={checkoutPricing}
           onClose={() => { setCheckoutPlan(null); setCheckoutPricing(null); }}

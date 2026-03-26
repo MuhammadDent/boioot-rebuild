@@ -1,0 +1,143 @@
+Fix the subscription upgrade payment modal logic for manual payment methods.
+
+Current critical bug:
+An Office account is viewing valid Office plans only, and selects an Office plan upgrade (example: "متقدم للمكتب").
+But when submitting the upgrade request using:
+- cash payment with sales representative
+- upload payment receipt
+the modal shows the backend compatibility error:
+
+"الخطة المطلوبة غير متوافقة مع نوع حسابك"
+
+This is incorrect because the selected plan is actually an Office plan and should be valid.
+
+Also, for all manual payment methods, the user must be able to upload a receipt / proof image / proof document and send it to admin for review.
+
+========================================
+GOAL
+========================================
+
+Fix the upgrade request modal so that:
+
+1) The correct selected plan is always submitted
+2) Changing payment method does not corrupt or reset the selected plan
+3) All manual payment methods support uploading proof of payment
+4) The upgrade request can be submitted to admin successfully
+5) The UI/validation/backend payload stay in sync
+
+========================================
+REQUIRED FIXES
+========================================
+
+1) Audit the upgrade modal state flow
+Inspect:
+- selected plan state
+- selected payment method state
+- form payload builder
+- submit handler
+- API request body
+- any hidden default/fallback values
+
+2) Fix selected plan persistence
+Ensure that when the user opens the upgrade modal from an Office plan card:
+- the exact selected plan code is stored correctly
+- example: office_pro
+- it must not fall back to another plan code
+- it must not reuse stale values from previous selections
+
+3) Fix payment method switching
+When switching between:
+- cash with sales representative
+- upload receipt
+- other payment method
+do NOT reset or corrupt:
+- selected plan code
+- account type
+- audience type
+- form payload
+
+4) Unify proof upload behavior
+For all MANUAL payment methods, allow the user to upload:
+- image
+- PDF
+- receipt
+- payment proof document
+
+This proof upload must be available for:
+- cash with مندوب المبيعات
+- upload receipt
+- other payment method
+
+5) Redesign manual payment logic
+Recommended structure:
+
+- paymentMethod = cash_rep / receipt_upload / other_manual
+- proofFile optional by default
+- proofFile required for selected manual methods according to business rule
+- admin can review uploaded proof regardless of manual payment method
+
+6) Fix backend payload mapping
+Verify the request sent to backend includes the correct:
+- planCode
+- accountType
+- audienceType if used
+- paymentMethod
+- note
+- proof attachment metadata
+
+7) Prevent false compatibility errors
+If the selected plan is valid for the current account type, backend should accept it.
+If backend rejects it, log and inspect the exact submitted plan code and account type.
+
+8) Add debugging and root cause fix
+Identify where the wrong plan/account combination is being introduced:
+- card click handler
+- modal initialization
+- submit payload builder
+- backend request DTO mapping
+- API controller/service
+
+Do not only hide the error.
+Fix the root cause.
+
+9) Improve validation UX
+Show proper validation messages:
+- missing proof file
+- missing note if required
+- invalid payment method
+- upload failed
+Do not show role-plan compatibility error unless the payload is truly invalid.
+
+10) File upload support
+Support proof upload for:
+- jpg
+- jpeg
+- png
+- pdf
+and ensure admin can later review the attachment in subscription requests.
+
+========================================
+EXPECTED BEHAVIOR
+========================================
+
+Scenario:
+- login as office account
+- open subscription page
+- choose office_basic or office_pro
+- open payment modal
+- choose any manual payment method
+- upload receipt/proof if required
+- submit request successfully
+- request appears in admin review queue
+- no false "plan incompatible with account type" error
+
+========================================
+STRICT REQUIREMENTS
+========================================
+
+- Do not break strict role-plan isolation
+- Do not remove backend validation
+- Fix the actual payload/state bug
+- Make proof upload available across all manual payment methods
+- Keep Arabic UI labels correct
+- Return exact root cause and changed files

@@ -301,6 +301,20 @@ public sealed class SchemaEvolutionService
         await TryAlter("AccountUsers", "OrganizationUserRole", "TEXT NOT NULL DEFAULT 'Agent'", ct);
         await TryAlter("AccountUsers", "IsPrimary",            "INTEGER NOT NULL DEFAULT 0",    ct);
         await TryAlter("AccountUsers", "IsActive",             "INTEGER NOT NULL DEFAULT 1",    ct);
+
+        // DATA CORRECTION: Fix Office accounts that were assigned AccountType='Company'
+        // before the AuthService bug-fix (CompanyOwner+RealEstateOffice must be 'Office').
+        // Idempotent: only updates rows where AccountType is still wrong.
+        await TryExec(@"
+            UPDATE Accounts
+            SET    AccountType = 'Office'
+            WHERE  AccountType = 'Company'
+            AND    Id IN (
+                SELECT a.Id
+                FROM   Accounts       a
+                JOIN   Companies      co ON co.Id = a.Id
+                WHERE  co.CompanyType = 'RealEstateOffice'
+            )", ct, warnOnError: true);
     }
 
     private async Task ApplySubscriptionPatchesAsync(CancellationToken ct)

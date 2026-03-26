@@ -22,7 +22,14 @@ public class UploadController : BaseController
         "image/webp", "image/svg+xml", "image/bmp",
     ];
 
+    private static readonly string[] AllowedProofTypes =
+    [
+        "image/jpeg", "image/jpg", "image/png",
+        "application/pdf",
+    ];
+
     private const long MaxImageBytes = 10L * 1024 * 1024; // 10 MB
+    private const long MaxProofBytes = 10L * 1024 * 1024; // 10 MB
 
     private static readonly string[] AllowedVideoTypes =
     [
@@ -73,6 +80,42 @@ public class UploadController : BaseController
         _logger.LogInformation("Image uploaded: {FileName} ({Size} bytes)", fileName, file.Length);
 
         return Ok(new { url = $"/uploads/{fileName}" });
+    }
+
+    /// <summary>
+    /// Upload a payment proof file (JPG/PNG/PDF) for a subscription payment request.
+    /// Returns { url, fileName } — store the url in ReceiptImageUrl and fileName in ReceiptFileName.
+    /// </summary>
+    [HttpPost("proof")]
+    [RequestSizeLimit(10_485_760)]
+    public async Task<IActionResult> UploadProof(IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { error = "لم يتم اختيار ملف" });
+
+        if (file.Length > MaxProofBytes)
+            return BadRequest(new { error = "حجم الملف يتجاوز 10MB" });
+
+        var contentType = file.ContentType.ToLower();
+        if (!AllowedProofTypes.Contains(contentType))
+            return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: JPG، PNG، PDF" });
+
+        var uploadsDir = Path.Combine(_env.WebRootPath, "uploads", "receipts");
+        Directory.CreateDirectory(uploadsDir);
+
+        var ext = Path.GetExtension(file.FileName).ToLower();
+        if (string.IsNullOrWhiteSpace(ext)) ext = contentType == "application/pdf" ? ".pdf" : ".jpg";
+
+        var fileName  = $"{Guid.NewGuid()}{ext}";
+        var filePath  = Path.Combine(uploadsDir, fileName);
+        var publicUrl = $"/uploads/receipts/{fileName}";
+
+        await using var stream = System.IO.File.Create(filePath);
+        await file.CopyToAsync(stream, ct);
+
+        _logger.LogInformation("Proof uploaded: {FileName} ({Size} bytes)", fileName, file.Length);
+
+        return Ok(new { url = publicUrl, fileName = file.FileName });
     }
 
     [HttpPost("video")]
