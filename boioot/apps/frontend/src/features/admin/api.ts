@@ -131,7 +131,10 @@ export const adminApi = {
     return api.get(`/admin/users/${userId}/profile`);
   },
 
-  updateAdminUser(userId: string, data: { fullName?: string; phone?: string }): Promise<AdminUserResponse> {
+  updateAdminUser(
+    userId: string,
+    data: { fullName?: string; email?: string; phone?: string },
+  ): Promise<AdminUserResponse> {
     return api.put(`/admin/users/${userId}`, data);
   },
 

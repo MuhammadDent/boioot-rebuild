@@ -334,6 +334,49 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleEditSave(
+    userId: string,
+    data: { fullName: string; email: string; phone: string; isActive: boolean; roleId: string; roleName: string },
+    original: AdminUserResponse,
+  ) {
+    if (actionLoading) return;
+    setActionLoading(`edit-${userId}`);
+    setActionError("");
+    try {
+      // 1. Always save name / email / phone
+      let updated = await adminApi.updateAdminUser(userId, {
+        fullName: data.fullName.trim() || undefined,
+        email:    data.email.trim()    || undefined,
+        phone:    data.phone.trim()    || undefined,
+      });
+
+      // 2. Status change (only if different and not self)
+      if (data.isActive !== original.isActive && userId !== user!.id) {
+        const statusResult = await adminApi.updateUserStatus(userId, data.isActive);
+        updated = { ...updated, isActive: statusResult.isActive };
+      }
+
+      // 3. Role change (only if different and not self)
+      if (data.roleId && data.roleName !== original.role && userId !== user!.id) {
+        await rbacApi.assignUserRole(userId, data.roleId);
+        updated = { ...updated, role: data.roleName };
+      }
+
+      setUsers(prev =>
+        prev.map(u =>
+          u.id === userId
+            ? { ...u, ...updated }
+            : u,
+        ),
+      );
+      showNotice(`تم حفظ بيانات "${updated.fullName}" بنجاح`);
+    } catch (e) {
+      setActionError(normalizeError(e));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   async function handleVerify(targetId: string) {
     if (actionLoading) return;
     setActionLoading(`verify-${targetId}`);
@@ -1090,6 +1133,7 @@ export default function AdminUsersPage() {
                 onViewProfile={() => router.push(`/dashboard/admin/users/${u.id}`)}
                 onVerify={handleVerify}
                 onUnverify={handleUnverify}
+                onEditSave={handleEditSave}
               />
             ))}
           </div>
@@ -1126,6 +1170,7 @@ function UserRow({
   onViewProfile,
   onVerify,
   onUnverify,
+  onEditSave,
 }: {
   userData: AdminUserResponse;
   isSelf: boolean;
@@ -1140,14 +1185,60 @@ function UserRow({
   onViewProfile: () => void;
   onVerify: (id: string) => void;
   onUnverify: (id: string) => void;
+  onEditSave: (
+    userId: string,
+    data: { fullName: string; email: string; phone: string; isActive: boolean; roleId: string; roleName: string },
+    original: AdminUserResponse,
+  ) => void;
 }) {
   const [showRoleEdit, setShowRoleEdit] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTag, setNewTag] = useState("");
+
+  // ── Edit form state ────────────────────────────────────────────────────────
+  const [showEdit, setShowEdit]         = useState(false);
+  const [editName, setEditName]         = useState("");
+  const [editEmail, setEditEmail]       = useState("");
+  const [editPhone, setEditPhone]       = useState("");
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [editRoleId, setEditRoleId]     = useState("");
+
   const isThisLoading   = actionLoading === u.id;
   const isTagLoading    = actionLoading === `tag-${u.id}`;
   const isVerifyLoading = actionLoading === `verify-${u.id}`;
+  const isEditLoading   = actionLoading === `edit-${u.id}`;
+
+  function openEdit() {
+    setEditName(u.fullName);
+    setEditEmail(u.email);
+    setEditPhone(u.phone ?? "");
+    setEditIsActive(u.isActive);
+    const currentRole = roles.find(r => r.name === u.role);
+    setEditRoleId(currentRole?.id ?? "");
+    setShowEdit(true);
+    setShowRoleEdit(false);
+    setShowTagInput(false);
+  }
+
+  function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (isEditLoading) return;
+    const selectedRole = roles.find(r => r.id === editRoleId);
+    onEditSave(
+      u.id,
+      {
+        fullName:   editName,
+        email:      editEmail,
+        phone:      editPhone,
+        isActive:   editIsActive,
+        roleId:     editRoleId,
+        roleName:   selectedRole?.name ?? u.role,
+      },
+      u,
+    );
+    setShowEdit(false);
+  }
 
   function handleRoleSubmit() {
     if (!selectedRoleId) return;
@@ -1330,16 +1421,24 @@ function UserRow({
           <button
             className="btn"
             style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem" }}
-            onClick={() => { setShowTagInput(v => !v); setShowRoleEdit(false); }}
+            onClick={() => { setShowTagInput(v => !v); setShowRoleEdit(false); setShowEdit(false); }}
             disabled={isTagLoading}
             title="إضافة تاج"
           >
             🏷
           </button>
           <button
+            className={showEdit ? "btn btn-primary" : "btn"}
+            style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem" }}
+            onClick={() => { showEdit ? setShowEdit(false) : openEdit(); setShowTagInput(false); setShowRoleEdit(false); }}
+            disabled={isEditLoading}
+          >
+            {showEdit ? "✕ إغلاق" : "تعديل"}
+          </button>
+          <button
             className="btn"
             style={{ padding: "0.3rem 0.65rem", fontSize: "0.75rem" }}
-            onClick={() => { setShowRoleEdit(v => !v); setShowTagInput(false); }}
+            onClick={() => { setShowRoleEdit(v => !v); setShowTagInput(false); setShowEdit(false); }}
             disabled={isThisLoading}
           >
             تغيير الدور
@@ -1400,6 +1499,135 @@ function UserRow({
         </div>
 
       </div>
+
+      {/* ── Edit form panel ──────────────────────────────────────────────────── */}
+      {showEdit && (
+        <form
+          onSubmit={handleEditSubmit}
+          style={{
+            marginTop: "0.9rem",
+            padding: "1rem 1.1rem",
+            background: "var(--color-bg-secondary, #f8fafc)",
+            borderRadius: "0.5rem",
+            border: "1px solid var(--color-border, #e5e7eb)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem",
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 700, fontSize: "0.85rem", color: "var(--color-text-secondary, #64748b)" }}>
+            تعديل بيانات المستخدم
+          </p>
+
+          {/* Row 1: Name + Email */}
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 180px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+              <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary, #64748b)" }}>الاسم الكامل</label>
+              <input
+                className="form-input"
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                placeholder="الاسم الكامل"
+                style={{ padding: "0.4rem 0.65rem", fontSize: "0.85rem" }}
+                disabled={isEditLoading}
+                required
+              />
+            </div>
+            <div style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+              <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary, #64748b)" }}>البريد الإلكتروني</label>
+              <input
+                className="form-input"
+                type="email"
+                value={editEmail}
+                onChange={e => setEditEmail(e.target.value)}
+                placeholder="email@example.com"
+                dir="ltr"
+                style={{ padding: "0.4rem 0.65rem", fontSize: "0.85rem", direction: "ltr" }}
+                disabled={isEditLoading}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Phone + Role */}
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+              <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary, #64748b)" }}>رقم الهاتف</label>
+              <input
+                className="form-input"
+                value={editPhone}
+                onChange={e => setEditPhone(e.target.value)}
+                placeholder="+963..."
+                dir="ltr"
+                style={{ padding: "0.4rem 0.65rem", fontSize: "0.85rem", direction: "ltr" }}
+                disabled={isEditLoading}
+              />
+            </div>
+            <div style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+              <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary, #64748b)" }}>
+                نوع الحساب
+                {isSelf && <span style={{ color: "#ef4444", fontSize: "0.72rem", marginRight: "0.3rem" }}>(لا يمكن تعديل حسابك)</span>}
+              </label>
+              <select
+                className="form-input"
+                value={editRoleId}
+                onChange={e => setEditRoleId(e.target.value)}
+                style={{ padding: "0.4rem 0.65rem", fontSize: "0.85rem" }}
+                disabled={isEditLoading || isSelf}
+              >
+                <option value="">اختر النوع...</option>
+                {roles.map(r => (
+                  <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] ?? r.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Row 3: Status checkbox */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <input
+              type="checkbox"
+              id={`edit-active-${u.id}`}
+              checked={editIsActive}
+              onChange={e => setEditIsActive(e.target.checked)}
+              disabled={isEditLoading || isSelf}
+              style={{ width: 16, height: 16, cursor: isSelf ? "not-allowed" : "pointer" }}
+            />
+            <label
+              htmlFor={`edit-active-${u.id}`}
+              style={{
+                fontSize: "0.83rem",
+                cursor: isSelf ? "not-allowed" : "pointer",
+                color: isSelf ? "var(--color-text-secondary, #94a3b8)" : undefined,
+              }}
+            >
+              الحساب نشط
+              {isSelf && <span style={{ fontSize: "0.72rem", color: "#94a3b8", marginRight: "0.3rem" }}>(لا يمكن تعديل حسابك)</span>}
+            </label>
+          </div>
+
+          {/* Row 4: Buttons */}
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ padding: "0.4rem 1rem", fontSize: "0.85rem" }}
+              disabled={isEditLoading}
+            >
+              {isEditLoading ? "جارٍ الحفظ..." : "حفظ التعديلات"}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              style={{ padding: "0.4rem 0.75rem", fontSize: "0.85rem" }}
+              onClick={() => setShowEdit(false)}
+              disabled={isEditLoading}
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

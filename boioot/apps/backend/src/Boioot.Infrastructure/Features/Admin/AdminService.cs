@@ -360,8 +360,34 @@ public class AdminService : IAdminService
         if (request.Phone is not null)
             user.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
 
+        // Email update — validate format and uniqueness across all accounts
+        if (request.Email is not null)
+        {
+            var newEmail = request.Email.Trim().ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(newEmail))
+                throw new BoiootException("البريد الإلكتروني لا يمكن أن يكون فارغاً", 400);
+
+            if (!newEmail.Contains('@'))
+                throw new BoiootException("البريد الإلكتروني غير صحيح", 400);
+
+            if (!string.Equals(user.Email, newEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                var taken = await _context.Users
+                    .IgnoreQueryFilters()
+                    .AnyAsync(u => u.Id != userId && u.Email.ToLower() == newEmail, ct);
+
+                if (taken)
+                    throw new BoiootException("هذا البريد الإلكتروني مستخدم من قِبل حساب آخر", 409);
+
+                user.Email = newEmail;
+            }
+        }
+
         user.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Admin updated User {UserId} profile fields", userId);
 
         return new AdminUserResponse
         {
@@ -375,6 +401,7 @@ public class AdminService : IAdminService
             IsDeleted       = user.IsDeleted,
             CreatedAt       = user.CreatedAt,
             UpdatedAt       = user.UpdatedAt,
+            LastLoginAt     = user.LastLoginAt,
             IsVerified      = user.IsVerified,
             VerifiedAt      = user.VerifiedAt,
             VerifiedBy      = user.VerifiedBy,
