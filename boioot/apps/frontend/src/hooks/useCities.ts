@@ -32,7 +32,7 @@ export function useCities() {
             unique.push(name);
           }
         });
-        unique.sort((a, b) => a.localeCompare(b, "ar"));
+        unique.sort((a, b) => (a || "").localeCompare(b || "", "ar"));
         setCities(unique);
       })
       .catch(() => setCities([]))

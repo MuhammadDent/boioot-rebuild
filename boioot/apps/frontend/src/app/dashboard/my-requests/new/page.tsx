@@ -20,6 +20,13 @@ const ADD_NEW = "__add_new__";
 interface LocationCity { id: string; name: string; province: string; }
 interface LocationNeighborhood { id: string; name: string; city: string; }
 
+/** Shape returned by POST /locations/cities and POST /locations/neighborhoods */
+interface LocationApiResult {
+  status:      "created" | "exists" | "similar";
+  item:        { id: string; name: string; province?: string; city?: string } | null;
+  suggestions: Array<{ id: string; name: string }>;
+}
+
 // ─── Safe location helpers ────────────────────────────────────────────────────
 
 /** Returns a trimmed string, never undefined/null. */
@@ -133,10 +140,14 @@ export default function NewBuyerRequestPage() {
   const [cityValue, setCityValue]               = useState("");
   const [addingCity, setAddingCity]             = useState(false);
   const [savingCity, setSavingCity]             = useState(false);
+  const [citySuggestions, setCitySuggestions]   = useState<string[]>([]);
+  const [pendingCityName, setPendingCityName]   = useState("");
   const [neighborhoods, setNeighborhoods]       = useState<LocationNeighborhood[]>([]);
   const [neighborhoodValue, setNeighborhoodValue] = useState("");
   const [addingNeighborhood, setAddingNeighborhood] = useState(false);
   const [savingNeighborhood, setSavingNeighborhood] = useState(false);
+  const [neighborhoodSuggestions, setNeighborhoodSuggestions] = useState<string[]>([]);
+  const [pendingNeighborhoodName, setPendingNeighborhoodName] = useState("");
 
   // UI state
   const [provincesLoading, setProvincesLoading] = useState(true);
@@ -200,6 +211,7 @@ export default function NewBuyerRequestPage() {
   // ── Handle city dropdown change ───────────────────────────────────────────
   function handleCityChange(val: string) {
     setCityValue(val);
+    setCitySuggestions([]);
     setAddingCity(val === ADD_NEW);
     if (val !== ADD_NEW) {
       setNeighborhoodValue("");
@@ -207,20 +219,35 @@ export default function NewBuyerRequestPage() {
     }
   }
 
-  // ── Save new city ─────────────────────────────────────────────────────────
-  async function handleSaveCity(name: string) {
+  // ── Save new city (handles created / exists / similar) ────────────────────
+  async function handleSaveCity(name: string, forceCreate = false) {
     setLocationError("");
+    setCitySuggestions([]);
+    setPendingCityName(name);
     setSavingCity(true);
     try {
-      const result = await api.post<{ id: string; name: string; province: string }>(
+      const result = await api.post<LocationApiResult>(
         "/locations/cities",
-        { name, province },
+        { name, province, forceCreate },
       );
-      const newCity = normalizeCity(result, province);
-      if (!newCity) throw new Error("استجابة غير صالحة من الخادم");
+
+      if (result.status === "similar" && !forceCreate) {
+        const names = (result.suggestions ?? []).map(s => safeStr(s.name)).filter(Boolean);
+        setCitySuggestions(names);
+        setLocationError(
+          names.length
+            ? `توجد مدينة مشابهة: "${names.join('، ')}" — اختر منها أو اضغط "إضافة بأي حال"`
+            : "توجد مدينة مشابهة — اضغط \"إضافة بأي حال\" للمتابعة",
+        );
+        return;
+      }
+
+      const newCity = normalizeCity(result.item ?? {}, province);
+      if (!newCity) throw new Error("استجابة غير متوقعة من الخادم");
       setCities(prev => mergeCities(prev, newCity));
       setCityValue(newCity.name);
       setAddingCity(false);
+      setCitySuggestions([]);
     } catch (e) {
       setLocationError(normalizeError(e));
     } finally {
@@ -234,21 +261,36 @@ export default function NewBuyerRequestPage() {
     setAddingNeighborhood(val === ADD_NEW);
   }
 
-  // ── Save new neighborhood ─────────────────────────────────────────────────
-  async function handleSaveNeighborhood(name: string) {
+  // ── Save new neighborhood (handles created / exists / similar) ───────────
+  async function handleSaveNeighborhood(name: string, forceCreate = false) {
     if (!selectedCityName) return;
     setLocationError("");
+    setNeighborhoodSuggestions([]);
+    setPendingNeighborhoodName(name);
     setSavingNeighborhood(true);
     try {
-      const result = await api.post<{ id: string; name: string; city: string }>(
+      const result = await api.post<LocationApiResult>(
         "/locations/neighborhoods",
-        { name, city: selectedCityName },
+        { name, city: selectedCityName, forceCreate },
       );
-      const newN = normalizeNeighborhood(result, selectedCityName);
-      if (!newN) throw new Error("استجابة غير صالحة من الخادم");
+
+      if (result.status === "similar" && !forceCreate) {
+        const names = (result.suggestions ?? []).map(s => safeStr(s.name)).filter(Boolean);
+        setNeighborhoodSuggestions(names);
+        setLocationError(
+          names.length
+            ? `يوجد حي مشابه: "${names.join('، ')}" — اختر منه أو اضغط "إضافة بأي حال"`
+            : "يوجد حي مشابه — اضغط \"إضافة بأي حال\" للمتابعة",
+        );
+        return;
+      }
+
+      const newN = normalizeNeighborhood(result.item ?? {}, selectedCityName);
+      if (!newN) throw new Error("استجابة غير متوقعة من الخادم");
       setNeighborhoods(prev => mergeNeighborhoods(prev, newN));
       setNeighborhoodValue(newN.name);
       setAddingNeighborhood(false);
+      setNeighborhoodSuggestions([]);
     } catch (e) {
       setLocationError(normalizeError(e));
     } finally {
@@ -436,12 +478,28 @@ export default function NewBuyerRequestPage() {
                       </select>
 
                       {addingCity && (
-                        <AddNewField
-                          placeholder="اكتب اسم المدينة الجديدة"
-                          saving={savingCity}
-                          onSave={handleSaveCity}
-                          onCancel={() => { setAddingCity(false); setCityValue(""); }}
-                        />
+                        <>
+                          <AddNewField
+                            placeholder="اكتب اسم المدينة الجديدة"
+                            saving={savingCity}
+                            onSave={handleSaveCity}
+                            onCancel={() => { setAddingCity(false); setCityValue(""); setCitySuggestions([]); setLocationError(""); }}
+                          />
+                          {citySuggestions.length > 0 && (
+                            <button
+                              type="button"
+                              disabled={savingCity}
+                              onClick={() => handleSaveCity(pendingCityName, true)}
+                              style={{
+                                marginTop: "0.35rem", background: "none", border: "1px solid #e2e8f0",
+                                borderRadius: 7, padding: "0.3rem 0.75rem", fontSize: "0.78rem",
+                                color: "#475569", cursor: "pointer", fontFamily: "inherit",
+                              }}
+                            >
+                              إضافة بأي حال
+                            </button>
+                          )}
+                        </>
                       )}
                     </>
                   )}
@@ -469,12 +527,28 @@ export default function NewBuyerRequestPage() {
                       </select>
 
                       {addingNeighborhood && (
-                        <AddNewField
-                          placeholder="اكتب اسم الحي الجديد"
-                          saving={savingNeighborhood}
-                          onSave={handleSaveNeighborhood}
-                          onCancel={() => { setAddingNeighborhood(false); setNeighborhoodValue(""); }}
-                        />
+                        <>
+                          <AddNewField
+                            placeholder="اكتب اسم الحي الجديد"
+                            saving={savingNeighborhood}
+                            onSave={handleSaveNeighborhood}
+                            onCancel={() => { setAddingNeighborhood(false); setNeighborhoodValue(""); setNeighborhoodSuggestions([]); setLocationError(""); }}
+                          />
+                          {neighborhoodSuggestions.length > 0 && (
+                            <button
+                              type="button"
+                              disabled={savingNeighborhood}
+                              onClick={() => handleSaveNeighborhood(pendingNeighborhoodName, true)}
+                              style={{
+                                marginTop: "0.35rem", background: "none", border: "1px solid #e2e8f0",
+                                borderRadius: 7, padding: "0.3rem 0.75rem", fontSize: "0.78rem",
+                                color: "#475569", cursor: "pointer", fontFamily: "inherit",
+                              }}
+                            >
+                              إضافة بأي حال
+                            </button>
+                          )}
+                        </>
                       )}
                     </>
                   )}

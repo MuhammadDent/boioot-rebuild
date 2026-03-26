@@ -215,7 +215,7 @@ export default function AdminPropertiesPage() {
   const provinceOptions = useMemo(() => {
     const seen = new Set<string>();
     allProperties.forEach(p => { const v = p.province?.trim(); if (v) seen.add(v); });
-    return [...seen].sort((a, b) => a.localeCompare(b, "ar"));
+    return [...seen].sort((a, b) => (a || "").localeCompare(b || "", "ar"));
   }, [allProperties]);
 
   const cityOptions = useMemo(() => {
@@ -226,7 +226,7 @@ export default function AdminPropertiesPage() {
       if (!city) return;
       if (!provinceFilter || province === provinceFilter) seen.add(city);
     });
-    return [...seen].sort((a, b) => a.localeCompare(b, "ar"));
+    return [...seen].sort((a, b) => (a || "").localeCompare(b || "", "ar"));
   }, [allProperties, provinceFilter]);
 
   const neighborhoodOptions = useMemo(() => {
@@ -240,7 +240,7 @@ export default function AdminPropertiesPage() {
       if (!cityFilter && provinceFilter && province !== provinceFilter) return;
       seen.add(nbhd);
     });
-    return [...seen].sort((a, b) => a.localeCompare(b, "ar"));
+    return [...seen].sort((a, b) => (a || "").localeCompare(b || "", "ar"));
   }, [allProperties, provinceFilter, cityFilter]);
 
   // ── Filter + Sort ──────────────────────────────────────────────────────────
