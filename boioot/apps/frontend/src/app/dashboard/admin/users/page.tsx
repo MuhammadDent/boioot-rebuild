@@ -166,15 +166,16 @@ export default function AdminUsersPage() {
       load(1, {});
       rbacApi.getRoles()
         .then(data => {
-          console.log("[AdminUsers] roles fetched from API:", data.map(r => r.name));
-          console.log("[AdminUsers] platform roles (filtered):", data.filter(r => PLATFORM_ROLE_NAMES.has(r.name)).map(r => r.name));
+          const customerRolesFromApi = data.filter(r => PLATFORM_ROLE_NAMES.has(r.name) && getRoleCategory(r.name) !== "admin").map(r => r.name);
+          console.log("[AdminUsers] customer roles for UI:", customerRolesFromApi);
           setRoles(data);
         })
         .catch(() => {})
         .finally(() => setRolesLoading(false));
       adminApi.getUserAnalytics()
         .then(data => {
-          console.log("[AdminUsers] analytics byRole:", data.byRole);
+          const customerByRole = Object.fromEntries(Object.entries(data.byRole).filter(([r]) => DIRECT_CUSTOMER_ROLES.has(r) || SUBORDINATE_ROLES.has(r)));
+          console.log("[AdminUsers] analytics byRole (customer-only):", customerByRole);
           setAnalytics(data);
         })
         .catch(() => {});
@@ -631,23 +632,6 @@ export default function AdminUsersPage() {
               </div>
             )}
 
-            {/* Other roles (Admin, Staff) */}
-            {Object.entries(analytics.byRole).some(([role]) => !DIRECT_CUSTOMER_ROLES.has(role) && !SUBORDINATE_ROLES.has(role)) && (
-              <div>
-                <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "#64748b", marginBottom: "0.35rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  أخرى
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                  {Object.entries(analytics.byRole)
-                    .filter(([role]) => !DIRECT_CUSTOMER_ROLES.has(role) && !SUBORDINATE_ROLES.has(role))
-                    .map(([role, count]) => (
-                      <span key={role} className={ROLE_BADGE[role] ?? "badge badge-gray"} style={{ fontSize: "0.78rem" }}>
-                        {ROLE_LABELS[role] ?? role}: {count}
-                      </span>
-                    ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 

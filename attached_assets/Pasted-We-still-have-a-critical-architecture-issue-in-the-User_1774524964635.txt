@@ -1,0 +1,104 @@
+We still have a critical architecture issue in the Users page.
+
+CURRENT ISSUE
+
+Admin/System Manager is still appearing in the UI as:
+- "إداريون (1)" tab
+- part of role segmentation
+
+This is WRONG.
+
+The Users page must be a pure CUSTOMER DIRECTORY.
+Internal roles must NOT appear anywhere in:
+- tabs
+- segmentation
+- analytics
+- grouping logic
+
+This means the fix is NOT complete yet.
+
+ROOT CAUSE
+
+The UI tabs and grouping are still generated from ALL roles,
+without excluding internal roles at the grouping level.
+
+GOAL
+
+Completely remove internal roles from:
+- role tabs
+- grouping logic
+- segmentation
+- any derived UI state
+
+REQUIRED FIX
+
+1) Fix role grouping logic (CRITICAL)
+
+Anywhere roles are grouped like:
+- groupByRole(users)
+- roles.map(...)
+- roleTabs generation
+
+You must EXCLUDE internal roles BEFORE grouping.
+
+Apply this rule:
+
+getRoleCategory(role) === "customer"
+
+ONLY include those roles.
+
+2) Remove "إداريون" tab completely
+
+- Do not render it conditionally
+- Do not hide it visually
+- Remove it from the data source entirely
+
+3) Fix tab source
+
+Tabs must be generated ONLY from customer roles:
+
+Expected tabs:
+- الكل
+- مستخدم
+- مالك عقار
+- وسطاء عقاريون
+- مكاتب عقارية
+- وكلاء عقاريون
+- شركات تطوير
+
+No internal roles allowed.
+
+4) Fix counts
+
+Counts above tabs must:
+- exclude admin completely
+- match only customer roles
+
+5) Double-check backend
+
+Ensure users query excludes internal roles:
+WHERE roleCategory = 'customer'
+
+NOT just frontend filtering.
+
+6) Debug logs
+
+Add console logs:
+- roles returned from API
+- roles after filtering
+- roles used in tabs
+
+So we verify admin is not leaking.
+
+EXPECTED RESULT
+
+- "إداريون" tab = completely gone
+- Admin count = not visible anywhere
+- Total users = only customers
+- Tabs = only customer roles
+- No duplication between Users and Team Management
+
+IMPORTANT
+
+This is a DATA LAYER issue, not just UI.
+Fix must happen before grouping and tab generation.
