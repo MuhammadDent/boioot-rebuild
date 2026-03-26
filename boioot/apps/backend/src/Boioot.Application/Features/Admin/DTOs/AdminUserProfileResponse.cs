@@ -29,4 +29,9 @@ public class AdminUserProfileResponse
     public int RemainingListings { get; set; }
     public string? SubscriptionStatus { get; set; }
     public DateTime? SubscriptionEndDate { get; set; }
+
+    // ── Identity verification ─────────────────────────────────────────────────
+    public bool IsVerified { get; set; }
+    public DateTime? VerifiedAt { get; set; }
+    public string? VerifiedBy { get; set; }
 }

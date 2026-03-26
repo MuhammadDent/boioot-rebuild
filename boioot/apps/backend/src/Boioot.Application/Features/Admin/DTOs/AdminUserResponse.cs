@@ -17,6 +17,11 @@ public class AdminUserResponse
     public string? PlanName { get; set; }
     public string PlanStatus { get; set; } = "None";
     public List<string> Tags { get; set; } = [];
+
+    // ── Identity verification ─────────────────────────────────────────────────
+    public bool IsVerified { get; set; }
+    public DateTime? VerifiedAt { get; set; }
+    public string? VerifiedBy { get; set; }
 }
 
 public class UserAnalyticsResponse

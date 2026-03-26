@@ -160,6 +160,11 @@ public sealed class SchemaEvolutionService
         await TryAlter("Users", "TrialListingsUsed",  "INTEGER NOT NULL DEFAULT 0",  ct);
         await TryAlter("Users", "LastLoginAt",        "TEXT",                        ct);
 
+        // User-level identity verification (admin-controlled, all user types)
+        await TryAlter("Users", "IsVerified",         "INTEGER NOT NULL DEFAULT 0",  ct);
+        await TryAlter("Users", "VerifiedAt",         "TEXT",                        ct);
+        await TryAlter("Users", "VerifiedBy",         "TEXT",                        ct);
+
         // Backfill TrialListingsUsed for existing User-role accounts using EF.
         try
         {

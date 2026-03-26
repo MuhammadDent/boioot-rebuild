@@ -113,4 +113,8 @@ public interface IAdminService
     Task<UserTagResponse> AddUserTagAsync(Guid userId, string tag, CancellationToken ct = default);
     Task RemoveUserTagAsync(Guid userId, string tag, CancellationToken ct = default);
     Task<List<string>> GetAllTagsAsync(CancellationToken ct = default);
+
+    // User identity verification (admin-controlled)
+    Task<AdminUserResponse> VerifyUserAsync(Guid adminUserId, Guid targetUserId, CancellationToken ct = default);
+    Task<AdminUserResponse> UnverifyUserAsync(Guid adminUserId, Guid targetUserId, CancellationToken ct = default);
 }

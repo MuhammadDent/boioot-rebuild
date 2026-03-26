@@ -255,6 +255,28 @@ public class AdminController : BaseController
         return Ok(result);
     }
 
+    [HttpPost("users/{userId:guid}/verify")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> VerifyUser(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var adminId = GetUserId();
+        var result  = await _admin.VerifyUserAsync(adminId, userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("users/{userId:guid}/unverify")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UnverifyUser(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var adminId = GetUserId();
+        var result  = await _admin.UnverifyUserAsync(adminId, userId, ct);
+        return Ok(result);
+    }
+
     // ── Companies ─────────────────────────────────────────────────────────────
 
     [HttpPost("companies")]

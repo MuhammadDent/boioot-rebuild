@@ -27,6 +27,17 @@ public class User : BaseEntity, ISoftDeletable
     /// </summary>
     public DateTime? LastLoginAt { get; set; }
 
+    // ── Identity verification (admin-controlled, applies to ALL user types) ───
+
+    /// <summary>True once an admin has verified this user's identity.</summary>
+    public bool IsVerified { get; set; } = false;
+
+    /// <summary>UTC timestamp when the admin granted verification.</summary>
+    public DateTime? VerifiedAt { get; set; }
+
+    /// <summary>Id (as string) of the admin user who last changed verification.</summary>
+    public string? VerifiedBy { get; set; }
+
     public Agent? Agent { get; set; }
     public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<AccountUser> AccountUsers { get; set; } = [];

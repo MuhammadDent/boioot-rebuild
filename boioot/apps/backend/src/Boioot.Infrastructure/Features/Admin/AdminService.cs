@@ -122,6 +122,9 @@ public class AdminService : IAdminService
                 u.CreatedAt,
                 u.UpdatedAt,
                 u.LastLoginAt,
+                u.IsVerified,
+                u.VerifiedAt,
+                u.VerifiedBy,
             })
             .ToListAsync(ct);
 
@@ -204,6 +207,9 @@ public class AdminService : IAdminService
                 PlanName        = planInfo.Item1,
                 PlanStatus      = planInfo.Item2,
                 Tags            = tagsMap.TryGetValue(u.Id, out var tags) ? tags : [],
+                IsVerified      = u.IsVerified,
+                VerifiedAt      = u.VerifiedAt,
+                VerifiedBy      = u.VerifiedBy,
             };
         }).ToList();
 
@@ -237,6 +243,9 @@ public class AdminService : IAdminService
             CreatedAt       = user.CreatedAt,
             UpdatedAt       = user.UpdatedAt,
             LastLoginAt     = user.LastLoginAt,
+            IsVerified      = user.IsVerified,
+            VerifiedAt      = user.VerifiedAt,
+            VerifiedBy      = user.VerifiedBy,
         };
     }
 
@@ -331,6 +340,10 @@ public class AdminService : IAdminService
             RemainingListings       = remaining,
             SubscriptionStatus      = activeSub?.Status.ToString(),
             SubscriptionEndDate     = activeSub?.EndDate,
+
+            IsVerified              = user.IsVerified,
+            VerifiedAt              = user.VerifiedAt,
+            VerifiedBy              = user.VerifiedBy,
         };
     }
 
@@ -362,6 +375,91 @@ public class AdminService : IAdminService
             IsDeleted       = user.IsDeleted,
             CreatedAt       = user.CreatedAt,
             UpdatedAt       = user.UpdatedAt,
+            IsVerified      = user.IsVerified,
+            VerifiedAt      = user.VerifiedAt,
+            VerifiedBy      = user.VerifiedBy,
+        };
+    }
+
+    // ── User identity verification ────────────────────────────────────────────
+
+    public async Task<AdminUserResponse> VerifyUserAsync(
+        Guid adminUserId, Guid targetUserId, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
+            ?? throw new BoiootException("المستخدم غير موجود", 404);
+
+        if (!CustomerRoles.Contains(user.Role))
+            throw new BoiootException("لا يمكن توثيق حسابات الإدارة والطاقم", 400);
+
+        user.IsVerified = true;
+        user.VerifiedAt = DateTime.UtcNow;
+        user.VerifiedBy = adminUserId.ToString();
+        user.UpdatedAt  = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "User {TargetUserId} verified by admin {AdminUserId}", targetUserId, adminUserId);
+
+        return new AdminUserResponse
+        {
+            Id              = user.Id,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            ProfileImageUrl = user.ProfileImageUrl,
+            Role            = user.Role.ToString(),
+            IsActive        = user.IsActive,
+            IsDeleted       = user.IsDeleted,
+            CreatedAt       = user.CreatedAt,
+            UpdatedAt       = user.UpdatedAt,
+            LastLoginAt     = user.LastLoginAt,
+            IsVerified      = user.IsVerified,
+            VerifiedAt      = user.VerifiedAt,
+            VerifiedBy      = user.VerifiedBy,
+        };
+    }
+
+    public async Task<AdminUserResponse> UnverifyUserAsync(
+        Guid adminUserId, Guid targetUserId, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
+            ?? throw new BoiootException("المستخدم غير موجود", 404);
+
+        if (!CustomerRoles.Contains(user.Role))
+            throw new BoiootException("لا يمكن تعديل حسابات الإدارة والطاقم", 400);
+
+        user.IsVerified = false;
+        user.VerifiedAt = null;
+        user.VerifiedBy = adminUserId.ToString();
+        user.UpdatedAt  = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "User {TargetUserId} unverified by admin {AdminUserId}", targetUserId, adminUserId);
+
+        return new AdminUserResponse
+        {
+            Id              = user.Id,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            ProfileImageUrl = user.ProfileImageUrl,
+            Role            = user.Role.ToString(),
+            IsActive        = user.IsActive,
+            IsDeleted       = user.IsDeleted,
+            CreatedAt       = user.CreatedAt,
+            UpdatedAt       = user.UpdatedAt,
+            LastLoginAt     = user.LastLoginAt,
+            IsVerified      = user.IsVerified,
+            VerifiedAt      = user.VerifiedAt,
+            VerifiedBy      = user.VerifiedBy,
         };
     }
 
