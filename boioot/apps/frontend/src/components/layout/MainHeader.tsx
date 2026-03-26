@@ -141,39 +141,6 @@ export default function MainHeader() {
             {/* Auth strip — mounted guard prevents SSR/client hydration mismatch */}
             {mounted && !isLoading && isAuthenticated && (
               <>
-                {/* Admin/Staff: quick-return button to admin dashboard */}
-                {isAdminOrStaff && (
-                  <Link
-                    href="/dashboard/admin"
-                    className="main-hdr__admin-btn main-hdr__auth-desktop"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.35rem",
-                      padding: "0.35rem 0.85rem",
-                      background: "#0f172a",
-                      color: "#f8fafc",
-                      borderRadius: "6px",
-                      fontSize: "0.82rem",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      whiteSpace: "nowrap",
-                      lineHeight: 1.4,
-                      border: "1.5px solid #334155",
-                    }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" strokeWidth="2.2"
-                      strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="7" height="7" rx="1"/>
-                      <rect x="14" y="3" width="7" height="7" rx="1"/>
-                      <rect x="14" y="14" width="7" height="7" rx="1"/>
-                      <rect x="3" y="14" width="7" height="7" rx="1"/>
-                    </svg>
-                    العودة إلى لوحة التحكم
-                  </Link>
-                )}
-
                 <MessagesIconBtn
                   isActivePage={onMessagesPage}
                   onClick={handleMessagesClick}
