@@ -233,6 +233,44 @@ public sealed class SchemaEvolutionService
             "TEXT NOT NULL DEFAULT '{PostTitle} | {SiteName}'", ct);
         await TryAlter("BlogSeoSettings", "DefaultOgDescriptionTemplate",
             "TEXT NOT NULL DEFAULT '{Excerpt}'", ct);
+
+        // Normalize all GUID columns in Blog tables to lowercase so that EF Core's
+        // GuidToStringConverter (which always writes lowercase) can JOIN correctly.
+        // SQLite string comparison is case-sensitive, so uppercase GUIDs from older inserts
+        // would silently fail the INNER JOIN between BlogPosts.CreatedByUserId and Users.Id.
+        // Step 1: normalize non-PK GUID columns in BlogPosts first (no FK concerns).
+        await TryExec(
+            "UPDATE BlogPosts SET " +
+            "CreatedByUserId = LOWER(CreatedByUserId), " +
+            "UpdatedByUserId = CASE WHEN UpdatedByUserId IS NULL THEN NULL ELSE LOWER(UpdatedByUserId) END, " +
+            "PublishedByUserId = CASE WHEN PublishedByUserId IS NULL THEN NULL ELSE LOWER(PublishedByUserId) END " +
+            "WHERE CreatedByUserId != LOWER(CreatedByUserId)",
+            ct, warnOnError: true);
+
+        // Step 2: disable FK enforcement, update PKs, re-enable.
+        await TryExec("PRAGMA foreign_keys = OFF", ct, warnOnError: true);
+
+        await TryExec(
+            "UPDATE BlogPostCategories SET " +
+            "BlogCategoryId = LOWER(BlogCategoryId) " +
+            "WHERE BlogCategoryId != LOWER(BlogCategoryId)",
+            ct, warnOnError: true);
+
+        await TryExec(
+            "UPDATE BlogCategories SET Id = LOWER(Id) WHERE Id != LOWER(Id)",
+            ct, warnOnError: true);
+
+        await TryExec(
+            "UPDATE BlogPostCategories SET " +
+            "BlogPostId = LOWER(BlogPostId) " +
+            "WHERE BlogPostId != LOWER(BlogPostId)",
+            ct, warnOnError: true);
+
+        await TryExec(
+            "UPDATE BlogPosts SET Id = LOWER(Id) WHERE Id != LOWER(Id)",
+            ct, warnOnError: true);
+
+        await TryExec("PRAGMA foreign_keys = ON", ct, warnOnError: true);
     }
 
     private async Task ApplyAccountPatchesAsync(CancellationToken ct)
