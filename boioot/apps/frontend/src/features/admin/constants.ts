@@ -1,5 +1,30 @@
 export const ADMIN_PAGE_SIZE = 20;
 
+/**
+ * Names that map to the backend UserRole enum — the only values accepted
+ * by GET /api/admin/users?role=... and POST /api/admin/users (primary role).
+ * Everything outside this set is a staff/RBAC-overlay role.
+ */
+export const PLATFORM_ROLE_NAMES = new Set([
+  "Admin",
+  "CompanyOwner",
+  "Broker",
+  "Agent",
+  "Owner",
+  "User",
+]);
+
+/**
+ * Derive a display category for a role name.
+ * Returns: "admin" | "business" | "user" | "staff"
+ */
+export function getRoleCategory(name: string): "admin" | "business" | "user" | "staff" {
+  if (name === "Admin") return "admin";
+  if (name === "User") return "user";
+  if (["CompanyOwner", "Broker", "Agent", "Owner"].includes(name)) return "business";
+  return "staff";
+}
+
 export const ROLE_LABELS: Record<string, string> = {
   // Platform roles
   Admin:            "مدير النظام",

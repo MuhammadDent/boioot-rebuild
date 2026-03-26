@@ -12,8 +12,10 @@ import {
 } from "@/features/admin/api";
 import {
   ADMIN_PAGE_SIZE,
+  PLATFORM_ROLE_NAMES,
   ROLE_LABELS,
   ROLE_BADGE,
+  getRoleCategory,
 } from "@/features/admin/constants";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { normalizeError } from "@/lib/api";
@@ -28,6 +30,7 @@ export default function AdminUsersPage() {
 
   const [users, setUsers]           = useState<AdminUserResponse[]>([]);
   const [roles, setRoles]           = useState<RbacRole[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
   const [page, setPage]             = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -75,11 +78,27 @@ export default function AdminUsersPage() {
   useEffect(() => {
     if (!isLoading && user) {
       load(1, {});
-      rbacApi.getRoles().then(setRoles).catch(() => {});
+      rbacApi.getRoles()
+        .then(setRoles)
+        .catch(() => {})
+        .finally(() => setRolesLoading(false));
     }
   }, [isLoading, user, load]);
 
   if (isLoading || !user) return null;
+
+  // Platform roles from DB — filtered to UserRole enum members (valid for primary-role filter & user creation)
+  const platformRoles = roles
+    .filter(r => PLATFORM_ROLE_NAMES.has(r.name))
+    .sort((a, b) => {
+      const order: Record<string, number> = { User: 0, Owner: 1, Broker: 2, Agent: 3, CompanyOwner: 4, Admin: 5 };
+      return (order[a.name] ?? 99) - (order[b.name] ?? 99);
+    });
+
+  // All roles grouped for the inline editor (unchanged — uses all RBAC roles)
+  const businessRoles = platformRoles.filter(r => getRoleCategory(r.name) === "business");
+  const userOnlyRoles = platformRoles.filter(r => getRoleCategory(r.name) === "user");
+  const adminRoles    = platformRoles.filter(r => getRoleCategory(r.name) === "admin");
 
   function handleSearch() {
     const params: AdminUsersParams = {};
@@ -284,13 +303,44 @@ export default function AdminUsersPage() {
                     className="form-input"
                     value={createRole}
                     onChange={e => setCreateRole(e.target.value)}
-                    disabled={createLoading}
+                    disabled={createLoading || rolesLoading}
                     style={{ padding: "0.5rem 0.75rem" }}
                   >
-                    <option value="Admin">مدير النظام</option>
-                    <option value="CompanyOwner">مالك شركة</option>
-                    <option value="Agent">وكيل عقاري</option>
-                    <option value="User">مستخدم عادي</option>
+                    {rolesLoading ? (
+                      <option>جارٍ التحميل...</option>
+                    ) : platformRoles.length === 0 ? (
+                      <option value="User">مستخدم</option>
+                    ) : (
+                      <>
+                        {userOnlyRoles.length > 0 && (
+                          <optgroup label="المستخدمون">
+                            {userOnlyRoles.map(r => (
+                              <option key={r.id} value={r.name}>
+                                {ROLE_LABELS[r.name] ?? r.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {businessRoles.length > 0 && (
+                          <optgroup label="الأعمال العقارية">
+                            {businessRoles.map(r => (
+                              <option key={r.id} value={r.name}>
+                                {ROLE_LABELS[r.name] ?? r.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {adminRoles.length > 0 && (
+                          <optgroup label="الإدارة">
+                            {adminRoles.map(r => (
+                              <option key={r.id} value={r.name}>
+                                {ROLE_LABELS[r.name] ?? r.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -324,19 +374,49 @@ export default function AdminUsersPage() {
           marginBottom: "1.25rem",
           display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end",
         }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", minWidth: 140 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", minWidth: 160 }}>
             <label className="form-label" style={{ margin: 0 }}>الدور</label>
             <select
               className="form-input"
               style={{ padding: "0.45rem 0.75rem" }}
               value={pendingRole}
               onChange={e => setPendingRole(e.target.value)}
+              disabled={rolesLoading}
             >
               <option value="">الكل</option>
-              <option value="Admin">مدير النظام</option>
-              <option value="CompanyOwner">مالك شركة</option>
-              <option value="Agent">وكيل عقاري</option>
-              <option value="User">مستخدم</option>
+              {rolesLoading ? (
+                <option disabled>جارٍ التحميل...</option>
+              ) : (
+                <>
+                  {userOnlyRoles.length > 0 && (
+                    <optgroup label="المستخدمون">
+                      {userOnlyRoles.map(r => (
+                        <option key={r.id} value={r.name}>
+                          {ROLE_LABELS[r.name] ?? r.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {businessRoles.length > 0 && (
+                    <optgroup label="الأعمال العقارية">
+                      {businessRoles.map(r => (
+                        <option key={r.id} value={r.name}>
+                          {ROLE_LABELS[r.name] ?? r.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {adminRoles.length > 0 && (
+                    <optgroup label="الإدارة">
+                      {adminRoles.map(r => (
+                        <option key={r.id} value={r.name}>
+                          {ROLE_LABELS[r.name] ?? r.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </>
+              )}
             </select>
           </div>
 
