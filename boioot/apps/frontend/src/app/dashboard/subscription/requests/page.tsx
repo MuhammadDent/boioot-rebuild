@@ -10,7 +10,7 @@ import {
   PAYMENT_METHOD_ICON,
   CYCLE_LABELS,
 } from "@/features/subscriptionPayments/constants";
-import { normalizeError } from "@/lib/api";
+import { api, normalizeError } from "@/lib/api";
 import type { PaymentRequestResponse } from "@/features/subscriptionPayments/types";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -98,15 +98,11 @@ function ReceiptUploadSection({
     setUploading(true);
     setUploadError(null);
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload  = ev => resolve(ev.target?.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(selectedFile);
-      });
+      const form = new FormData();
+      form.append("file", selectedFile);
+      const { url } = await api.postForm<{ url: string; fileName: string }>("/upload/proof", form);
       const updated = await paymentRequestsApi.uploadReceipt(requestId, {
-        receiptImageUrl: dataUrl,
-        receiptFileName: selectedFile.name,
+        receiptImageUrl: url,
       });
       onUpdate(updated);
     } catch (err) {
@@ -341,7 +337,7 @@ function RequestCard({
           <p style={{ margin: "0 0 0.5rem", fontSize: "0.78rem", fontWeight: 700, color: "#166534" }}>
             ✅ تم رفع الإيصال — بانتظار المراجعة
           </p>
-          {req.receiptImageUrl.startsWith("data:image") && (
+          {/\.(jpe?g|png|webp|gif)$/i.test(req.receiptImageUrl) || req.receiptImageUrl.startsWith("data:image") ? (
             <img
               src={req.receiptImageUrl}
               alt="الإيصال المرفوع"
@@ -354,11 +350,15 @@ function RequestCard({
                 backgroundColor: "#fff",
               }}
             />
-          )}
-          {!req.receiptImageUrl.startsWith("data:image") && (
-            <p style={{ margin: 0, fontSize: "0.8rem", color: "#374151" }}>
-              📄 {req.receiptFileName ?? "إيصال الدفع"}
-            </p>
+          ) : (
+            <a
+              href={req.receiptImageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontSize: "0.8rem", color: "#059669", textDecoration: "underline" }}
+            >
+              📄 {req.receiptFileName ?? "عرض الإيصال"}
+            </a>
           )}
         </div>
       )}

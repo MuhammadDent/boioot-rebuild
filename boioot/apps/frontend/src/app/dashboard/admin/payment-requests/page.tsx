@@ -605,7 +605,7 @@ const selectSt = {
 };
 
 export default function AdminPaymentRequestsPage() {
-  const { user, isLoading } = useProtectedRoute({ requiredPermission: "billing.view" });
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "billing.manage" });
 
   const [items, setItems]           = useState<PaymentRequestResponse[]>([]);
   const [paged, setPaged]           = useState<PagedResult<PaymentRequestResponse> | null>(null);
