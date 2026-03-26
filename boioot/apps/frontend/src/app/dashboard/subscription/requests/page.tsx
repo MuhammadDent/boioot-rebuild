@@ -71,13 +71,13 @@ function ReceiptUploadSection({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 3 * 1024 * 1024) {
-      setUploadError("حجم الملف كبير جداً. الحد الأقصى 3 ميغابايت.");
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("حجم الملف كبير جداً. الحد الأقصى 5 ميغابايت.");
       return;
     }
-    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    const allowed = ["image/jpeg", "image/png", "application/pdf"];
     if (!allowed.includes(file.type)) {
-      setUploadError("نوع الملف غير مدعوم. يُقبل: JPG، PNG، WebP، PDF.");
+      setUploadError("نوع الملف غير مدعوم. يُقبل: JPG، PNG، PDF.");
       return;
     }
 
@@ -127,7 +127,7 @@ function ReceiptUploadSection({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,application/pdf"
+        accept="image/jpeg,image/png,application/pdf"
         onChange={handleFileChange}
         style={{ display: "none" }}
       />
@@ -149,7 +149,7 @@ function ReceiptUploadSection({
             textAlign: "center",
           }}
         >
-          اختر صورة الإيصال أو ملف PDF (حتى 3 ميغابايت)
+          اختر صورة الإيصال أو ملف PDF (حتى 5 ميغابايت)
         </button>
       ) : (
         <div>

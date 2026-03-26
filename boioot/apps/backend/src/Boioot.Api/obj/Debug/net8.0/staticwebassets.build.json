@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "5nqgH5UpI6ZUuesQKPIQnVYaVtrU2dLJ4RkQjabwY/w=",
+  "Hash": "AB0NTskucbPRk3t2q6EPiM9aBH9Ws2pZLcFkaa7ccd4=",
   "Source": "Boioot.Api",
   "BasePath": "_content/Boioot.Api",
   "Mode": "Default",
@@ -509,6 +509,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot/uploads/eb8e0467-aff7-46ad-bac1-407f7d3f62ea.webp"
+    },
+    {
+      "Identity": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/receipts/2a5bdeab-b135-4a8c-aa3c-88961857daa4.jpg",
+      "SourceId": "Boioot.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/",
+      "BasePath": "_content/Boioot.Api",
+      "RelativePath": "uploads/receipts/2a5bdeab-b135-4a8c-aa3c-88961857daa4.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/uploads/receipts/2a5bdeab-b135-4a8c-aa3c-88961857daa4.jpg"
     },
     {
       "Identity": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/videos/3827ac4b-511b-45af-9f22-1e2787ea6329.mp4",

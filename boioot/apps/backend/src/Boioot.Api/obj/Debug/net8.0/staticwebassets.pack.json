@@ -105,6 +105,10 @@
       "PackagePath": "staticwebassets/uploads/eb8e0467-aff7-46ad-bac1-407f7d3f62ea.webp"
     },
     {
+      "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/uploads/receipts/2a5bdeab-b135-4a8c-aa3c-88961857daa4.jpg",
+      "PackagePath": "staticwebassets/uploads/receipts/2a5bdeab-b135-4a8c-aa3c-88961857daa4.jpg"
+    },
+    {
       "Id": "/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/wwwroot/videos/3827ac4b-511b-45af-9f22-1e2787ea6329.mp4",
       "PackagePath": "staticwebassets/videos/3827ac4b-511b-45af-9f22-1e2787ea6329.mp4"
     },

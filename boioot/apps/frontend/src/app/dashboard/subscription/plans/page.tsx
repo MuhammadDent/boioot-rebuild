@@ -253,8 +253,8 @@ function CheckoutModal({
       e.target.value = "";
       return;
     }
-    if (f.size > 10 * 1024 * 1024) {
-      setError("حجم الملف يتجاوز 10MB.");
+    if (f.size > 5 * 1024 * 1024) {
+      setError("حجم الملف يتجاوز 5MB.");
       e.target.value = "";
       return;
     }
@@ -479,7 +479,7 @@ function CheckoutModal({
             }}>
               {isReceiptRequired ? "إيصال الدفع (مطلوب)" : "ملف الإثبات (اختياري)"}
               <span style={{ fontSize: "0.74rem", fontWeight: 400, color: "#94a3b8", marginRight: "0.4rem" }}>
-                JPG · PNG · PDF · حد أقصى 10MB
+                JPG · PNG · PDF · حد أقصى 5MB
               </span>
             </label>
 
