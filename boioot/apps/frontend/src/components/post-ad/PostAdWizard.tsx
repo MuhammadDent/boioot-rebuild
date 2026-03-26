@@ -8,6 +8,7 @@ import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/das
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { FEATURES_LIST } from "@/features/properties/constants";
 import { useSubscription } from "@/hooks/useSubscription";
+import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
 import type { ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
 
 const FLOOR_OPTIONS = [
@@ -179,7 +180,30 @@ export default function PostAdWizard({
   listingTypes = [], propertyTypes = [], ownershipTypes = [], onSubmit, isSubmitting, serverError,
 }: PostAdWizardProps) {
   const { subscription } = useSubscription();
-  const videoAllowed = subscription === null || subscription.hasVideoUpload;
+
+  // ── Subscription feature/limit helpers ────────────────────────────────────
+  // Safe accessors — handle null AND undefined (API may return undefined for
+  // accounts without a plan).
+  //
+  // Default policy when subscription is null/undefined:
+  //   hasFeature → false   (locked — require a plan)
+  //   getLimit   → value from the free-tier defaults defined below
+  //
+  // Call pattern: `hasFeature("hasVideoUpload")` or `getLimit("maxImagesPerListing", 5)`
+
+  function hasFeature(key: keyof CurrentSubscriptionResponse): boolean {
+    return subscription?.[key] === true;
+  }
+
+  function getLimit(
+    key: "maxActiveListings" | "maxImagesPerListing" | "maxAgents" | "maxFeaturedSlots",
+    freeTierDefault: number,
+  ): number {
+    return (subscription?.[key] as number | undefined) ?? freeTierDefault;
+  }
+
+  // Video upload: requires an active subscription with hasVideoUpload = true.
+  const videoAllowed = hasFeature("hasVideoUpload");
 
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(EMPTY);

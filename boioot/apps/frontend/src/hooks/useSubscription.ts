@@ -22,7 +22,7 @@ export function useSubscription(): UseSubscriptionResult {
     let cancelled = false;
     subscriptionApi
       .getCurrent()
-      .then((data) => { if (!cancelled) setSubscription(data); })
+      .then((data) => { if (!cancelled) setSubscription(data ?? null); })
       .catch(() => { /* no active subscription or unauthenticated — keep null */ })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
