@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getRoleCategory } from "@/features/admin/constants";
-import AdminSidebar from "@/components/admin/AdminSidebar";
+import UnifiedSidebar from "@/components/dashboard/UnifiedSidebar";
 import AdminToolbar from "@/components/admin/AdminToolbar";
 import AdminBreadcrumb from "@/components/admin/AdminBreadcrumb";
 
@@ -40,7 +40,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    // Customer and subordinate users must use /dashboard, not /dashboard/admin
     const category = getRoleCategory(user.role);
     const hasAnyAdminPermission = (user.permissions?.length ?? 0) > 0;
     if (category === "customer" || category === "subordinate") {
@@ -48,7 +47,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.replace("/dashboard");
       return;
     }
-    // Staff without any RBAC permissions also blocked
     if (category === "staff" && !hasAnyAdminPermission) {
       redirected.current = true;
       router.replace("/dashboard");
@@ -64,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* ── Body: sidebar + content ── */}
       <div className="admin-layout">
-        {/* Hamburger button (mobile only, visible via CSS) */}
+        {/* Hamburger (mobile only, visible via CSS) */}
         <button
           className="admin-hamburger"
           onClick={() => setSidebarOpen(true)}
@@ -77,17 +75,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </svg>
         </button>
 
-        {/* Overlay (mobile only) */}
-        <div
-          className={`admin-overlay${sidebarOpen ? " open" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-
         {/* Sidebar */}
-        <AdminSidebar
+        <UnifiedSidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          showBackLink={false}
+          headerHeight={52}
         />
 
         {/* Main content */}

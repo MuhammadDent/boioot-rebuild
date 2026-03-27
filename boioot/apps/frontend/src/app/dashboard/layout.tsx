@@ -5,14 +5,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getRoleCategory } from "@/features/admin/constants";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import UnifiedSidebar from "@/components/dashboard/UnifiedSidebar";
 import UpsellModal from "@/components/dashboard/UpsellModal";
 
 // ─── DashboardLayout ──────────────────────────────────────────────────────────
 //
 // Two strict zones:
 //   /dashboard/admin/*  → AdminLayout (handled by its own layout.tsx, pass-through here)
-//   /dashboard/*        → CustomerLayout (DashboardHeader + DashboardSidebar)
+//   /dashboard/*        → CustomerLayout (DashboardHeader + UnifiedSidebar)
 //
 // Guard: Admin and Staff users are redirected to /dashboard/admin for ALL
 // customer routes — they must never see the customer shell.
@@ -30,11 +30,26 @@ export default function DashboardLayout({
 
   const isAdminRoute = pathname.startsWith("/dashboard/admin");
 
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll when sidebar open on mobile
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [sidebarOpen]);
+
   // ── Guard: redirect Admin/Staff out of the customer zone ──────────────────
   useEffect(() => {
-    if (isAdminRoute) return; // admin layout handles its own guards
+    if (isAdminRoute) return;
     if (isLoading || redirected.current) return;
-    if (!user) return; // unauthenticated — useProtectedRoute handles /login redirect
+    if (!user) return;
 
     const category = getRoleCategory(user.role);
     if (category === "admin" || category === "staff") {
@@ -59,10 +74,11 @@ export default function DashboardLayout({
   return (
     <div className="dash-shell">
       <DashboardHeader onMenuToggle={() => setSidebarOpen((o) => !o)} />
-      <div className="dash-shell__body">
-        <DashboardSidebar
-          open={sidebarOpen}
+      <div className="admin-layout" style={{ background: "#f4f6f4" }}>
+        <UnifiedSidebar
+          isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          headerHeight={60}
         />
         <main className="dash-shell__content">
           {children}
