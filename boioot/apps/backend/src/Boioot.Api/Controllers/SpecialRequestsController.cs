@@ -72,6 +72,7 @@ public class SpecialRequestsController : BaseController
     // ── Public endpoints ───────────────────────────────────────────────────────
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> Submit([FromBody] SubmitSpecialRequestDto dto, CancellationToken ct)
     {
         var userId = GetOptionalUserId();

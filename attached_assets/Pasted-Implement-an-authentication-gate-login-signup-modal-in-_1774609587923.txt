@@ -1,0 +1,153 @@
+Implement an authentication gate (login/signup modal) in the Special Requests form.
+
+GOAL
+When a non-authenticated user tries to submit a special request (or interact with the form), show a popup modal requiring login or account creation BEFORE allowing submission.
+
+IMPORTANT UX RULE
+Do NOT block the user immediately when opening the page.
+Let the user start typing first, then trigger auth when needed (best conversion practice).
+
+==================================================
+1) TRIGGER LOGIC
+==================================================
+
+Trigger the auth modal when:
+
+A) User clicks "إرسال الطلب"
+OR
+B) User focuses on important fields (optional advanced UX)
+
+Minimum requirement:
+- Trigger when clicking submit button
+
+Condition:
+IF user is NOT authenticated → show auth modal
+
+==================================================
+2) AUTH MODAL (POPUP)
+==================================================
+
+Create a modal (centered popup) with:
+
+Tabs or switch:
+- تسجيل الدخول
+- إنشاء حساب
+
+Fields for login:
+- phone/email
+- password
+
+Fields for signup:
+- name
+- phone
+- password
+
+UI:
+- clean modern modal
+- Arabic labels
+- mobile friendly
+- close button (X)
+
+Text example:
+"يرجى تسجيل الدخول أو إنشاء حساب لإرسال طلبك"
+
+==================================================
+3) PRESERVE USER INPUT (CRITICAL)
+==================================================
+
+When modal opens:
+- DO NOT lose the data user already typed
+
+Store form data temporarily:
+Options:
+- React state
+- localStorage (preferred for safety)
+
+After successful login/signup:
+- restore form data
+- allow user to continue submission
+- optionally auto-submit
+
+==================================================
+4) POST-AUTH FLOW
+==================================================
+
+After successful authentication:
+
+Option A (best UX):
+- close modal
+- keep user on same page
+- restore data
+- allow user to click submit again
+
+Option B (advanced):
+- auto-submit the request after login
+
+==================================================
+5) API / AUTH CHECK
+==================================================
+
+Before submitting request:
+
+- Check auth state (token/session)
+- If not authenticated → block API call and show modal
+- If authenticated → proceed normally
+
+==================================================
+6) REUSABILITY (IMPORTANT)
+==================================================
+
+Make this modal reusable:
+
+- Can be used later in:
+  - adding listings
+  - messaging
+  - saving favorites
+  - commenting
+
+Create it as:
+<AuthModal />
+
+==================================================
+7) OPTIONAL UX IMPROVEMENTS
+==================================================
+
+- Show small hint under submit button:
+  "سيُطلب منك تسجيل الدخول قبل إرسال الطلب"
+
+- Allow guest typing but not submission
+
+- Add loading state after login
+
+==================================================
+8) EDGE CASES
+==================================================
+
+- If user closes modal → keep typed data
+- If login fails → show error without losing form
+- If session expires → re-trigger modal
+
+==================================================
+9) SECURITY
+==================================================
+
+- Do not allow request submission without authentication
+- Validate again in backend (not frontend only)
+
+==================================================
+10) DELIVERABLES
+==================================================
+
+1) Auth modal component (login + signup)
+2) Integration with special request form
+3) Trigger on submit when user is not logged in
+4) Data preservation before login
+5) Restore after login
+6) No page reload
+7) Clean Arabic UI
+
+IMPORTANT
+- Do NOT redirect to a separate login page
+- Use modal only
+- Do NOT lose user input
+- Keep UX smooth and fast

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useContent } from "@/context/ContentContext";
 import { api } from "@/lib/api";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 import {
   getSpecialRequestTypes,
   submitSpecialRequest,
@@ -12,27 +13,27 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MAX_FILES   = 5;
-const MAX_MB      = 10;
-const MAX_BYTES   = MAX_MB * 1024 * 1024;
-const ALLOWED_EXT = [".jpg", ".jpeg", ".png", ".pdf"];
-const ALLOWED_MIME= ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+const MAX_FILES    = 5;
+const MAX_MB       = 10;
+const MAX_BYTES    = MAX_MB * 1024 * 1024;
+const ALLOWED_EXT  = [".jpg", ".jpeg", ".png", ".pdf"];
+const ALLOWED_MIME = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
 
 const EMPTY_FORM: SubmitSpecialRequestDto = {
-  fullName:    "",
-  phone:       "",
-  whatsApp:    "",
-  email:       "",
-  requestType: "",
-  message:     "",
-  source:      "web",
+  fullName:       "",
+  phone:          "",
+  whatsApp:       "",
+  email:          "",
+  requestType:    "",
+  message:        "",
+  source:         "web",
   attachmentUrls: [],
 };
 
 interface AttachFile {
-  name:   string;
-  url:    string;
-  isPdf:  boolean;
+  name:  string;
+  url:   string;
+  isPdf: boolean;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -42,24 +43,30 @@ export default function SpecialRequestsPage() {
   const description = useContent("special_requests.description",  "هل تبحث عن عقار بمواصفات خاصة؟ أرسل لنا طلبك وسيتواصل معك فريقنا لمساعدتك في العثور على العقار المناسب.");
   const ctaText     = useContent("special_requests.cta_text",    "أضف طلبك الآن");
 
-  const [types, setTypes]         = useState<SpecialRequestType[]>([]);
-  const [form, setForm]           = useState<SubmitSpecialRequestDto>(EMPTY_FORM);
-  const [errors, setErrors]       = useState<Partial<Record<keyof SubmitSpecialRequestDto, string>>>({});
-  const [loading, setLoading]     = useState(false);
-  const [success, setSuccess]     = useState(false);
-  const [apiError, setApiError]   = useState("");
+  // Auth
+  const { isAuthenticated, openAuthModal } = useRequireAuth();
+
+  // Types
+  const [types, setTypes] = useState<SpecialRequestType[]>([]);
+
+  // Form
+  const [form, setForm]         = useState<SubmitSpecialRequestDto>(EMPTY_FORM);
+  const [errors, setErrors]     = useState<Partial<Record<keyof SubmitSpecialRequestDto, string>>>({});
+  const [loading, setLoading]   = useState(false);
+  const [success, setSuccess]   = useState(false);
+  const [apiError, setApiError] = useState("");
 
   // Attachments
-  const [attachFiles, setAttachFiles]         = useState<AttachFile[]>([]);
-  const [uploadingFiles, setUploadingFiles]   = useState(false);
-  const [fileError, setFileError]             = useState("");
+  const [attachFiles, setAttachFiles]       = useState<AttachFile[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [fileError, setFileError]           = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getSpecialRequestTypes().then(setTypes).catch(() => setTypes([]));
   }, []);
 
-  // ── Validation ─────────────────────────────────────────────────────────────
+  // ── Validation ──────────────────────────────────────────────────────────────
 
   function validate() {
     const e: typeof errors = {};
@@ -71,25 +78,58 @@ export default function SpecialRequestsPage() {
     return e;
   }
 
+  // ── Actual API submission (called after auth is confirmed) ──────────────────
+
+  async function doSubmit(urls: string[]) {
+    setLoading(true);
+    setApiError("");
+    try {
+      await submitSpecialRequest({
+        ...form,
+        whatsApp:       form.whatsApp || undefined,
+        attachmentUrls: urls,
+      });
+      setSuccess(true);
+    } catch {
+      setApiError("حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Submit handler — triggers auth gate if needed ───────────────────────────
+
+  function handleSubmit(ev: React.FormEvent) {
+    ev.preventDefault();
+
+    const e = validate();
+    if (Object.keys(e).length > 0) { setErrors(e); return; }
+    setErrors({});
+
+    const urls = attachFiles.map(a => a.url);
+
+    if (!isAuthenticated) {
+      // Open auth modal — on success the callback fires doSubmit automatically
+      openAuthModal(() => doSubmit(urls));
+      return;
+    }
+
+    doSubmit(urls);
+  }
+
   // ── File upload ─────────────────────────────────────────────────────────────
 
   async function handleFileChange(ev: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(ev.target.files ?? []);
     if (!files.length) return;
     ev.target.value = "";
-
     setFileError("");
 
     const remaining = MAX_FILES - attachFiles.length;
-    if (remaining <= 0) {
-      setFileError(`الحد الأقصى ${MAX_FILES} ملفات`);
-      return;
-    }
+    if (remaining <= 0) { setFileError(`الحد الأقصى ${MAX_FILES} ملفات`); return; }
 
     const toUpload = files.slice(0, remaining);
-    const invalid  = toUpload.filter(f =>
-      !ALLOWED_MIME.includes(f.type) || f.size > MAX_BYTES
-    );
+    const invalid  = toUpload.filter(f => !ALLOWED_MIME.includes(f.type) || f.size > MAX_BYTES);
 
     if (invalid.length > 0) {
       setFileError("بعض الملفات غير مدعومة أو تجاوزت 10MB. المدعومة: JPG، PNG، PDF");
@@ -122,34 +162,12 @@ export default function SpecialRequestsPage() {
     setForm(f => ({ ...f, attachmentUrls: updated.map(a => a.url) }));
   }
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
-
-  async function handleSubmit(ev: React.FormEvent) {
-    ev.preventDefault();
-    const e = validate();
-    if (Object.keys(e).length > 0) { setErrors(e); return; }
-    setErrors({});
-    setLoading(true);
-    setApiError("");
-    try {
-      await submitSpecialRequest({
-        ...form,
-        whatsApp:       form.whatsApp || undefined,
-        attachmentUrls: attachFiles.map(a => a.url),
-      });
-      setSuccess(true);
-    } catch {
-      setApiError("حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function resetAll() {
     setSuccess(false);
     setForm(EMPTY_FORM);
     setAttachFiles([]);
     setFileError("");
+    setApiError("");
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -265,15 +283,11 @@ export default function SpecialRequestsPage() {
                 </span>
               </label>
 
-              {/* Drop zone */}
               <div
                 onClick={() => !uploadingFiles && attachFiles.length < MAX_FILES && fileInputRef.current?.click()}
                 style={{
-                  border: "2px dashed #d0d5dd",
-                  borderRadius: 10,
-                  padding: "20px",
-                  textAlign: "center",
-                  background: "#fafafa",
+                  border: "2px dashed #d0d5dd", borderRadius: 10, padding: "20px",
+                  textAlign: "center", background: "#fafafa",
                   cursor: attachFiles.length >= MAX_FILES ? "not-allowed" : "pointer",
                   opacity: attachFiles.length >= MAX_FILES ? 0.5 : 1,
                   transition: "border-color 0.2s",
@@ -292,20 +306,11 @@ export default function SpecialRequestsPage() {
                 </p>
               </div>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept={ALLOWED_EXT.join(",")}
-                onChange={handleFileChange}
-                style={{ display: "none" }}
-              />
+              <input ref={fileInputRef} type="file" multiple accept={ALLOWED_EXT.join(",")}
+                onChange={handleFileChange} style={{ display: "none" }} />
 
-              {fileError && (
-                <p style={{ color: "#e63946", fontSize: 12, margin: "6px 0 0" }}>{fileError}</p>
-              )}
+              {fileError && <p style={{ color: "#e63946", fontSize: 12, margin: "6px 0 0" }}>{fileError}</p>}
 
-              {/* Uploaded files list */}
               {attachFiles.length > 0 && (
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                   {attachFiles.map((f, i) => (
@@ -316,34 +321,22 @@ export default function SpecialRequestsPage() {
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: 18 }}>{f.isPdf ? "📄" : "🖼️"}</span>
-                        <a
-                          href={f.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            fontSize: 13, color: "#1d4ed8", textDecoration: "none",
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                          }}
-                        >
-                          {f.name}
-                        </a>
+                        <a href={f.url} target="_blank" rel="noreferrer" style={{
+                          fontSize: 13, color: "#1d4ed8", textDecoration: "none",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>{f.name}</a>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        style={{
-                          background: "none", border: "none", color: "#e63946",
-                          cursor: "pointer", fontSize: 16, padding: "0 4px", flexShrink: 0,
-                        }}
-                      >
-                        ✕
-                      </button>
+                      <button type="button" onClick={() => removeFile(i)} style={{
+                        background: "none", border: "none", color: "#e63946",
+                        cursor: "pointer", fontSize: 16, padding: "0 4px", flexShrink: 0,
+                      }}>✕</button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
+            {/* ── Submit ───────────────────────────────────────────────────── */}
             <button type="submit" disabled={loading || uploadingFiles} style={{
               marginTop: 28, width: "100%",
               background: (loading || uploadingFiles) ? "#999" : "#e63946",
@@ -352,8 +345,20 @@ export default function SpecialRequestsPage() {
               cursor: (loading || uploadingFiles) ? "not-allowed" : "pointer",
               transition: "background 0.2s",
             }}>
-              {loading ? "جاري الإرسال..." : uploadingFiles ? "يرجى انتظار اكتمال الرفع..." : "إرسال الطلب"}
+              {loading        ? "جاري الإرسال..."
+               : uploadingFiles ? "يرجى انتظار اكتمال الرفع..."
+               : "إرسال الطلب"}
             </button>
+
+            {/* Auth hint for guests */}
+            {!isAuthenticated && (
+              <p style={{
+                marginTop: 10, textAlign: "center", fontSize: 12,
+                color: "#9ca3af", lineHeight: 1.5,
+              }}>
+                🔐 سيُطلب منك تسجيل الدخول أو إنشاء حساب قبل إرسال الطلب
+              </p>
+            )}
           </form>
         )}
       </div>
@@ -377,7 +382,8 @@ function inputStyle(hasError = false): React.CSSProperties {
   return {
     width: "100%", padding: "11px 14px", borderRadius: 8,
     border: `1.5px solid ${hasError ? "#e63946" : "#e0e0e0"}`,
-    fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "#fafafa",
+    fontSize: 15, outline: "none", boxSizing: "border-box",
+    fontFamily: "inherit", background: "#fafafa",
   };
 }
 
