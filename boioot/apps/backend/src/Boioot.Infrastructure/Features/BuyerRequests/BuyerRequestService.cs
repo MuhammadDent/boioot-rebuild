@@ -2,19 +2,28 @@ using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.BuyerRequests.DTOs;
 using Boioot.Application.Features.BuyerRequests.Interfaces;
+using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Domain.Entities;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Boioot.Infrastructure.Features.BuyerRequests;
 
 public class BuyerRequestService : IBuyerRequestService
 {
     private readonly BoiootDbContext _context;
+    private readonly IUserNotificationService _notifications;
+    private readonly ILogger<BuyerRequestService> _logger;
 
-    public BuyerRequestService(BoiootDbContext context)
+    public BuyerRequestService(
+        BoiootDbContext context,
+        IUserNotificationService notifications,
+        ILogger<BuyerRequestService> logger)
     {
-        _context = context;
+        _context       = context;
+        _notifications = notifications;
+        _logger        = logger;
     }
 
     // ── Create ───────────────────────────────────────────────────────────────
@@ -147,20 +156,30 @@ public class BuyerRequestService : IBuyerRequestService
         var exists = await _context.BuyerRequests.AnyAsync(r => r.Id == requestId, ct);
         if (!exists) throw new BoiootException("الطلب غير موجود", 404);
 
-        return await _context.BuyerRequestComments
+        // Materialize to in-memory list first, then project.
+        // Cannot call MapComment inside IQueryable.Select() because MapComment has an
+        // optional parameter (actorName), which causes CS0854 in expression trees.
+        var rows = await _context.BuyerRequestComments
             .Include(c => c.User)
             .Where(c => c.BuyerRequestId == requestId)
             .OrderBy(c => c.CreatedAt)
             .AsNoTracking()
-            .Select(c => MapComment(c))
             .ToListAsync(ct);
+
+        return rows.Select(c => MapComment(c)).ToList();
     }
 
     public async Task<BuyerRequestCommentResponse> AddCommentAsync(
         Guid userId, Guid requestId, AddCommentDto dto, CancellationToken ct = default)
     {
-        var exists = await _context.BuyerRequests.AnyAsync(r => r.Id == requestId && r.IsPublished, ct);
-        if (!exists) throw new BoiootException("الطلب غير موجود", 404);
+        // Fetch the request to validate existence AND retrieve the owner's UserId.
+        // We need the owner to send a notification — do NOT use AnyAsync here.
+        var request = await _context.BuyerRequests
+            .Where(r => r.Id == requestId && r.IsPublished)
+            .Select(r => new { r.UserId, r.Title })
+            .FirstOrDefaultAsync(ct);
+
+        if (request is null) throw new BoiootException("الطلب غير موجود", 404);
 
         var comment = new BuyerRequestComment
         {
@@ -172,13 +191,54 @@ public class BuyerRequestService : IBuyerRequestService
         _context.BuyerRequestComments.Add(comment);
         await _context.SaveChangesAsync(ct);
 
-        var user = await _context.Users
+        // Fetch commenter's name for notification body and comment response.
+        var actorName = await _context.Users
             .Where(u => u.Id == userId)
             .Select(u => u.FullName)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(ct) ?? "";
 
-        comment.User = new User { FullName = user ?? "" };
-        return MapComment(comment);
+        // NOTE: Do NOT assign comment.User = new User{...} on the tracked entity.
+        // Assigning a new (untracked) User to a tracked entity's nav property causes
+        // EF Core's change-tracker to queue it for INSERT, which then conflicts with
+        // the Notifications SaveChangesAsync below.  Pass the name directly instead.
+
+        // ── Notification: notify request owner (skip if owner replied to own request) ──
+        if (request.UserId != userId)
+        {
+            _logger.LogInformation(
+                "[BuyerRequest] Sending REQUEST_COMMENT notification — requestId={RequestId}, ownerId={OwnerId}, actorId={ActorId}, actorName={ActorName}",
+                requestId, request.UserId, userId, actorName);
+
+            try
+            {
+                await _notifications.CreateAsync(
+                    userId            : request.UserId,
+                    type              : "request_comment",
+                    title             : "رد جديد على طلبك",
+                    body              : $"قام {actorName} بالرد على طلبك: {request.Title}",
+                    relatedEntityId   : requestId.ToString(),
+                    relatedEntityType : "BuyerRequest",
+                    ct                : ct);
+
+                _logger.LogInformation(
+                    "[BuyerRequest] Notification created successfully for ownerId={OwnerId}", request.UserId);
+            }
+            catch (Exception ex)
+            {
+                // Never let a notification failure break the comment creation.
+                _logger.LogError(ex,
+                    "[BuyerRequest] Failed to create REQUEST_COMMENT notification for ownerId={OwnerId}",
+                    request.UserId);
+            }
+        }
+        else
+        {
+            _logger.LogDebug(
+                "[BuyerRequest] Skipping self-notification — owner replied to own request (requestId={RequestId})",
+                requestId);
+        }
+
+        return MapComment(comment, actorName);
     }
 
     public async Task DeleteCommentAsync(Guid userId, Guid commentId, CancellationToken ct = default)
@@ -212,12 +272,14 @@ public class BuyerRequestService : IBuyerRequestService
         UpdatedAt     = r.UpdatedAt,
     };
 
-    private static BuyerRequestCommentResponse MapComment(BuyerRequestComment c) => new()
+    // actorName overrides the navigation property — avoids EF change-tracker issues
+    // when the caller cannot safely set c.User = new User{...} on a tracked entity.
+    private static BuyerRequestCommentResponse MapComment(BuyerRequestComment c, string? actorName = null) => new()
     {
         Id             = c.Id,
         Content        = c.Content,
         UserId         = c.UserId,
-        UserName       = c.User?.FullName ?? "",
+        UserName       = actorName ?? c.User?.FullName ?? "",
         BuyerRequestId = c.BuyerRequestId,
         CreatedAt      = c.CreatedAt,
     };

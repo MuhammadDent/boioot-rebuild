@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { notificationsApi, type NotificationItem } from "@/features/notifications/api";
 
 // ─── Bell icon ────────────────────────────────────────────────────────────────
@@ -48,13 +49,27 @@ function typeIcon(type: string): string {
     trial_warning:       "⚠️",
     trial_limit_reached: "🚫",
     system_alert:        "🔔",
+    request_comment:     "💬",
   };
   return map[type] ?? "🔔";
+}
+
+// ─── Deep link resolver ────────────────────────────────────────────────────────
+// Maps notification relatedEntityType + relatedEntityId → navigable URL.
+
+function resolveNotificationLink(n: NotificationItem): string | null {
+  if (!n.relatedEntityId || !n.relatedEntityType) return null;
+  switch (n.relatedEntityType) {
+    case "BuyerRequest": return `/requests/${n.relatedEntityId}`;
+    case "Property":     return `/properties/${n.relatedEntityId}`;
+    default:             return null;
+  }
 }
 
 // ─── NotificationsBell ────────────────────────────────────────────────────────
 
 export default function NotificationsBell() {
+  const router = useRouter();
   const [open,        setOpen]        = useState(false);
   const [unread,      setUnread]      = useState(0);
   const [items,       setItems]       = useState<NotificationItem[]>([]);
@@ -116,6 +131,15 @@ export default function NotificationsBell() {
       prev.map(n => n.id === id ? { ...n, isRead: true } : n)
     );
     setUnread(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNotificationClick = async (n: NotificationItem) => {
+    if (!n.isRead) await handleMarkRead(n.id);
+    const link = resolveNotificationLink(n);
+    if (link) {
+      setOpen(false);
+      router.push(link);
+    }
   };
 
   const handleMarkAll = async () => {
@@ -265,7 +289,9 @@ export default function NotificationsBell() {
             </div>
           ) : (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {items.map(n => (
+              {items.map(n => {
+                const link = resolveNotificationLink(n);
+                return (
                 <li
                   key={n.id}
                   style={{
@@ -274,10 +300,10 @@ export default function NotificationsBell() {
                     padding:         "12px 16px",
                     background:      n.isRead ? "#fff" : "#f0fdf4",
                     borderBottom:    "1px solid #f3f4f6",
-                    cursor:          n.isRead ? "default" : "pointer",
+                    cursor:          (!n.isRead || link) ? "pointer" : "default",
                     transition:      "background 0.15s",
                   }}
-                  onClick={() => { if (!n.isRead) handleMarkRead(n.id); }}
+                  onClick={() => handleNotificationClick(n)}
                 >
                   <span style={{ fontSize: "18px", flexShrink: 0, lineHeight: 1.4 }}>
                     {typeIcon(n.type)}
@@ -330,7 +356,8 @@ export default function NotificationsBell() {
                     />
                   )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </div>

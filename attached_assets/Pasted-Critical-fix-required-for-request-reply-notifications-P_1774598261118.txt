@@ -1,0 +1,133 @@
+Critical fix required for request reply notifications.
+
+Problem:
+When an Office account publishes a request and another user replies/comments on that request, the request owner does NOT receive any notification, alert, badge update, or dashboard signal.
+
+This is a core messaging/notification bug.
+
+========================================
+GOAL
+========================================
+
+Whenever someone replies/comments on a request:
+- the request owner must receive a notification
+- the notification must appear in the notification system
+- unread count/badge must update
+- the notification must open the correct request details page
+- this must work for Office accounts, Company accounts, Broker accounts, Owner accounts, and normal users according to the business rules
+
+========================================
+REQUIRED FIX
+========================================
+
+1) Audit request reply flow
+Find the code path where a reply/comment is created on a request.
+After a successful reply creation, trigger a notification event for the request owner.
+
+2) Create notification on reply
+When a user replies to a request:
+- identify the request owner correctly
+- create a notification record for that owner
+- notification type example:
+  REQUEST_REPLY
+or
+  REQUEST_COMMENT
+
+Suggested payload:
+- recipient user/account id
+- actor id
+- request id
+- reply id
+- title
+- message
+- read status = unread
+- createdAt
+- deep link URL to the request detail page
+
+3) Correct recipient resolution
+This is very important:
+Do not notify the replier.
+Notify the OWNER of the request.
+
+For business accounts, correctly resolve the owning account/user.
+Do not confuse:
+- current logged-in user
+- account owner
+- office/company profile id
+- listing/request creator id
+
+The recipient must be the account that owns the request.
+
+4) Show notification in UI
+Ensure the created notification appears in:
+- bell icon dropdown / notification panel
+- notifications page if it exists
+- unread badge counter
+- any dashboard notification widget
+
+5) Add proper Arabic message
+Examples:
+- تم إضافة رد جديد على طلبك
+- قام [اسم المستخدم] بالرد على طلبك
+- لديك تعليق جديد على طلب: [عنوان الطلب]
+
+6) Clicking notification should navigate correctly
+Notification should open the correct request details page, for example:
+- /requests/{id}
+or the correct dashboard/public route used by the app
+
+7) Update unread counters
+When a new reply notification is created:
+- unread count should increment
+- bell badge should reflect the new state
+- after opening/reading, it should be markable as read
+
+8) Cover both comments and replies
+If your system distinguishes between:
+- comment on request
+- reply to comment
+Then both should notify the request owner as needed.
+If threaded replies exist, also consider notifying the parent comment owner when appropriate, but at minimum the request owner must always be notified.
+
+9) Ensure it works for all account types
+Test at least these scenarios:
+- Office posts request → normal user replies → Office gets notification
+- Broker posts request → another account replies → Broker gets notification
+- Owner posts request → broker replies → Owner gets notification
+- Company posts request → office replies → Company gets notification
+
+10) Backend/data-layer enforcement
+Do not make this frontend-only.
+The notification must be generated in the backend/service layer or the real mutation flow that creates the reply.
+
+11) Avoid duplicates
+Do not create duplicate notifications for the same single action unless intended.
+One reply action = one notification event to the request owner.
+
+12) Logging/debugging
+Add temporary logs if needed to confirm:
+- who is the request owner
+- who is the actor
+- whether notification creation succeeded
+- why it failed if no notification was stored
+
+13) Final verification
+After implementing, verify:
+- request reply is saved
+- notification record is created
+- bell badge updates
+- notification appears in UI
+- clicking it opens the relevant request
+- unread/read state works properly
+
+========================================
+REPORT BACK
+========================================
+
+After fixing, report:
+1. root cause
+2. where notification creation was missing or broken
+3. which files were changed
+4. how recipient resolution now works
+5. how unread badge is updated
+6. test result for Office account scenario
