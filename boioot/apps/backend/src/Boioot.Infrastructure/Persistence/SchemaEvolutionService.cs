@@ -600,6 +600,30 @@ public sealed class SchemaEvolutionService
 
         // ── Threaded comments: add ParentCommentId to BuyerRequestComments ────
         await TryAlter("BuyerRequestComments", "ParentCommentId", "TEXT", ct);
+
+        // ── SpecialRequests ────────────────────────────────────────────────────
+        await TryExec(@"
+            CREATE TABLE IF NOT EXISTS SpecialRequests (
+                Id               TEXT NOT NULL PRIMARY KEY,
+                PublicCode       TEXT NOT NULL DEFAULT '',
+                CreatedByUserId  TEXT,
+                FullName         TEXT NOT NULL DEFAULT '',
+                Phone            TEXT NOT NULL DEFAULT '',
+                WhatsApp         TEXT,
+                Email            TEXT,
+                Message          TEXT NOT NULL DEFAULT '',
+                Status           TEXT NOT NULL DEFAULT 'New',
+                Source           TEXT,
+                AssignedToUserId TEXT,
+                NotesInternal    TEXT,
+                ClosedAt         TEXT,
+                CreatedAt        TEXT NOT NULL DEFAULT (datetime('now')),
+                UpdatedAt        TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (CreatedByUserId)  REFERENCES Users(Id) ON DELETE SET NULL,
+                FOREIGN KEY (AssignedToUserId) REFERENCES Users(Id) ON DELETE SET NULL
+            )", ct);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_SpecialRequests_Status ON SpecialRequests(Status)", ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_SpecialRequests_CreatedAt ON SpecialRequests(CreatedAt DESC)", ct, warnOnError: true);
     }
 
     // ── Helper methods ────────────────────────────────────────────────────────

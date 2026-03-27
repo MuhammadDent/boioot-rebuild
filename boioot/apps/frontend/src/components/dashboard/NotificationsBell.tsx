@@ -52,6 +52,7 @@ function typeIcon(type: string): string {
     request_comment:              "💬",
     request_reply:                "↩️",
     request_discussion_activity:  "💬",
+    special_request_new:          "📋",
   };
   return map[type] ?? "🔔";
 }

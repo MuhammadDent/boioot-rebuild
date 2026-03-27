@@ -105,6 +105,11 @@ export default function HomePage() {
   const heroCtaUrl   = useContent("home.hero.primaryCtaUrl",  "/properties");
   const heroImage    = useContent("home.hero.image",          "https://images.unsplash.com/photo-1613977257592-4871e5fcd7c4?w=1600&q=80");
 
+  const srHomepageShow  = useContent("special_requests.homepage_show",  "true");
+  const srHomepageTitle = useContent("special_requests.homepage_title", "هل تبحث عن عقار بمواصفات خاصة؟");
+  const srHomepageDesc  = useContent("special_requests.homepage_desc",  "أرسل طلبك الآن وسنساعدك في العثور على العقار المناسب بأسرع وقت ممكن");
+  const srCtaText       = useContent("special_requests.cta_text",       "أضف طلبك الآن");
+
   const slides = [
     { image: heroImage, title: heroTitle, subtitle: heroSubtitle, btnText: heroCtaText, btnHref: heroCtaUrl },
     ...STATIC_SLIDES,
@@ -650,6 +655,39 @@ export default function HomePage() {
         </aside>
         </div>{/* home-main-layout */}
       </div>{/* home-main-wrap */}
+
+      {/* ── SPECIAL REQUESTS BANNER ──────────────────────────────────────────── */}
+      {srHomepageShow === "true" && (
+        <div style={{
+          background: "linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)",
+          padding: "56px 24px",
+          textAlign: "center",
+          color: "#fff",
+          marginTop: 32,
+        }}>
+          <h2 style={{ fontSize: "clamp(1.4rem, 3vw, 2rem)", fontWeight: 800, margin: "0 0 12px" }}>
+            {srHomepageTitle}
+          </h2>
+          <p style={{ fontSize: "clamp(0.95rem, 2vw, 1.1rem)", opacity: 0.85, maxWidth: 560, margin: "0 auto 28px", lineHeight: 1.7 }}>
+            {srHomepageDesc}
+          </p>
+          <a
+            href="/special-requests"
+            style={{
+              display: "inline-block",
+              background: "#e63946",
+              color: "#fff",
+              padding: "14px 36px",
+              borderRadius: 10,
+              fontWeight: 700,
+              fontSize: "1rem",
+              textDecoration: "none",
+            }}
+          >
+            {srCtaText}
+          </a>
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

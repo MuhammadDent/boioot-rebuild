@@ -83,6 +83,25 @@ public sealed class SiteContentSeeder
 
             Item("general.supportWhatsappUrl",   "general", "url",   "رابط واتساب الدعم",     "Support WhatsApp URL",
                  "", null, 20),
+
+            // ── Special Requests (lead capture) ───────────────────────────────
+            Item("special_requests.title",          "home", "text",     "عنوان صفحة الطلبات الخاصة",    "Special Requests Page Title",
+                 "الطلبات الخاصة", null, 60),
+
+            Item("special_requests.description",    "home", "textarea", "وصف صفحة الطلبات الخاصة",      "Special Requests Page Description",
+                 "هل تبحث عن عقار بمواصفات خاصة؟ أرسل لنا طلبك وسيتواصل معك فريقنا لمساعدتك في العثور على العقار المناسب.", null, 61),
+
+            Item("special_requests.cta_text",       "home", "text",     "نص زر الطلبات الخاصة",         "Special Requests CTA Text",
+                 "أضف طلبك الآن", null, 62),
+
+            Item("special_requests.homepage_title", "home", "text",     "عنوان قسم الطلبات في الرئيسية", "Homepage Special Requests Section Title",
+                 "هل تبحث عن عقار بمواصفات خاصة؟", null, 63),
+
+            Item("special_requests.homepage_desc",  "home", "textarea", "وصف قسم الطلبات في الرئيسية",  "Homepage Special Requests Section Description",
+                 "أرسل طلبك الآن وسنساعدك في العثور على العقار المناسب بأسرع وقت ممكن", null, 64),
+
+            Item("special_requests.homepage_show",  "home", "text",     "إظهار قسم الطلبات في الرئيسية","Show Homepage Special Requests Section",
+                 "true", null, 65),
         };
 
         foreach (var def in defaults)

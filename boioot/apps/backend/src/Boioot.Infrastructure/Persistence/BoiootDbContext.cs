@@ -32,6 +32,7 @@ public class BoiootDbContext : DbContext
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<BuyerRequest> BuyerRequests => Set<BuyerRequest>();
     public DbSet<BuyerRequestComment> BuyerRequestComments => Set<BuyerRequestComment>();
+    public DbSet<SpecialRequest> SpecialRequests => Set<SpecialRequest>();
     public DbSet<PropertyListingType> PropertyListingTypes => Set<PropertyListingType>();
     public DbSet<PropertyTypeConfig> PropertyTypeConfigs => Set<PropertyTypeConfig>();
     public DbSet<OwnershipTypeConfig> OwnershipTypeConfigs => Set<OwnershipTypeConfig>();
