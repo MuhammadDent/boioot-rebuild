@@ -43,8 +43,16 @@ public class DashboardService : IDashboardService
 
         var totalProperties    = await propertyQuery.CountAsync(ct);
         var totalProjects      = await projectQuery.CountAsync(ct);
-        var totalRequests      = await requestQuery.CountAsync(ct);
-        var newRequests        = await requestQuery.CountAsync(r => r.Status == RequestStatus.New, ct);
+
+        // Combine total + new requests into a single GROUP BY round-trip
+        var requestsByStatus = await requestQuery
+            .GroupBy(r => r.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        var totalRequests = requestsByStatus.Sum(x => x.Count);
+        var newRequests   = requestsByStatus
+            .FirstOrDefault(x => x.Status == RequestStatus.New)?.Count ?? 0;
+
         var totalConversations = await CountConversationsAsync(userId, ct);
         var unreadMessages     = await CountUnreadMessagesAsync(userId, ct);
 
@@ -73,12 +81,14 @@ public class DashboardService : IDashboardService
                 accountId.Value, SubscriptionKeys.AnalyticsDashboard, ct);
 
             listingsUsed = await _context.Properties
+                .AsNoTracking()
                 .Where(p => p.AccountId == accountId.Value
                          && p.IsDeleted == false
                          && (p.Status == PropertyStatus.Available || p.Status == PropertyStatus.Inactive))
                 .CountAsync(ct);
 
             agentsUsed = await _context.AccountUsers
+                .AsNoTracking()
                 .Where(au => au.AccountId == accountId.Value
                           && au.OrganizationUserRole == OrganizationUserRole.Agent
                           && au.IsActive == true)
@@ -148,8 +158,14 @@ public class DashboardService : IDashboardService
             : 0;
 
         // ── KPI: requests & views ──────────────────────────────────────────
-        int  totalRequests = await reqQuery.CountAsync(ct);
-        int  newRequests   = await reqQuery.CountAsync(r => r.Status == RequestStatus.New, ct);
+        // Combine total + new requests into one GROUP BY round-trip
+        var reqStatusGroups = await reqQuery
+            .GroupBy(r => r.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        int  totalRequests = reqStatusGroups.Sum(x => x.Count);
+        int  newRequests   = reqStatusGroups
+            .FirstOrDefault(x => x.Status == RequestStatus.New)?.Count ?? 0;
         long totalViews    = await propQuery.SumAsync(p => (long)p.ViewCount, ct);
 
         // ── Monthly trends (last 6 months) ────────────────────────────────
@@ -370,6 +386,7 @@ public class DashboardService : IDashboardService
             return new DashboardScope(IsAdmin: true, UserId: userId, CompanyId: null, AgentId: null);
 
         var agent = await _context.Agents
+            .AsNoTracking()
             .Where(a => a.UserId == userId)
             .Select(a => new { a.Id, a.CompanyId })
             .FirstOrDefaultAsync(ct);
@@ -390,7 +407,7 @@ public class DashboardService : IDashboardService
 
     private IQueryable<Property> GetScopedPropertyQuery(DashboardScope scope)
     {
-        var query = _context.Properties.AsQueryable();
+        var query = _context.Properties.AsNoTracking();
         if (scope.IsAdmin) return query;
 
         var ownerIdStr = scope.UserId.ToString();
@@ -410,7 +427,7 @@ public class DashboardService : IDashboardService
 
     private IQueryable<Project> GetScopedProjectQuery(DashboardScope scope)
     {
-        var query = _context.Projects.AsQueryable();
+        var query = _context.Projects.AsNoTracking();
         if (scope.IsAdmin) return query;
         if (scope.CompanyId.HasValue) return query.Where(p => p.CompanyId == scope.CompanyId.Value);
         return query.Where(_ => false);
@@ -418,12 +435,13 @@ public class DashboardService : IDashboardService
 
     private IQueryable<Request> GetScopedRequestQuery(DashboardScope scope)
     {
-        var query = _context.Requests.AsQueryable();
+        var query = _context.Requests.AsNoTracking();
         if (scope.IsAdmin) return query;
 
         if (scope.AgentId.HasValue)
         {
             var agentPropertyIds = _context.Properties
+                .AsNoTracking()
                 .Where(p => p.AgentId == scope.AgentId.Value)
                 .Select(p => p.Id);
 
@@ -434,10 +452,12 @@ public class DashboardService : IDashboardService
         if (scope.CompanyId.HasValue)
         {
             var companyPropertyIds = _context.Properties
+                .AsNoTracking()
                 .Where(p => p.CompanyId == scope.CompanyId.Value)
                 .Select(p => p.Id);
 
             var companyProjectIds = _context.Projects
+                .AsNoTracking()
                 .Where(p => p.CompanyId == scope.CompanyId.Value)
                 .Select(p => p.Id);
 
@@ -452,11 +472,11 @@ public class DashboardService : IDashboardService
     // ── Messaging count helpers ──────────────────────────────────────────────
 
     private Task<int> CountConversationsAsync(Guid userId, CancellationToken ct) =>
-        _context.Conversations.CountAsync(
+        _context.Conversations.AsNoTracking().CountAsync(
             c => c.User1Id == userId || c.User2Id == userId, ct);
 
     private Task<int> CountUnreadMessagesAsync(Guid userId, CancellationToken ct) =>
-        _context.Messages.CountAsync(
+        _context.Messages.AsNoTracking().CountAsync(
             m => m.SenderId != userId
               && !m.IsRead
               && (m.Conversation.User1Id == userId || m.Conversation.User2Id == userId), ct);

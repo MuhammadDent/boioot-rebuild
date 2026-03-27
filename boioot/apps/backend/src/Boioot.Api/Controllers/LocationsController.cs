@@ -24,7 +24,10 @@ public class LocationsController : BaseController
     [AllowAnonymous]
     public async Task<IActionResult> GetProvinces(CancellationToken ct = default)
     {
+        Response.Headers.Append("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+
         var provinces = await _db.LocationCities
+            .AsNoTracking()
             .Where(c => c.IsActive && !string.IsNullOrEmpty(c.Province))
             .Select(c => c.Province)
             .Distinct()
@@ -43,7 +46,9 @@ public class LocationsController : BaseController
         [FromQuery] bool    includeInactive = false,
         CancellationToken   ct = default)
     {
-        var query = _db.LocationCities.AsQueryable();
+        Response.Headers.Append("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+
+        var query = _db.LocationCities.AsNoTracking();
 
         if (!includeInactive)
             query = query.Where(c => c.IsActive);
@@ -102,7 +107,9 @@ public class LocationsController : BaseController
         [FromQuery] bool    includeInactive = false,
         CancellationToken   ct = default)
     {
-        var query = _db.LocationNeighborhoods.AsQueryable();
+        Response.Headers.Append("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
+
+        var query = _db.LocationNeighborhoods.AsNoTracking();
 
         if (!includeInactive)
             query = query.Where(n => n.IsActive);

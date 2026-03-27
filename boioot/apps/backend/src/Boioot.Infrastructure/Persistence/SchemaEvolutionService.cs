@@ -651,6 +651,21 @@ public sealed class SchemaEvolutionService
               ('00000100-0000-0000-0000-000000000004', 'خدمات خاصة',   'special', 4, 1),
               ('00000100-0000-0000-0000-000000000005', 'خدمات قانونية','legal',   5, 1)
         ", ct);
+
+        // ── Properties table performance indexes ──────────────────────────────
+        // These indexes cover the most common WHERE and ORDER BY clauses used
+        // across public listing pages, dashboard analytics, and admin views.
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_Status      ON Properties(Status)",                         ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_City        ON Properties(City)",                           ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_ListingType ON Properties(ListingType)",                    ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_CreatedAt   ON Properties(CreatedAt DESC)",                 ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_IsDeleted   ON Properties(IsDeleted)",                     ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_OwnerId     ON Properties(OwnerId)",                       ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_CompanyId   ON Properties(CompanyId)",                     ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_AccountId   ON Properties(AccountId)",                     ct, warnOnError: true);
+        // Composite: public listing page (status + isDeleted + createdAt is the most common filter)
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_Status_IsDeleted_CreatedAt ON Properties(Status, IsDeleted, CreatedAt DESC)", ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_City_Status ON Properties(City, Status)",                  ct, warnOnError: true);
     }
 
     // ── Helper methods ────────────────────────────────────────────────────────

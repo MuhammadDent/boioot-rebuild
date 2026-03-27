@@ -1,0 +1,249 @@
+STRICT PERFORMANCE OPTIMIZATION REQUIRED — SLOW PAGE DATA LOADING
+
+We have a serious performance problem:
+
+Opening many pages is noticeably slow because data fetching is delayed or excessive.
+
+This must be fixed at architecture level, not cosmetically.
+
+========================================
+MAIN GOAL
+========================================
+
+Reduce page-load latency across the app by optimizing:
+- frontend data fetching
+- duplicate requests
+- caching
+- server/API performance
+- database query efficiency
+- rendering strategy
+
+Do NOT only add loaders.
+Do NOT only say “optimized”.
+I want real measurable improvements.
+
+========================================
+PHASE 1 — INVESTIGATE THE ROOT CAUSE
+========================================
+
+Audit the codebase and identify ALL of the following:
+
+1) Which pages are slow
+2) Which API calls run on each page load
+3) Which requests are duplicated
+4) Which shared components trigger unnecessary fetches
+5) Which server routes perform heavy DB work
+6) Which DB queries are unindexed / inefficient
+7) Which pages block rendering until all data finishes loading
+8) Whether large payloads are being returned unnecessarily
+
+Check especially:
+- homepage
+- /properties
+- listing details pages
+- /daily-rentals
+- dashboard pages
+- header / navbar / notification components
+- auth/session/user profile bootstrap
+- layout-level fetches
+- filter/search pages
+
+========================================
+PHASE 2 — FRONTEND FIXES (MANDATORY)
+========================================
+
+Apply the following strictly:
+
+1) REMOVE DUPLICATE REQUESTS
+- Search for repeated fetch/useEffect calls
+- Prevent the same endpoint from firing multiple times on first render
+- Prevent strict-mode-like duplicate fetch behavior if relevant in current implementation
+
+2) CENTRALIZE DATA FETCHING
+- Shared data should be fetched once and reused
+- Do not fetch the same current-user/session/header data separately in multiple components
+
+3) ADD CLIENT-SIDE CACHING
+Use proper caching for repeated reads:
+- React Query / TanStack Query if available, or equivalent
+- configure staleTime and cacheTime sensibly for each dataset
+
+Examples:
+- current user/profile: cache
+- property lists: cache
+- categories / cities / static lookup data: long cache
+- notifications/messages counts: short cache with invalidation
+
+4) AVOID BLOCKING INITIAL RENDER
+- Render page shell immediately
+- Load secondary sections lazily
+- Use skeletons only where needed
+- Above-the-fold content first, secondary widgets later
+
+5) LAZY LOAD NON-CRITICAL DATA
+Examples:
+- recommendations
+- related listings
+- analytics widgets
+- secondary dashboard cards
+- footer extras
+- non-critical counters
+
+6) PAGINATE / LIMIT RESULTS
+Do NOT fetch large full datasets.
+For lists:
+- fetch only required page size
+- use limit/offset or cursor pagination
+- avoid loading all listings at once
+
+7) DEBOUNCE FILTER REQUESTS
+For filters/search:
+- do not refetch on every keystroke/change instantly
+- debounce user input where appropriate
+
+8) MEMOIZE EXPENSIVE DERIVED COMPUTATION
+- useMemo / memo where needed
+- avoid recomputing filtered/transformed lists on every render
+
+========================================
+PHASE 3 — API / SERVER FIXES (MANDATORY)
+========================================
+
+1) OPTIMIZE API RESPONSES
+- return only necessary fields
+- avoid oversized JSON payloads
+- avoid nested unnecessary relations
+
+2) SPLIT HEAVY ENDPOINTS
+If one endpoint returns too much:
+- split critical vs secondary data
+- page should fetch critical data first
+
+3) PARALLELIZE SAFE REQUESTS
+Where multiple independent requests are needed:
+- use Promise.all / equivalent
+- do not await sequentially unless required
+
+4) ADD RESPONSE TIMING LOGGING
+Instrument slow endpoints and print timing logs for:
+- route execution time
+- DB query time if possible
+
+Need a clear report:
+- before optimization
+- after optimization
+
+========================================
+PHASE 4 — DATABASE FIXES (MANDATORY)
+========================================
+
+Audit database access and fix:
+
+1) N+1 QUERY PROBLEMS
+- detect repeated queries inside loops
+- batch or join properly
+
+2) ADD / VERIFY INDEXES
+Check indexes for fields commonly used in:
+- property status
+- city / governorate / district
+- listing type
+- price
+- createdAt / publishedAt
+- ownerId / brokerId / officeId
+- slug / propertyId
+- foreign keys used in joins
+
+3) OPTIMIZE QUERY SHAPE
+- select only needed columns
+- avoid full table scans where possible
+- use pagination
+- use proper filtering at DB layer, not in memory
+
+4) STATIC LOOKUP DATA
+For data like:
+- cities
+- districts
+- categories
+- plan metadata
+Use aggressive caching or preload strategy.
+
+========================================
+PHASE 5 — IMAGE / ASSET PERFORMANCE
+========================================
+
+Check whether slow pages are delayed by media:
+
+1) Lazy-load below-the-fold images
+2) Use properly sized thumbnails in lists
+3) Do not load original large images in cards
+4) Compress or optimize heavy assets if needed
+5) Prevent layout waiting for large media before showing content
+
+========================================
+PHASE 6 — APP ARCHITECTURE CLEANUP
+========================================
+
+Search entire app for bad patterns like:
+
+- fetch inside many nested child components
+- repeated auth/session bootstrap calls
+- layouts refetching everything on every navigation
+- useEffect without stable dependencies
+- client-side filtering of huge datasets from API
+- fetching entire objects when only count/title/image is needed
+- duplicate hydration/fetch behavior
+- loading dashboard-wide data for pages that do not need it
+
+Refactor to:
+- page-level critical fetch
+- shared cache
+- reusable query hooks
+- minimal payload responses
+
+========================================
+MEASUREMENT REQUIREMENTS
+========================================
+
+For each major page, report:
+
+1) Requests triggered before optimization
+2) Requests triggered after optimization
+3) Slowest endpoints before
+4) Slowest endpoints after
+5) Estimated or measured load improvement
+
+At minimum audit these pages:
+- homepage
+- properties page
+- property details page
+- daily rentals page
+- dashboard home
+- subscription page
+- requests page
+
+========================================
+DELIVERABLE FORMAT
+========================================
+
+Return a final report with:
+
+1) Root causes found
+2) Files changed
+3) Duplicate fetches removed
+4) Caching added
+5) DB/API optimizations applied
+6) Before/after request counts
+7) Before/after timing results
+8) Remaining bottlenecks, if any
+
+========================================
+STRICT RULES
+========================================
+
+- Do NOT stop at adding loading spinners
+- Do NOT leave repeated fetches in shared components
+- Do NOT keep large unpaginated list endpoints
+- Do NOT claim success without measuring
+
+I want actual performance improvements in the running app.
