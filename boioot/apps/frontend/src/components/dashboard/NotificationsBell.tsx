@@ -50,6 +50,7 @@ function typeIcon(type: string): string {
     trial_limit_reached:          "🚫",
     system_alert:                 "🔔",
     request_comment:              "💬",
+    request_reply:                "↩️",
     request_discussion_activity:  "💬",
   };
   return map[type] ?? "🔔";

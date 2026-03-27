@@ -597,6 +597,9 @@ public sealed class SchemaEvolutionService
             WHERE SubscriptionPlanId = '00000009-0000-0000-0000-000000000000'
               AND LimitDefinitionId  = 'add00002-0000-0000-0000-000000000000'",
             ct, warnOnError: true);
+
+        // ── Threaded comments: add ParentCommentId to BuyerRequestComments ────
+        await TryAlter("BuyerRequestComments", "ParentCommentId", "TEXT", ct);
     }
 
     // ── Helper methods ────────────────────────────────────────────────────────

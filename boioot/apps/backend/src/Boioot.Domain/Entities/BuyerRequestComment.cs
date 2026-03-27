@@ -9,4 +9,13 @@ public class BuyerRequestComment : BaseEntity
 
     public Guid UserId { get; set; }
     public User? User { get; set; }
+
+    // ── Threaded replies ──────────────────────────────────────────────────────
+    /// <summary>
+    /// Null = top-level comment.
+    /// Non-null = reply to another comment in the same request.
+    /// </summary>
+    public Guid? ParentCommentId { get; set; }
+    public BuyerRequestComment? ParentComment { get; set; }
+    public ICollection<BuyerRequestComment> Replies { get; set; } = new List<BuyerRequestComment>();
 }

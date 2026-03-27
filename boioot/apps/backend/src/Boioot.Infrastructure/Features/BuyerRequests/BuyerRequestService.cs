@@ -181,50 +181,76 @@ public class BuyerRequestService : IBuyerRequestService
 
         if (request is null) throw new BoiootException("الطلب غير موجود", 404);
 
+        // ── Validate parent comment (if replying) ──────────────────────────────────
+        Guid? parentAuthorId = null;
+        if (dto.ParentCommentId.HasValue)
+        {
+            var parent = await _context.BuyerRequestComments
+                .Where(c => c.Id == dto.ParentCommentId.Value
+                         && c.BuyerRequestId == requestId)
+                .Select(c => new { c.UserId })
+                .FirstOrDefaultAsync(ct);
+
+            if (parent is null)
+                throw new BoiootException("التعليق الأصلي غير موجود في هذا الطلب", 400);
+
+            parentAuthorId = parent.UserId;
+        }
+
         var comment = new BuyerRequestComment
         {
             Content         = dto.Content.Trim(),
             BuyerRequestId  = requestId,
             UserId          = userId,
+            ParentCommentId = dto.ParentCommentId,
         };
 
         _context.BuyerRequestComments.Add(comment);
         await _context.SaveChangesAsync(ct);
 
         // Fetch commenter's name for notification body and comment response.
+        // NOTE: Do NOT assign comment.User = new User{...} on a tracked entity.
+        // EF Core's change-tracker would queue it for INSERT → UNIQUE constraint on UserCode.
         var actorName = await _context.Users
             .Where(u => u.Id == userId)
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(ct) ?? "";
 
-        // NOTE: Do NOT assign comment.User = new User{...} on the tracked entity.
-        // EF Core's change-tracker would queue the new User object for INSERT,
-        // conflicting with the Notifications SaveChangesAsync.  Use actorName directly.
-
-        // ── Notifications: multi-recipient, deduplicated ────────────────────────────
+        // ── Notifications: multi-recipient, priority-ordered, deduplicated ────────
         //
-        // Priority / message map:
-        //   A) Request owner              → "تعليق جديد على طلبك"             (request_comment)
-        //   B) Other previous commenters  → "نشاط جديد في نقاش شاركت فيه"    (request_discussion_activity)
+        //  Priority:
+        //    0) Parent comment author (if reply)    → "تم الرد على تعليقك"         (request_reply)
+        //    A) Request owner (if different)        → "تعليق جديد على طلبك"         (request_comment)
+        //    B) Other previous participants         → "نشاط جديد في نقاش شاركت فيه" (request_discussion_activity)
         //
-        // Rules:
-        //   • Never notify the actor (current commenter).
-        //   • Never send duplicate notifications to the same recipient.
-        //   • Request owner always gets message A (more specific), even if they
-        //     also happen to be a previous commenter.
+        //  Rules:
+        //    • Never notify the actor.
+        //    • Never duplicate — first assignment wins (HashSet<Guid>).
+        //    • Owner gets message A even if they also commented before.
 
-        // Fetch all users who commented on this request BEFORE the current comment,
-        // excluding the actor.  We use c.Id != comment.Id to exclude the just-saved comment.
         var previousParticipantIds = await _context.BuyerRequestComments
             .Where(c => c.BuyerRequestId == requestId
-                     && c.Id             != comment.Id  // exclude current comment
-                     && c.UserId         != userId)     // exclude actor
+                     && c.Id             != comment.Id   // exclude just-saved comment
+                     && c.UserId         != userId)      // exclude actor
             .Select(c => c.UserId)
             .Distinct()
             .ToListAsync(ct);
 
-        var recipientSet    = new HashSet<Guid>();
-        var notifications   = new List<NotificationRequest>();
+        var recipientSet  = new HashSet<Guid>();
+        var notifications = new List<NotificationRequest>();
+
+        // 0) Parent comment author — most specific message for replies
+        if (parentAuthorId.HasValue && parentAuthorId.Value != userId
+                                    && recipientSet.Add(parentAuthorId.Value))
+        {
+            notifications.Add(new NotificationRequest(
+                UserId            : parentAuthorId.Value,
+                Type              : "request_reply",
+                Title             : "تم الرد على تعليقك",
+                Body              : $"قام {actorName} بالرد على تعليقك في الطلب: {request.Title}",
+                RelatedEntityId   : requestId.ToString(),
+                RelatedEntityType : "BuyerRequest"));
+        }
 
         // A) Request owner
         if (request.UserId != userId && recipientSet.Add(request.UserId))
@@ -238,10 +264,10 @@ public class BuyerRequestService : IBuyerRequestService
                 RelatedEntityType : "BuyerRequest"));
         }
 
-        // B) Previous unique participants (skip any already in recipientSet)
+        // B) Other previous participants
         foreach (var pId in previousParticipantIds)
         {
-            if (!recipientSet.Add(pId)) continue;  // owner already added above
+            if (!recipientSet.Add(pId)) continue;
 
             notifications.Add(new NotificationRequest(
                 UserId            : pId,
@@ -255,17 +281,15 @@ public class BuyerRequestService : IBuyerRequestService
         if (notifications.Count > 0)
         {
             _logger.LogInformation(
-                "[BuyerRequest] Dispatching {Count} notification(s) — requestId={RequestId}, actorId={ActorId}, recipients=[{Recipients}]",
-                notifications.Count, requestId, userId,
+                "[BuyerRequest] Dispatching {Count} notification(s) — requestId={RequestId}, actorId={ActorId}, isReply={IsReply}, recipients=[{Recipients}]",
+                notifications.Count, requestId, userId, dto.ParentCommentId.HasValue,
                 string.Join(", ", recipientSet));
-
             try
             {
                 await _notifications.CreateBatchAsync(notifications, ct);
             }
             catch (Exception ex)
             {
-                // Never let a notification failure break the comment creation.
                 _logger.LogError(ex,
                     "[BuyerRequest] Failed to dispatch notifications for requestId={RequestId}", requestId);
             }
@@ -273,7 +297,7 @@ public class BuyerRequestService : IBuyerRequestService
         else
         {
             _logger.LogDebug(
-                "[BuyerRequest] No notification recipients (self-comment or solo request) requestId={RequestId}",
+                "[BuyerRequest] No notification recipients (self-comment or solo) requestId={RequestId}",
                 requestId);
         }
 
@@ -315,11 +339,12 @@ public class BuyerRequestService : IBuyerRequestService
     // when the caller cannot safely set c.User = new User{...} on a tracked entity.
     private static BuyerRequestCommentResponse MapComment(BuyerRequestComment c, string? actorName = null) => new()
     {
-        Id             = c.Id,
-        Content        = c.Content,
-        UserId         = c.UserId,
-        UserName       = actorName ?? c.User?.FullName ?? "",
-        BuyerRequestId = c.BuyerRequestId,
-        CreatedAt      = c.CreatedAt,
+        Id              = c.Id,
+        Content         = c.Content,
+        UserId          = c.UserId,
+        UserName        = actorName ?? c.User?.FullName ?? "",
+        BuyerRequestId  = c.BuyerRequestId,
+        ParentCommentId = c.ParentCommentId,
+        CreatedAt       = c.CreatedAt,
     };
 }
