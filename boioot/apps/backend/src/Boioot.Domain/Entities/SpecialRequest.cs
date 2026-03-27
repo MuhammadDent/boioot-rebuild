@@ -9,10 +9,13 @@ public class SpecialRequest : BaseEntity
     public Guid?   CreatedByUserId { get; set; }
     public User?   CreatedByUser   { get; set; }
 
-    public string  FullName  { get; set; } = string.Empty;
-    public string  Phone     { get; set; } = string.Empty;
-    public string? WhatsApp  { get; set; }
-    public string? Email     { get; set; }
+    public string  FullName     { get; set; } = string.Empty;
+    public string  Phone        { get; set; } = string.Empty;
+    public string? WhatsApp     { get; set; }
+    public string? Email        { get; set; }
+
+    /// <summary>Type of request: buy, sell, invest, legal, etc.</summary>
+    public string? RequestType  { get; set; }
 
     /// <summary>The main free-text message — the core of the request.</summary>
     public string  Message   { get; set; } = string.Empty;

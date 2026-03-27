@@ -13,8 +13,11 @@ public class SubmitSpecialRequestDto
     [MaxLength(30)]
     public string? WhatsApp { get; set; }
 
-    [EmailAddress, MaxLength(200)]
-    public string? Email { get; set; }
+    [Required, EmailAddress, MaxLength(200)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required, MaxLength(100)]
+    public string RequestType { get; set; } = string.Empty;
 
     [Required, MaxLength(2000)]
     public string Message { get; set; } = string.Empty;

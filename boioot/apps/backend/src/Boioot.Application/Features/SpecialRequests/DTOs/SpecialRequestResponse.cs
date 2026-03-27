@@ -8,6 +8,7 @@ public class SpecialRequestResponse
     public string    Phone         { get; set; } = string.Empty;
     public string?   WhatsApp      { get; set; }
     public string?   Email         { get; set; }
+    public string?   RequestType   { get; set; }
     public string    Message       { get; set; } = string.Empty;
     public string    Status        { get; set; } = string.Empty;
     public string?   Source        { get; set; }

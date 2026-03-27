@@ -10,6 +10,7 @@ export interface SpecialRequest {
   phone: string;
   whatsApp?: string;
   email?: string;
+  requestType?: string;
   message: string;
   status: string;
   source?: string;
@@ -27,7 +28,8 @@ export interface SubmitSpecialRequestDto {
   fullName: string;
   phone: string;
   whatsApp?: string;
-  email?: string;
+  email: string;
+  requestType: string;
   message: string;
   source?: string;
 }
