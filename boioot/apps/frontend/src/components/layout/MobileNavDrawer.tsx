@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { saveRedirectTarget } from "@/lib/authRedirect";
 
 export interface NavItem {
   href: string;
@@ -145,14 +146,14 @@ export default function MobileNavDrawer({
             <div className="mobile-drawer__auth">
               <Link
                 href="/login"
-                onClick={onClose}
+                onClick={() => { saveRedirectTarget(); onClose(); }}
                 className="mobile-drawer__login"
               >
                 تسجيل الدخول
               </Link>
               <Link
                 href="/register"
-                onClick={onClose}
+                onClick={() => { saveRedirectTarget(); onClose(); }}
                 className="mobile-drawer__register"
               >
                 إنشاء حساب

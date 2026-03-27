@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
+import { saveRedirectTarget } from "@/lib/authRedirect";
 import MessagesIconBtn from "@/components/ui/MessagesIconBtn";
 import MobileNavDrawer from "@/components/layout/MobileNavDrawer";
 import { getRoleCategory } from "@/features/admin/constants";
@@ -180,6 +181,7 @@ export default function MainHeader() {
                 <Link
                   href="/login"
                   className="main-hdr__login main-hdr__auth-desktop"
+                  onClick={() => saveRedirectTarget()}
                 >
                   تسجيل الدخول
                 </Link>
@@ -187,6 +189,7 @@ export default function MainHeader() {
                 <Link
                   href="/register"
                   className="main-hdr__register main-hdr__auth-desktop"
+                  onClick={() => saveRedirectTarget()}
                 >
                   إنشاء حساب
                 </Link>
