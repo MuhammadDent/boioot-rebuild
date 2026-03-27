@@ -125,9 +125,15 @@ const NAV_GROUPS: NavGroup[] = [
       },
       {
         href: "/dashboard/admin/requests",
-        label: "الطلبات",
+        label: "طلبات التواصل",
         permission: "requests.view",
         icon: <Icon path={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />} />,
+      },
+      {
+        href: "/dashboard/admin/buyer-requests",
+        label: "طلبات السوق",
+        permission: "requests.view",
+        icon: <Icon path={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} />,
       },
       {
         href: "/dashboard/admin/properties",

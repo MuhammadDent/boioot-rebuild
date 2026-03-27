@@ -15,6 +15,28 @@ public class BuyerRequestsController : BaseController
         _service = service;
     }
 
+    // ── Admin-only ────────────────────────────────────────────────────────────
+
+    [HttpGet("admin")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAllAdmin(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        CancellationToken ct = default)
+    {
+        var result = await _service.GetAllForAdminAsync(page, pageSize, search, ct);
+        return Ok(result);
+    }
+
+    [HttpDelete("admin/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AdminDelete(Guid id, CancellationToken ct)
+    {
+        await _service.AdminDeleteAsync(id, ct);
+        return NoContent();
+    }
+
     // ── Listing ───────────────────────────────────────────────────────────────
 
     [HttpGet]

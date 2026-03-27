@@ -9,7 +9,9 @@ public interface IBuyerRequestService
     Task<BuyerRequestResponse> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<PagedResult<BuyerRequestResponse>> GetMyAsync(Guid userId, int page, int pageSize, CancellationToken ct = default);
     Task<PagedResult<BuyerRequestResponse>> GetPublicAsync(int page, int pageSize, CancellationToken ct = default);
+    Task<PagedResult<BuyerRequestResponse>> GetAllForAdminAsync(int page, int pageSize, string? search, CancellationToken ct = default);
     Task DeleteAsync(Guid userId, Guid id, CancellationToken ct = default);
+    Task AdminDeleteAsync(Guid id, CancellationToken ct = default);
 
     Task<List<BuyerRequestCommentResponse>> GetCommentsAsync(Guid requestId, CancellationToken ct = default);
     Task<BuyerRequestCommentResponse> AddCommentAsync(Guid userId, Guid requestId, AddCommentDto dto, CancellationToken ct = default);

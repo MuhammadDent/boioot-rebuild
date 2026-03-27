@@ -133,6 +133,49 @@ public class BuyerRequestService : IBuyerRequestService
             page, pageSize, total);
     }
 
+    // ── Admin listing (all requests, with optional search) ────────────────────
+
+    public async Task<PagedResult<BuyerRequestResponse>> GetAllForAdminAsync(
+        int page, int pageSize, string? search, CancellationToken ct = default)
+    {
+        page     = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var query = _context.BuyerRequests
+            .Include(r => r.User)
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            query = query.Where(r =>
+                r.Title.ToLower().Contains(term) ||
+                r.Description.ToLower().Contains(term) ||
+                (r.City != null && r.City.ToLower().Contains(term)) ||
+                (r.Neighborhood != null && r.Neighborhood.ToLower().Contains(term)));
+        }
+
+        query = query.OrderByDescending(r => r.CreatedAt);
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        var ids = items.Select(r => r.Id).ToList();
+        var commentCounts = await _context.BuyerRequestComments
+            .Where(c => ids.Contains(c.BuyerRequestId))
+            .GroupBy(c => c.BuyerRequestId)
+            .Select(g => new { Id = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Id, g => g.Count, ct);
+
+        return new PagedResult<BuyerRequestResponse>(
+            items.Select(r => MapToResponse(r, r.User?.FullName ?? "", commentCounts.GetValueOrDefault(r.Id, 0))).ToList(),
+            page, pageSize, total);
+    }
+
     // ── Delete request ────────────────────────────────────────────────────────
 
     public async Task DeleteAsync(Guid userId, Guid id, CancellationToken ct = default)
@@ -143,6 +186,16 @@ public class BuyerRequestService : IBuyerRequestService
 
         if (entity.UserId != userId)
             throw new BoiootException("غير مصرح لك بحذف هذا الطلب", 403);
+
+        _context.BuyerRequests.Remove(entity);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task AdminDeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var entity = await _context.BuyerRequests
+            .FirstOrDefaultAsync(r => r.Id == id, ct)
+            ?? throw new BoiootException("الطلب غير موجود", 404);
 
         _context.BuyerRequests.Remove(entity);
         await _context.SaveChangesAsync(ct);
