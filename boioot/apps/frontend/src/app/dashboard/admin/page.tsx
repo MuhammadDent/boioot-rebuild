@@ -96,8 +96,8 @@ function exportCSV(a: DashboardAnalytics | null, users: number, brokers: number,
     ["الإعلانات غير النشطة", a.inactiveListings],
     ["الإعلانات المباعة", a.soldListings],
     ["الإعلانات المؤجرة", a.rentedListings],
-    ["إجمالي الطلبات", a.totalRequests],
-    ["الطلبات الجديدة", a.newRequests],
+    ["إجمالي ردود الإعلانات", a.totalRequests],
+    ["ردود الإعلانات الجديدة", a.newRequests],
     ["إجمالي المشاهدات", a.totalViews],
     ["المشاريع", a.totalProjects],
     ["إعلانات تحتاج اهتمام", a.attentionListings?.length ?? 0],
@@ -419,7 +419,7 @@ export default function AdminOverviewPage() {
           icon={<Ico d={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>} />}
         />
         <KpiCard
-          label="الطلبات"
+          label="ردود الإعلانات"
           value={loading ? "—" : fmt(a?.totalRequests ?? 0)}
           href="/dashboard/admin/requests"
           sub={!loading && (a?.newRequests ?? 0) > 0 ? `${a!.newRequests} جديد` : undefined}
@@ -455,7 +455,7 @@ export default function AdminOverviewPage() {
       {/* ── Charts ───────────────────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: "0.7rem", marginBottom: "1.1rem" }}>
         <BarChart data={chartData.listings} label="نمو الإعلانات" accent="#059669" />
-        <BarChart data={chartData.requests} label="الطلبات الشهرية" accent="#d97706" />
+        <BarChart data={chartData.requests} label="ردود الإعلانات الشهرية" accent="#d97706" />
       </div>
 
       {/* ── Funnel ───────────────────────────────────────────────────────── */}

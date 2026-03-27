@@ -140,10 +140,10 @@ export default function DashboardRequestsPage() {
           <div className="flex items-start justify-between gap-4 flex-wrap mt-1">
             <div>
               <h1 style={{ fontSize: "1.5rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                الطلبات والاستفسارات
+                ردود الإعلانات والاستفسارات
               </h1>
               <p style={{ margin: "0.3rem 0 0", fontSize: "0.88rem", color: "#64748b" }}>
-                إدارة وتحليل طلبات العملاء وتتبّع حالاتها
+                إدارة وتحليل ردود العملاء على الإعلانات وتتبّع حالاتها
               </p>
             </div>
             {kpis.total > 0 && (
@@ -152,7 +152,7 @@ export default function DashboardRequestsPage() {
                 padding: "0.3rem 0.85rem", borderRadius: 20,
                 fontSize: "0.82rem", fontWeight: 700,
               }}>
-                {kpis.total} طلب إجمالاً
+                {kpis.total} رد إجمالاً
               </span>
             )}
           </div>
@@ -165,13 +165,13 @@ export default function DashboardRequestsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             <KpiCard
               icon={<MessageSquare size={18} />}
-              label="إجمالي الطلبات"
+              label="إجمالي ردود الإعلانات"
               value={kpis.total}
               accent="slate"
             />
             <KpiCard
               icon={<TrendingUp size={18} />}
-              label="الطلبات هذا الأسبوع"
+              label="ردود الإعلانات هذا الأسبوع"
               value={kpis.sevenDays}
               accent="blue"
             />
@@ -324,7 +324,7 @@ export default function DashboardRequestsPage() {
               boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
             }}>
               <h3 style={{ margin: "0 0 1rem", fontSize: "0.9rem", fontWeight: 700, color: "#1e293b" }}>
-                الطلبات حسب الحالة
+                ردود الإعلانات حسب الحالة
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
                 {statusDist.map(({ status, label, count, pct }) => (
@@ -354,14 +354,14 @@ export default function DashboardRequestsPage() {
               boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
             }}>
               <h3 style={{ margin: "0 0 1rem", fontSize: "0.9rem", fontWeight: 700, color: "#1e293b" }}>
-                الطلبات حسب النوع
+                ردود الإعلانات حسب النوع
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
                 {[
-                  { label: "طلبات عقارات", count: kpis.withProp, icon: <Building2 size={16} />, color: "#2563eb" },
-                  { label: "طلبات مشاريع", count: kpis.withProj, icon: <Briefcase size={16} />, color: "#7c3aed" },
+                  { label: "ردود عقارات", count: kpis.withProp, icon: <Building2 size={16} />, color: "#2563eb" },
+                  { label: "ردود مشاريع", count: kpis.withProj, icon: <Briefcase size={16} />, color: "#7c3aed" },
                   {
-                    label: "طلبات عامة",
+                    label: "ردود عامة",
                     count: kpis.total - kpis.withProp - kpis.withProj,
                     icon: <LayoutGrid size={16} />,
                     color: "#0891b2",
@@ -399,11 +399,11 @@ export default function DashboardRequestsPage() {
           marginBottom: "0.85rem", flexWrap: "wrap", gap: "0.5rem",
         }}>
           <h2 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700, color: "#1e293b" }}>
-            قائمة الطلبات
+            قائمة ردود الإعلانات
           </h2>
           {!fetching && (
             <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
-              {filtered.length} طلب — صفحة {safePage} من {totalPages}
+              {filtered.length} رد — صفحة {safePage} من {totalPages}
             </span>
           )}
         </div>

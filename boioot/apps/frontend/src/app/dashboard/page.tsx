@@ -430,7 +430,7 @@ export default function DashboardPage() {
                     />
                   )}
                   <KpiCard
-                    label="الطلبات الجديدة"
+                    label="ردود الإعلانات الجديدة"
                     value={analytics.newRequests}
                     color="#dc2626"
                     accent="#fee2e2"
@@ -444,7 +444,7 @@ export default function DashboardPage() {
                 {/* ── إجمالي الطلبات + المحادثات ── */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
                   <KpiCard
-                    label="إجمالي الطلبات"
+                    label="إجمالي ردود الإعلانات"
                     value={analytics.totalRequests}
                     color="#374151"
                     accent="#f3f4f6"
@@ -495,7 +495,7 @@ export default function DashboardPage() {
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
               }}>
                 <p style={{ margin: "0 0 0.75rem", fontSize: "0.78rem", fontWeight: 700, color: "#64748b" }}>
-                  الطلبات — آخر 6 أشهر
+                  ردود الإعلانات — آخر 6 أشهر
                 </p>
                 <MiniBarChart data={analytics.monthlyRequests ?? []} color="#2563eb" />
               </div>
@@ -635,7 +635,7 @@ export default function DashboardPage() {
               <NavCard href="/dashboard/admin/projects" label="جميع المشاريع" description="استعراض وإدارة كل المشاريع العقارية"
                 icon={<><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></>}
               />
-              <NavCard href="/dashboard/admin/requests" label="جميع الطلبات" description="استعراض وإدارة طلبات العملاء"
+              <NavCard href="/dashboard/admin/requests" label="جميع ردود الإعلانات" description="استعراض وإدارة ردود العملاء على الإعلانات"
                 icon={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>}
               />
               <NavCard href="/dashboard/admin/listing-types" label="أنواع الإدراج" description="إدارة أنواع الإدراج (بيع / إيجار / ...)"
@@ -736,7 +736,7 @@ export default function DashboardPage() {
               <NavCard
                 href="/dashboard/my-requests"
                 label="طلباتي"
-                description="الطلبات والاستفسارات التي أرسلتها"
+                description="ردود الإعلانات والاستفسارات التي أرسلتها"
                 icon={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>}
               />
               <NavCard

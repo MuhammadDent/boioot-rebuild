@@ -186,7 +186,7 @@ export default function AdminRequestsPage() {
           }}>
             <div>
               <h1 style={{ fontSize: "1.5rem", fontWeight: 800, margin: 0, color: "#0f172a" }}>
-                الطلبات والاستفسارات
+                ردود الإعلانات والاستفسارات
               </h1>
               <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
                 إدارة جميع استفسارات العملاء · تحليل التوزيعات وتعمّق في البيانات
@@ -640,10 +640,10 @@ function EmptyState({ isFiltered, onReset }: { isFiltered: boolean; onReset: () 
     }}>
       <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📋</div>
       <p style={{ margin: "0 0 0.4rem", fontWeight: 700, fontSize: "1rem", color: "#1e293b" }}>
-        {isFiltered ? "لا توجد طلبات مطابقة" : "لا توجد طلبات بعد"}
+        {isFiltered ? "لا توجد ردود مطابقة" : "لا توجد ردود بعد"}
       </p>
       <p style={{ margin: "0 0 1.25rem", fontSize: "0.85rem", color: "#64748b" }}>
-        {isFiltered ? "جرّب تغيير معايير البحث أو إعادة ضبط الفلاتر" : "ستظهر هنا الطلبات عند وصولها من العملاء"}
+        {isFiltered ? "جرّب تغيير معايير البحث أو إعادة ضبط الفلاتر" : "ستظهر هنا ردود العملاء على الإعلانات عند وصولها"}
       </p>
       {isFiltered && (
         <button onClick={onReset} style={{
