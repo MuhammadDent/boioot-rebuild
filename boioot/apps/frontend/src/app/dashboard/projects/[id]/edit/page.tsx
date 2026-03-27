@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
-import { canAccessProjects } from "@/components/dashboard/DashboardSidebar";
+import { canAccessProjects } from "@/features/sidebar/sidebar.config";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";

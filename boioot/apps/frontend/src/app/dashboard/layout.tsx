@@ -5,14 +5,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getRoleCategory } from "@/features/admin/constants";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import UnifiedSidebar from "@/components/dashboard/UnifiedSidebar";
+import AppSidebar from "@/components/dashboard/AppSidebar";
 import UpsellModal from "@/components/dashboard/UpsellModal";
 
 // ─── DashboardLayout ──────────────────────────────────────────────────────────
 //
 // Two strict zones:
 //   /dashboard/admin/*  → AdminLayout (handled by its own layout.tsx, pass-through here)
-//   /dashboard/*        → CustomerLayout (DashboardHeader + UnifiedSidebar)
+//   /dashboard/*        → CustomerLayout (DashboardHeader + AppSidebar)
 //
 // Guard: Admin and Staff users are redirected to /dashboard/admin for ALL
 // customer routes — they must never see the customer shell.
@@ -75,7 +75,7 @@ export default function DashboardLayout({
     <div className="dash-shell">
       <DashboardHeader onMenuToggle={() => setSidebarOpen((o) => !o)} />
       <div className="admin-layout" style={{ background: "#f4f6f4" }}>
-        <UnifiedSidebar
+        <AppSidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           headerHeight={60}

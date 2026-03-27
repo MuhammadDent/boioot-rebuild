@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getRoleCategory } from "@/features/admin/constants";
-import UnifiedSidebar from "@/components/dashboard/UnifiedSidebar";
+import AppSidebar from "@/components/dashboard/AppSidebar";
 import AdminToolbar from "@/components/admin/AdminToolbar";
 import AdminBreadcrumb from "@/components/admin/AdminBreadcrumb";
 
@@ -76,10 +76,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </button>
 
         {/* Sidebar */}
-        <UnifiedSidebar
+        <AppSidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
-          showBackLink={false}
           headerHeight={52}
         />
 

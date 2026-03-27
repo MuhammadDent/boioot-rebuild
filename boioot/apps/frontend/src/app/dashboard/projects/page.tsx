@@ -16,7 +16,7 @@ import {
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
-import { canAccessProjects } from "@/components/dashboard/DashboardSidebar";
+import { canAccessProjects } from "@/features/sidebar/sidebar.config";
 import { normalizeError } from "@/lib/api";
 import { hasPermission } from "@/lib/permissions";
 import type { DashboardProjectItem } from "@/types";

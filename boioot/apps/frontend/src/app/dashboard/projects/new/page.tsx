@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
-import { canAccessProjects } from "@/components/dashboard/DashboardSidebar";
+import { canAccessProjects } from "@/features/sidebar/sidebar.config";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { dashboardProjectsApi } from "@/features/dashboard/projects/api";
 import ProjectForm from "@/components/dashboard/projects/ProjectForm";
