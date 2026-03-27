@@ -2,6 +2,7 @@ using Boioot.Application.Features.SubscriptionPayments.DTOs;
 using Boioot.Application.Features.SubscriptionPayments.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace Boioot.Api.Controllers;
 
@@ -133,6 +134,22 @@ public class AdminSubscriptionPaymentController : BaseController
     public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
     {
         var result = await _service.ActivateSubscriptionAsync(id, GetUserId(), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// POST /api/admin/payment-requests/{id}/notify-user
+    /// Sends a structured notification (internal + optional email) to the request owner.
+    /// Logs the action in SubscriptionRequestActions.
+    /// Decision: "approved" | "rejected" | "missing_info"
+    /// </summary>
+    [HttpPost("{id:guid}/notify-user")]
+    public async Task<IActionResult> NotifyUser(
+        Guid id,
+        [FromBody] NotifyUserDto dto,
+        CancellationToken ct)
+    {
+        var result = await _service.NotifyUserAsync(id, GetUserId(), dto, ct);
         return Ok(result);
     }
 }

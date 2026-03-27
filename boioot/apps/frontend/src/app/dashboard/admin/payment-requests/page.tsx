@@ -11,7 +11,13 @@ import {
   CYCLE_LABELS,
 } from "@/features/subscriptionPayments/constants";
 import { normalizeError } from "@/lib/api";
-import type { PaymentRequestResponse, PaymentRequestStatus } from "@/features/subscriptionPayments/types";
+import type {
+  PaymentRequestResponse,
+  PaymentRequestStatus,
+  NotifyUserDto,
+  NotifyUserResult,
+  SubscriptionRequestActionResponse,
+} from "@/features/subscriptionPayments/types";
 import type { PagedResult } from "@/types";
 
 // ── State machine allowed actions per status ──────────────────────────────────
@@ -280,6 +286,299 @@ interface ModalState {
   id: string;
 }
 
+// ── Notify User Modal ─────────────────────────────────────────────────────────
+
+const DECISION_OPTIONS = [
+  { value: "approved",     label: "موافقة",                   color: "#16a34a", bg: "#f0fdf4" },
+  { value: "rejected",     label: "رفض",                      color: "#dc2626", bg: "#fee2e2" },
+  { value: "missing_info", label: "طلب استكمال / نقص بيانات", color: "#d97706", bg: "#fffbeb" },
+] as const;
+
+const DEFAULT_TITLES: Record<string, string> = {
+  approved:     "تمت الموافقة على طلب الاشتراك",
+  rejected:     "تم رفض طلب الاشتراك",
+  missing_info: "يوجد نقص في طلب الاشتراك",
+};
+
+function NotifyUserModal({
+  req,
+  onClose,
+  onSuccess,
+}: {
+  req: PaymentRequestResponse;
+  onClose: () => void;
+  onSuccess: (result: NotifyUserResult) => void;
+}) {
+  const [decision, setDecision] = useState<"approved" | "rejected" | "missing_info">("approved");
+  const [title, setTitle]       = useState(DEFAULT_TITLES["approved"]);
+  const [message, setMessage]   = useState("");
+  const [sendInternal, setSendInternal] = useState(true);
+  const [sendEmail, setSendEmail]       = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+
+  function onDecisionChange(d: "approved" | "rejected" | "missing_info") {
+    setDecision(d);
+    setTitle(DEFAULT_TITLES[d]);
+  }
+
+  async function submit() {
+    if (!message.trim()) { setError("نص الرسالة مطلوب."); return; }
+    if (!sendInternal && !sendEmail) { setError("يجب اختيار طريقة إرسال واحدة على الأقل."); return; }
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await adminApi.paymentNotifyUser(req.id, {
+        decision, title, message, sendInternal, sendEmail,
+      });
+      onSuccess(result);
+    } catch (e) {
+      setError(normalizeError(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const decisionOpt = DECISION_OPTIONS.find(d => d.value === decision)!;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 2000,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "1rem",
+      backgroundColor: "rgba(0,0,0,0.4)",
+    }}>
+      <div style={{
+        backgroundColor: "#fff", borderRadius: 16, width: "100%", maxWidth: 520,
+        boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+        display: "flex", flexDirection: "column", maxHeight: "90vh", overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: "1.1rem 1.4rem",
+          borderBottom: "1px solid #f1f5f9",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#1a2e1a" }}>إشعار المستخدم</h3>
+            <p style={{ margin: "0.15rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
+              طلب #{req.id.slice(0,8).toUpperCase()} • {req.userName ?? req.userId.slice(0,8)}
+            </p>
+          </div>
+          <button onClick={onClose} type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: "1.25rem" }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "1.25rem 1.4rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+
+          {/* Decision */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "0.5rem" }}>
+              نوع القرار *
+            </label>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              {DECISION_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onDecisionChange(opt.value)}
+                  style={{
+                    padding: "0.5rem 1rem", borderRadius: 8, fontSize: "0.82rem", fontWeight: 700, cursor: "pointer",
+                    border: `2px solid ${decision === opt.value ? opt.color : "#e2e8f0"}`,
+                    backgroundColor: decision === opt.value ? opt.bg : "#f8fafc",
+                    color: decision === opt.value ? opt.color : "#94a3b8",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "0.5rem" }}>
+              عنوان الإشعار
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "0.6rem 0.8rem", borderRadius: 8, fontSize: "0.85rem",
+                border: "1.5px solid #e2e8f0", outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+          </div>
+
+          {/* Message */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "0.5rem" }}>
+              نص الرسالة / الملاحظة *
+            </label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={5}
+              placeholder={
+                decision === "approved"     ? "اكتب رسالة الموافقة للمستخدم..." :
+                decision === "rejected"     ? "اكتب سبب الرفض للمستخدم..." :
+                                              "اكتب النواقص أو البيانات المطلوبة من المستخدم..."
+              }
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "0.7rem 0.8rem", borderRadius: 8, fontSize: "0.85rem", lineHeight: 1.6,
+                border: "1.5px solid #e2e8f0", outline: "none", resize: "vertical",
+                fontFamily: "inherit", direction: "rtl",
+              }}
+            />
+          </div>
+
+          {/* Send options */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "0.65rem" }}>
+              خيارات الإرسال
+            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+              {[
+                { id: "internal", checked: sendInternal, onChange: setSendInternal, label: "إشعار داخلي (مُوصى به)", badge: "افتراضي", badgeColor: "#16a34a" },
+                { id: "email",    checked: sendEmail,    onChange: setSendEmail,    label: "البريد الإلكتروني", badge: "اختياري", badgeColor: "#2563eb" },
+              ].map(({ id, checked, onChange, label, badge, badgeColor }) => (
+                <label key={id} style={{
+                  display: "flex", alignItems: "center", gap: "0.65rem",
+                  padding: "0.65rem 0.85rem", borderRadius: 8,
+                  border: `1.5px solid ${checked ? badgeColor : "#e2e8f0"}`,
+                  backgroundColor: checked ? "#f8fafc" : "#fff",
+                  cursor: "pointer",
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={e => onChange(e.target.checked)}
+                    style={{ width: 17, height: 17, cursor: "pointer", accentColor: badgeColor }}
+                  />
+                  <span style={{ fontSize: "0.83rem", fontWeight: 600, color: "#374151", flex: 1 }}>{label}</span>
+                  <span style={{
+                    fontSize: "0.68rem", fontWeight: 700, padding: "0.15rem 0.5rem",
+                    borderRadius: 20, backgroundColor: badgeColor + "22", color: badgeColor,
+                  }}>{badge}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div style={{ backgroundColor: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, padding: "0.75rem", fontSize: "0.82rem", color: "#b91c1c" }}>
+              ⚠️ {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: "1rem 1.4rem", borderTop: "1px solid #f1f5f9",
+          display: "flex", gap: "0.65rem", justifyContent: "flex-start",
+        }}>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading || !message.trim()}
+            style={{
+              padding: "0.65rem 1.5rem", borderRadius: 8, border: "none", cursor: loading || !message.trim() ? "not-allowed" : "pointer",
+              backgroundColor: loading || !message.trim() ? "#e2e8f0" : decisionOpt.color,
+              color: loading || !message.trim() ? "#94a3b8" : "#fff",
+              fontSize: "0.85rem", fontWeight: 700,
+              transition: "all 0.15s",
+            }}
+          >
+            {loading ? "جاري الإرسال..." : "إرسال الإشعار"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "0.65rem 1.1rem", borderRadius: 8,
+              border: "1.5px solid #e2e8f0", backgroundColor: "#fff",
+              color: "#64748b", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Action history item ───────────────────────────────────────────────────────
+
+const DECISION_LABELS: Record<string, { label: string; color: string }> = {
+  approved:     { label: "موافقة", color: "#16a34a" },
+  rejected:     { label: "رفض",   color: "#dc2626" },
+  missing_info: { label: "طلب استكمال", color: "#d97706" },
+};
+
+function ActionHistoryItem({ item }: { item: SubscriptionRequestActionResponse }) {
+  const [expanded, setExpanded] = useState(false);
+  const dec = DECISION_LABELS[item.decision] ?? { label: item.decision, color: "#64748b" };
+  return (
+    <div style={{
+      border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden", fontSize: "0.82rem",
+    }}>
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: "0.65rem", padding: "0.65rem 0.85rem",
+          backgroundColor: "#f8fafc", cursor: "pointer",
+        }}
+        onClick={() => setExpanded(v => !v)}
+      >
+        <span style={{
+          fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.5rem", borderRadius: 20,
+          backgroundColor: dec.color + "22", color: dec.color, flexShrink: 0,
+        }}>{dec.label}</span>
+        <span style={{ flex: 1, color: "#374151", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {item.title}
+        </span>
+        <span style={{ color: "#94a3b8", fontSize: "0.72rem", whiteSpace: "nowrap", flexShrink: 0 }}>
+          {new Date(item.createdAt).toLocaleString("ar-SY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+        </span>
+        <span style={{ color: "#94a3b8" }}>{expanded ? "▲" : "▼"}</span>
+      </div>
+      {expanded && (
+        <div style={{ padding: "0.75rem 0.85rem", borderTop: "1px solid #f1f5f9", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <p style={{ margin: 0, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-line" }}>{item.note}</p>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+            {item.sentInternally && (
+              <span style={{ fontSize: "0.7rem", fontWeight: 600, backgroundColor: "#dbeafe", color: "#1d4ed8", padding: "0.15rem 0.5rem", borderRadius: 20 }}>
+                ✓ إشعار داخلي
+              </span>
+            )}
+            {item.sentByEmail && (
+              <span style={{ fontSize: "0.7rem", fontWeight: 600, backgroundColor: "#dcfce7", color: "#16a34a", padding: "0.15rem 0.5rem", borderRadius: 20 }}>
+                ✓ إيميل مُرسَل
+              </span>
+            )}
+            {item.emailFailed && (
+              <span style={{ fontSize: "0.7rem", fontWeight: 600, backgroundColor: "#fee2e2", color: "#dc2626", padding: "0.15rem 0.5rem", borderRadius: 20 }}>
+                ✗ فشل إرسال الإيميل
+              </span>
+            )}
+          </div>
+          {item.performedByName && (
+            <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>بواسطة: {item.performedByName}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Detail Panel ──────────────────────────────────────────────────────────────
+
 function DetailPanel({
   req,
   onClose,
@@ -292,6 +591,8 @@ function DetailPanel({
   const [modal, setModal]     = useState<ModalState | null>(null);
   const [actLoading, setActLoading] = useState(false);
   const [actError, setActError]   = useState<string | null>(null);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [notifyFeedback, setNotifyFeedback] = useState<string | null>(null);
 
   async function handleAction(action: ActionType, note?: string) {
     setActLoading(true);
@@ -312,6 +613,17 @@ function DetailPanel({
     } finally {
       setActLoading(false);
     }
+  }
+
+  function handleNotifySuccess(result: NotifyUserResult) {
+    setNotifyOpen(false);
+    const parts: string[] = [];
+    if (result.sentInternally) parts.push("تم إرسال الإشعار الداخلي");
+    if (result.sentByEmail)    parts.push("تم إرسال الإيميل");
+    if (result.emailFailed)    parts.push("⚠️ فشل إرسال الإيميل: " + (result.emailError ?? "خطأ غير معروف"));
+    setNotifyFeedback(parts.join(" • "));
+    onUpdated(result.request);
+    setTimeout(() => setNotifyFeedback(null), 5000);
   }
 
   const s = req.status;
@@ -387,6 +699,16 @@ function DetailPanel({
 
       <div style={{ flex: 1, padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
+        {/* Notify feedback */}
+        {notifyFeedback && (
+          <div style={{
+            backgroundColor: "#f0fdf4", border: "1px solid #86efac",
+            borderRadius: 9, padding: "0.7rem", fontSize: "0.82rem", color: "#15803d", fontWeight: 600,
+          }}>
+            ✓ {notifyFeedback}
+          </div>
+        )}
+
         {/* Action error */}
         {actError && (
           <div style={{
@@ -394,6 +716,21 @@ function DetailPanel({
             borderRadius: 9, padding: "0.7rem", fontSize: "0.82rem", color: "#b91c1c",
           }}>
             ⚠️ {actError}
+          </div>
+        )}
+
+        {/* User info */}
+        {(req.userName || req.userEmail || req.accountTypeAr) && (
+          <div style={{ backgroundColor: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, padding: "0.9rem" }}>
+            <p style={{ margin: "0 0 0.6rem", fontSize: "0.72rem", fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              بيانات المستخدم
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.83rem" }}>
+              {req.userName  && <Row label="الاسم"       value={req.userName} bold />}
+              {req.userEmail && <Row label="البريد"       value={req.userEmail} />}
+              {req.accountTypeAr && <Row label="نوع الحساب" value={req.accountTypeAr} />}
+              {req.planDisplayNameAr && <Row label="الباقة (عربي)" value={req.planDisplayNameAr} />}
+            </div>
           </div>
         )}
 
@@ -443,6 +780,14 @@ function DetailPanel({
                 لا توجد إجراءات متاحة لهذه الحالة
               </p>
             )}
+          </div>
+          {/* Notify button — always available */}
+          <div style={{ marginTop: "0.6rem", paddingTop: "0.6rem", borderTop: "1px dashed #e2e8f0" }}>
+            <ActionBtn
+              label="📩 إشعار المستخدم"
+              color="#2563eb" bg="#eff6ff"
+              onClick={() => setNotifyOpen(true)}
+            />
           </div>
         </div>
 
@@ -534,6 +879,20 @@ function DetailPanel({
           </div>
         </div>
 
+        {/* Action history */}
+        {req.actions && req.actions.length > 0 && (
+          <div>
+            <p style={{ margin: "0 0 0.75rem", fontSize: "0.75rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              سجل الإشعارات ({req.actions.length})
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {req.actions.map((action, i) => (
+                <ActionHistoryItem key={i} item={action} />
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Confirm modal */}
@@ -548,6 +907,15 @@ function DetailPanel({
           />
         );
       })()}
+
+      {/* Notify user modal */}
+      {notifyOpen && (
+        <NotifyUserModal
+          req={req}
+          onClose={() => setNotifyOpen(false)}
+          onSuccess={handleNotifySuccess}
+        />
+      )}
     </div>
   );
 }
@@ -859,7 +1227,7 @@ export default function AdminPaymentRequestsPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                 <thead>
                   <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1.5px solid #e2e8f0" }}>
-                    {["المعرّف","الباقة","المبلغ","طريقة الدفع","الحالة","التاريخ",""].map((h, i) => (
+                    {["المعرّف","اسم المستخدم","نوع الحساب","الباقة","المبلغ","طريقة الدفع","الحالة","التاريخ",""].map((h, i) => (
                       <th key={i} style={{
                         padding: "0.75rem 0.85rem", textAlign: "right",
                         fontWeight: 700, color: "#64748b", fontSize: "0.75rem",
@@ -887,6 +1255,12 @@ export default function AdminPaymentRequestsPage() {
                       >
                         <td style={{ padding: "0.75rem 0.85rem", fontFamily: "monospace", color: "#64748b", fontSize: "0.72rem" }}>
                           #{shortId(req.id)}
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem", color: "#1e293b", fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {req.userName ?? <span style={{ color: "#cbd5e1", fontWeight: 400, fontStyle: "italic" }}>—</span>}
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem", color: "#64748b", whiteSpace: "nowrap" }}>
+                          {req.accountTypeAr ?? "—"}
                         </td>
                         <td style={{ padding: "0.75rem 0.85rem", fontWeight: 600, color: "#1e293b" }}>
                           {req.planName}

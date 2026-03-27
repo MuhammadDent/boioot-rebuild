@@ -53,7 +53,8 @@ public class BoiootDbContext : DbContext
 
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<PaymentProof> PaymentProofs => Set<PaymentProof>();
-    public DbSet<SubscriptionPaymentRequest> SubscriptionPaymentRequests => Set<SubscriptionPaymentRequest>();
+    public DbSet<SubscriptionPaymentRequest>  SubscriptionPaymentRequests  => Set<SubscriptionPaymentRequest>();
+    public DbSet<SubscriptionRequestAction>   SubscriptionRequestActions   => Set<SubscriptionRequestAction>();
 
     public DbSet<PropertyAmenity> PropertyAmenities => Set<PropertyAmenity>();
     public DbSet<PropertyAmenitySelection> PropertyAmenitySelections => Set<PropertyAmenitySelection>();

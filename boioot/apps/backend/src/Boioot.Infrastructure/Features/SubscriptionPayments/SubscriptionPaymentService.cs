@@ -1,5 +1,6 @@
 using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Email;
 using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Application.Features.SubscriptionPayments;
 using Boioot.Application.Features.SubscriptionPayments.DTOs;
@@ -15,9 +16,10 @@ namespace Boioot.Infrastructure.Features.SubscriptionPayments;
 
 public class SubscriptionPaymentService : ISubscriptionPaymentService
 {
-    private readonly BoiootDbContext       _db;
-    private readonly IAccountResolver      _accountResolver;
-    private readonly IUserNotificationService _notifications;
+    private readonly BoiootDbContext              _db;
+    private readonly IAccountResolver             _accountResolver;
+    private readonly IUserNotificationService     _notifications;
+    private readonly IEmailService                _email;
     private readonly ILogger<SubscriptionPaymentService> _logger;
 
     // Statuses that block new request creation for the same account.
@@ -30,15 +32,28 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         PaymentRequestStatus.Approved,
     ];
 
+    // Arabic labels for account audience type
+    private static readonly Dictionary<string, string> AudienceTypeArLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["seeker"]  = "باحث عن عقار",
+        ["owner"]   = "مالك عقار",
+        ["broker"]  = "وسيط",
+        ["office"]  = "مكتب عقاري",
+        ["company"] = "شركة",
+        ["admin"]   = "مدير نظام",
+    };
+
     public SubscriptionPaymentService(
         BoiootDbContext                      db,
         IAccountResolver                     accountResolver,
         IUserNotificationService             notifications,
+        IEmailService                        email,
         ILogger<SubscriptionPaymentService>  logger)
     {
         _db              = db;
         _accountResolver = accountResolver;
         _notifications   = notifications;
+        _email           = email;
         _logger          = logger;
     }
 
@@ -321,11 +336,46 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             .Take(pageSize)
             .ToListAsync(ct);
 
-        return new PagedResult<PaymentRequestResponse>(
-            items.Select(r => ToResponse(r)).ToList(),
-            page,
-            pageSize,
-            total);
+        // Enrich with user / account info in a single batch query
+        var userIds    = items.Select(r => r.UserId).Distinct().ToList();
+        var accountIds = items.Select(r => r.AccountId).Distinct().ToList();
+
+        var userMap = await _db.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName, u.Email })
+            .ToDictionaryAsync(u => u.Id, ct);
+
+        var accountTypeMap = await _db.Plans
+            .AsNoTracking()
+            .Join(_db.Subscriptions.Where(s => s.IsActive && accountIds.Contains(s.AccountId)),
+                  p => p.Id, s => s.PlanId,
+                  (p, s) => new { s.AccountId, p.AudienceType })
+            .GroupBy(x => x.AccountId)
+            .Select(g => new { AccountId = g.Key, AudienceType = g.First().AudienceType })
+            .ToDictionaryAsync(x => x.AccountId, x => x.AudienceType, ct);
+
+        var responses = items.Select(r =>
+        {
+            var resp = ToResponse(r);
+            if (userMap.TryGetValue(r.UserId, out var u))
+            {
+                resp.UserName  = u.FullName;
+                resp.UserEmail = u.Email;
+            }
+            if (accountTypeMap.TryGetValue(r.AccountId, out var at))
+            {
+                resp.AccountType   = at;
+                resp.AccountTypeAr = AudienceTypeArLabels.GetValueOrDefault(at ?? "", "غير محدد");
+            }
+            else
+            {
+                resp.AccountTypeAr = "غير محدد";
+            }
+            return resp;
+        }).ToList();
+
+        return new PagedResult<PaymentRequestResponse>(responses, page, pageSize, total);
     }
 
     // ── Admin: Get by Id ─────────────────────────────────────────────────
@@ -338,7 +388,55 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             .FirstOrDefaultAsync(r => r.Id == requestId, ct)
             ?? throw new BoiootException("طلب الدفع غير موجود.", 404);
 
-        return ToResponse(req);
+        var resp = ToResponse(req);
+
+        // Enrich with user info
+        var user = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == req.UserId)
+            .Select(u => new { u.FullName, u.Email })
+            .FirstOrDefaultAsync(ct);
+
+        if (user is not null)
+        {
+            resp.UserName  = user.FullName;
+            resp.UserEmail = user.Email;
+        }
+
+        // Enrich account type from current active subscription plan
+        var activePlan = await _db.Subscriptions
+            .AsNoTracking()
+            .Where(s => s.AccountId == req.AccountId && s.IsActive)
+            .OrderByDescending(s => s.StartDate)
+            .Join(_db.Plans, s => s.PlanId, p => p.Id, (s, p) => p.AudienceType)
+            .FirstOrDefaultAsync(ct);
+
+        resp.AccountType   = activePlan;
+        resp.AccountTypeAr = AudienceTypeArLabels.GetValueOrDefault(activePlan ?? "", "غير محدد");
+
+        // Load action history
+        resp.Actions = await _db.SubscriptionRequestActions
+            .AsNoTracking()
+            .Where(a => a.RequestId == requestId)
+            .OrderByDescending(a => a.CreatedAt)
+            .Join(_db.Users, a => a.PerformedByUserId, u => u.Id,
+                  (a, u) => new SubscriptionRequestActionResponse
+                  {
+                      Id                = a.Id,
+                      ActionType        = a.ActionType,
+                      Decision          = a.Decision,
+                      Title             = a.Title,
+                      Note              = a.Note,
+                      SentInternally    = a.SentInternally,
+                      SentByEmail       = a.SentByEmail,
+                      EmailFailed       = a.EmailFailed,
+                      PerformedByUserId = a.PerformedByUserId,
+                      PerformedByName   = u.FullName ?? u.Email,
+                      CreatedAt         = a.CreatedAt,
+                  })
+            .ToListAsync(ct);
+
+        return resp;
     }
 
     // ── Admin: Mark Under Review ─────────────────────────────────────────
@@ -675,6 +773,205 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             ?? throw new BoiootException("طلب الدفع غير موجود.", 404);
     }
 
+    // ── Admin: Notify User ───────────────────────────────────────────────
+
+    public async Task<NotifyUserResult> NotifyUserAsync(
+        Guid requestId, Guid adminUserId, NotifyUserDto dto, CancellationToken ct = default)
+    {
+        // Validate
+        if (string.IsNullOrWhiteSpace(dto.Message))
+            throw new BoiootException("نص الرسالة مطلوب ولا يمكن أن يكون فارغاً.", 400);
+
+        if (!new[] { "approved", "rejected", "missing_info" }.Contains(dto.Decision, StringComparer.OrdinalIgnoreCase))
+            throw new BoiootException("نوع القرار غير صالح. القيم المقبولة: approved, rejected, missing_info.", 400);
+
+        if (!dto.SendInternal && !dto.SendEmail)
+            throw new BoiootException("يجب اختيار طريقة إرسال واحدة على الأقل (داخلي أو إيميل).", 400);
+
+        var req = await _db.SubscriptionPaymentRequests
+            .Include(r => r.Plan)
+            .FirstOrDefaultAsync(r => r.Id == requestId, ct)
+            ?? throw new BoiootException("طلب الدفع غير موجود.", 404);
+
+        // Determine notification type
+        var notifType = dto.Decision.ToLowerInvariant() switch
+        {
+            "approved"     => "subscription_approved",
+            "rejected"     => "subscription_rejected",
+            "missing_info" => "subscription_missing_info",
+            _              => "subscription_notification",
+        };
+
+        // Auto-generate title if not provided
+        var title = string.IsNullOrWhiteSpace(dto.Title)
+            ? dto.Decision.ToLowerInvariant() switch
+            {
+                "approved"     => "تمت الموافقة على طلب الاشتراك",
+                "rejected"     => "تم رفض طلب الاشتراك",
+                "missing_info" => "يوجد نقص في طلب الاشتراك",
+                _              => "إشعار بشأن طلب الاشتراك",
+            }
+            : dto.Title;
+
+        // Get recipient info
+        var recipientUser = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == req.UserId && !u.IsDeleted)
+            .Select(u => new { u.Id, u.FullName, u.Email })
+            .FirstOrDefaultAsync(ct)
+            ?? throw new BoiootException("المستخدم المرتبط بالطلب غير موجود.", 404);
+
+        bool sentInternally = false;
+        bool sentByEmail    = false;
+        bool emailFailed    = false;
+        string? emailError  = null;
+
+        // ── Internal notification ─────────────────────────────────────────
+        if (dto.SendInternal)
+        {
+            try
+            {
+                await _notifications.CreateAsync(
+                    userId:            req.UserId,
+                    type:              notifType,
+                    title:             title,
+                    body:              dto.Message,
+                    relatedEntityId:   requestId.ToString(),
+                    relatedEntityType: "SubscriptionPaymentRequest",
+                    ct:                ct);
+                sentInternally = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send internal notification for request {RequestId}", requestId);
+            }
+        }
+
+        // ── Email ─────────────────────────────────────────────────────────
+        if (dto.SendEmail)
+        {
+            var planName = req.Plan?.DisplayNameAr ?? req.Plan?.Name ?? "الباقة المطلوبة";
+            var htmlBody = BuildEmailHtml(
+                userName:    recipientUser.FullName ?? recipientUser.Email,
+                title:       title,
+                message:     dto.Message,
+                requestId:   requestId.ToString(),
+                planName:    planName,
+                decision:    dto.Decision);
+
+            var (ok, err) = await _email.TrySendAsync(new EmailMessage
+            {
+                ToAddress = recipientUser.Email,
+                ToName    = recipientUser.FullName ?? recipientUser.Email,
+                Subject   = title,
+                HtmlBody  = htmlBody,
+                PlainBody = dto.Message,
+            }, ct);
+
+            sentByEmail = ok;
+            emailFailed = !ok;
+            emailError  = err;
+        }
+
+        // ── Persist action log ────────────────────────────────────────────
+        var action = new SubscriptionRequestAction
+        {
+            Id                = Guid.NewGuid(),
+            RequestId         = requestId,
+            ActionType        = "notify_user",
+            Decision          = dto.Decision.ToLowerInvariant(),
+            Title             = title,
+            Note              = dto.Message,
+            SentInternally    = sentInternally,
+            SentByEmail       = sentByEmail,
+            EmailFailed       = emailFailed,
+            PerformedByUserId = adminUserId,
+            CreatedAt         = DateTime.UtcNow,
+            UpdatedAt         = DateTime.UtcNow,
+        };
+        _db.SubscriptionRequestActions.Add(action);
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "NotifyUser: request={RequestId}, decision={Decision}, internal={Internal}, email={Email}, emailFailed={EmailFailed}, by={AdminId}",
+            requestId, dto.Decision, sentInternally, sentByEmail, emailFailed, adminUserId);
+
+        var updatedRequest = await AdminGetByIdAsync(requestId, ct);
+
+        return new NotifyUserResult
+        {
+            SentInternally = sentInternally,
+            SentByEmail    = sentByEmail,
+            EmailFailed    = emailFailed,
+            EmailError     = emailFailed ? emailError : null,
+            Request        = updatedRequest,
+        };
+    }
+
+    // ── Private: Build email HTML ─────────────────────────────────────────
+
+    private static string BuildEmailHtml(
+        string userName, string title, string message,
+        string requestId, string planName, string decision)
+    {
+        var decisionColor = decision.ToLowerInvariant() switch
+        {
+            "approved"     => "#16a34a",
+            "rejected"     => "#dc2626",
+            "missing_info" => "#d97706",
+            _              => "#2563eb",
+        };
+
+        var decisionLabel = decision.ToLowerInvariant() switch
+        {
+            "approved"     => "موافقة",
+            "rejected"     => "رفض",
+            "missing_info" => "طلب استكمال بيانات",
+            _              => "إشعار",
+        };
+
+        return $"""
+            <!DOCTYPE html>
+            <html dir="rtl" lang="ar">
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="margin:0;padding:0;background:#f3f4f6;font-family:Tahoma,Arial,sans-serif;direction:rtl;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+                <tr><td align="center">
+                  <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                    <tr><td style="background:{decisionColor};padding:24px 32px;text-align:center;">
+                      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700;">بويوت للعقارات</h1>
+                    </td></tr>
+                    <tr><td style="padding:32px;">
+                      <p style="color:#374151;font-size:16px;margin:0 0 16px;">مرحباً {System.Net.WebUtility.HtmlEncode(userName)}،</p>
+                      <div style="background:#f9fafb;border-right:4px solid {decisionColor};padding:16px 20px;border-radius:8px;margin-bottom:24px;">
+                        <p style="margin:0 0 8px;font-size:14px;color:#6b7280;">نوع القرار</p>
+                        <p style="margin:0;font-size:18px;font-weight:700;color:{decisionColor};">{System.Net.WebUtility.HtmlEncode(decisionLabel)}</p>
+                      </div>
+                      <h2 style="color:#111827;font-size:18px;margin:0 0 12px;">{System.Net.WebUtility.HtmlEncode(title)}</h2>
+                      <p style="color:#374151;font-size:15px;line-height:1.7;white-space:pre-line;margin:0 0 24px;">{System.Net.WebUtility.HtmlEncode(message)}</p>
+                      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+                      <table width="100%">
+                        <tr>
+                          <td style="color:#6b7280;font-size:13px;">رقم الطلب</td>
+                          <td style="color:#374151;font-size:13px;text-align:left;">{requestId[..8].ToUpper()}</td>
+                        </tr>
+                        <tr>
+                          <td style="color:#6b7280;font-size:13px;padding-top:8px;">الباقة</td>
+                          <td style="color:#374151;font-size:13px;text-align:left;padding-top:8px;">{System.Net.WebUtility.HtmlEncode(planName)}</td>
+                        </tr>
+                      </table>
+                    </td></tr>
+                    <tr><td style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #e5e7eb;">
+                      <p style="color:#9ca3af;font-size:12px;margin:0;">© 2026 بويوت للعقارات. جميع الحقوق محفوظة.</p>
+                    </td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """;
+    }
+
     private static PaymentRequestResponse ToResponse(
         SubscriptionPaymentRequest r,
         string? planName = null,
@@ -686,6 +983,7 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         PlanId                   = r.RequestedPlanId,
         PlanName                 = planName ?? r.Plan?.Name ?? string.Empty,
         PlanCode                 = planCode ?? r.Plan?.Code ?? string.Empty,
+        PlanDisplayNameAr        = r.Plan?.DisplayNameAr,
         PricingId                = r.RequestedPricingId,
         BillingCycle             = r.BillingCycle,
         Amount                   = r.Amount,
@@ -704,6 +1002,7 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         ReviewedAt               = r.ReviewedAt,
         ActivatedAt              = r.ActivatedAt,
         CompletedAt              = r.CompletedAt,
+        Actions                  = [],
     };
 
     // ── Private: Admin notifications ─────────────────────────────────────

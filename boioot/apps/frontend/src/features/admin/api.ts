@@ -602,6 +602,14 @@ export const adminApi = {
     return api.post(`/admin/payment-requests/${id}/activate`, {});
   },
 
+  /** POST /api/admin/payment-requests/{id}/notify-user */
+  paymentNotifyUser(
+    id: string,
+    dto: import("@/features/subscriptionPayments/types").NotifyUserDto
+  ): Promise<import("@/features/subscriptionPayments/types").NotifyUserResult> {
+    return api.post(`/admin/payment-requests/${id}/notify-user`, dto);
+  },
+
   // ── Plan Matrix ──────────────────────────────────────────────────────────
 
   /** GET /api/admin/plan-catalog/matrix — full plan × feature matrix */

@@ -62,6 +62,7 @@ public sealed class SchemaEvolutionService
         await ApplyUserTagsPatchesAsync(ct);
         await ApplyVerificationRequestsPatchesAsync(ct);
         await ApplyMonetizationPhase1PatchesAsync(ct);
+        await ApplySubscriptionRequestActionsPatchesAsync(ct);
 
         await ApplySqliteIndexPatchesAsync(ct);
         await ApplyWalCheckpointAsync(ct);
@@ -456,6 +457,31 @@ public sealed class SchemaEvolutionService
             "DELETE FROM PlanFeatures WHERE FeatureDefinitionId NOT IN (SELECT Id FROM FeatureDefinitions)", ct);
         await TryExec(
             "DELETE FROM PlanLimits WHERE LimitDefinitionId NOT IN (SELECT Id FROM LimitDefinitions)", ct);
+    }
+
+    // ── SubscriptionRequestActions table ─────────────────────────────────────
+
+    private async Task ApplySubscriptionRequestActionsPatchesAsync(CancellationToken ct)
+    {
+        await TryExec(@"
+            CREATE TABLE IF NOT EXISTS ""SubscriptionRequestActions"" (
+                ""Id""                TEXT NOT NULL PRIMARY KEY,
+                ""RequestId""         TEXT NOT NULL,
+                ""ActionType""        TEXT NOT NULL DEFAULT '',
+                ""Decision""          TEXT NOT NULL DEFAULT '',
+                ""Title""             TEXT NOT NULL DEFAULT '',
+                ""Note""              TEXT NOT NULL DEFAULT '',
+                ""SentInternally""    INTEGER NOT NULL DEFAULT 0,
+                ""SentByEmail""       INTEGER NOT NULL DEFAULT 0,
+                ""EmailFailed""       INTEGER NOT NULL DEFAULT 0,
+                ""PerformedByUserId"" TEXT NOT NULL,
+                ""CreatedAt""         TEXT NOT NULL,
+                ""UpdatedAt""         TEXT NOT NULL
+            )", ct);
+
+        await TryExec(
+            @"CREATE INDEX IF NOT EXISTS IX_SubscriptionRequestActions_RequestId
+              ON ""SubscriptionRequestActions""(""RequestId"")", ct, warnOnError: true);
     }
 
     // ── WAL checkpoint + pool reset (SQLite only) ─────────────────────────────
