@@ -2,8 +2,8 @@
 
 import { useState, useEffect, Suspense, type FormEvent } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import Spinner from "@/components/ui/Spinner";
 import PropertyCard from "@/components/properties/PropertyCard";
+import { PropertyCardSkeletonGrid } from "@/components/properties/PropertyCardSkeleton";
 import { propertiesApi, PROPERTIES_PAGE_SIZE } from "@/features/properties/api";
 import { PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
 import { useCities } from "@/hooks/useCities";
@@ -245,7 +245,7 @@ function DailyRentalsContent() {
         </form>
 
         {/* Loading */}
-        {loading && <Spinner />}
+        {loading && <PropertyCardSkeletonGrid count={PROPERTIES_PAGE_SIZE} />}
 
         {/* Error */}
         {!loading && error && <div className="error-banner">{error}</div>}
@@ -310,7 +310,7 @@ function DailyRentalsContent() {
 
 export default function DailyRentalsPage() {
   return (
-    <Suspense fallback={<Spinner />}>
+    <Suspense fallback={<PropertyCardSkeletonGrid />}>
       <DailyRentalsContent />
     </Suspense>
   );

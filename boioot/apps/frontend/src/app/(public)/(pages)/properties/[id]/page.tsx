@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Spinner from "@/components/ui/Spinner";
+import { PropertyDetailSkeleton } from "@/components/properties/PropertyDetailSkeleton";
 import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
@@ -164,7 +164,7 @@ export default function PropertyDetailPage() {
     void doOpenChat();
   }, [user, openAuthModal, doOpenChat]);
 
-  if (loading) return <Spinner />;
+  if (loading) return <PropertyDetailSkeleton />;
 
   if (error) {
     return (

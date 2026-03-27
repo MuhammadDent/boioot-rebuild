@@ -2,8 +2,8 @@
 
 import { useState, useEffect, Suspense, type FormEvent } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import Spinner from "@/components/ui/Spinner";
 import PropertyCard from "@/components/properties/PropertyCard";
+import { PropertyCardSkeletonGrid } from "@/components/properties/PropertyCardSkeleton";
 import { propertiesApi, PROPERTIES_PAGE_SIZE } from "@/features/properties/api";
 import {
   PROPERTY_TYPE_LABELS,
@@ -198,7 +198,7 @@ function PropertiesContent() {
           {/* Content — first in DOM = RIGHT side in RTL (main reading area) */}
           <div className="properties-content">
 
-            {loading && <Spinner />}
+            {loading && <PropertyCardSkeletonGrid count={PROPERTIES_PAGE_SIZE} />}
 
             {!loading && error && <div className="error-banner">{error}</div>}
 
@@ -360,7 +360,7 @@ function PropertiesContent() {
 
 export default function PropertiesPage() {
   return (
-    <Suspense fallback={<Spinner />}>
+    <Suspense fallback={<PropertyCardSkeletonGrid />}>
       <PropertiesContent />
     </Suspense>
   );

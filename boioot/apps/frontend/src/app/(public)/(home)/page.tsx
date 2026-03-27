@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import MainHeader from "@/components/layout/MainHeader";
 import PropertyCard from "@/components/properties/PropertyCard";
+import { PropertyCardSkeletonGrid } from "@/components/properties/PropertyCardSkeleton";
 import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { api } from "@/lib/api";
@@ -497,11 +498,7 @@ export default function HomePage() {
             {!loading && <span style={{ color: "var(--color-text-muted)", fontWeight: 400, fontSize: "0.9rem", marginRight: "0.5rem" }}>({totalCount.toLocaleString("en")})</span>}
           </h2>
 
-          {loading && (
-            <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-muted)" }}>
-              <div style={{ display: "inline-block", width: 36, height: 36, border: "3px solid var(--color-border)", borderTop: "3px solid var(--color-primary)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-            </div>
-          )}
+          {loading && <PropertyCardSkeletonGrid count={8} />}
 
           {!loading && displayed.length === 0 && (
             <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-muted)" }}>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, type FormEvent } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import Spinner from "@/components/ui/Spinner";
+import { PropertyCardSkeletonGrid } from "@/components/properties/PropertyCardSkeleton";
 import ProjectCard from "@/components/projects/ProjectCard";
 import { projectsApi, PROJECTS_PAGE_SIZE } from "@/features/projects/api";
 import { PROJECT_STATUS_LABELS } from "@/features/projects/constants";
@@ -169,7 +169,7 @@ function ProjectsContent() {
         </form>
 
         {/* Loading */}
-        {loading && <Spinner />}
+        {loading && <PropertyCardSkeletonGrid count={PROJECTS_PAGE_SIZE} />}
 
         {/* Error */}
         {!loading && error && (
@@ -240,7 +240,7 @@ function ProjectsContent() {
 
 export default function ProjectsPage() {
   return (
-    <Suspense fallback={<Spinner />}>
+    <Suspense fallback={<PropertyCardSkeletonGrid />}>
       <ProjectsContent />
     </Suspense>
   );

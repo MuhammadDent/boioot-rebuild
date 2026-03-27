@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import Spinner from "@/components/ui/Spinner";
+import { PropertyDetailSkeleton } from "@/components/properties/PropertyDetailSkeleton";
 import InquiryForm from "@/components/ui/InquiryForm";
 import { projectsApi } from "@/features/projects/api";
 import {
@@ -36,7 +36,7 @@ export default function ProjectDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <Spinner />;
+  if (loading) return <PropertyDetailSkeleton />;
 
   if (error) {
     return (

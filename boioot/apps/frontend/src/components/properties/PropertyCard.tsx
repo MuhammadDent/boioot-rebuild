@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { memo, useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { PropertyResponse } from "@/types";
 import {
   PROPERTY_TYPE_LABELS,
@@ -17,44 +18,66 @@ interface PropertyCardProps {
   initialIsFavorited?: boolean;
 }
 
-export default function PropertyCard({ property, initialIsFavorited = false }: PropertyCardProps) {
+function PropertyCardInner({ property, initialIsFavorited = false }: PropertyCardProps) {
+  const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthGate();
   const mainImage = property.images.find((img) => img.isPrimary) ?? property.images[0];
 
+  // ── Optimistic favorite state ──────────────────────────────────────────────
+  // Toggle state immediately on click; roll back on API failure.
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
   const [toggling, setToggling] = useState(false);
 
-  async function doToggle() {
+  const doToggle = useCallback(async () => {
     if (toggling) return;
+    // Optimistic update — instant feedback before the network round-trip
+    const optimisticValue = !isFavorited;
+    setIsFavorited(optimisticValue);
     setToggling(true);
     try {
       const { added } = await favoritesApi.toggle(property.id);
-      setIsFavorited(added);
-    } catch { /* silent */ } finally { setToggling(false); }
-  }
+      // Reconcile with server response in case it differs
+      if (added !== optimisticValue) setIsFavorited(added);
+    } catch {
+      // Rollback on failure
+      setIsFavorited(!optimisticValue);
+    } finally {
+      setToggling(false);
+    }
+  }, [isFavorited, toggling, property.id]);
 
-  function handleFavorite(e: React.MouseEvent) {
+  const handleFavorite = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAuthenticated) { openAuthModal(() => { void doToggle(); }); return; }
     void doToggle();
-  }
+  }, [isAuthenticated, openAuthModal, doToggle]);
+
+  // ── Phase 3: Prefetch property detail on hover ─────────────────────────────
+  const handleMouseEnter = useCallback(() => {
+    router.prefetch(`/properties/${property.id}`);
+  }, [router, property.id]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative" }} onMouseEnter={handleMouseEnter}>
       <Link
         href={`/properties/${property.id}`}
         style={{ textDecoration: "none", display: "block" }}
       >
         <article className="card property-card">
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", overflow: "hidden" }}>
             {mainImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={mainImage.imageUrl}
                 alt={property.title}
                 className="property-card__img"
+                loading="lazy"
+                width={400}
+                height={200}
+                decoding="async"
+                style={{ display: "block" }}
               />
             ) : (
               <div className="property-card__img-placeholder">🏠</div>
@@ -99,11 +122,12 @@ export default function PropertyCard({ property, initialIsFavorited = false }: P
         </article>
       </Link>
 
-      {/* Heart button — outside <Link> (<a>) to satisfy HTML5 interactive-content rule */}
+      {/* Heart button — outside <Link> to satisfy HTML5 interactive-content rule */}
       <button
         type="button"
         onClick={handleFavorite}
         title={isFavorited ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+        aria-pressed={isFavorited}
         style={{
           position: "absolute",
           top: "0.55rem",
@@ -131,6 +155,7 @@ export default function PropertyCard({ property, initialIsFavorited = false }: P
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          style={{ transition: "fill 0.15s, stroke 0.15s" }}
         >
           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
         </svg>
@@ -138,3 +163,6 @@ export default function PropertyCard({ property, initialIsFavorited = false }: P
     </div>
   );
 }
+
+// Phase 6: Memoize — prevents re-render when parent re-renders with same props
+export default memo(PropertyCardInner);
