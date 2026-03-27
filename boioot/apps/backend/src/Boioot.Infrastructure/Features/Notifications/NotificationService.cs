@@ -39,6 +39,29 @@ public class NotificationService : IUserNotificationService
         await _db.SaveChangesAsync(ct);
     }
 
+    public async Task CreateBatchAsync(
+        IEnumerable<NotificationRequest> items,
+        CancellationToken ct = default)
+    {
+        var list = items
+            .Select(i => new Notification
+            {
+                UserId            = i.UserId,
+                Type              = i.Type,
+                Title             = i.Title,
+                Body              = i.Body,
+                IsRead            = false,
+                RelatedEntityId   = i.RelatedEntityId,
+                RelatedEntityType = i.RelatedEntityType,
+            })
+            .ToList();
+
+        if (list.Count == 0) return;
+
+        _db.Notifications.AddRange(list);
+        await _db.SaveChangesAsync(ct);
+    }
+
     public async Task<NotificationListResult> GetForUserAsync(
         Guid userId, int page, int pageSize, CancellationToken ct = default)
     {

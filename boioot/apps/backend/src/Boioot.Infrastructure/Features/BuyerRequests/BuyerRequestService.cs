@@ -198,43 +198,82 @@ public class BuyerRequestService : IBuyerRequestService
             .FirstOrDefaultAsync(ct) ?? "";
 
         // NOTE: Do NOT assign comment.User = new User{...} on the tracked entity.
-        // Assigning a new (untracked) User to a tracked entity's nav property causes
-        // EF Core's change-tracker to queue it for INSERT, which then conflicts with
-        // the Notifications SaveChangesAsync below.  Pass the name directly instead.
+        // EF Core's change-tracker would queue the new User object for INSERT,
+        // conflicting with the Notifications SaveChangesAsync.  Use actorName directly.
 
-        // ── Notification: notify request owner (skip if owner replied to own request) ──
-        if (request.UserId != userId)
+        // ── Notifications: multi-recipient, deduplicated ────────────────────────────
+        //
+        // Priority / message map:
+        //   A) Request owner              → "تعليق جديد على طلبك"             (request_comment)
+        //   B) Other previous commenters  → "نشاط جديد في نقاش شاركت فيه"    (request_discussion_activity)
+        //
+        // Rules:
+        //   • Never notify the actor (current commenter).
+        //   • Never send duplicate notifications to the same recipient.
+        //   • Request owner always gets message A (more specific), even if they
+        //     also happen to be a previous commenter.
+
+        // Fetch all users who commented on this request BEFORE the current comment,
+        // excluding the actor.  We use c.Id != comment.Id to exclude the just-saved comment.
+        var previousParticipantIds = await _context.BuyerRequestComments
+            .Where(c => c.BuyerRequestId == requestId
+                     && c.Id             != comment.Id  // exclude current comment
+                     && c.UserId         != userId)     // exclude actor
+            .Select(c => c.UserId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var recipientSet    = new HashSet<Guid>();
+        var notifications   = new List<NotificationRequest>();
+
+        // A) Request owner
+        if (request.UserId != userId && recipientSet.Add(request.UserId))
+        {
+            notifications.Add(new NotificationRequest(
+                UserId            : request.UserId,
+                Type              : "request_comment",
+                Title             : "تعليق جديد على طلبك",
+                Body              : $"قام {actorName} بالتعليق على طلبك: {request.Title}",
+                RelatedEntityId   : requestId.ToString(),
+                RelatedEntityType : "BuyerRequest"));
+        }
+
+        // B) Previous unique participants (skip any already in recipientSet)
+        foreach (var pId in previousParticipantIds)
+        {
+            if (!recipientSet.Add(pId)) continue;  // owner already added above
+
+            notifications.Add(new NotificationRequest(
+                UserId            : pId,
+                Type              : "request_discussion_activity",
+                Title             : "نشاط جديد في نقاش شاركت فيه",
+                Body              : $"قام {actorName} بالتعليق على طلب شاركت في نقاشه",
+                RelatedEntityId   : requestId.ToString(),
+                RelatedEntityType : "BuyerRequest"));
+        }
+
+        if (notifications.Count > 0)
         {
             _logger.LogInformation(
-                "[BuyerRequest] Sending REQUEST_COMMENT notification — requestId={RequestId}, ownerId={OwnerId}, actorId={ActorId}, actorName={ActorName}",
-                requestId, request.UserId, userId, actorName);
+                "[BuyerRequest] Dispatching {Count} notification(s) — requestId={RequestId}, actorId={ActorId}, recipients=[{Recipients}]",
+                notifications.Count, requestId, userId,
+                string.Join(", ", recipientSet));
 
             try
             {
-                await _notifications.CreateAsync(
-                    userId            : request.UserId,
-                    type              : "request_comment",
-                    title             : "رد جديد على طلبك",
-                    body              : $"قام {actorName} بالرد على طلبك: {request.Title}",
-                    relatedEntityId   : requestId.ToString(),
-                    relatedEntityType : "BuyerRequest",
-                    ct                : ct);
-
-                _logger.LogInformation(
-                    "[BuyerRequest] Notification created successfully for ownerId={OwnerId}", request.UserId);
+                await _notifications.CreateBatchAsync(notifications, ct);
             }
             catch (Exception ex)
             {
                 // Never let a notification failure break the comment creation.
                 _logger.LogError(ex,
-                    "[BuyerRequest] Failed to create REQUEST_COMMENT notification for ownerId={OwnerId}",
-                    request.UserId);
+                    "[BuyerRequest] Failed to dispatch notifications for requestId={RequestId}", requestId);
             }
         }
         else
         {
             _logger.LogDebug(
-                "[BuyerRequest] Skipping self-notification — owner replied to own request (requestId={RequestId})",
+                "[BuyerRequest] No notification recipients (self-comment or solo request) requestId={RequestId}",
                 requestId);
         }
 

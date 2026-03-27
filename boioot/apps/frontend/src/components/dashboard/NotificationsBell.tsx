@@ -43,13 +43,14 @@ function relativeTime(dateStr: string): string {
 
 function typeIcon(type: string): string {
   const map: Record<string, string> = {
-    listing_approved:    "✅",
-    listing_rejected:    "❌",
-    new_request:         "📨",
-    trial_warning:       "⚠️",
-    trial_limit_reached: "🚫",
-    system_alert:        "🔔",
-    request_comment:     "💬",
+    listing_approved:             "✅",
+    listing_rejected:             "❌",
+    new_request:                  "📨",
+    trial_warning:                "⚠️",
+    trial_limit_reached:          "🚫",
+    system_alert:                 "🔔",
+    request_comment:              "💬",
+    request_discussion_activity:  "💬",
   };
   return map[type] ?? "🔔";
 }
