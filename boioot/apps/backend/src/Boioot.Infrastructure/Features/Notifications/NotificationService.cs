@@ -66,11 +66,24 @@ public class NotificationService : IUserNotificationService
         Guid userId, int page, int pageSize, CancellationToken ct = default)
     {
         var query = _db.Notifications
+            .AsNoTracking()
             .Where(n => n.UserId == userId)
             .OrderByDescending(n => n.CreatedAt);
 
-        var total  = await query.CountAsync(ct);
-        var unread = await query.CountAsync(n => !n.IsRead, ct);
+        // Combine total + unread into a single GROUP BY round-trip
+        var counts = await _db.Notifications
+            .AsNoTracking()
+            .Where(n => n.UserId == userId)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                Total  = g.Count(),
+                Unread = g.Count(n => !n.IsRead)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var total  = counts?.Total  ?? 0;
+        var unread = counts?.Unread ?? 0;
 
         var items = await query
             .Skip((page - 1) * pageSize)

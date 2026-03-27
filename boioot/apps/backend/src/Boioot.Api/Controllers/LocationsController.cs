@@ -184,7 +184,10 @@ public class LocationsController : BaseController
         [FromQuery] string? city,
         CancellationToken   ct = default)
     {
+        Response.Headers.Append("Cache-Control", "public, max-age=120, stale-while-revalidate=30");
+
         var baseQuery = _db.Properties
+            .AsNoTracking()
             .IgnoreQueryFilters()
             .Where(p => !p.IsDeleted);
 

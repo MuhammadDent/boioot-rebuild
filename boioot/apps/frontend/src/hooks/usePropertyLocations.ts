@@ -20,21 +20,36 @@ interface RawOptions {
   neighborhoods: LocationNeighborhood[];
 }
 
+// ─── Module-level cache ───────────────────────────────────────────────────────
+// property-options reflects the live Properties dataset. Caching is safe for
+// the tab session — it changes only when listings are added/removed.
+
+const _EMPTY: RawOptions = { provinces: [], cities: [], neighborhoods: [] };
+let _cached: RawOptions | null = null;
+let _inFlight: Promise<RawOptions> | null = null;
+
+function fetchOptions(): Promise<RawOptions> {
+  if (_cached) return Promise.resolve(_cached);
+  if (_inFlight) return _inFlight;
+  _inFlight = api
+    .get<RawOptions>("/locations/property-options")
+    .then((d) => { _cached = d; _inFlight = null; return d; })
+    .catch(() => { _inFlight = null; return _EMPTY; });
+  return _inFlight;
+}
+
 /**
  * Fetches ALL distinct province / city / neighborhood values that appear in
- * the Properties dataset (single request on mount).  Client-side filtering is
- * then applied based on the selected province and city.
+ * the Properties dataset (single request, cached for the tab session).
+ * Client-side filtering is applied based on the selected province and city.
  */
 export function usePropertyLocations(selectedProvince?: string, selectedCity?: string) {
-  const [raw, setRaw] = useState<RawOptions>({ provinces: [], cities: [], neighborhoods: [] });
-  const [loading, setLoading] = useState(true);
+  const [raw, setRaw] = useState<RawOptions>(() => _cached ?? _EMPTY);
+  const [loading, setLoading] = useState(() => _cached === null);
 
   useEffect(() => {
-    api
-      .get<RawOptions>("/locations/property-options")
-      .then((d) => setRaw(d))
-      .catch(() => setRaw({ provinces: [], cities: [], neighborhoods: [] }))
-      .finally(() => setLoading(false));
+    if (_cached) { setRaw(_cached); setLoading(false); return; }
+    fetchOptions().then((d) => { setRaw(d); setLoading(false); });
   }, []);
 
   const cities = useMemo(() => {

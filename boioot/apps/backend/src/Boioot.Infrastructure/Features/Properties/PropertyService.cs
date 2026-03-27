@@ -43,6 +43,7 @@ public class PropertyService : IPropertyService
         var pageSize = Math.Clamp(filters.PageSize, 1, 50);
 
         var query = _context.Properties
+            .AsNoTracking()
             .Include(p => p.Company)
             .Include(p => p.Images.Where(i => i.IsPrimary))
             .Where(p => p.Status == PropertyStatus.Available);
@@ -65,6 +66,7 @@ public class PropertyService : IPropertyService
     public async Task<PropertyResponse> GetByIdPublicAsync(Guid id, CancellationToken ct = default)
     {
         var property = await _context.Properties
+            .AsNoTracking()
             .Include(p => p.Company)
             .Include(p => p.Images)
             .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
@@ -497,6 +499,7 @@ public class PropertyService : IPropertyService
         var pageSize = Math.Clamp(filters.PageSize, 1, 50);
 
         var query = _context.Properties
+            .AsNoTracking()
             .Include(p => p.Company)
             .Include(p => p.Images.Where(i => i.IsPrimary));
 
@@ -754,6 +757,7 @@ public class PropertyService : IPropertyService
             .ToListAsync(ct);
 
         var query = _context.Properties
+            .AsNoTracking()
             .Include(p => p.Company)
             .Include(p => p.Images.Where(i => i.IsPrimary))
             .Where(p => !p.IsDeleted && (

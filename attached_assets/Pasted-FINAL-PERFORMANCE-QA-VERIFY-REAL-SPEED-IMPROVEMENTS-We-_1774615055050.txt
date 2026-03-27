@@ -1,0 +1,128 @@
+FINAL PERFORMANCE QA — VERIFY REAL SPEED IMPROVEMENTS
+
+We have already applied performance optimizations.
+
+Now I want strict end-to-end validation in the running app.
+
+Do NOT describe the code again.
+Do NOT repeat what was changed.
+I want actual verification results.
+
+========================================
+GOAL
+========================================
+
+Verify whether the app is now actually faster across key pages.
+
+========================================
+TEST PAGES (MANDATORY)
+========================================
+
+Measure and validate these pages:
+
+1) Homepage
+2) /properties
+3) Property details page
+4) /daily-rentals
+5) Dashboard home
+6) Requests page
+7) Subscription / plans page
+
+========================================
+FOR EACH PAGE, REPORT:
+========================================
+
+1) Number of network requests on first load
+2) Slowest request
+3) Approximate page data-ready time
+4) Whether duplicate requests still exist
+5) Whether page blocks on non-critical data
+6) PASS / FAIL status
+
+========================================
+MANDATORY CHECKS
+========================================
+
+Check all of the following carefully:
+
+1) Are location/city/province requests still repeated across pages?
+2) Is CMS/public content still fetched repeatedly?
+3) Is current-user/session/profile data requested more than once per page?
+4) Are filters/search endpoints debounced correctly?
+5) Are list pages fetching too many records at once?
+6) Are detail pages loading unnecessary related data before first render?
+7) Are header/navbar/mobile drawer still causing extra requests?
+8) Are there any endpoints missing cache headers that should have them?
+9) Are dashboard pages still doing unnecessary summary/count queries?
+10) Are images slowing first paint because large assets are loaded too early?
+
+========================================
+NETWORK VALIDATION
+========================================
+
+Use actual browser/network inspection and list:
+
+- endpoint
+- request count
+- status
+- duration
+- duplicate? yes/no
+
+Especially inspect:
+- /api/locations/cities
+- /api/locations/provinces
+- /api/locations/neighborhoods
+- /api/content/public
+- property list endpoints
+- dashboard summary endpoints
+- notifications/messages/profile endpoints if any
+
+========================================
+PERFORMANCE REGRESSION CHECK
+========================================
+
+Search for any remaining bad patterns:
+
+- repeated useEffect fetching
+- layout-level refetch on every navigation
+- client components fetching same data independently
+- unpaginated list endpoints
+- sequential awaits where Promise.all is possible
+- missing AsNoTracking in read-only queries
+- missing indexes for frequently filtered fields
+
+========================================
+SCORING
+========================================
+
+For each page, assign one of:
+- Excellent
+- Acceptable
+- Needs more optimization
+- Still slow
+
+========================================
+FINAL OUTPUT FORMAT
+========================================
+
+Return:
+
+1) Table of all tested pages
+   - page
+   - request count
+   - slowest request
+   - result
+   - rating
+
+2) List of remaining bottlenecks ranked by severity
+
+3) Exact files/endpoints still needing optimization
+
+4) Clear final verdict:
+- “Performance issue largely resolved”
+OR
+- “Performance issue partially resolved”
+OR
+- “Performance issue still present”
+
+5) If still present, immediately fix the remaining bottlenecks and rerun the validation.
