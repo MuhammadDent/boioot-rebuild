@@ -286,6 +286,11 @@ export default function NotificationsBell() {
   };
 
   const handleNotificationClick = (n: NotificationItem) => {
+    console.log("[BELL_CLICK] notification:", JSON.stringify({
+      id: n.id, type: n.type, relatedEntityType: n.relatedEntityType,
+      relatedEntityId: n.relatedEntityId, isRead: n.isRead
+    }));
+
     // Mark as read non-blocking
     if (!n.isRead) handleMarkRead(n.id);
 
@@ -293,18 +298,22 @@ export default function NotificationsBell() {
 
     // Subscription payment request → rich detail modal
     if (n.relatedEntityType === "SubscriptionPaymentRequest" && n.relatedEntityId) {
+      console.log("[BELL_CLICK] → opening subscription_request modal, requestId:", n.relatedEntityId);
       setModal({ kind: "subscription_request", requestId: n.relatedEntityId });
       return;
     }
 
     // Has direct navigation target
     const target = resolveNotificationTarget(n);
+    console.log("[BELL_CLICK] resolved target:", target);
     if (target) {
+      console.log("[BELL_CLICK] → navigating to:", target);
       router.push(target);
       return;
     }
 
     // Fallback: generic body modal
+    console.log("[BELL_CLICK] → opening generic modal");
     setModal({ kind: "generic", notification: n });
   };
 

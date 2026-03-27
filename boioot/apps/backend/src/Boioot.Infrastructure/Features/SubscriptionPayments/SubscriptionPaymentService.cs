@@ -250,7 +250,31 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         Guid requestId, Guid userId, CancellationToken ct = default)
     {
         var req = await LoadOwnedRequestAsync(requestId, userId, ct);
-        return ToResponse(req);
+        var resp = ToResponse(req);
+
+        // Load admin action history so the user can see all replies/decisions
+        resp.Actions = await _db.SubscriptionRequestActions
+            .AsNoTracking()
+            .Where(a => a.RequestId == requestId)
+            .OrderByDescending(a => a.CreatedAt)
+            .Join(_db.Users, a => a.PerformedByUserId, u => u.Id,
+                  (a, u) => new SubscriptionRequestActionResponse
+                  {
+                      Id                = a.Id,
+                      ActionType        = a.ActionType,
+                      Decision          = a.Decision,
+                      Title             = a.Title,
+                      Note              = a.Note,
+                      SentInternally    = a.SentInternally,
+                      SentByEmail       = a.SentByEmail,
+                      EmailFailed       = a.EmailFailed,
+                      PerformedByUserId = a.PerformedByUserId,
+                      PerformedByName   = u.FullName ?? u.Email,
+                      CreatedAt         = a.CreatedAt,
+                  })
+            .ToListAsync(ct);
+
+        return resp;
     }
 
     // ── Customer: My requests ────────────────────────────────────────────
