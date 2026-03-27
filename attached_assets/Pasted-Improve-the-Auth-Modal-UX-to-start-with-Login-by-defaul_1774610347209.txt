@@ -1,0 +1,114 @@
+Improve the Auth Modal UX to start with Login by default and allow switching to Signup.
+
+GOAL
+When the authentication modal opens:
+- Show "تسجيل الدخول" first (default view)
+- Allow user to switch to "إنشاء حساب" manually
+- Do NOT show both forms at once
+- Do NOT rely on tabs only — use clear switching logic
+
+==================================================
+1) DEFAULT STATE
+==================================================
+
+When AuthModal opens:
+- activeView = "login"
+
+Always show login form first:
+- email/phone
+- password
+- login button
+
+==================================================
+2) SWITCH TO SIGNUP
+==================================================
+
+Under login form, add:
+
+"ليس لديك حساب؟ إنشاء حساب"
+
+When user clicks:
+→ switch view to signup
+
+==================================================
+3) SIGNUP VIEW
+==================================================
+
+Signup form should include:
+- name
+- email
+- phone (optional)
+- password
+- confirm password
+- account type (if exists)
+
+Under signup form, add:
+
+"لديك حساب؟ تسجيل الدخول"
+
+When clicked:
+→ switch back to login
+
+==================================================
+4) STATE MANAGEMENT
+==================================================
+
+Use a single modal with state:
+
+const [view, setView] = useState("login");
+
+- "login"
+- "signup"
+
+Do NOT create two separate modals
+
+==================================================
+5) REMOVE CURRENT BEHAVIOR
+==================================================
+
+- Remove default tab switching if confusing
+- Remove showing signup first
+- Remove auto-switch unless explicitly triggered
+
+==================================================
+6) UX IMPROVEMENTS
+==================================================
+
+- Keep modal centered
+- Keep scroll working inside modal
+- Animate transition between login/signup (fade or slide)
+- Keep form data if user switches between views
+
+==================================================
+7) INTEGRATION WITH SPECIAL REQUEST FLOW
+==================================================
+
+When modal is triggered from special request form:
+
+- Open modal with login view
+- After successful login/signup:
+  → close modal
+  → return user to form
+  → allow submission
+
+==================================================
+8) EDGE CASES
+==================================================
+
+- If login fails → stay in login view
+- If signup fails → stay in signup view
+- If user closes modal → do nothing (data remains)
+
+==================================================
+9) DELIVERABLES
+==================================================
+
+1) AuthModal starts with login view
+2) Clean switch between login/signup
+3) No duplicate modals
+4) Smooth UX
+5) Works correctly with special requests flow
+
+IMPORTANT
+- Default must always be login
+- Signup only appears after user action

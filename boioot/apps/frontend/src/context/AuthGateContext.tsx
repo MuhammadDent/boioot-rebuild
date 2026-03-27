@@ -360,7 +360,7 @@ function LoginForm({
 // ─── Modal shell ──────────────────────────────────────────────────────────────
 
 function AuthModal({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) {
-  const [mode, setMode] = useState<Mode>("register");
+  const [mode, setMode] = useState<Mode>("login");
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
