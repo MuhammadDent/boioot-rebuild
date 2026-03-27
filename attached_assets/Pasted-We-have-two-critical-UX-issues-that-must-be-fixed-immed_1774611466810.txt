@@ -1,0 +1,154 @@
+We have two critical UX issues that must be fixed immediately.
+
+========================================
+ISSUE 1: Message Icon Visible for Guests
+========================================
+
+PROBLEM:
+The messaging icon is currently visible in the header even when the user is NOT authenticated.
+
+This is incorrect behavior.
+
+REQUIREMENTS:
+
+1) Hide messaging icon completely for unauthenticated users
+- Do NOT render it
+- Do NOT just disable it (must be removed from DOM)
+
+2) Only show messaging icon when:
+- user.isAuthenticated === true
+
+3) Apply same rule to:
+- notifications icon
+- dashboard shortcut (if exists)
+
+4) Guest users should only see:
+- Login
+- Register
+- Public navigation
+
+----------------------------------------
+
+IMPLEMENTATION (React example):
+
+{user?.isAuthenticated && (
+  <MessagesIcon />
+)}
+
+----------------------------------------
+
+========================================
+ISSUE 2: Bad Redirect After Login
+========================================
+
+PROBLEM:
+After login, the system redirects user to dashboard ALWAYS.
+
+This breaks UX.
+
+REQUIREMENTS:
+
+1) Store last visited page BEFORE redirecting to login
+
+- Use:
+  location.pathname
+  + location.search
+
+2) Save it in:
+- sessionStorage (preferred)
+OR
+- redirect query param
+
+----------------------------------------
+
+WHEN USER TRIES ACTION (e.g. send request):
+
+IF not authenticated:
+→ Save current URL
+→ Redirect to /login
+
+----------------------------------------
+
+IMPLEMENTATION:
+
+sessionStorage.setItem("redirect_after_login", window.location.href)
+
+----------------------------------------
+
+3) After successful login:
+
+- Check if redirect exists:
+
+const redirect = sessionStorage.getItem("redirect_after_login")
+
+IF exists:
+→ redirect to it
+→ then clear it
+
+ELSE:
+→ fallback to /dashboard
+
+----------------------------------------
+
+4) IMPORTANT UX RULE:
+
+User must return to EXACT page:
+- same listing
+- same scroll (if possible)
+- same context
+
+----------------------------------------
+
+5) DO NOT:
+- force redirect to dashboard
+- lose user context
+
+----------------------------------------
+
+========================================
+BONUS (HIGHLY RECOMMENDED)
+========================================
+
+If user clicks:
+- "Send Request"
+- "Contact"
+- "Message"
+
+While not logged in:
+
+→ Show LOGIN MODAL instead of full redirect
+
+After login success:
+→ auto-continue action
+
+----------------------------------------
+
+========================================
+TEST CASES (MUST PASS)
+========================================
+
+1) Guest visits listing → clicks "Contact"
+→ login shown
+→ after login returns to SAME listing
+
+2) Guest opens homepage → login manually
+→ redirect to homepage (NOT dashboard)
+
+3) Authenticated user:
+→ sees messaging icon
+
+4) Guest user:
+→ does NOT see messaging icon at all
+
+========================================
+
+DO NOT BREAK:
+- existing auth system
+- routing
+- SSR (if exists)
+
+========================================
+DELIVERABLE:
+- Clean conditional rendering
+- Proper redirect logic
+- No UX regression

@@ -177,12 +177,6 @@ export default function MainHeader() {
 
             {mounted && !isLoading && !isAuthenticated && (
               <>
-                <MessagesIconBtn
-                  isActivePage={false}
-                  onClick={handleMessagesClick}
-                  size={34}
-                />
-
                 <Link
                   href="/login"
                   className="main-hdr__login main-hdr__auth-desktop"

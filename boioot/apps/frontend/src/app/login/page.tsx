@@ -24,7 +24,16 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace("/dashboard");
+      // Respect any stored return URL (set by useProtectedRoute or openAuthModal).
+      const returnUrl = typeof window !== "undefined"
+        ? sessionStorage.getItem(AUTH_INTENT_KEY)
+        : null;
+      if (returnUrl && !returnUrl.includes("/login") && !returnUrl.includes("/register")) {
+        sessionStorage.removeItem(AUTH_INTENT_KEY);
+        router.replace(returnUrl);
+      } else {
+        router.replace("/dashboard");
+      }
     }
   }, [isLoading, isAuthenticated, router]);
 
