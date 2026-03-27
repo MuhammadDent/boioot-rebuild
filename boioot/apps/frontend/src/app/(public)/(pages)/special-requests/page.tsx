@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useContent } from "@/context/ContentContext";
 import { submitSpecialRequest, type SubmitSpecialRequestDto } from "@/features/special-requests/api";
-import MainHeader from "@/components/layout/MainHeader";
-import Footer from "@/components/layout/Footer";
 
 const STATUS_LABELS: Record<string, string> = {
   required: "هذا الحقل مطلوب",
@@ -58,10 +56,7 @@ export default function SpecialRequestsPage() {
   }
 
   return (
-    <>
-      <MainHeader />
-
-      <main style={{ minHeight: "100vh", background: "#f8f9fa", paddingBottom: 64 }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa", paddingBottom: 64 }}>
 
         {/* ── Hero ────────────────────────────────────────────────────────────── */}
         <section style={{
@@ -244,10 +239,7 @@ export default function SpecialRequestsPage() {
             </form>
           )}
         </div>
-      </main>
-
-      <Footer />
-    </>
+    </div>
   );
 }
 
