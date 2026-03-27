@@ -90,4 +90,6 @@ export interface UpgradeIntentResponse {
   allowed:         boolean;
   reason:          UpgradeIntentReason;
   message:         string;
+  targetPlanId:    string;
+  targetPricingId: string | null;
 }

@@ -1,5 +1,6 @@
 using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Application.Features.SubscriptionPayments;
 using Boioot.Application.Features.SubscriptionPayments.DTOs;
 using Boioot.Application.Features.SubscriptionPayments.Interfaces;
@@ -16,6 +17,7 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
 {
     private readonly BoiootDbContext       _db;
     private readonly IAccountResolver      _accountResolver;
+    private readonly IUserNotificationService _notifications;
     private readonly ILogger<SubscriptionPaymentService> _logger;
 
     // Statuses that block new request creation for the same account.
@@ -31,10 +33,12 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
     public SubscriptionPaymentService(
         BoiootDbContext                      db,
         IAccountResolver                     accountResolver,
+        IUserNotificationService             notifications,
         ILogger<SubscriptionPaymentService>  logger)
     {
         _db              = db;
         _accountResolver = accountResolver;
+        _notifications   = notifications;
         _logger          = logger;
     }
 
@@ -160,8 +164,22 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "PaymentRequest {Id} created: account={AccountId}, plan={PlanId}, method={Method}, amount={Amount}{Currency}",
-            request.Id, accountId, dto.PlanId, dto.PaymentMethod, amount, currency);
+            "PaymentRequest {Id} created: account={AccountId}, plan={PlanId}, method={Method}, amount={Amount}{Currency}, status={Status}",
+            request.Id, accountId, dto.PlanId, dto.PaymentMethod, amount, currency, request.Status);
+
+        // Notify all admins of the new subscription request
+        var userName = await _db.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.FullName ?? u.Email)
+            .FirstOrDefaultAsync(ct) ?? "مستخدم";
+
+        await NotifyAdminsAsync(
+            type:              "subscription_request_created",
+            title:             "طلب اشتراك جديد",
+            body:              $"قام المستخدم {userName} بإرسال طلب ترقية إلى الباقة ({plan.DisplayNameAr ?? plan.Name})",
+            relatedEntityId:   request.Id.ToString(),
+            relatedEntityType: "SubscriptionPaymentRequest",
+            ct:                ct);
 
         return ToResponse(request, plan.Name, plan.Code ?? string.Empty);
     }
@@ -190,7 +208,23 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "Receipt uploaded for PaymentRequest {Id} by user {UserId}", requestId, userId);
+            "Receipt uploaded for PaymentRequest {Id} by user {UserId}, status=ReceiptUploaded", requestId, userId);
+
+        // Notify admins that a receipt was uploaded and needs review
+        var uploaderName = await _db.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.FullName ?? u.Email)
+            .FirstOrDefaultAsync(ct) ?? "مستخدم";
+
+        var planNameForNotif = req.Plan?.DisplayNameAr ?? req.Plan?.Name ?? "غير محدد";
+
+        await NotifyAdminsAsync(
+            type:              "subscription_receipt_uploaded",
+            title:             "إيصال دفع جديد للمراجعة",
+            body:              $"قام المستخدم {uploaderName} برفع إيصال دفع لطلب الاشتراك في الباقة ({planNameForNotif})",
+            relatedEntityId:   req.Id.ToString(),
+            relatedEntityType: "SubscriptionPaymentRequest",
+            ct:                ct);
 
         return ToResponse(req);
     }
@@ -671,4 +705,52 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         ActivatedAt              = r.ActivatedAt,
         CompletedAt              = r.CompletedAt,
     };
+
+    // ── Private: Admin notifications ─────────────────────────────────────
+
+    /// <summary>
+    /// Sends a notification to every user with the Admin role.
+    /// Silently swallows any notification errors to avoid rolling back the primary operation.
+    /// </summary>
+    private async Task NotifyAdminsAsync(
+        string  type,
+        string  title,
+        string  body,
+        string? relatedEntityId,
+        string? relatedEntityType,
+        CancellationToken ct)
+    {
+        try
+        {
+            var adminIds = await _db.Users
+                .AsNoTracking()
+                .Where(u => u.Role == UserRole.Admin && u.IsActive && !u.IsDeleted)
+                .Select(u => u.Id)
+                .ToListAsync(ct);
+
+            if (adminIds.Count == 0) return;
+
+            var notifications = adminIds.Select(adminId => new NotificationRequest(
+                UserId:            adminId,
+                Type:              type,
+                Title:             title,
+                Body:              body,
+                RelatedEntityId:   relatedEntityId,
+                RelatedEntityType: relatedEntityType))
+                .ToList();
+
+            await _notifications.CreateBatchAsync(notifications, ct);
+
+            _logger.LogInformation(
+                "Admin notification sent to {Count} admins: type={Type}, entity={EntityId}",
+                adminIds.Count, type, relatedEntityId);
+        }
+        catch (Exception ex)
+        {
+            // Notification failures must NOT rollback the primary subscription operation.
+            _logger.LogWarning(ex,
+                "Failed to send admin notification of type {Type} for entity {EntityId}",
+                type, relatedEntityId);
+        }
+    }
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { billingApi } from "@/features/billing/api";
-import type { InvoiceResponse } from "@/features/billing/types";
+import Link from "next/link";
+import { paymentRequestsApi } from "@/features/subscriptionPayments/api";
+import { normalizeError } from "@/lib/api";
+import type { PaymentRequestResponse } from "@/features/subscriptionPayments/types";
 import type { UpgradeIntentResponse } from "@/features/subscription/types";
 
 interface UpgradeModalProps {
@@ -29,11 +31,9 @@ const REASON_COLORS: Record<string, string> = {
   no_account:         "#c62828",
 };
 
-// ── Invoice created screen ───────────────────────────────────────────────────
+// ── Request created confirmation screen ──────────────────────────────────────
 
-function InvoiceRow({
-  label, value, bold, color,
-}: {
+function InfoRow({ label, value, bold, color }: {
   label: string; value: string; bold?: boolean; color?: string;
 }) {
   return (
@@ -55,23 +55,23 @@ function InvoiceRow({
   );
 }
 
-function InvoiceCreatedView({
-  invoice, onClose,
+function RequestCreatedView({
+  request, onClose,
 }: {
-  invoice: InvoiceResponse;
+  request: PaymentRequestResponse;
   onClose: () => void;
 }) {
-  const shortId = invoice.id.slice(0, 8).toUpperCase();
+  const shortId = request.id.slice(0, 8).toUpperCase();
 
   return (
     <div style={{ direction: "rtl" }}>
       <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-        <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🧾</div>
+        <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>✅</div>
         <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "var(--color-primary)" }}>
-          تم إنشاء الفاتورة بنجاح
+          تم إرسال طلب الاشتراك بنجاح
         </h3>
         <p style={{ margin: "0.4rem 0 0", fontSize: "0.85rem", color: "var(--color-text-muted)" }}>
-          رقم الفاتورة: <strong style={{ fontFamily: "monospace" }}>#{shortId}</strong>
+          رقم الطلب: <strong style={{ fontFamily: "monospace" }}>#{shortId}</strong>
         </p>
       </div>
 
@@ -81,9 +81,16 @@ function InvoiceCreatedView({
         padding:      "1rem",
         marginBottom: "1.25rem",
       }}>
-        <InvoiceRow label="الباقة" value={`${invoice.planName} — ${invoice.billingCycle === "Yearly" ? "سنوي" : "شهري"}`} />
-        <InvoiceRow label="المبلغ" value={`${invoice.amount.toLocaleString("ar-SY")} ${invoice.currency}`} bold />
-        <InvoiceRow label="الحالة" value="بانتظار الدفع" color="#e65100" />
+        <InfoRow
+          label="الباقة"
+          value={`${request.planName} — ${request.billingCycle === "Yearly" ? "سنوي" : "شهري"}`}
+        />
+        <InfoRow
+          label="المبلغ"
+          value={`${request.amount.toLocaleString("ar-SY")} ${request.currency}`}
+          bold
+        />
+        <InfoRow label="الحالة" value="قيد الانتظار" color="#e65100" />
       </div>
 
       <div style={{
@@ -96,13 +103,13 @@ function InvoiceCreatedView({
         lineHeight:   1.7,
       }}>
         <p style={{ margin: "0 0 0.5rem", fontWeight: 700, color: "var(--color-text-primary)" }}>
-          تعليمات الدفع بالتحويل البنكي
+          الخطوات التالية
         </p>
         <ol style={{ margin: 0, paddingRight: "1.2rem" }}>
           <li>حوّل المبلغ إلى الحساب البنكي الموضح أدناه.</li>
           <li>احتفظ بإيصال التحويل.</li>
-          <li>ارفع صورة الإيصال من لوحة التحكم تحت "فواتيري".</li>
-          <li>سيقوم الفريق بتفعيل اشتراكك خلال 24 ساعة من التحقق.</li>
+          <li>ارفع صورة الإيصال من لوحة التحكم تحت "طلباتي".</li>
+          <li>سيقوم الفريق بمراجعة الطلب وتفعيل اشتراكك خلال 24 ساعة.</li>
         </ol>
         <div style={{
           marginTop:    "0.75rem",
@@ -119,23 +126,48 @@ function InvoiceCreatedView({
         </div>
       </div>
 
-      <button
-        onClick={onClose}
-        style={{
-          width:        "100%",
-          padding:      "0.75rem",
-          borderRadius: "var(--radius-md)",
-          border:       "none",
-          background:   "var(--color-primary)",
-          color:        "#fff",
-          fontFamily:   "inherit",
-          fontSize:     "0.95rem",
-          fontWeight:   700,
-          cursor:       "pointer",
-        }}
-      >
-        حسناً، سأرفع الإيصال لاحقاً
-      </button>
+      <div style={{ display: "flex", gap: "0.65rem" }}>
+        <Link
+          href="/dashboard/subscription/requests"
+          style={{
+            flex:           1,
+            padding:        "0.75rem",
+            borderRadius:   "var(--radius-md)",
+            border:         "1px solid var(--color-border)",
+            background:     "transparent",
+            color:          "var(--color-text-secondary)",
+            fontFamily:     "inherit",
+            fontSize:       "0.88rem",
+            fontWeight:     600,
+            cursor:         "pointer",
+            textAlign:      "center",
+            textDecoration: "none",
+            display:        "flex",
+            alignItems:     "center",
+            justifyContent: "center",
+          }}
+          onClick={onClose}
+        >
+          عرض طلباتي
+        </Link>
+        <button
+          onClick={onClose}
+          style={{
+            flex:         1,
+            padding:      "0.75rem",
+            borderRadius: "var(--radius-md)",
+            border:       "none",
+            background:   "var(--color-primary)",
+            color:        "#fff",
+            fontFamily:   "inherit",
+            fontSize:     "0.88rem",
+            fontWeight:   700,
+            cursor:       "pointer",
+          }}
+        >
+          حسناً
+        </button>
+      </div>
     </div>
   );
 }
@@ -143,9 +175,9 @@ function InvoiceCreatedView({
 // ── Main modal ───────────────────────────────────────────────────────────────
 
 export default function UpgradeModal({ intent, pricingId, onClose }: UpgradeModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
-  const [invoice, setInvoice] = useState<InvoiceResponse | null>(null);
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState<string | null>(null);
+  const [createdRequest,  setCreatedRequest]  = useState<PaymentRequestResponse | null>(null);
 
   const icon  = REASON_ICONS[intent.reason]  ?? "📋";
   const color = REASON_COLORS[intent.reason] ?? "var(--color-primary)";
@@ -155,11 +187,15 @@ export default function UpgradeModal({ intent, pricingId, onClose }: UpgradeModa
     setLoading(true);
     setError(null);
     try {
-      const result = await billingApi.checkout(pricingId);
-      setInvoice(result);
+      const result = await paymentRequestsApi.create({
+        planId:       intent.targetPlanId,
+        pricingId:    intent.targetPricingId ?? pricingId,
+        billingCycle: intent.billingCycle,
+        paymentMethod: "bank_transfer",
+      });
+      setCreatedRequest(result);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "حدث خطأ غير متوقع";
-      setError(msg);
+      setError(normalizeError(err));
     } finally {
       setLoading(false);
     }
@@ -193,8 +229,8 @@ export default function UpgradeModal({ intent, pricingId, onClose }: UpgradeModa
         animation:    "fadeInUp 0.2s ease",
       }}>
 
-        {invoice ? (
-          <InvoiceCreatedView invoice={invoice} onClose={onClose} />
+        {createdRequest ? (
+          <RequestCreatedView request={createdRequest} onClose={onClose} />
         ) : (
           <>
             <div style={{ fontSize: "2.5rem", textAlign: "center", marginBottom: "1rem" }}>
@@ -307,7 +343,7 @@ export default function UpgradeModal({ intent, pricingId, onClose }: UpgradeModa
                     opacity:      loading ? 0.75 : 1,
                   }}
                 >
-                  {loading ? "جارٍ الإنشاء..." : "تأكيد وإنشاء فاتورة 🧾"}
+                  {loading ? "جارٍ إرسال الطلب..." : "تأكيد وإرسال الطلب 📋"}
                 </button>
               ) : (
                 <button

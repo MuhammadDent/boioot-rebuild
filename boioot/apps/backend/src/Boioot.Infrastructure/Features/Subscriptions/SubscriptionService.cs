@@ -107,6 +107,8 @@ public sealed class SubscriptionService : ISubscriptionService
                 Allowed         = false,
                 Reason          = "no_account",
                 Message         = "يرجى إنشاء حساب أولاً للاشتراك في إحدى الباقات",
+                TargetPlanId    = targetPricing.Plan.Id,
+                TargetPricingId = targetPricing.Id,
             };
         }
 
@@ -125,6 +127,8 @@ public sealed class SubscriptionService : ISubscriptionService
                 Allowed         = false,
                 Reason          = "already_subscribed",
                 Message         = $"أنت مشترك بالفعل في {current.PlanName}",
+                TargetPlanId    = targetPricing.Plan.Id,
+                TargetPricingId = targetPricing.Id,
             };
         }
 
@@ -141,6 +145,8 @@ public sealed class SubscriptionService : ISubscriptionService
                 Reason          = "cycle_change",
                 Message         = $"سيتم تغيير دورة الفوترة إلى {ArabicCycle(targetPricing.BillingCycle)} " +
                                   $"بسعر {targetPricing.PriceAmount:N0} {targetPricing.CurrencyCode}",
+                TargetPlanId    = targetPricing.Plan.Id,
+                TargetPricingId = targetPricing.Id,
             };
         }
 
@@ -158,6 +164,8 @@ public sealed class SubscriptionService : ISubscriptionService
             Reason          = reason,
             Message         = $"{verb} من {current.PlanName} إلى {targetPricing.Plan.DisplayNameAr ?? targetPricing.Plan.Name} " +
                               $"بسعر {targetPricing.PriceAmount:N0} {targetPricing.CurrencyCode} / {ArabicCycle(targetPricing.BillingCycle)}",
+            TargetPlanId    = targetPricing.Plan.Id,
+            TargetPricingId = targetPricing.Id,
         };
     }
 

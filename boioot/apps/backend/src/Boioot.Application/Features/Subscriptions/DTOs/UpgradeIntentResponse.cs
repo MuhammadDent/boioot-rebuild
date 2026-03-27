@@ -23,4 +23,10 @@ public sealed class UpgradeIntentResponse
 
     /// <summary>Human-readable Arabic message shown in the confirmation modal.</summary>
     public string  Message         { get; init; } = string.Empty;
+
+    /// <summary>The target plan's ID — used by the frontend to create a payment request.</summary>
+    public Guid    TargetPlanId    { get; init; }
+
+    /// <summary>The specific pricing row ID — locks the billing cycle + amount.</summary>
+    public Guid?   TargetPricingId { get; init; }
 }
