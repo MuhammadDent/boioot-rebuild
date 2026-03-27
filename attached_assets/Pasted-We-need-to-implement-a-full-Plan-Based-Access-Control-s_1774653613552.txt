@@ -1,0 +1,238 @@
+We need to implement a full Plan-Based Access Control system across the entire application.
+
+IMPORTANT:
+The application already has role-based sidebar and RBAC.
+Now we must extend access control so that subscription plans control features and limits.
+
+========================================
+GOAL
+========================================
+
+Create a unified authorization system based on:
+
+1. Role
+2. Subscription Plan
+3. Features
+4. Limits
+
+This system must control:
+- Sidebar visibility
+- Page access
+- Buttons/actions
+- Feature usage
+- Numeric limits
+
+========================================
+ARCHITECTURE
+========================================
+
+Implement the following concepts:
+
+1) Roles
+Examples:
+- seeker
+- owner
+- broker
+- office
+- company
+- admin
+- staff
+
+2) Plans
+Examples:
+- seeker_free
+- owner_free
+- owner_basic
+- owner_pro
+- broker_free
+- broker_basic
+- broker_pro
+- office_free
+- office_basic
+- office_pro
+- company_enterprise
+
+3) Features
+Examples:
+- listings.create
+- listings.edit
+- listings.auto_publish
+- listings.video_upload
+- listings.priority
+- requests.receive
+- messages.internal
+- conversations.unlimited
+- analytics.dashboard
+- analytics.advanced
+- verification.badge
+- verification.priority_review
+- team.manage
+- agents.manage
+- projects.manage
+
+4) Limits
+Examples:
+- max_listings
+- max_images_per_listing
+- max_videos_per_listing
+- max_active_requests
+- max_conversations
+- max_team_members
+- max_agents
+- max_projects
+
+========================================
+REQUIRED IMPLEMENTATION
+========================================
+
+1) CENTRAL PLAN CONFIG
+
+Create a centralized config file such as:
+
+plans.config.ts
+
+Each plan must define:
+- code
+- role
+- displayName
+- features[]
+- limits{}
+
+Example structure:
+
+{
+  code: "broker_basic",
+  role: "broker",
+  displayName: "Broker Basic",
+  features: [
+    "listings.create",
+    "listings.edit",
+    "messages.internal",
+    "requests.receive"
+  ],
+  limits: {
+    max_listings: 20,
+    max_images_per_listing: 15,
+    max_videos_per_listing: 1,
+    max_conversations: 50
+  }
+}
+
+----------------------------------------
+
+2) AUTHORIZATION HELPERS
+
+Create reusable helpers like:
+
+canAccess(user, featureKey)
+getLimit(user, limitKey)
+hasPlan(user, planCode)
+
+These must work everywhere in the app.
+
+----------------------------------------
+
+3) SIDEBAR INTEGRATION
+
+Update sidebar config/items so visibility can depend on plan features,
+not role only.
+
+Example:
+- show "Analytics" only if analytics.dashboard feature is enabled
+- show "Team" only if team.manage feature is enabled
+
+----------------------------------------
+
+4) PAGE GUARDS
+
+Protect pages at route/page level.
+Do NOT rely only on hiding sidebar items.
+
+If user opens a URL manually and does not have access:
+- show access denied
+OR
+- redirect to upgrade page / dashboard
+
+----------------------------------------
+
+5) ACTION/BUTTON GUARDS
+
+Apply feature checks to all actions such as:
+- create listing
+- upload video
+- auto publish
+- assign lead
+- manage team
+- add project
+- use advanced analytics
+
+----------------------------------------
+
+6) LIMIT ENFORCEMENT
+
+Before creating or updating data, validate numeric limits.
+
+Examples:
+- prevent creating listing if max_listings reached
+- prevent uploading more images than max_images_per_listing
+- prevent new conversation if max_conversations reached
+
+This must be enforced in business logic, not UI only.
+
+----------------------------------------
+
+7) UPGRADE UX
+
+When user tries to access a locked feature:
+- show clear upgrade message
+- mention current plan
+- mention required feature or higher plan
+- optionally provide upgrade CTA
+
+----------------------------------------
+
+8) ADMIN / STAFF BYPASS
+
+Admin should have full access.
+Staff access should remain permission-based (RBAC), not blocked by plan unless intentionally configured.
+
+----------------------------------------
+
+9) TYPE SAFETY
+
+Create typed feature keys and limit keys.
+Avoid magic strings scattered across the codebase.
+
+----------------------------------------
+
+10) FUTURE SCALABILITY
+
+The system must be easy to extend with:
+- new plans
+- new features
+- new limits
+- temporary feature flags
+- enterprise custom plans
+
+========================================
+TEST CASES
+========================================
+
+1. broker_free cannot access advanced analytics
+2. broker_basic can create listings up to limit only
+3. broker_pro can access more features than basic
+4. office plan can access office-only sections
+5. company_enterprise can access enterprise features
+6. admin can access everything
+7. direct URL access is blocked if feature missing
+8. sidebar hides inaccessible sections correctly
+9. buttons/actions are disabled or blocked correctly
+10. limits are enforced even if frontend is bypassed
+
+========================================
+DELIVERABLE
+========================================
+
+Implement a production-grade plan-based authorization system
+that connects subscription plans with features, limits, sidebar access,
+page access, and business actions across the entire application.

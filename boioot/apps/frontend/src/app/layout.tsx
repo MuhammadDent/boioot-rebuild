@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cairo } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { SubscriptionProvider } from "@/context/SubscriptionContext";
 import { AuthGateProvider } from "@/context/AuthGateContext";
 import { ContentProvider } from "@/context/ContentContext";
 
@@ -42,9 +43,11 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className={cairo.variable} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <AuthProvider>
-          <ContentProvider>
-            <AuthGateProvider>{children}</AuthGateProvider>
-          </ContentProvider>
+          <SubscriptionProvider>
+            <ContentProvider>
+              <AuthGateProvider>{children}</AuthGateProvider>
+            </ContentProvider>
+          </SubscriptionProvider>
         </AuthProvider>
       </body>
     </html>

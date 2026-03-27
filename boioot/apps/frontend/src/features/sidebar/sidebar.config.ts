@@ -9,6 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { ReactNode } from "react";
+import type { FeatureKey } from "@/features/plan/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,8 @@ export type SidebarItem = {
   icon: ReactNode;
   exact?: boolean;
   permission?: string;
+  /** Plan feature required to see this item. Checked by AppSidebar via usePlan(). */
+  feature?: FeatureKey;
 };
 
 export type SidebarGroup = {
@@ -27,6 +30,8 @@ export type SidebarGroup = {
   items: SidebarItem[];
   alwaysOpen?: boolean;
   permission?: string;
+  /** Plan feature required to see this entire group. Checked by AppSidebar via usePlan(). */
+  feature?: FeatureKey;
 };
 
 // ── Icon helper ────────────────────────────────────────────────────────────────
@@ -426,7 +431,12 @@ export function getSidebarGroups(
             ...g,
             items: [
               ...g.items,
-              { href: "/dashboard/projects", label: "المشاريع", icon: I.projects },
+              {
+                href: "/dashboard/projects",
+                label: "المشاريع",
+                icon: I.projects,
+                feature: "project_management" as FeatureKey,
+              },
             ],
           };
         }

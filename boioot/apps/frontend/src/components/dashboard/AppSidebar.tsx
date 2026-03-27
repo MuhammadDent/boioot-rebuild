@@ -11,7 +11,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { usePlan } from "@/context/SubscriptionContext";
 import { getSidebarGroups, ROLE_DISPLAY } from "@/features/sidebar/sidebar.config";
+import type { FeatureKey } from "@/features/plan/types";
 
 // ── Icon: chevron ────────────────────────────────────────────────────────────
 
@@ -66,6 +68,7 @@ export default function AppSidebar({
   const pathname = usePathname();
   const router   = useRouter();
   const { user, logout, hasPermission } = useAuth();
+  const { canAccess, isAdminBypass }    = usePlan();
 
   // ── Build groups from config ────────────────────────────────────────────
 
@@ -108,11 +111,20 @@ export default function AppSidebar({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // ── Permission helper ───────────────────────────────────────────────────
+  // ── Permission helper (RBAC) ────────────────────────────────────────────
 
   function can(permission?: string): boolean {
     if (!permission) return true;
     return hasPermission(permission);
+  }
+
+  // ── Plan feature helper (PBAC) ──────────────────────────────────────────
+  // Admin / Staff bypass is handled inside canAccess() in SubscriptionContext.
+
+  function canFeature(feature?: FeatureKey): boolean {
+    if (!feature) return true;
+    if (isAdminBypass) return true;
+    return canAccess(feature);
   }
 
   function isActive(href: string, exact?: boolean): boolean {
@@ -233,10 +245,14 @@ export default function AppSidebar({
           aria-label="قائمة التنقل"
         >
           {groups.map((group, groupIdx) => {
-            // Requirement 7: Hide groups the user has no permission to see
+            // RBAC: Hide groups the user has no permission to see
             if (!can(group.permission)) return null;
+            // PBAC: Hide groups gated by a plan feature
+            if (!canFeature(group.feature)) return null;
 
-            const visibleItems = group.items.filter((item) => can(item.permission));
+            const visibleItems = group.items.filter(
+              (item) => can(item.permission) && canFeature(item.feature),
+            );
 
             // Requirement 7: Hide empty groups
             if (visibleItems.length === 0) return null;
