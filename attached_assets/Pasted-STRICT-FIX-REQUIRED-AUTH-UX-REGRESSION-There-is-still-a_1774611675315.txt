@@ -1,0 +1,207 @@
+STRICT FIX REQUIRED — AUTH UX REGRESSION
+
+There is still a UX problem in the authentication flow.
+
+The current implementation is NOT enough.
+
+========================================
+MAIN GOAL
+========================================
+
+Fix authentication behavior so that:
+
+1) Guests do NOT see messaging-related UI in public header
+2) After login, user must return to the exact page they came from
+3) The app must NOT redirect to /dashboard by default unless there is NO stored redirect target
+4) Direct visit to /login should not break normal fallback behavior
+
+========================================
+PROBLEM DETAILS
+========================================
+
+Current behavior is still wrong because:
+- login flow still opens /login normally
+- after successful login the redirect logic is not guaranteed to restore the original page correctly
+- system may still send user to /dashboard unnecessarily
+- guest header may still contain unauthorized communication shortcuts
+
+========================================
+REQUIRED BEHAVIOR (MANDATORY)
+========================================
+
+CASE A — Guest browsing public site
+- User opens homepage, listing page, request page, or any public page
+- If user clicks an action requiring auth:
+  - Save current full URL
+  - Open /login
+- After successful login:
+  - Return to the exact saved URL
+  - Do NOT send user to /dashboard
+
+CASE B — User manually visits /login
+- If user manually opens /login without coming from protected action:
+  - after login fallback can be /dashboard
+  - but only if no saved redirect target exists
+
+CASE C — Already authenticated user visits /login
+- If authenticated user opens /login directly:
+  - redirect intelligently:
+    - first check saved redirect target
+    - otherwise go to /dashboard
+- Do NOT discard redirect target if it exists
+
+========================================
+STRICT IMPLEMENTATION RULES
+========================================
+
+1) SAVE REDIRECT TARGET
+Use a dedicated utility function for redirect persistence.
+
+Must save:
+- pathname
+- search
+- hash (if exists)
+
+Use:
+window.location.pathname + window.location.search + window.location.hash
+
+Store in sessionStorage using a single key:
+auth.redirectAfterLogin
+
+Do NOT store /login itself
+Do NOT store /register itself
+Do NOT store /dashboard as redirect source unless explicitly intended
+
+2) READ + CONSUME REDIRECT TARGET AFTER LOGIN
+After successful login:
+- read auth.redirectAfterLogin
+- validate it
+- navigate to it
+- remove it immediately after successful use
+
+3) VALIDATION RULES
+Redirect target must be:
+- internal path only
+- must start with "/"
+- must not be external URL
+- must not equal "/login"
+- must not equal "/register"
+
+If invalid:
+- ignore it
+- fallback to /dashboard
+
+4) DO NOT HARD-CODE DASHBOARD REDIRECT
+Search entire codebase for:
+- navigate("/dashboard")
+- router.push("/dashboard")
+- redirect("/dashboard")
+- window.location = "/dashboard"
+
+Replace unconditional redirect behavior with:
+- redirect target first
+- fallback second
+
+5) PUBLIC HEADER RULES
+For unauthenticated users:
+- completely hide messaging icon
+- completely hide notifications icon
+- completely hide any private inbox shortcut
+- do not render empty placeholders
+
+For authenticated users only:
+- render messages icon
+- render notifications icon
+- render account/private shortcuts
+
+6) APPLY THIS CONSISTENTLY
+Check all of the following:
+- public site header
+- mobile header
+- sticky header
+- drawer menu
+- responsive menu
+- dashboard topbar if shared component is reused
+
+========================================
+TECHNICAL REQUIREMENTS
+========================================
+
+Create/adjust:
+- auth redirect helper utility
+- login success handler
+- protected action handler
+- public header conditional rendering
+
+Preferred structure:
+- saveRedirectTarget()
+- getRedirectTarget()
+- clearRedirectTarget()
+- isValidRedirectTarget()
+
+========================================
+EXAMPLE EXPECTED LOGIC
+========================================
+
+saveRedirectTarget():
+- get current path
+- if current path is not /login or /register
+- sessionStorage.setItem("auth.redirectAfterLogin", fullInternalPath)
+
+onLoginSuccess():
+- const target = getRedirectTarget()
+- if valid target exists:
+    clearRedirectTarget()
+    navigate(target, { replace: true })
+  else:
+    navigate("/dashboard", { replace: true })
+
+========================================
+TESTS YOU MUST RUN
+========================================
+
+Run these tests and confirm each passes:
+
+TEST 1:
+- Open public homepage as guest
+- confirm messages icon is hidden
+- confirm notifications icon is hidden
+
+TEST 2:
+- Open a public listing page as guest
+- click protected action
+- app opens login
+- after login user returns to same listing page exactly
+
+TEST 3:
+- Open homepage as guest
+- click login manually from navbar
+- after login goes to /dashboard only if no stored redirect exists
+
+TEST 4:
+- Try opening /login while already authenticated
+- if stored redirect exists, go there
+- otherwise go to /dashboard
+
+TEST 5:
+- Confirm no shared header component still renders messages icon for guests on mobile or desktop
+
+========================================
+IMPORTANT
+========================================
+
+Do NOT just describe the fix.
+Do NOT only patch one component.
+Do NOT leave duplicate redirect logic in multiple places.
+
+I want a real codebase-level fix:
+- identify all auth redirect entry points
+- unify behavior
+- remove unconditional dashboard redirects
+- verify by testing
+
+At the end provide:
+1) files changed
+2) exact redirect flow now
+3) test results
+4) any remaining edge case

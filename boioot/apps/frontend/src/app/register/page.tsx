@@ -12,7 +12,7 @@ import { normalizeError } from "@/lib/api";
 import { EyeIcon } from "@/components/ui/EyeIcon";
 import Spinner from "@/components/ui/Spinner";
 import type { E164Number } from "libphonenumber-js/core";
-import { AUTH_INTENT_KEY } from "@/context/AuthGateContext";
+import { consumeRedirectTarget } from "@/lib/authRedirect";
 
 type RoleValue = "User" | "Owner" | "Broker" | "CompanyOwner";
 type CompanyTypeValue = "RealEstateOffice" | "DeveloperCompany" | null;
@@ -116,7 +116,10 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) router.replace("/dashboard");
+    if (!isLoading && isAuthenticated) {
+      const target = consumeRedirectTarget();
+      router.replace(target ?? "/dashboard");
+    }
   }, [isLoading, isAuthenticated, router]);
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
@@ -183,16 +186,9 @@ export default function RegisterPage() {
         router.push("/onboarding");
         return;
       }
-      // Resume the originating listing page if the user came from a protected action.
-      const returnUrl = sessionStorage.getItem(AUTH_INTENT_KEY);
-      sessionStorage.removeItem(AUTH_INTENT_KEY);
-      const safeReturn =
-        returnUrl &&
-        !returnUrl.includes("/login") &&
-        !returnUrl.includes("/register")
-          ? returnUrl
-          : null;
-      router.push(safeReturn ?? "/dashboard");
+      // Return to the exact page the guest was on, or fall back to dashboard.
+      const target = consumeRedirectTarget();
+      router.push(target ?? "/dashboard");
     } catch (err) {
       setError(normalizeError(err));
     } finally {

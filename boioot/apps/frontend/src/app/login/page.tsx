@@ -9,7 +9,7 @@ import { authApi } from "@/features/auth/api";
 import { normalizeError } from "@/lib/api";
 import { EyeIcon } from "@/components/ui/EyeIcon";
 import Spinner from "@/components/ui/Spinner";
-import { AUTH_INTENT_KEY } from "@/context/AuthGateContext";
+import { consumeRedirectTarget } from "@/lib/authRedirect";
 
 export default function LoginPage() {
   const { login, isAuthenticated, isLoading } = useAuth();
@@ -24,16 +24,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      // Respect any stored return URL (set by useProtectedRoute or openAuthModal).
-      const returnUrl = typeof window !== "undefined"
-        ? sessionStorage.getItem(AUTH_INTENT_KEY)
-        : null;
-      if (returnUrl && !returnUrl.includes("/login") && !returnUrl.includes("/register")) {
-        sessionStorage.removeItem(AUTH_INTENT_KEY);
-        router.replace(returnUrl);
-      } else {
-        router.replace("/dashboard");
-      }
+      // Authenticated users visiting /login are redirected to their stored target
+      // (e.g. a listing they were on) or fall back to /dashboard.
+      const target = consumeRedirectTarget();
+      router.replace(target ?? "/dashboard");
     }
   }, [isLoading, isAuthenticated, router]);
 
@@ -45,18 +39,10 @@ export default function LoginPage() {
     try {
       const res = await authApi.login({ email, password, rememberMe });
       login(res.token, res.user, res.expiresAt);
-      // Resume the originating listing page if the user came from a protected action.
-      const returnUrl = sessionStorage.getItem(AUTH_INTENT_KEY);
-      sessionStorage.removeItem(AUTH_INTENT_KEY);
-      const safeReturn =
-        returnUrl &&
-        !returnUrl.includes("/login") &&
-        !returnUrl.includes("/register")
-          ? returnUrl
-          : null;
-      // Redirect staff (any user with admin permissions) to the admin area.
+      // Return to the exact page the guest was on, or fall back intelligently.
+      const target = consumeRedirectTarget();
       const isStaff = (res.user.permissions?.length ?? 0) > 0;
-      router.push(safeReturn ?? (isStaff ? "/dashboard/admin" : "/dashboard"));
+      router.push(target ?? (isStaff ? "/dashboard/admin" : "/dashboard"));
     } catch (err) {
       setError(normalizeError(err));
     } finally {

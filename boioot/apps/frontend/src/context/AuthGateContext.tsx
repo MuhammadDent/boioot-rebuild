@@ -14,6 +14,10 @@ import { useAuth } from "@/context/AuthContext";
 import { authApi } from "@/features/auth/api";
 import { normalizeError } from "@/lib/api";
 import { EyeIcon } from "@/components/ui/EyeIcon";
+import {
+  saveRedirectTarget as _save,
+  clearRedirectTarget as _clear,
+} from "@/lib/authRedirect";
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -481,10 +485,12 @@ function AuthModal({ onClose, onSuccess }: { onClose: () => void; onSuccess?: ()
   );
 }
 
-// ─── Intent storage key ───────────────────────────────────────────────────────
-// Persists the URL where the protected action originated.
-// Consumed by standalone /login and /register pages as a fallback.
-export const AUTH_INTENT_KEY = "boioot_auth_return";
+// ─── Intent storage key (re-exported for legacy imports) ─────────────────────
+// The actual key is owned by @/lib/authRedirect — do NOT write to sessionStorage
+// directly; use saveRedirectTarget / consumeRedirectTarget instead.
+export { saveRedirectTarget, consumeRedirectTarget, clearRedirectTarget } from "@/lib/authRedirect";
+/** @deprecated Import saveRedirectTarget / consumeRedirectTarget from @/lib/authRedirect instead. */
+export const AUTH_INTENT_KEY = "auth.redirectAfterLogin";
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
@@ -494,10 +500,8 @@ export function AuthGateProvider({ children }: { children: ReactNode }) {
 
   const openAuthModal = useCallback((onSuccess?: () => void) => {
     callbackRef.current = onSuccess;
-    // Persist the originating URL so standalone login/register can redirect back.
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem(AUTH_INTENT_KEY, window.location.href);
-    }
+    // Persist the current page so /login and /register can redirect back.
+    _save();
     setOpen(true);
   }, []);
 
@@ -511,13 +515,8 @@ export function AuthGateProvider({ children }: { children: ReactNode }) {
   // even though the form calls onClose() first.
   const pendingCb = callbackRef.current;
   const wrappedSuccess = pendingCb
-    ? () => {
-        if (typeof window !== "undefined") sessionStorage.removeItem(AUTH_INTENT_KEY);
-        pendingCb();
-      }
-    : () => {
-        if (typeof window !== "undefined") sessionStorage.removeItem(AUTH_INTENT_KEY);
-      };
+    ? () => { _clear(); pendingCb(); }
+    : () => { _clear(); };
 
   return (
     <AuthGateContext.Provider value={{ openAuthModal, closeAuthModal }}>

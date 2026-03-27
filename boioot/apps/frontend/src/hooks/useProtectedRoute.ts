@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { AUTH_INTENT_KEY } from "@/context/AuthGateContext";
+import { saveRedirectTarget } from "@/lib/authRedirect";
 
 interface Options {
   /** Redirect target if unauthenticated. Defaults to "/login". */
@@ -62,10 +62,8 @@ export function useProtectedRoute(options: Options = {}) {
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      // Save current URL so /login can redirect back after authentication.
-      if (typeof window !== "undefined" && redirectTo === "/login") {
-        sessionStorage.setItem(AUTH_INTENT_KEY, window.location.href);
-      }
+      // Persist the current page so /login can redirect back after authentication.
+      if (redirectTo === "/login") saveRedirectTarget();
       router.replace(redirectTo);
       return;
     }
