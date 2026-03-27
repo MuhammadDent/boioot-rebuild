@@ -1,0 +1,78 @@
+Fix the runtime API parsing error in src/lib/api.ts
+
+Current error:
+Failed to execute 'json' on 'Response': Unexpected end of JSON input
+
+File:
+src/lib/api.ts
+around line 196 in request()
+
+Current problematic logic:
+if (res.status === 204) return undefined as T;
+return res.json() as Promise<T>;
+
+Problem:
+The API client assumes every non-204 response contains valid JSON, but some endpoints return:
+- empty body
+- no content
+- non-JSON response
+- success response without JSON payload
+
+Required fix:
+1. Make the request() function robust and safe.
+2. Do NOT call res.json() blindly.
+3. Handle these cases safely:
+   - 204 No Content
+   - empty response body
+   - missing content-type
+   - non-JSON content-type
+   - successful responses with empty body
+4. Preserve existing typed API behavior as much as possible.
+5. Do not break current consumers of the API client.
+
+Implementation requirements:
+- Read response text first
+- If body is empty or whitespace only, return undefined as T
+- If content-type includes application/json, parse JSON safely
+- If content-type is not JSON, return text as T when appropriate, or handle gracefully
+- Add try/catch around JSON parsing with a clear fallback
+- Keep error handling correct for non-success responses
+
+Preferred implementation pattern:
+
+async function request<T>(...) {
+  const res = await fetch(...)
+
+  if (!res.ok) {
+    // preserve existing error handling
+  }
+
+  if (res.status === 204) return undefined as T;
+
+  const contentType = res.headers.get('content-type') || '';
+  const raw = await res.text();
+
+  if (!raw || !raw.trim()) {
+    return undefined as T;
+  }
+
+  if (contentType.includes('application/json')) {
+    try {
+      return JSON.parse(raw) as T;
+    } catch (err) {
+      console.error('Invalid JSON response', { raw, err });
+      throw new Error('Invalid JSON response from server');
+    }
+  }
+
+  return raw as T;
+}
+
+Also:
+6. Search the codebase for endpoints that should return JSON but currently return empty responses incorrectly.
+7. If a newly added notifications endpoint or mark-as-read endpoint is returning empty success responses, make sure frontend can handle it safely.
+8. Verify the dashboard loads without this runtime crash.
+9. Report exactly:
+   - what endpoint triggered the issue
+   - what was changed in api.ts
+   - whether any endpoint response format was also corrected

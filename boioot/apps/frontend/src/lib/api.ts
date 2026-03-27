@@ -193,7 +193,24 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+
+  // Read as text first — some success responses have an empty body (e.g. Ok() with no payload).
+  const contentType = res.headers.get("content-type") ?? "";
+  const raw = await res.text();
+
+  if (!raw || !raw.trim()) return undefined as T;
+
+  if (contentType.includes("application/json")) {
+    try {
+      return JSON.parse(raw) as T;
+    } catch (err) {
+      console.error("[api] Invalid JSON response", { raw, err });
+      throw new Error("Invalid JSON response from server");
+    }
+  }
+
+  // Non-JSON success (e.g. plain text) — return as-is
+  return raw as unknown as T;
 }
 
 // ─── Public API client ────────────────────────────────────────────────────────
@@ -288,7 +305,23 @@ export const api = {
       throw new ApiError(message, res.status, payload);
     }
 
-    return res.json() as Promise<T>;
+    if (res.status === 204) return undefined as T;
+
+    const formContentType = res.headers.get("content-type") ?? "";
+    const formRaw = await res.text();
+
+    if (!formRaw || !formRaw.trim()) return undefined as T;
+
+    if (formContentType.includes("application/json")) {
+      try {
+        return JSON.parse(formRaw) as T;
+      } catch (err) {
+        console.error("[api] Invalid JSON response (postForm)", { formRaw, err });
+        throw new Error("Invalid JSON response from server");
+      }
+    }
+
+    return formRaw as unknown as T;
   },
 };
 
