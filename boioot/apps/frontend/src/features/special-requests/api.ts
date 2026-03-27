@@ -1,7 +1,33 @@
 import { api } from "@/lib/api";
 import type { PagedResult } from "@/types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── SpecialRequestType ────────────────────────────────────────────────────────
+
+export interface SpecialRequestType {
+  id: string;
+  label: string;
+  value: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSpecialRequestTypeDto {
+  label: string;
+  value: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateSpecialRequestTypeDto {
+  label?: string;
+  value?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+// ─── SpecialRequest ────────────────────────────────────────────────────────────
 
 export interface SpecialRequest {
   id: string;
@@ -40,13 +66,35 @@ export interface UpdateSpecialRequestDto {
   notesInternal?: string;
 }
 
-// ─── Public ───────────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+export function getSpecialRequestTypes(): Promise<SpecialRequestType[]> {
+  return api.get<SpecialRequestType[]>("/special-request-types");
+}
 
 export function submitSpecialRequest(dto: SubmitSpecialRequestDto): Promise<SpecialRequest> {
   return api.post<SpecialRequest>("/special-requests", dto);
 }
 
-// ─── Admin ────────────────────────────────────────────────────────────────────
+// ─── Admin — Request Types ─────────────────────────────────────────────────────
+
+export function adminGetSpecialRequestTypes(): Promise<SpecialRequestType[]> {
+  return api.get<SpecialRequestType[]>("/special-request-types/admin");
+}
+
+export function adminCreateSpecialRequestType(dto: CreateSpecialRequestTypeDto): Promise<SpecialRequestType> {
+  return api.post<SpecialRequestType>("/special-request-types/admin", dto);
+}
+
+export function adminUpdateSpecialRequestType(id: string, dto: UpdateSpecialRequestTypeDto): Promise<SpecialRequestType> {
+  return api.put<SpecialRequestType>(`/special-request-types/admin/${id}`, dto);
+}
+
+export function adminDeleteSpecialRequestType(id: string): Promise<void> {
+  return api.delete(`/special-request-types/admin/${id}`);
+}
+
+// ─── Admin — Requests ──────────────────────────────────────────────────────────
 
 export function adminGetSpecialRequests(params: {
   search?: string;

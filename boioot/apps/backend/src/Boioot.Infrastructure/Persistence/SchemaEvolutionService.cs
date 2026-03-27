@@ -627,6 +627,29 @@ public sealed class SchemaEvolutionService
 
         // ── SpecialRequests: add RequestType column ────────────────────────────
         await TryAlter("SpecialRequests", "RequestType", "TEXT", ct);
+
+        // ── SpecialRequestTypes ────────────────────────────────────────────────
+        await TryExec(@"
+            CREATE TABLE IF NOT EXISTS SpecialRequestTypes (
+                Id        TEXT NOT NULL PRIMARY KEY,
+                Label     TEXT NOT NULL DEFAULT '',
+                Value     TEXT NOT NULL DEFAULT '',
+                SortOrder INTEGER NOT NULL DEFAULT 0,
+                IsActive  INTEGER NOT NULL DEFAULT 1,
+                CreatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+                UpdatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+            )", ct);
+
+        // Seed default types if the table is empty
+        await TryExec(@"
+            INSERT OR IGNORE INTO SpecialRequestTypes (Id, Label, Value, SortOrder, IsActive)
+            VALUES
+              ('00000100-0000-0000-0000-000000000001', 'شراء عقار',     'buy',     1, 1),
+              ('00000100-0000-0000-0000-000000000002', 'بيع عقار',      'sell',    2, 1),
+              ('00000100-0000-0000-0000-000000000003', 'استثمار',       'invest',  3, 1),
+              ('00000100-0000-0000-0000-000000000004', 'خدمات خاصة',   'special', 4, 1),
+              ('00000100-0000-0000-0000-000000000005', 'خدمات قانونية','legal',   5, 1)
+        ", ct);
     }
 
     // ── Helper methods ────────────────────────────────────────────────────────

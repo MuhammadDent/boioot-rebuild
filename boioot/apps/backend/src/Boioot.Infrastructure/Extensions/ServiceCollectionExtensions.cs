@@ -99,7 +99,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMessagingService, MessagingService>();
         services.AddScoped<IFavoriteService, FavoriteService>();
         services.AddScoped<IBuyerRequestService, BuyerRequestService>();
-        services.AddScoped<ISpecialRequestService, SpecialRequestService>();
+        services.AddScoped<ISpecialRequestService,     SpecialRequestService>();
+        services.AddScoped<ISpecialRequestTypeService, SpecialRequestTypeService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IAgentManagementService, AgentManagementService>();
         services.AddScoped<IPlanEntitlementService, PlanEntitlementService>();
