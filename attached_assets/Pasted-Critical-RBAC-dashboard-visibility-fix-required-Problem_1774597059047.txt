@@ -1,0 +1,135 @@
+Critical RBAC / dashboard visibility fix required.
+
+Problem:
+Broker accounts are currently seeing dashboard pages/features that should belong only to Office or Company accounts, such as:
+- الفريق
+- الوكلاء
+- المشاريع
+
+This is incorrect.
+
+We need strict dashboard isolation by account type.
+
+========================================
+GOAL
+========================================
+
+For Broker accounts:
+- do NOT show Team pages
+- do NOT show Agents pages
+- do NOT show Projects pages
+- do NOT expose Office/Company-only navigation items
+- do NOT allow access to those routes even by direct URL
+
+Broker should only see features that belong to Broker account type.
+
+========================================
+REQUIRED FIX
+========================================
+
+1) Audit sidebar visibility logic
+Find where dashboard sidebar/menu items are built and fix the visibility conditions.
+
+Current issue likely comes from loose checks such as:
+- business user
+- paid user
+- professional user
+- has subscription
+These are too broad.
+
+Replace them with strict account-type checks.
+
+2) Define clear account-type access matrix
+Example expected visibility:
+
+Broker:
+- profile
+- listings
+- requests
+- messages
+- verification
+- subscriptions
+- allowed broker tools only
+
+Office:
+- may include team
+- may include agents
+- may include office-specific tools
+
+Company:
+- may include projects
+- may include team hierarchy
+- may include company-specific tools
+
+3) Add centralized permission helpers
+Create reusable helpers such as:
+- canAccessTeam(accountType, features)
+- canAccessAgents(accountType, features)
+- canAccessProjects(accountType, features)
+- getDashboardNavItemsForAccount(accountType, subscription, permissions)
+
+Do not scatter raw conditions across many components.
+
+4) Enforce account-type-first visibility
+Visibility must be based first on account type, then optionally on plan features.
+For example:
+- team page should require accountType = office or company
+- agents page should require accountType = office or company (depending on business rules)
+- projects page should require accountType = company only, or whatever the intended rule is
+
+A broker plan must never unlock office/company navigation accidentally.
+
+5) Fix direct route protection too
+Do not only hide menu items.
+Also protect the routes/pages themselves.
+
+If a Broker tries to access:
+- /dashboard/team
+- /dashboard/agents
+- /dashboard/projects
+or equivalent routes
+the app must:
+- redirect safely
+or
+- show unauthorized / access denied
+
+6) Audit feature leakage from subscription data
+Check whether Broker account is receiving Office/Company feature flags by mistake.
+Examples:
+- team_management
+- agents_management
+- project_management
+- multi-branch
+- company_tools
+
+Ensure these are not assigned to Broker subscriptions unless explicitly intended.
+
+7) Separate account type from plan features
+Do not let plan features override account-type boundaries.
+Correct logic:
+- account type defines the maximum allowed feature scope
+- subscription plan refines limits/features within that scope
+But a Broker plan must not become an Office or Company dashboard.
+
+8) Clean broker dashboard
+Remove from Broker dashboard:
+- الفريق
+- الوكلاء
+- المشاريع
+and any related KPI cards/stat widgets if they are office/company-only
+
+9) Report the root cause
+After fixing, report exactly:
+- what caused the leakage
+- which conditions were too broad
+- which files were changed
+- what the final visibility rules are for Broker, Office, and Company
+
+========================================
+IMPORTANT
+========================================
+
+Do not apply a CSS-only fix.
+Do not just hide cards visually.
+Fix the real RBAC and dashboard navigation logic.
+Also protect route access at page level.

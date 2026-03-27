@@ -104,14 +104,28 @@ const BASE: NavItem[] = [
   { href: "/dashboard/messages", label: "الرسائل",        exact: false, icon: ICONS.messages  },
 ];
 
-// ─── Account-type access helper ───────────────────────────────────────────────
+// ─── Account-type access helpers ──────────────────────────────────────────────
 //
-// Centralised check for project-module access.
-// Only Company accounts (developer companies) have access to Projects.
-// Office accounts share the CompanyOwner role but are NOT allowed.
+// Centralised checks for feature-level access gating.
+// These are the single source of truth — used in sidebar + page-level route guards.
+//
+// Access matrix:
+//   canAccessProjects → CompanyOwner + accountType="Company" only
+//   canAccessTeam     → CompanyOwner only (Office OR Company account)
+//   canAccessAgents   → CompanyOwner only (has agents.manage permission)
+//
+// Broker is an INDIVIDUAL broker. Broker must NOT access Team / Agents / Projects.
 
 export function canAccessProjects(accountType?: string | null): boolean {
   return accountType === "Company";
+}
+
+export function canAccessTeam(role?: string | null): boolean {
+  return role === "CompanyOwner";
+}
+
+export function canAccessAgents(role?: string | null): boolean {
+  return role === "CompanyOwner";
 }
 
 // ─── Per-role sidebar configuration ──────────────────────────────────────────
@@ -151,10 +165,11 @@ const SIDEBAR_CONFIG: Record<string, NavEntry[]> = {
     { href: "/dashboard/subscription/plans",     label: "باقات الاشتراك", exact: false, icon: ICONS.subscription },
   ],
 
-  // ── Broker / office ───────────────────────────────────────────────────────
+  // ── Broker (وسيط عقاري فردي) ─────────────────────────────────────────────
+  // Individual broker — manages own listings + requests + subscription.
+  // Does NOT have access to: Team / Agents / Projects (those are Office/Company only).
   Broker: [
     ...BASE,
-    { href: "/dashboard/team",                   label: "الفريق",         exact: false, icon: ICONS.team         },
     { href: "/dashboard/listings",               label: "الإعلانات",      exact: false, icon: ICONS.listings     },
     { href: "/dashboard/my-requests",            label: "الطلبات",        exact: false, icon: ICONS.requests     },
     { href: "/dashboard/verification",           label: "التوثيق",        exact: false, icon: ICONS.verification },

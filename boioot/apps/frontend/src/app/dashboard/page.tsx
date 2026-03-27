@@ -13,7 +13,10 @@ import { formatPrice, LISTING_TYPE_LABELS } from "@/features/properties/constant
 import type { DashboardSummary, DashboardAnalytics, FavoriteResponse } from "@/types";
 import { api, ApiError } from "@/lib/api";
 
-const SUMMARY_ROLES = ["CompanyOwner", "Broker", "Office", "Agent"] as const;
+// Management roles that see the KPI/analytics section.
+// "Broker" shows listing/request KPIs only — المشاريع/الوكلاء are hidden separately.
+// "Office" is an AccountType (not a UserRole) — never add it here.
+const SUMMARY_ROLES = ["CompanyOwner", "Broker", "Agent"] as const;
 type SummaryRole = (typeof SUMMARY_ROLES)[number];
 function canSeeSummary(role: string): role is SummaryRole {
   return (SUMMARY_ROLES as readonly string[]).includes(role);
@@ -400,26 +403,32 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                {/* ── Row 2: Business + Engagement KPIs ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.65rem", marginBottom: "0.65rem" }}>
-                  <KpiCard
-                    label="المشاريع"
-                    value={analytics.totalProjects}
-                    color="#7c3aed"
-                    accent="#f5f3ff"
-                    href={isCompanyOrAdmin ? "/dashboard/projects" : undefined}
-                    icon={<><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></>}
-                    small
-                  />
-                  <KpiCard
-                    label="الوكلاء"
-                    value={analytics.totalAgents}
-                    color="#0891b2"
-                    accent="#cffafe"
-                    href={canManageAgents ? "/dashboard/agents" : undefined}
-                    icon={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></>}
-                    small
-                  />
+                {/* ── Row 2: Business + Engagement KPIs ──
+                    المشاريع and الوكلاء are gated on account-type permissions.
+                    Broker sees only الطلبات الجديدة here.              ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(145px, 1fr))", gap: "0.65rem", marginBottom: "0.65rem" }}>
+                  {isCompanyOrAdmin && (
+                    <KpiCard
+                      label="المشاريع"
+                      value={analytics.totalProjects}
+                      color="#7c3aed"
+                      accent="#f5f3ff"
+                      href="/dashboard/projects"
+                      icon={<><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></>}
+                      small
+                    />
+                  )}
+                  {canManageAgents && (
+                    <KpiCard
+                      label="الوكلاء"
+                      value={analytics.totalAgents}
+                      color="#0891b2"
+                      accent="#cffafe"
+                      href="/dashboard/agents"
+                      icon={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></>}
+                      small
+                    />
+                  )}
                   <KpiCard
                     label="الطلبات الجديدة"
                     value={analytics.newRequests}
