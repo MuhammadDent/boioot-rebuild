@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { notificationsApi, type NotificationItem } from "@/features/notifications/api";
 import { resolveNotificationTarget } from "@/components/dashboard/NotificationsBell";
+import SubscriptionRequestDetailModal from "@/components/dashboard/SubscriptionRequestDetailModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function relativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const diff  = Date.now() - new Date(dateStr).getTime();
   const mins  = Math.floor(diff / 60_000);
   const hours = Math.floor(diff / 3_600_000);
   const days  = Math.floor(diff / 86_400_000);
@@ -20,10 +21,7 @@ function relativeTime(dateStr: string): string {
 }
 
 function fullDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("ar-SY", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  return new Date(dateStr).toLocaleString("ar-SY", { dateStyle: "medium", timeStyle: "short" });
 }
 
 function typeIcon(type: string): string {
@@ -52,9 +50,29 @@ function typeIcon(type: string): string {
   return map[type] ?? "🔔";
 }
 
-// ─── Detail Modal ─────────────────────────────────────────────────────────────
+function actionLabel(n: NotificationItem): string | null {
+  if (n.relatedEntityType === "SubscriptionPaymentRequest") {
+    if (n.type === "subscription_approved")     return "عرض الموافقة";
+    if (n.type === "subscription_rejected")     return "عرض سبب الرفض";
+    if (n.type === "subscription_missing_info") return "عرض المطلوب";
+    return "عرض الرد";
+  }
+  if (n.relatedEntityType === "BuyerRequest" || n.relatedEntityType === "SpecialRequest") {
+    return "عرض الطلب";
+  }
+  return null;
+}
 
-function DetailModal({
+const DECISION_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+  subscription_approved:        { label: "موافقة",        color: "#166534", bg: "#dcfce7" },
+  subscription_rejected:        { label: "رفض",           color: "#b91c1c", bg: "#fee2e2" },
+  subscription_missing_info:    { label: "استكمال مطلوب", color: "#92400e", bg: "#fef3c7" },
+  subscription_activated:       { label: "مُفعَّل",       color: "#166534", bg: "#bbf7d0" },
+};
+
+// ─── Generic detail modal ─────────────────────────────────────────────────────
+
+function GenericDetailModal({
   notification,
   onClose,
 }: {
@@ -66,70 +84,32 @@ function DetailModal({
 
   return (
     <div
-      style={{
-        position:       "fixed",
-        inset:          0,
-        background:     "rgba(0,0,0,0.45)",
-        zIndex:         99999,
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "center",
-        padding:        "16px",
-      }}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}
       onClick={onClose}
     >
       <div
-        style={{
-          background:   "#fff",
-          borderRadius: "16px",
-          boxShadow:    "0 12px 40px rgba(0,0,0,0.18)",
-          maxWidth:     "480px",
-          width:        "100%",
-          padding:      "28px",
-          direction:    "rtl",
-        }}
+        style={{ background: "#fff", borderRadius: "16px", boxShadow: "0 12px 40px rgba(0,0,0,0.18)", maxWidth: "480px", width: "100%", padding: "28px", direction: "rtl" }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
           <span style={{ fontSize: "32px" }}>{typeIcon(notification.type)}</span>
           <div>
-            <p style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#111827", lineHeight: 1.4 }}>
-              {notification.title}
-            </p>
-            <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#9ca3af" }}>
-              {fullDate(notification.createdAt)}
-            </p>
+            <p style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#111827", lineHeight: 1.4 }}>{notification.title}</p>
+            <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#9ca3af" }}>{fullDate(notification.createdAt)}</p>
           </div>
         </div>
-
         <div style={{ height: "1px", background: "#f3f4f6", margin: "0 0 16px" }} />
-
         <p style={{ margin: 0, fontSize: "14px", color: "#374151", lineHeight: 1.75, whiteSpace: "pre-wrap" }}>
-          {notification.body || "لا يوجد محتوى إضافي لهذا الإشعار."}
+          {notification.body || "لا يوجد محتوى إضافي."}
         </p>
-
         <div style={{ display: "flex", gap: "8px", marginTop: "24px", justifyContent: "flex-end" }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: "8px 18px", borderRadius: "8px",
-              border: "1px solid #e5e7eb", background: "#fff",
-              color: "#374151", fontSize: "13px", fontWeight: 600, cursor: "pointer",
-            }}
-          >
+          <button type="button" onClick={onClose}
+            style={{ padding: "8px 18px", borderRadius: "8px", border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
             إغلاق
           </button>
           {target && (
-            <button
-              type="button"
-              onClick={() => { onClose(); router.push(target); }}
-              style={{
-                padding: "8px 18px", borderRadius: "8px",
-                border: "none", background: "#16a34a",
-                color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer",
-              }}
-            >
+            <button type="button" onClick={() => { onClose(); router.push(target); }}
+              style={{ padding: "8px 18px", borderRadius: "8px", border: "none", background: "#16a34a", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
               عرض التفاصيل
             </button>
           )}
@@ -139,9 +119,16 @@ function DetailModal({
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Modal state type ─────────────────────────────────────────────────────────
+
+type ModalState =
+  | { kind: "none" }
+  | { kind: "subscription_request"; requestId: string }
+  | { kind: "generic"; notification: NotificationItem };
 
 type Filter = "all" | "unread";
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -153,7 +140,7 @@ export default function NotificationsPage() {
   const [page,       setPage]       = useState(1);
   const [total,      setTotal]      = useState(0);
   const [unread,     setUnread]     = useState(0);
-  const [detailItem, setDetailItem] = useState<NotificationItem | null>(null);
+  const [modal,      setModal]      = useState<ModalState>({ kind: "none" });
   const [hoveredId,  setHoveredId]  = useState<string | null>(null);
 
   const PAGE_SIZE = 25;
@@ -178,14 +165,22 @@ export default function NotificationsPage() {
     setUnread(prev => Math.max(0, prev - 1));
   };
 
-  const handleItemClick = async (n: NotificationItem) => {
+  const handleItemClick = (n: NotificationItem) => {
     if (!n.isRead) handleMarkRead(n.id);
+
+    // Subscription payment request → rich detail modal
+    if (n.relatedEntityType === "SubscriptionPaymentRequest" && n.relatedEntityId) {
+      setModal({ kind: "subscription_request", requestId: n.relatedEntityId });
+      return;
+    }
+
     const target = resolveNotificationTarget(n);
     if (target) {
       router.push(target);
-    } else {
-      setDetailItem(n);
+      return;
     }
+
+    setModal({ kind: "generic", notification: n });
   };
 
   const handleMarkAll = async () => {
@@ -199,52 +194,26 @@ export default function NotificationsPage() {
     }
   };
 
-  const displayed = filter === "unread"
-    ? items.filter(n => !n.isRead)
-    : items;
+  const closeModal = () => setModal({ kind: "none" });
 
+  const displayed = filter === "unread" ? items.filter(n => !n.isRead) : items;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div style={{ padding: "24px", maxWidth: "720px", margin: "0 auto", direction: "rtl" }}>
 
       {/* Page header */}
-      <div
-        style={{
-          display:         "flex",
-          alignItems:      "center",
-          justifyContent:  "space-between",
-          marginBottom:    "20px",
-          flexWrap:        "wrap",
-          gap:             "12px",
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#111827" }}>
-            الإشعارات
-          </h1>
+          <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#111827" }}>الإشعارات</h1>
           {unread > 0 && (
-            <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#6b7280" }}>
-              {unread} إشعار غير مقروء
-            </p>
+            <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#6b7280" }}>{unread} إشعار غير مقروء</p>
           )}
         </div>
-
         {unread > 0 && (
           <button
-            type="button"
-            onClick={handleMarkAll}
-            disabled={markingAll}
-            style={{
-              padding:      "8px 16px",
-              borderRadius: "8px",
-              border:       "1px solid #d1fae5",
-              background:   "#f0fdf4",
-              color:        "#16a34a",
-              fontSize:     "13px",
-              fontWeight:   600,
-              cursor:       "pointer",
-            }}
+            type="button" onClick={handleMarkAll} disabled={markingAll}
+            style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #d1fae5", background: "#f0fdf4", color: "#16a34a", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
           >
             {markingAll ? "جاري التعليم..." : "تعليم الكل كمقروء"}
           </button>
@@ -252,48 +221,22 @@ export default function NotificationsPage() {
       </div>
 
       {/* Filter tabs */}
-      <div
-        style={{
-          display:      "flex",
-          gap:          "4px",
-          marginBottom: "16px",
-          background:   "#f3f4f6",
-          borderRadius: "10px",
-          padding:      "4px",
-          width:        "fit-content",
-        }}
-      >
+      <div style={{ display: "flex", gap: "4px", marginBottom: "16px", background: "#f3f4f6", borderRadius: "10px", padding: "4px", width: "fit-content" }}>
         {([ ["all", "الكل"], ["unread", "غير مقروءة"] ] as [Filter, string][]).map(([f, label]) => (
           <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
+            key={f} type="button" onClick={() => setFilter(f)}
             style={{
-              padding:      "6px 16px",
-              borderRadius: "8px",
-              border:       "none",
-              background:   filter === f ? "#fff" : "transparent",
-              color:        filter === f ? "#111827" : "#6b7280",
-              fontSize:     "13px",
-              fontWeight:   filter === f ? 600 : 400,
-              cursor:       "pointer",
-              boxShadow:    filter === f ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-              transition:   "all 0.12s",
+              padding: "6px 16px", borderRadius: "8px", border: "none",
+              background: filter === f ? "#fff" : "transparent",
+              color: filter === f ? "#111827" : "#6b7280",
+              fontSize: "13px", fontWeight: filter === f ? 600 : 400,
+              cursor: "pointer", boxShadow: filter === f ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+              transition: "all 0.12s",
             }}
           >
             {label}
             {f === "unread" && unread > 0 && (
-              <span
-                style={{
-                  marginRight:  "6px",
-                  background:   "#ef4444",
-                  color:        "#fff",
-                  fontSize:     "10px",
-                  fontWeight:   700,
-                  borderRadius: "999px",
-                  padding:      "1px 5px",
-                }}
-              >
+              <span style={{ marginRight: "6px", background: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: 700, borderRadius: "999px", padding: "1px 5px" }}>
                 {unread}
               </span>
             )}
@@ -303,42 +246,19 @@ export default function NotificationsPage() {
 
       {/* List */}
       {loading ? (
-        <div
-          style={{
-            padding:    "60px",
-            textAlign:  "center",
-            color:      "#9ca3af",
-            fontSize:   "14px",
-          }}
-        >
+        <div style={{ padding: "60px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>
           جاري التحميل...
         </div>
       ) : displayed.length === 0 ? (
-        <div
-          style={{
-            padding:      "60px 24px",
-            textAlign:    "center",
-            color:        "#9ca3af",
-            fontSize:     "14px",
-            background:   "#f9fafb",
-            borderRadius: "12px",
-          }}
-        >
+        <div style={{ padding: "60px 24px", textAlign: "center", color: "#9ca3af", fontSize: "14px", background: "#f9fafb", borderRadius: "12px" }}>
           {filter === "unread" ? "لا توجد إشعارات غير مقروءة" : "لا توجد إشعارات بعد"}
         </div>
       ) : (
-        <div
-          style={{
-            background:   "#fff",
-            border:       "1px solid #e5e7eb",
-            borderRadius: "12px",
-            overflow:     "hidden",
-          }}
-        >
+        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
           {displayed.map((n, idx) => {
-            const isHovered = hoveredId === n.id;
-            const target    = resolveNotificationTarget(n);
-            const hasAction = !!target || !!n.body;
+            const isHovered   = hoveredId === n.id;
+            const label       = actionLabel(n);
+            const decisionBdg = DECISION_BADGE[n.type];
 
             return (
               <div
@@ -346,81 +266,49 @@ export default function NotificationsPage() {
                 role="button"
                 tabIndex={0}
                 style={{
-                  display:      "flex",
-                  gap:          "14px",
-                  padding:      "16px 20px",
-                  background:   isHovered
-                    ? n.isRead ? "#f9fafb" : "#dcfce7"
-                    : n.isRead ? "#fff"    : "#f0fdf4",
+                  display: "flex", gap: "14px", padding: "16px 20px",
+                  background: isHovered ? (n.isRead ? "#f9fafb" : "#dcfce7") : (n.isRead ? "#fff" : "#f0fdf4"),
                   borderBottom: idx < displayed.length - 1 ? "1px solid #f3f4f6" : "none",
-                  cursor:       hasAction ? "pointer" : "default",
-                  transition:   "background 0.12s",
-                  userSelect:   "none",
+                  cursor: "pointer", transition: "background 0.12s", userSelect: "none",
                 }}
                 onMouseEnter={() => setHoveredId(n.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 onClick={() => handleItemClick(n)}
-                onKeyDown={e => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleItemClick(n);
-                  }
-                }}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleItemClick(n); } }}
               >
-                {/* Icon */}
                 <span style={{ fontSize: "22px", flexShrink: 0, lineHeight: 1.3, marginTop: "2px" }}>
                   {typeIcon(n.type)}
                 </span>
-
-                {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      margin:     0,
-                      fontSize:   "14px",
-                      fontWeight: n.isRead ? 400 : 700,
-                      color:      "#111827",
-                      lineHeight: 1.4,
-                    }}
-                  >
+                  <p style={{ margin: 0, fontSize: "14px", fontWeight: n.isRead ? 400 : 700, color: "#111827", lineHeight: 1.4 }}>
                     {n.title}
                   </p>
-                  <p
-                    style={{
-                      margin:       "4px 0 0",
-                      fontSize:     "13px",
-                      color:        "#6b7280",
-                      lineHeight:   1.5,
-                      overflow:     "hidden",
-                      textOverflow: "ellipsis",
-                      display:      "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical" as const,
-                    }}
-                  >
+                  <p style={{
+                    margin: "4px 0 0", fontSize: "13px", color: "#6b7280", lineHeight: 1.5,
+                    overflow: "hidden", textOverflow: "ellipsis",
+                    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
+                  }}>
                     {n.body}
                   </p>
-                  <p style={{ margin: "6px 0 0", fontSize: "11px", color: "#9ca3af" }}>
-                    {relativeTime(n.createdAt)} · {fullDate(n.createdAt)}
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+                      {relativeTime(n.createdAt)} · {fullDate(n.createdAt)}
+                    </span>
+                    {decisionBdg && (
+                      <span style={{ fontSize: "10px", fontWeight: 700, color: decisionBdg.color, background: decisionBdg.bg, borderRadius: "999px", padding: "1px 7px" }}>
+                        {decisionBdg.label}
+                      </span>
+                    )}
+                    {label && (
+                      <span style={{ fontSize: "10px", fontWeight: 700, color: "#1d4ed8", background: "#dbeafe", borderRadius: "999px", padding: "1px 7px", cursor: "pointer" }}>
+                        {label} ›
+                      </span>
+                    )}
+                  </div>
                 </div>
-
-                {/* Unread dot + arrow hint */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", flexShrink: 0, marginTop: "4px" }}>
-                  {!n.isRead && (
-                    <span
-                      style={{
-                        width:        "9px",
-                        height:       "9px",
-                        borderRadius: "50%",
-                        background:   "#16a34a",
-                      }}
-                    />
-                  )}
-                  {hasAction && (
-                    <span style={{ fontSize: "12px", color: "#d1d5db" }}>‹</span>
-                  )}
-                </div>
+                {!n.isRead && (
+                  <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#16a34a", flexShrink: 0, marginTop: "4px" }} />
+                )}
               </div>
             );
           })}
@@ -429,66 +317,32 @@ export default function NotificationsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div
-          style={{
-            display:        "flex",
-            justifyContent: "center",
-            gap:            "8px",
-            marginTop:      "24px",
-          }}
-        >
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => setPage(p => p - 1)}
-            style={{
-              padding:      "8px 16px",
-              borderRadius: "8px",
-              border:       "1px solid #e5e7eb",
-              background:   page <= 1 ? "#f9fafb" : "#fff",
-              color:        page <= 1 ? "#9ca3af" : "#374151",
-              fontSize:     "13px",
-              fontWeight:   600,
-              cursor:       page <= 1 ? "default" : "pointer",
-            }}
-          >
+        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "24px" }}>
+          <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)}
+            style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #e5e7eb", background: page <= 1 ? "#f9fafb" : "#fff", color: page <= 1 ? "#9ca3af" : "#374151", fontSize: "13px", fontWeight: 600, cursor: page <= 1 ? "default" : "pointer" }}>
             السابق
           </button>
-          <span
-            style={{
-              padding:   "8px 16px",
-              fontSize:  "13px",
-              color:     "#6b7280",
-              alignSelf: "center",
-            }}
-          >
+          <span style={{ padding: "8px 16px", fontSize: "13px", color: "#6b7280", alignSelf: "center" }}>
             {page} / {totalPages}
           </span>
-          <button
-            type="button"
-            disabled={page >= totalPages}
-            onClick={() => setPage(p => p + 1)}
-            style={{
-              padding:      "8px 16px",
-              borderRadius: "8px",
-              border:       "1px solid #e5e7eb",
-              background:   page >= totalPages ? "#f9fafb" : "#fff",
-              color:        page >= totalPages ? "#9ca3af" : "#374151",
-              fontSize:     "13px",
-              fontWeight:   600,
-              cursor:       page >= totalPages ? "default" : "pointer",
-            }}
-          >
+          <button type="button" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
+            style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #e5e7eb", background: page >= totalPages ? "#f9fafb" : "#fff", color: page >= totalPages ? "#9ca3af" : "#374151", fontSize: "13px", fontWeight: 600, cursor: page >= totalPages ? "default" : "pointer" }}>
             التالي
           </button>
         </div>
       )}
 
-      {/* Detail modal */}
-      {detailItem && (
-        <DetailModal
-          notification={detailItem}
-          onClose={() => setDetailItem(null)}
+      {/* Modals */}
+      {modal.kind === "subscription_request" && (
+        <SubscriptionRequestDetailModal
+          requestId={modal.requestId}
+          onClose={closeModal}
+        />
+      )}
+      {modal.kind === "generic" && (
+        <GenericDetailModal
+          notification={modal.notification}
+          onClose={closeModal}
         />
       )}
     </div>
