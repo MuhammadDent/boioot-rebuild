@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Boioot.Application.Common.Models;
 using Boioot.Application.Features.Notifications.DTOs;
 using Boioot.Application.Features.Notifications.Interfaces;
@@ -39,6 +40,9 @@ public class SpecialRequestService : ISpecialRequestService
             Email           = dto.Email?.Trim(),
             RequestType     = dto.RequestType?.Trim(),
             Message         = dto.Message.Trim(),
+            Attachments     = dto.AttachmentUrls is { Count: > 0 }
+                                ? JsonSerializer.Serialize(dto.AttachmentUrls)
+                                : null,
             Status          = SpecialRequestStatus.New,
             Source          = dto.Source ?? "web",
         };
@@ -189,6 +193,9 @@ public class SpecialRequestService : ISpecialRequestService
         Email               = r.Email,
         RequestType         = r.RequestType,
         Message             = r.Message,
+        AttachmentUrls      = r.Attachments is not null
+                                ? JsonSerializer.Deserialize<List<string>>(r.Attachments)
+                                : null,
         Status              = r.Status,
         Source              = r.Source,
         NotesInternal       = r.NotesInternal,

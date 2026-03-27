@@ -12,8 +12,9 @@ public class SpecialRequestResponse
     public string    Message       { get; set; } = string.Empty;
     public string    Status        { get; set; } = string.Empty;
     public string?   Source        { get; set; }
-    public string?   NotesInternal { get; set; }
-    public DateTime? ClosedAt      { get; set; }
+    public string?   NotesInternal  { get; set; }
+    public DateTime? ClosedAt       { get; set; }
+    public List<string>? AttachmentUrls { get; set; }
     public DateTime  CreatedAt     { get; set; }
     public DateTime  UpdatedAt     { get; set; }
 

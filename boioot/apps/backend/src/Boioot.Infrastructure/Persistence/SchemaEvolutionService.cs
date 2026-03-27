@@ -625,8 +625,9 @@ public sealed class SchemaEvolutionService
         await TryExec("CREATE INDEX IF NOT EXISTS IX_SpecialRequests_Status ON SpecialRequests(Status)", ct, warnOnError: true);
         await TryExec("CREATE INDEX IF NOT EXISTS IX_SpecialRequests_CreatedAt ON SpecialRequests(CreatedAt DESC)", ct, warnOnError: true);
 
-        // ── SpecialRequests: add RequestType column ────────────────────────────
-        await TryAlter("SpecialRequests", "RequestType", "TEXT", ct);
+        // ── SpecialRequests: add RequestType + Attachments columns ────────────
+        await TryAlter("SpecialRequests", "RequestType",  "TEXT", ct);
+        await TryAlter("SpecialRequests", "Attachments",  "TEXT", ct);
 
         // ── SpecialRequestTypes ────────────────────────────────────────────────
         await TryExec(@"

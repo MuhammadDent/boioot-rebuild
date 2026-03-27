@@ -365,6 +365,37 @@ function DetailModal({
             </div>
           </Section>
 
+          {/* Attachments */}
+          {request.attachmentUrls && request.attachmentUrls.length > 0 && (
+            <Section title={`المرفقات (${request.attachmentUrls.length})`}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {request.attachmentUrls.map((url, i) => {
+                  const isPdf = url.toLowerCase().endsWith(".pdf");
+                  const name  = url.split("/").pop() ?? `ملف-${i + 1}`;
+                  return (
+                    <a
+                      key={i}
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        background: "#f0f4ff", borderRadius: 8, padding: "10px 14px",
+                        border: "1px solid #dbeafe", textDecoration: "none", color: "#1d4ed8",
+                      }}
+                    >
+                      <span style={{ fontSize: 20 }}>{isPdf ? "📄" : "🖼️"}</span>
+                      <span style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {isPdf ? "عرض PDF" : "عرض الصورة"} — {name}
+                      </span>
+                      <span style={{ marginRight: "auto", fontSize: 12, color: "#6b7280" }}>↗</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
+
           {/* Notes */}
           <Section title="ملاحظات داخلية">
             <textarea

@@ -93,6 +93,52 @@ public class UploadController : BaseController
         return Ok(new { url = $"/uploads/{fileName}" });
     }
 
+    // ── /api/upload/special-request-attachment ────────────────────────────────
+
+    /// <summary>
+    /// Public (anonymous) upload endpoint for special-request form attachments.
+    /// Accepts JPG, PNG, PDF — max 10 MB — stored in wwwroot/uploads/sr-att/.
+    /// </summary>
+    [HttpPost("special-request-attachment")]
+    [AllowAnonymous]
+    [RequestSizeLimit(10_485_760)]
+    public async Task<IActionResult> UploadSpecialRequestAttachment(IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { error = "لم يتم اختيار ملف" });
+
+        if (file.Length > MaxImageBytes)
+            return BadRequest(new { error = "حجم الملف يتجاوز 10MB" });
+
+        var allowed = new[] { "image/jpeg", "image/jpg", "image/png", "application/pdf" };
+        var mime = file.ContentType?.ToLower().Trim() ?? "";
+        if (!allowed.Contains(mime))
+            return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: JPG، PNG، PDF" });
+
+        var ext = mime switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png"                  => ".png",
+            "application/pdf"            => ".pdf",
+            _                            => null,
+        };
+
+        if (ext is null) return BadRequest(new { error = "نوع الملف غير مدعوم" });
+
+        var dir = Path.Combine(_env.WebRootPath, "uploads", "sr-att");
+        Directory.CreateDirectory(dir);
+
+        var fileName = $"{Guid.NewGuid()}{ext}";
+        var filePath = Path.Combine(dir, fileName);
+
+        await using var stream = System.IO.File.Create(filePath);
+        await file.CopyToAsync(stream, ct);
+
+        _logger.LogInformation("SR attachment uploaded: {FileName} ({Size} bytes)", fileName, file.Length);
+
+        return Ok(new { url = $"/uploads/sr-att/{fileName}" });
+    }
+
     // ── /api/upload/proof ─────────────────────────────────────────────────────
 
     /// <summary>

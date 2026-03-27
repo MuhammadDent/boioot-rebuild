@@ -24,4 +24,7 @@ public class SubmitSpecialRequestDto
 
     [MaxLength(50)]
     public string? Source { get; set; }
+
+    /// <summary>Up to 5 pre-uploaded file URLs.</summary>
+    public List<string>? AttachmentUrls { get; set; }
 }

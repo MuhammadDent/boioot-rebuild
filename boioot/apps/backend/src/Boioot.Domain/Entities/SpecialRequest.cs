@@ -20,6 +20,9 @@ public class SpecialRequest : BaseEntity
     /// <summary>The main free-text message — the core of the request.</summary>
     public string  Message   { get; set; } = string.Empty;
 
+    /// <summary>JSON array of file URLs attached by the submitter.</summary>
+    public string? Attachments { get; set; }
+
     // ── Workflow ──────────────────────────────────────────────────────────────
     public string  Status    { get; set; } = SpecialRequestStatus.New;
 

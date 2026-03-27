@@ -42,6 +42,7 @@ export interface SpecialRequest {
   source?: string;
   notesInternal?: string;
   closedAt?: string;
+  attachmentUrls?: string[];
   createdAt: string;
   updatedAt: string;
   assignedToUserId?: string;
@@ -58,6 +59,7 @@ export interface SubmitSpecialRequestDto {
   requestType: string;
   message: string;
   source?: string;
+  attachmentUrls?: string[];
 }
 
 export interface UpdateSpecialRequestDto {
