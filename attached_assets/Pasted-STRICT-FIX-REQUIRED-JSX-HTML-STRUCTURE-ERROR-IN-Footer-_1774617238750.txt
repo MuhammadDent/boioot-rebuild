@@ -1,0 +1,96 @@
+STRICT FIX REQUIRED — JSX/HTML STRUCTURE ERROR IN Footer.tsx
+
+We have a runtime render error in:
+
+src/components/ui/Footer.tsx
+around line 194
+
+The error points to this line:
+
+<p className="footer2__about-desc">
+
+This means the JSX structure in Footer is broken.
+
+========================================
+GOAL
+========================================
+
+Fix the Footer component so it renders correctly without any JSX syntax or invalid DOM nesting errors.
+
+========================================
+REQUIRED ACTIONS
+========================================
+
+1) Open src/components/ui/Footer.tsx and inspect the JSX structure around lines 185–205
+
+2) Fix any of the following if present:
+- unclosed tag
+- extra closing tag
+- invalid nested element
+- broken <Link> wrapping block content incorrectly
+- text/content placed outside valid JSX structure
+- mismatched parentheses / fragments
+- conditional rendering block not closed properly
+
+3) Specifically verify the structure around:
+- the "Boioot" link/title
+- the paragraph:
+  <p className="footer2__about-desc">{footerAboutText}</p>
+- the checklist:
+  <ul className="footer2__checks" role="list">
+
+4) Ensure the final JSX is valid and clean, for example:
+
+<div className="footer2__about">
+  <Link href="/" className="footer2__brand">
+    Boioot
+  </Link>
+
+  <p className="footer2__about-desc">
+    {footerAboutText}
+  </p>
+
+  <ul className="footer2__checks" role="list">
+    ...
+  </ul>
+</div>
+
+5) If the <p> is currently placed inside a Link or invalid parent, move it to the correct container.
+
+6) Check for any invalid HTML nesting rules, especially:
+- <p> inside disallowed container
+- block elements inside inline-only structure
+- malformed Link children
+
+========================================
+VALIDATION REQUIRED
+========================================
+
+After fixing:
+
+1) Rebuild and confirm the error overlay disappears
+2) Confirm /special-requests loads successfully
+3) Confirm Footer renders correctly on:
+- homepage
+- properties page
+- special requests page
+- mobile view
+
+========================================
+DO NOT
+========================================
+
+- Do not suppress the error
+- Do not comment out the Footer
+- Do not remove dynamic content unless absolutely necessary
+- Do not break styling classes
+
+========================================
+DELIVERABLE
+========================================
+
+Return:
+1) exact root cause
+2) corrected JSX block
+3) whether any other JSX issues were found in Footer
+4) confirmation that the page now renders successfully

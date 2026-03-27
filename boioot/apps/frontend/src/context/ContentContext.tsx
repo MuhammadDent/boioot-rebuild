@@ -57,7 +57,9 @@ function getContentMap(): Promise<ContentMap> {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function ContentProvider({ children }: { children: React.ReactNode }) {
-  const [map, setMap] = useState<ContentMap>(() => readCache() ?? {});
+  // Always start with {} so server and client render identically (no hydration mismatch).
+  // sessionStorage is only available on the client, so we read it inside useEffect.
+  const [map, setMap] = useState<ContentMap>({});
 
   useEffect(() => {
     getContentMap().then((m) => setMap(m));
