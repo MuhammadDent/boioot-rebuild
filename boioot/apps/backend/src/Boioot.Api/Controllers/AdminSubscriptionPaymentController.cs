@@ -1,7 +1,9 @@
 using Boioot.Application.Features.SubscriptionPayments.DTOs;
 using Boioot.Application.Features.SubscriptionPayments.Interfaces;
+using Boioot.Application.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 
 namespace Boioot.Api.Controllers;
@@ -15,10 +17,14 @@ namespace Boioot.Api.Controllers;
 public class AdminSubscriptionPaymentController : BaseController
 {
     private readonly ISubscriptionPaymentService _service;
+    private readonly ILogger<AdminSubscriptionPaymentController> _logger;
 
-    public AdminSubscriptionPaymentController(ISubscriptionPaymentService service)
+    public AdminSubscriptionPaymentController(
+        ISubscriptionPaymentService service,
+        ILogger<AdminSubscriptionPaymentController> logger)
     {
         _service = service;
+        _logger  = logger;
     }
 
     /// <summary>
@@ -149,7 +155,40 @@ public class AdminSubscriptionPaymentController : BaseController
         [FromBody] NotifyUserDto dto,
         CancellationToken ct)
     {
-        var result = await _service.NotifyUserAsync(id, GetUserId(), dto, ct);
-        return Ok(result);
+        var adminId = GetUserId();
+
+        _logger.LogInformation(
+            "NotifyUser → requestId={RequestId}, adminId={AdminId}, decision={Decision}, " +
+            "sendInternal={Internal}, sendEmail={Email}, titleLen={TitleLen}, msgLen={MsgLen}",
+            id, adminId, dto?.Decision, dto?.SendInternal, dto?.SendEmail,
+            dto?.Title?.Length ?? 0, dto?.Message?.Length ?? 0);
+
+        try
+        {
+            if (dto is null)
+                return BadRequest(new { error = "Request body is required." });
+
+            var result = await _service.NotifyUserAsync(id, adminId, dto, ct);
+
+            _logger.LogInformation(
+                "NotifyUser OK → requestId={RequestId}, sentInternally={Internal}, sentByEmail={Email}, emailFailed={EF}",
+                id, result.SentInternally, result.SentByEmail, result.EmailFailed);
+
+            return Ok(result);
+        }
+        catch (BoiootException bex)
+        {
+            _logger.LogWarning(
+                "NotifyUser business error → requestId={RequestId}: [{Code}] {Msg}",
+                id, bex.StatusCode, bex.Message);
+            return StatusCode(bex.StatusCode, new { error = bex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "NotifyUser unexpected error → requestId={RequestId}, adminId={AdminId}",
+                id, adminId);
+            return StatusCode(500, new { error = "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.", detail = ex.Message });
+        }
     }
 }

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace Boioot.Domain.Entities;
 
 /// <summary>
@@ -25,9 +27,20 @@ public class SubscriptionRequestAction : BaseEntity
     public bool SentByEmail    { get; set; }
     public bool EmailFailed    { get; set; }
 
+    /// <summary>
+    /// The admin user who performed this action.
+    /// Named PerformedByUserId (not PerformedById) to avoid EF Core generating
+    /// a conflicting shadow FK column alongside the navigation property.
+    /// </summary>
     public Guid PerformedByUserId { get; set; }
 
     // ── Navigation ────────────────────────────────────────────────────────
-    public SubscriptionPaymentRequest? Request     { get; set; }
-    public User?                       PerformedBy { get; set; }
+    public SubscriptionPaymentRequest? Request { get; set; }
+
+    /// <summary>
+    /// ForeignKey attribute tells EF Core to use PerformedByUserId as the FK
+    /// instead of creating a shadow 'PerformedById' column.
+    /// </summary>
+    [ForeignKey(nameof(PerformedByUserId))]
+    public User? PerformedBy { get; set; }
 }
