@@ -418,13 +418,14 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         var user = await _db.Users
             .AsNoTracking()
             .Where(u => u.Id == req.UserId)
-            .Select(u => new { u.FullName, u.Email })
+            .Select(u => new { u.FullName, u.Email, u.Phone })
             .FirstOrDefaultAsync(ct);
 
         if (user is not null)
         {
             resp.UserName  = user.FullName;
             resp.UserEmail = user.Email;
+            resp.UserPhone = user.Phone;
         }
 
         // Enrich account type from current active subscription plan

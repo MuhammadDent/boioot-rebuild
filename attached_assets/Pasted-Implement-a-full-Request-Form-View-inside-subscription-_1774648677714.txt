@@ -1,0 +1,353 @@
+Implement a full **Request Form View** inside subscription request details so the admin can see the actual submitted request content clearly.
+
+========================================
+PROBLEM
+=======
+
+Currently in the admin subscription request details:
+
+* I can see account/user info and some payment info
+* BUT I cannot properly view the actual request content submitted by the user
+* The user's text note/comment is missing or not shown clearly
+* There is no structured request form preview
+* The admin cannot review the request as a complete submitted form
+
+This is a major UX and review problem.
+
+========================================
+GOAL
+====
+
+Inside the request details panel/page, add a dedicated section called:
+
+* نموذج الطلب
+  or
+* بيانات الطلب المرسلة
+  or
+* عرض الطلب
+
+This section must display a **structured, auto-generated form view** based on the actual data submitted by the user.
+
+It should work even if request fields vary depending on request type or submission flow.
+
+========================================
+MAIN REQUIREMENT
+================
+
+When a user submits a request, the system should save a **request snapshot** of the submitted form data.
+
+Then, in admin details, render this snapshot as a readable Arabic RTL form-like layout.
+
+This means the admin must see:
+
+* all submitted fields
+* field labels
+* field values
+* any free-text note written by the user
+* uploaded attachments if any
+* submission metadata
+
+========================================
+DATA MODEL REQUIREMENT
+======================
+
+If not already implemented, add support for storing submitted request data in a structured format.
+
+Recommended options:
+
+Option A:
+Add a JSON column on the request, such as:
+
+* SubmittedFormJson
+* RequestPayloadJson
+* FormSnapshotJson
+
+Option B:
+Use normalized child table for request fields if already supported
+
+Preferred:
+Keep a JSON snapshot for exact submitted data at time of submission.
+
+========================================
+WHAT MUST BE SHOWN IN ADMIN VIEW
+================================
+
+Inside the request details, add a dedicated section that displays:
+
+1. User note / message / comment
+
+   * Show clearly
+   * If empty, display "لا توجد ملاحظة من العميل"
+
+2. Submitted request fields
+   Example fields depending on request type:
+
+   * الاسم
+   * رقم الجوال
+   * البريد الإلكتروني
+   * نوع الحساب المطلوب
+   * الباقة المطلوبة
+   * طريقة الدفع
+   * المدينة
+   * أي حقول إضافية أدخلها العميل
+   * الرسالة / الملاحظة النصية
+
+3. Attachments
+
+   * payment receipt
+   * uploaded files
+   * identity documents
+   * any proof or image
+     Show as preview or downloadable links
+
+4. Technical submission info
+
+   * request created at
+   * last updated at
+   * source page / source flow if available
+
+========================================
+AUTO-GENERATED FORM RENDERING
+=============================
+
+Build a reusable renderer component that can take structured request JSON and display it as:
+
+* label / value rows
+* grouped sections
+* multiline notes
+* file previews
+* badges for status-like values
+
+This component must:
+
+* support Arabic RTL
+* gracefully handle missing fields
+* support dynamic fields without hardcoding everything
+* work for current and future request types
+
+Suggested structure:
+
+* Basic data section
+* Account / subscription section
+* Payment section
+* Customer note section
+* Attachments section
+
+========================================
+IMPORTANT: USER NOTE MUST APPEAR
+================================
+
+If the user entered a free-text note/comment during submission, it must appear inside a highlighted box in admin details:
+
+Section title:
+
+* ملاحظة العميل
+  or
+* رسالة العميل
+
+Display full content with proper wrapping.
+Do not truncate important text.
+If long, allow expand/collapse.
+
+========================================
+REQUEST SNAPSHOT LOGIC
+======================
+
+At request creation time:
+
+* capture all submitted request fields
+* store exact field labels/keys and values
+* store text note
+* store uploaded file references
+* store selected package / payment choice
+* save as immutable snapshot for audit/review
+
+This is important so future UI changes do not erase old request meaning.
+
+========================================
+BACKEND REQUIREMENTS
+====================
+
+1. Extend subscription request retrieval endpoint so admin gets:
+
+* submitted form snapshot
+* user note
+* attachments
+* display-friendly structured data
+
+2. If older requests have no snapshot:
+
+* attempt fallback mapping from existing columns
+* build a minimal derived display model
+* do not fail
+
+3. Create serializer / mapper for admin request details response
+
+Suggested response shape:
+{
+id,
+user,
+plan,
+payment,
+status,
+userNote,
+attachments,
+submittedForm,
+submittedAt,
+...
+}
+
+========================================
+FRONTEND UI REQUIREMENTS
+========================
+
+In admin request details side panel or full page:
+
+Add a new visible section:
+
+* عرض الطلب
+  or
+* نموذج الطلب
+
+This section should include:
+
+* clean card layout
+* Arabic labels
+* strong typography
+* readable spacing
+* long text wrapping
+* attachment preview area
+
+## For example:
+
+ملاحظة العميل
+"أرغب في الترقية وتم إرفاق ما يثبت الدفع..."
+--------------------------------------------
+
+البيانات المرسلة
+الاسم: البراء محمد
+نوع الحساب: مكتب عقاري
+الباقة المطلوبة: Office Basic
+طريقة الدفع: تحويل بنكي
+...
+---
+
+المرفقات
+[عرض الإيصال]
+[عرض الهوية]
+------------
+
+========================================
+SMART FIELD LABEL MAPPING
+=========================
+
+Do not expose raw JSON keys directly if they are technical.
+
+Create a mapping layer from system keys to Arabic labels.
+
+Example:
+
+* fullName -> الاسم
+* email -> البريد الإلكتروني
+* phone -> رقم الجوال
+* accountType -> نوع الحساب
+* targetPlan -> الباقة المطلوبة
+* paymentMethod -> طريقة الدفع
+* note -> الملاحظة
+* city -> المدينة
+
+If unknown dynamic fields exist:
+
+* transform key to readable label as fallback
+* still display them
+
+========================================
+FOR REQUESTS WITH DIFFERENT TYPES
+=================================
+
+The renderer must support different request structures:
+
+* subscription upgrade request
+* verification request
+* support request
+* marketplace/custom requests if reused later
+
+Do not hardcode only one exact schema.
+
+Build generic rendering with optional per-type enhancement.
+
+========================================
+ADD A BUTTON
+============
+
+Add an action button in request details:
+
+* عرض الطلب كاملًا
+
+Behavior:
+
+* either expands the request form section
+* or opens a modal / drawer with the full submitted form
+
+This is especially useful when request has many fields or long note.
+
+========================================
+FILES / ATTACHMENTS
+===================
+
+If attachments exist:
+
+* show filename
+* show type if possible
+* provide preview button
+* provide download/open action
+* if image or pdf, preview nicely
+
+If no attachments:
+
+* display "لا توجد مرفقات"
+
+========================================
+AUDIT / CONSISTENCY
+===================
+
+The displayed request form must reflect what the client actually submitted, not what is currently inferred later.
+
+This should be review-safe and audit-friendly.
+
+========================================
+BACKFILL FOR OLD REQUESTS
+=========================
+
+For existing requests already stored without snapshot:
+
+* derive a display form from existing fields
+* include note from existing message/comment column if available
+* include receipt and plan/payment fields
+* do not leave admin with empty request view
+
+========================================
+ERROR HANDLING
+==============
+
+If snapshot is missing or corrupt:
+
+* show clear fallback message:
+  "تعذر تحميل نموذج الطلب الأصلي، وتم عرض البيانات المتاحة فقط"
+* still show whatever data exists
+
+========================================
+FINAL DELIVERABLE
+=================
+
+After implementation, provide:
+
+1. What DB fields/tables were added
+2. How request snapshot is stored
+3. How old requests are handled
+4. Which fields are shown in admin
+5. How user note is displayed
+6. How attachments are displayed
+7. Example of a rendered request form in admin
+
+Make this production-ready, dynamic, Arabic RTL, and easy for admins to review.

@@ -9,6 +9,7 @@ public class PaymentRequestResponse
     // ── User / account info (enriched by admin queries) ───────────────────
     public string? UserName       { get; set; }
     public string? UserEmail      { get; set; }
+    public string? UserPhone      { get; set; }
     /// <summary>Raw audience type: "broker" | "office" | "company" | "owner" | "seeker"</summary>
     public string? AccountType    { get; set; }
     /// <summary>Arabic label for the account type.</summary>

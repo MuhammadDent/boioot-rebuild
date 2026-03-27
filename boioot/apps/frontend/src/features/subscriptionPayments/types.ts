@@ -30,6 +30,7 @@ export interface PaymentRequestResponse {
   // User / account info (enriched by admin)
   userName:                string | null;
   userEmail:               string | null;
+  userPhone:               string | null;
   accountType:             string | null;
   accountTypeAr:           string | null;
 

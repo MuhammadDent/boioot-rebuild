@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { adminApi } from "@/features/admin/api";
@@ -152,6 +152,165 @@ function ActionBtn({
     >
       {label}
     </button>
+  );
+}
+
+// ── Request Form Section ──────────────────────────────────────────────────────
+
+function FormBlock({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p style={{ margin: "0 0 0.55rem", fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.35rem" }}>
+        {label}
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.38rem" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FormRow({ label, value, mono, highlight }: { label: string; value?: string | null; mono?: boolean; highlight?: boolean }) {
+  if (!value) return null;
+  return (
+    <div style={{ display: "flex", gap: "0.5rem", fontSize: "0.82rem", alignItems: "flex-start" }}>
+      <span style={{ color: "#9ca3af", flexShrink: 0, minWidth: 100 }}>{label}:</span>
+      <span style={{
+        color: highlight ? "#0f172a" : "#1f2937",
+        fontWeight: highlight ? 700 : 500,
+        fontFamily: mono ? "monospace" : undefined,
+        wordBreak: "break-all",
+      }}>{value}</span>
+    </div>
+  );
+}
+
+function RequestFormSection({ req }: { req: PaymentRequestResponse }) {
+  const [expanded, setExpanded] = useState(true);
+
+  const planLabel = req.planDisplayNameAr
+    ? `${req.planDisplayNameAr} (${req.planName})`
+    : req.planName;
+
+  const cycleLabel = CYCLE_LABELS[req.billingCycle] ?? req.billingCycle;
+  const methodLabel = `${PAYMENT_METHOD_ICON[req.paymentMethod] ?? ""} ${PAYMENT_METHOD_LABELS[req.paymentMethod] ?? req.paymentMethod}`.trim();
+  const amountLabel = req.amount === 0 ? "مجاني" : `${req.amount.toLocaleString("ar-SY")} ${req.currency}`;
+
+  return (
+    <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
+      {/* Collapsible header */}
+      <button
+        type="button"
+        onClick={() => setExpanded(p => !p)}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "0.75rem 1rem", backgroundColor: "#f8fafc",
+          border: "none", cursor: "pointer", borderBottom: expanded ? "1px solid #e2e8f0" : "none",
+        }}
+      >
+        <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#374151", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          📋 نموذج الطلب المرسل
+        </span>
+        <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{expanded ? "▲ طي" : "▼ عرض"}</span>
+      </button>
+
+      {expanded && (
+        <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+          {/* 1 — مقدم الطلب */}
+          <FormBlock label="بيانات مقدم الطلب">
+            <FormRow label="الاسم"         value={req.userName}      highlight />
+            <FormRow label="البريد الإلكتروني" value={req.userEmail} />
+            <FormRow label="رقم الجوال"    value={req.userPhone} />
+            <FormRow label="نوع الحساب"    value={req.accountTypeAr ?? req.accountType} />
+          </FormBlock>
+
+          {/* 2 — بيانات الاشتراك */}
+          <FormBlock label="بيانات الاشتراك والدفع">
+            <FormRow label="الباقة المطلوبة" value={planLabel}      highlight />
+            <FormRow label="دورة الفوترة"   value={cycleLabel} />
+            <FormRow label="المبلغ"          value={amountLabel}     highlight />
+            <FormRow label="طريقة الدفع"    value={methodLabel} />
+            {req.salesRepresentativeName && (
+              <FormRow label="المندوب"         value={req.salesRepresentativeName} />
+            )}
+            {req.externalPaymentReference && (
+              <FormRow label="مرجع الدفع خارجي" value={req.externalPaymentReference} mono />
+            )}
+          </FormBlock>
+
+          {/* 3 — ملاحظة العميل (always shown) */}
+          <div>
+            <p style={{ margin: "0 0 0.45rem", fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.35rem" }}>
+              ملاحظة العميل
+            </p>
+            {req.customerNote ? (
+              <div style={{ backgroundColor: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "0.75rem" }}>
+                <p style={{ margin: 0, fontSize: "0.84rem", color: "#78350f", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                  {req.customerNote}
+                </p>
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: "0.82rem", color: "#9ca3af", fontStyle: "italic" }}>
+                لا توجد ملاحظة من العميل
+              </p>
+            )}
+          </div>
+
+          {/* 4 — المرفقات */}
+          <div>
+            <p style={{ margin: "0 0 0.45rem", fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.35rem" }}>
+              المرفقات
+            </p>
+            {req.receiptImageUrl ? (
+              <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 10, overflow: "hidden" }}>
+                <a href={req.receiptImageUrl} target="_blank" rel="noopener noreferrer" style={{ display: "block", textDecoration: "none" }}>
+                  <img
+                    src={req.receiptImageUrl}
+                    alt="إيصال الدفع"
+                    style={{ width: "100%", maxHeight: 200, objectFit: "cover", display: "block" }}
+                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                  <div style={{ padding: "0.5rem 0.75rem", backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "0.78rem", color: "#374151", fontWeight: 600 }}>
+                      📎 {req.receiptFileName ?? "إيصال الدفع"}
+                    </span>
+                    <span style={{ fontSize: "0.72rem", color: "#2563eb", fontWeight: 600 }}>🔗 فتح / تحميل</span>
+                  </div>
+                </a>
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: "0.82rem", color: "#9ca3af", fontStyle: "italic" }}>
+                لا توجد مرفقات
+              </p>
+            )}
+          </div>
+
+          {/* 5 — معلومات الإرسال */}
+          <FormBlock label="معلومات الإرسال">
+            <FormRow label="تاريخ التقديم" value={fmtDate(req.createdAt, true)} />
+            {req.reviewedAt  && <FormRow label="تاريخ المراجعة" value={fmtDate(req.reviewedAt, true)}  />}
+            {req.activatedAt && <FormRow label="تاريخ التفعيل"  value={fmtDate(req.activatedAt, true)} />}
+            {req.completedAt && <FormRow label="تاريخ الإتمام"  value={fmtDate(req.completedAt, true)} />}
+          </FormBlock>
+
+          {/* 6 — ملاحظة المراجع (if any) */}
+          {req.reviewNote && (
+            <div>
+              <p style={{ margin: "0 0 0.45rem", fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.35rem" }}>
+                ملاحظة المراجع
+              </p>
+              <div style={{ backgroundColor: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 8, padding: "0.75rem" }}>
+                <p style={{ margin: 0, fontSize: "0.84rem", color: "#78350f", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                  {req.reviewNote}
+                </p>
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -719,17 +878,16 @@ function DetailPanel({
           </div>
         )}
 
-        {/* User info */}
-        {(req.userName || req.userEmail || req.accountTypeAr) && (
-          <div style={{ backgroundColor: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, padding: "0.9rem" }}>
-            <p style={{ margin: "0 0 0.6rem", fontSize: "0.72rem", fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              بيانات المستخدم
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.83rem" }}>
-              {req.userName  && <Row label="الاسم"       value={req.userName} bold />}
-              {req.userEmail && <Row label="البريد"       value={req.userEmail} />}
-              {req.accountTypeAr && <Row label="نوع الحساب" value={req.accountTypeAr} />}
-              {req.planDisplayNameAr && <Row label="الباقة (عربي)" value={req.planDisplayNameAr} />}
+        {/* User quick summary */}
+        {(req.userName || req.userEmail) && (
+          <div style={{ backgroundColor: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, padding: "0.75rem 0.9rem", display: "flex", alignItems: "center", gap: "0.65rem" }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: "#bae6fd", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: "1rem", color: "#0369a1" }}>👤</span>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              {req.userName  && <p style={{ margin: 0, fontSize: "0.87rem", fontWeight: 700, color: "#0c4a6e" }}>{req.userName}</p>}
+              {req.userEmail && <p style={{ margin: 0, fontSize: "0.77rem", color: "#0369a1" }}>{req.userEmail}</p>}
+              {req.accountTypeAr && <p style={{ margin: 0, fontSize: "0.72rem", color: "#7dd3fc", fontWeight: 600 }}>{req.accountTypeAr}</p>}
             </div>
           </div>
         )}
@@ -791,67 +949,8 @@ function DetailPanel({
           </div>
         </div>
 
-        {/* Plan + payment info */}
-        <div style={{ backgroundColor: "#f8fafc", borderRadius: 12, padding: "1rem" }}>
-          <p style={{ margin: "0 0 0.75rem", fontSize: "0.75rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            تفاصيل الطلب
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", fontSize: "0.83rem" }}>
-            <Row label="الباقة"      value={req.planName} />
-            <Row label="المبلغ"      value={fmtAmount(req.amount, req.currency)} bold />
-            <Row label="دورة الفوترة" value={CYCLE_LABELS[req.billingCycle] ?? req.billingCycle} />
-            <Row label="طريقة الدفع" value={`${PAYMENT_METHOD_ICON[req.paymentMethod]} ${PAYMENT_METHOD_LABELS[req.paymentMethod] ?? req.paymentMethod}`} />
-            {req.salesRepresentativeName && (
-              <Row label="المندوب" value={req.salesRepresentativeName} />
-            )}
-            {req.externalPaymentReference && (
-              <Row label="مرجع الدفع" value={req.externalPaymentReference} />
-            )}
-          </div>
-        </div>
-
-        {/* Customer note */}
-        {req.customerNote && (
-          <div style={{ backgroundColor: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "0.85rem" }}>
-            <p style={{ margin: "0 0 0.3rem", fontSize: "0.72rem", fontWeight: 700, color: "#92400e" }}>ملاحظة العميل</p>
-            <p style={{ margin: 0, fontSize: "0.83rem", color: "#78350f", lineHeight: 1.6 }}>{req.customerNote}</p>
-          </div>
-        )}
-
-        {/* Review note */}
-        {req.reviewNote && (
-          <div style={{ backgroundColor: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10, padding: "0.85rem" }}>
-            <p style={{ margin: "0 0 0.3rem", fontSize: "0.72rem", fontWeight: 700, color: "#92400e" }}>ملاحظة المراجع</p>
-            <p style={{ margin: 0, fontSize: "0.83rem", color: "#78350f", lineHeight: 1.6 }}>{req.reviewNote}</p>
-          </div>
-        )}
-
-        {/* Receipt */}
-        {req.receiptImageUrl && (
-          <div>
-            <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              إيصال الدفع
-            </p>
-            <a href={req.receiptImageUrl} target="_blank" rel="noopener noreferrer"
-              style={{
-                display: "block", borderRadius: 10, overflow: "hidden",
-                border: "1.5px solid #e2e8f0", textDecoration: "none",
-              }}
-            >
-              <img
-                src={req.receiptImageUrl}
-                alt="إيصال الدفع"
-                style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }}
-                onError={e => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-              <div style={{ padding: "0.5rem 0.75rem", backgroundColor: "#f8fafc", fontSize: "0.78rem", color: "#64748b" }}>
-                📎 {req.receiptFileName ?? "عرض الإيصال"}
-              </div>
-            </a>
-          </div>
-        )}
+        {/* ── Request Form Section ─────────────────────────────── */}
+        <RequestFormSection req={req} />
 
         {/* Timeline */}
         <div>
