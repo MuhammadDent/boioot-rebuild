@@ -27,7 +27,7 @@ const ALLOWED_ACTIONS: Record<string, string[]> = {
   AwaitingPayment:  ["under-review", "approve", "reject", "cancel"],
   ReceiptUploaded:  ["under-review", "approve", "reject", "cancel"],
   UnderReview:      ["approve", "reject", "cancel"],
-  Approved:         ["activate", "cancel"],
+  Approved:         ["activate", "cancel"],  // legacy: requests approved before combined flow
   Rejected:         [],
   Activated:        [],
   Cancelled:        [],
@@ -797,9 +797,9 @@ function DetailPanel({
       confirmLabel: "تأكيد", confirmColor: "#5b21b6",
     },
     approve: {
-      title: "الموافقة على الطلب",
-      body: "تأكيد استلام الدفع والموافقة على هذا الطلب. يمكن تفعيل الاشتراك بعد الموافقة.",
-      confirmLabel: "موافقة", confirmColor: "#166534",
+      title: "موافقة وتفعيل الاشتراك",
+      body: "تأكيد استلام الدفع والموافقة على هذا الطلب.\n\nسيتم تفعيل الاشتراك فوراً وإلغاء أي اشتراك نشط سابق.",
+      confirmLabel: "موافقة وتفعيل", confirmColor: "#166534",
       withNote: true, notePlaceholder: "ملاحظة اختيارية للعميل...",
     },
     reject: {
@@ -907,7 +907,7 @@ function DetailPanel({
             )}
             {canDo(s, "approve") && (
               <ActionBtn
-                label="✓ موافقة"
+                label="✓ موافقة وتفعيل"
                 color="#166534" bg="#f0fdf4"
                 onClick={() => setModal({ action: "approve", id: req.id })}
               />

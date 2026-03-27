@@ -486,39 +486,117 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         return ToResponse(req);
     }
 
-    // ── Admin: Approve ───────────────────────────────────────────────────
+    // ── Admin: Approve + Activate (combined) ─────────────────────────────
 
     public async Task<PaymentRequestResponse> ApproveAsync(
         Guid requestId, Guid adminUserId, ReviewPaymentRequestDto dto, CancellationToken ct = default)
     {
-        var req = await LoadAdminRequestAsync(requestId, ct);
-
-        // FIX-2: Explicit allowlist — Rejected and Cancelled are implicitly blocked
-        var allowedStatuses = new[]
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        try
         {
-            PaymentRequestStatus.Pending,
-            PaymentRequestStatus.AwaitingPayment,
-            PaymentRequestStatus.ReceiptUploaded,
-            PaymentRequestStatus.UnderReview,
-        };
+            // Re-fetch inside transaction for fresh, consistent read
+            var req = await _db.SubscriptionPaymentRequests
+                .Include(r => r.Plan)
+                .FirstOrDefaultAsync(r => r.Id == requestId, ct)
+                ?? throw new BoiootException("طلب الدفع غير موجود.", 404);
 
-        if (!allowedStatuses.Contains(req.Status))
+            var allowedStatuses = new[]
+            {
+                PaymentRequestStatus.Pending,
+                PaymentRequestStatus.AwaitingPayment,
+                PaymentRequestStatus.ReceiptUploaded,
+                PaymentRequestStatus.UnderReview,
+            };
+
+            if (!allowedStatuses.Contains(req.Status))
+                throw new BoiootException(
+                    $"لا يمكن الموافقة على طلب في الحالة '{req.Status}'. " +
+                    "الموافقة مسموحة فقط للطلبات في: Pending, AwaitingPayment, ReceiptUploaded, UnderReview.", 400);
+
+            // 1. Record review audit fields
+            req.ReviewedByUserId = adminUserId;
+            req.ReviewNote       = dto.Note?.Trim();
+            req.ReviewedAt       = DateTime.UtcNow;
+            req.UpdatedAt        = DateTime.UtcNow;
+            req.Status           = PaymentRequestStatus.Approved;
+
+            // 2. Immediately activate the subscription
+            await ActivateInternalAsync(req, ct);
+
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+
+            _logger.LogInformation(
+                "[APPROVE+ACTIVATE] PaymentRequest {ReqId} approved and subscription activated " +
+                "for account={AccountId}, plan={PlanId}, cycle={Cycle}, by admin={AdminId}",
+                requestId, req.AccountId, req.RequestedPlanId, req.BillingCycle, adminUserId);
+
+            return ToResponse(req);
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Internal helper: activates the subscription for the given request.
+    /// Must be called INSIDE an existing DB transaction.
+    /// Sets req.Status = Activated, req.ActivatedAt, req.CompletedAt.
+    /// </summary>
+    private async Task ActivateInternalAsync(SubscriptionPaymentRequest req, CancellationToken ct)
+    {
+        // Idempotency guard
+        var alreadyActivated = await _db.Subscriptions
+            .AnyAsync(s => s.PaymentRef == req.Id.ToString(), ct);
+
+        if (alreadyActivated)
             throw new BoiootException(
-                $"لا يمكن الموافقة على طلب في الحالة '{req.Status}'. " +
-                "الموافقة مسموحة فقط للطلبات في: Pending, AwaitingPayment, ReceiptUploaded, UnderReview.", 400);
+                "تم تفعيل اشتراك لهذا الطلب مسبقاً. لا يمكن التفعيل مرتين.", 409);
 
-        req.Status           = PaymentRequestStatus.Approved;
-        req.ReviewedByUserId = adminUserId;
-        req.ReviewNote       = dto.Note?.Trim();
-        req.ReviewedAt       = DateTime.UtcNow;
-        req.UpdatedAt        = DateTime.UtcNow;
+        // Deactivate any existing active subscriptions for the account
+        var existingActive = await _db.Subscriptions
+            .Where(s => s.AccountId == req.AccountId && s.IsActive)
+            .ToListAsync(ct);
 
-        await _db.SaveChangesAsync(ct);
+        foreach (var sub in existingActive)
+        {
+            sub.IsActive  = false;
+            sub.Status    = SubscriptionStatus.Cancelled;
+            sub.UpdatedAt = DateTime.UtcNow;
+        }
+
+        // Calculate subscription dates based on billing cycle
+        var startDate = DateTime.UtcNow;
+        var endDate   = req.BillingCycle == "Yearly"
+            ? startDate.AddYears(1)
+            : startDate.AddMonths(1);
+
+        _db.Subscriptions.Add(new Subscription
+        {
+            AccountId  = req.AccountId,
+            PlanId     = req.RequestedPlanId,
+            PricingId  = req.RequestedPricingId,
+            Status     = SubscriptionStatus.Active,
+            StartDate  = startDate,
+            EndDate    = endDate,
+            IsActive   = true,
+            AutoRenew  = false,
+            PaymentRef = req.Id.ToString(),
+            CreatedAt  = DateTime.UtcNow,
+            UpdatedAt  = DateTime.UtcNow,
+        });
+
+        req.Status      = PaymentRequestStatus.Activated;
+        req.ActivatedAt = DateTime.UtcNow;
+        req.CompletedAt = DateTime.UtcNow;
+        req.UpdatedAt   = DateTime.UtcNow;
 
         _logger.LogInformation(
-            "PaymentRequest {Id} approved by admin {AdminId}", requestId, adminUserId);
-
-        return ToResponse(req);
+            "[ACTIVATION] Subscription created: accountId={AccountId}, planId={PlanId}, " +
+            "cycle={Cycle}, start={Start}, end={End}, requestId={ReqId}",
+            req.AccountId, req.RequestedPlanId, req.BillingCycle, startDate, endDate, req.Id);
     }
 
     // ── Admin: Reject ────────────────────────────────────────────────────
@@ -587,16 +665,14 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         return ToResponse(req);
     }
 
-    // ── Admin: Activate Subscription ────────────────────────────────────
+    // ── Admin: Activate Subscription (manual fallback for pre-existing Approved requests) ──
 
     public async Task<PaymentRequestResponse> ActivateSubscriptionAsync(
         Guid requestId, Guid adminUserId, CancellationToken ct = default)
     {
-        // FIX-6: Wrap in a transaction to prevent race conditions
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
         try
         {
-            // Re-fetch inside the transaction for a fresh, consistent read
             var req = await _db.SubscriptionPaymentRequests
                 .Include(r => r.Plan)
                 .FirstOrDefaultAsync(r => r.Id == requestId, ct)
@@ -606,62 +682,14 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
                 throw new BoiootException(
                     $"يمكن تفعيل الاشتراك فقط بعد الموافقة على الطلب. الحالة الحالية: {req.Status}", 400);
 
-            // FIX-6: Idempotency guard — check if a subscription was already created
-            // for this exact payment request (PaymentRef = req.Id)
-            var alreadyActivated = await _db.Subscriptions
-                .AnyAsync(s => s.PaymentRef == req.Id.ToString(), ct);
-
-            if (alreadyActivated)
-                throw new BoiootException(
-                    "تم تفعيل اشتراك لهذا الطلب مسبقاً. لا يمكن التفعيل مرتين.", 409);
-
-            // Deactivate any existing active subscriptions for the account
-            var existingActive = await _db.Subscriptions
-                .Where(s => s.AccountId == req.AccountId && s.IsActive)
-                .ToListAsync(ct);
-
-            foreach (var sub in existingActive)
-            {
-                sub.IsActive  = false;
-                sub.Status    = SubscriptionStatus.Cancelled;
-                sub.UpdatedAt = DateTime.UtcNow;
-            }
-
-            // Calculate subscription dates
-            var startDate = DateTime.UtcNow;
-            var endDate   = req.BillingCycle == "Yearly"
-                ? startDate.AddYears(1)
-                : startDate.AddMonths(1);
-
-            var subscription = new Subscription
-            {
-                AccountId  = req.AccountId,
-                PlanId     = req.RequestedPlanId,
-                PricingId  = req.RequestedPricingId,
-                Status     = SubscriptionStatus.Active,
-                StartDate  = startDate,
-                EndDate    = endDate,
-                IsActive   = true,
-                AutoRenew  = false,
-                PaymentRef = req.Id.ToString(),
-                CreatedAt  = DateTime.UtcNow,
-                UpdatedAt  = DateTime.UtcNow,
-            };
-
-            _db.Subscriptions.Add(subscription);
-
-            req.Status      = PaymentRequestStatus.Activated;
-            req.ActivatedAt = DateTime.UtcNow;
-            req.CompletedAt = DateTime.UtcNow;
-            req.UpdatedAt   = DateTime.UtcNow;
+            await ActivateInternalAsync(req, ct);
 
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
 
             _logger.LogInformation(
-                "Subscription activated: account={AccountId}, plan={PlanId}, " +
-                "cycle={Cycle}, end={EndDate}, via PaymentRequest={ReqId}",
-                req.AccountId, req.RequestedPlanId, req.BillingCycle, endDate, requestId);
+                "[MANUAL_ACTIVATE] Subscription activated by admin {AdminId}, requestId={ReqId}",
+                adminUserId, requestId);
 
             return ToResponse(req);
         }
