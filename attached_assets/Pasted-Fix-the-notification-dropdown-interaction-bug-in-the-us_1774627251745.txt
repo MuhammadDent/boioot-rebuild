@@ -1,0 +1,234 @@
+Fix the notification dropdown interaction bug in the user dashboard.
+
+========================================
+PROBLEM
+=======
+
+Currently, when the user clicks the notification bell in the top header:
+
+* the notification dropdown opens
+* notifications are visible
+* BUT clicking a notification item does nothing
+* the user cannot open/read the notification details properly
+
+So the issue is not rendering.
+The issue is notification item interaction / click behavior.
+
+========================================
+GOAL
+====
+
+Make every notification item fully clickable and readable.
+
+When the user clicks a notification item, the system must do the following correctly:
+
+1. Open the notification content
+2. Mark the notification as read
+3. Navigate to the related page OR open a details modal/drawer
+4. Never silently fail
+5. Work correctly on desktop and mobile
+
+========================================
+REQUIRED BEHAVIOR
+=================
+
+For each notification item in the dropdown:
+
+* Entire row should be clickable, not only the icon or small text
+* Cursor should be pointer
+* Hover state should be visible
+* On click:
+
+  * mark notification as read
+  * if notification has related link/url → navigate there
+  * if notification has no link but has message body → open notification details modal
+  * if notification belongs to a subscription request → open the request details page
+  * if notification belongs to comments/messages/orders/etc → navigate to the relevant record
+
+========================================
+IMPLEMENTATION REQUIREMENTS
+===========================
+
+1. Review the notification dropdown component
+
+* Find where notification items are rendered
+* Make sure each item has a real onClick handler
+* Do not rely on nested small buttons only
+
+2. Fix event handling
+
+* Prevent dropdown from closing before click action completes
+* If needed, use:
+
+  * stopPropagation carefully
+  * async click handling
+  * delayed close only after action is executed
+
+3. Fix CSS / pointer issues
+   Check for:
+
+* pointer-events: none
+* z-index conflicts
+* overlay blocking clicks
+* disabled state accidentally applied
+* transparent layer above the list
+
+4. Add navigation resolver
+   Create a centralized function like:
+
+* getNotificationTarget(notification)
+  or
+* resolveNotificationAction(notification)
+
+This function should map notification type to action.
+
+Example:
+
+* subscription_approved → /dashboard/subscriptions or subscription request details
+* subscription_rejected → related subscription request details
+* subscription_missing_info → request details page
+* new_comment → relevant discussion/request/comment thread
+* new_message → messages/conversation page
+* system_alert → details modal if no page exists
+
+========================================
+DETAIL VIEW REQUIREMENT
+=======================
+
+If notification has no dedicated target page, open a modal or drawer with:
+
+* notification title
+* full message
+* date/time
+* status (read/unread)
+* optional action button if related record exists
+
+This is important because the user must always be able to read the full notification text.
+
+========================================
+MARK AS READ LOGIC
+==================
+
+When clicking notification item:
+
+* mark only that notification as read
+* update unread badge count instantly in UI
+* do not require full page refresh
+
+Also add:
+
+* "Mark all as read" should continue working
+* unread/read style should update immediately
+
+========================================
+API / BACKEND
+=============
+
+Verify notification model supports:
+
+* id
+* title
+* message
+* type
+* isRead
+* createdAt
+* targetUrl or referenceType/referenceId
+* metadataJson (if needed)
+
+If missing, extend it properly.
+
+Ensure backend returns enough data for frontend to know where to navigate.
+
+========================================
+FRONTEND UX IMPROVEMENTS
+========================
+
+In dropdown notifications list:
+
+* Make item container clickable
+* Add subtle hover background
+* Add active press state
+* Show truncated preview in list
+* On click, show full content in modal or navigate
+* Keep RTL layout correct in Arabic
+
+Unread notifications should appear visually distinct.
+
+========================================
+DEBUGGING TASKS
+===============
+
+Please inspect and fix all of the following:
+
+1. Is onClick attached to the notification row?
+2. Is there a parent element intercepting clicks?
+3. Does dropdown auto-close before navigation runs?
+4. Is routing path valid?
+5. Is notification missing target info?
+6. Is there JS console error on click?
+7. Is there API error when marking as read?
+
+========================================
+EDGE CASES
+==========
+
+Handle these safely:
+
+* Notification has missing referenceId
+  → open details modal instead of failing
+
+* Notification has invalid target URL
+  → open details modal
+
+* Mark-as-read API fails
+  → still allow opening notification, then show warning
+
+* Notification text is long
+  → show full content in details modal
+
+========================================
+RECOMMENDED STRUCTURE
+=====================
+
+Preferred behavior:
+
+Option A:
+Click notification → mark as read → navigate to related page
+
+Option B:
+If no page available → mark as read → open modal with full message
+
+Do not leave notifications as non-interactive text only.
+
+========================================
+ALSO ADD THIS
+=============
+
+Add a small action inside dropdown footer or header:
+
+* "عرض كل الإشعارات"
+
+This should go to a dedicated notifications page where user can:
+
+* read all notifications
+* filter read/unread
+* open each notification
+* mark as read
+
+If notifications page already exists, make sure dropdown links to it.
+
+========================================
+FINAL DELIVERABLE
+=================
+
+After fixing, provide:
+
+1. What caused the click bug
+2. What component(s) were changed
+3. How click now behaves
+4. Which notification types navigate to pages
+5. Which notification types open modal
+6. Confirmation that unread counter updates instantly
+7. Confirmation that notification content is now readable by the user
+
+Make the fix production-ready and do not break the existing header or dropdown behavior.
