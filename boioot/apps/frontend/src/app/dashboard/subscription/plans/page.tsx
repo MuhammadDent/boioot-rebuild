@@ -27,6 +27,10 @@ import {
   filterPlansForAudience,
   AUDIENCE_TYPE_LABEL,
 } from "@/features/pricing/planCompatibility";
+import {
+  canAccessFeature,
+  type FeatureAccessKey,
+} from "@/features/access/featureAccess";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -47,6 +51,14 @@ const LIMIT_LABELS: Record<string, string> = {
   max_projects:        "مشروع",
 };
 
+// Maps each limit key to the featureAccess gate required to display it.
+// null = always visible regardless of role.
+const LIMIT_VISIBILITY: Record<string, FeatureAccessKey | null> = {
+  max_active_listings: null,
+  max_agents:          "agents",
+  max_projects:        "projects",
+};
+
 // ── PlanCard ─────────────────────────────────────────────────────────────────
 
 function PlanCard({
@@ -56,6 +68,7 @@ function PlanCard({
   onChoose,
   onActivateFree,
   freeActivatingId,
+  user,
 }: {
   plan: PublicPricingItem;
   cycle: "Monthly" | "Yearly";
@@ -63,6 +76,7 @@ function PlanCard({
   onChoose: (plan: PublicPricingItem, pricing: PublicPricingEntry) => void;
   onActivateFree: (planId: string) => void;
   freeActivatingId: string | null;
+  user: { role?: string | null; accountType?: string | null } | null;
 }) {
   const pricing = plan.pricing.find(p => p.billingCycle === cycle)
     ?? plan.pricing[0];
@@ -72,7 +86,15 @@ function PlanCard({
   const isRecommended = plan.isRecommended;
   const isActivatingFree = freeActivatingId === plan.planId;
 
-  const keyLimits = plan.limits.filter(l => LIMIT_KEYS.includes(l.key));
+  // Filter limits by: (a) known display keys, (b) role-based visibility gate.
+  // max_agents → CompanyOwner + Admin only
+  // max_projects → Company CompanyOwner + Admin only
+  const keyLimits = plan.limits.filter(l => {
+    if (!LIMIT_KEYS.includes(l.key)) return false;
+    const gate = LIMIT_VISIBILITY[l.key];
+    if (gate === null) return true;
+    return canAccessFeature(user, gate);
+  });
 
   return (
     <div style={{
@@ -1124,6 +1146,7 @@ export default function PlansPage() {
               }}
               onActivateFree={handleActivateFree}
               freeActivatingId={freeActivatingId}
+              user={user}
             />
           ))}
         </div>
