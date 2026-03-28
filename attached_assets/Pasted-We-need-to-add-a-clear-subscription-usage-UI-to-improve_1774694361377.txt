@@ -1,0 +1,107 @@
+We need to add a clear subscription usage UI to improve user experience.
+
+GOAL:
+Show plan usage, quota status, and actionable buttons (repurchase / early renewal) in a clear and user-friendly way.
+
+========================================
+BACKEND REQUIREMENTS
+========================================
+
+Ensure CurrentSubscriptionResponse includes:
+
+- listingLimit
+- listingUsed
+- isQuotaExhausted (listingUsed >= listingLimit)
+- canRepurchaseNow
+- canRenewEarlyNow
+- planBillingType
+
+========================================
+FRONTEND IMPLEMENTATION (Next.js)
+========================================
+
+Update:
+dashboard/subscription/page.tsx
+
+========================================
+1) ADD USAGE CARD
+========================================
+
+Display a card showing:
+
+- "عدد الإعلانات المستخدمة"
+- Format:
+  {listingUsed} / {listingLimit}
+
+Example:
+20 / 20 إعلان
+
+Add progress bar:
+- width = (listingUsed / listingLimit) * 100
+
+Color logic:
+- < 70% → green
+- 70%–99% → yellow
+- 100% → red
+
+========================================
+2) ADD STATUS MESSAGE
+========================================
+
+If NOT exhausted:
+Show:
+"يمكنك نشر المزيد من الإعلانات"
+
+If exhausted:
+Show warning box:
+"تم استهلاك كامل عدد الإعلانات المتاحة في الباقة"
+
+========================================
+3) ADD ACTION BUTTONS
+========================================
+
+If planBillingType = one_time_fixed_term AND isQuotaExhausted:
+Show button:
+"إعادة شراء الباقة"
+
+If planBillingType = recurring AND isQuotaExhausted:
+Show button:
+"تجديد الآن"
+
+If both canRepurchaseNow / canRenewEarlyNow are true:
+Show both options
+
+Buttons should redirect to pricing/plans page.
+
+========================================
+4) ADD VISUAL WARNING
+========================================
+
+If isQuotaExhausted:
+- Highlight card border in red
+- Show icon ⚠️
+
+If near limit (>80%):
+- Show soft warning:
+"أوشكت على استهلاك كامل الحصة"
+
+========================================
+5) OPTIONAL (HIGH VALUE UX)
+========================================
+
+Add small badge on listing creation button:
+
+If exhausted:
+Disable button + tooltip:
+"لقد استهلكت كامل عدد الإعلانات، يرجى إعادة الشراء أو التجديد"
+
+========================================
+EXPECTED RESULT
+========================================
+
+User clearly sees:
+- how many listings they used
+- whether they reached the limit
+- what action they should take next
+
+No confusion about subscription state.

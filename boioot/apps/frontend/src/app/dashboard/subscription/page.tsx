@@ -442,6 +442,178 @@ function FreePlanDisplay() {
   );
 }
 
+// ── UsageCard ─────────────────────────────────────────────────────────────────
+
+function UsageCard({ sub }: { sub: CurrentSubscriptionResponse }) {
+  const used  = sub.listingQuotaUsed;
+  const limit = sub.listingLimit;
+  const pct   = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+
+  const barColor =
+    pct >= 100 ? "#dc2626" :
+    pct >= 70  ? "#d97706" : "#059669";
+
+  const cardBorder =
+    pct >= 100 ? "1.5px solid #fca5a5" :
+    pct >= 80  ? "1.5px solid #fcd34d" : "1.5px solid #e2e8f0";
+
+  const isExhausted  = sub.isQuotaExhausted;
+  const isNearLimit  = !isExhausted && pct >= 80;
+  const plansHref    = "/dashboard/subscription/plans";
+
+  return (
+    <div style={{
+      backgroundColor: "#fff",
+      borderRadius: 16,
+      padding: "1.5rem",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
+      border: cardBorder,
+      marginBottom: "1.5rem",
+    }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+        <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700, color: "#374151", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          {isExhausted ? "⚠️" : "📋"} عدد الإعلانات المستخدمة
+        </h3>
+        <span style={{
+          fontSize: "1.35rem",
+          fontWeight: 800,
+          color: barColor,
+          fontVariantNumeric: "tabular-nums",
+          direction: "ltr",
+        }}>
+          {used} / {limit} <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#94a3b8" }}>إعلان</span>
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{
+        height: 10,
+        borderRadius: 6,
+        backgroundColor: "#f1f5f9",
+        overflow: "hidden",
+        marginBottom: "0.85rem",
+      }}>
+        <div style={{
+          height: "100%",
+          width: `${pct}%`,
+          borderRadius: 6,
+          backgroundColor: barColor,
+          transition: "width 0.4s ease",
+        }} />
+      </div>
+
+      {/* Status message */}
+      {isExhausted ? (
+        <div style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "0.6rem",
+          padding: "0.85rem 1rem",
+          borderRadius: 10,
+          backgroundColor: "#fff1f2",
+          border: "1.5px solid #fca5a5",
+          marginBottom: (sub.canRepurchaseNow || sub.canRenewEarlyNow) ? "1rem" : 0,
+        }}>
+          <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>⛔</span>
+          <div>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: "0.88rem", color: "#9f1239" }}>
+              تم استهلاك كامل عدد الإعلانات المتاحة في الباقة
+            </p>
+            <p style={{ margin: "0.2rem 0 0", fontSize: "0.8rem", color: "#be123c" }}>
+              لا يمكنك نشر إعلانات جديدة حتى تجدّد أو تُعيد شراء الباقة.
+            </p>
+          </div>
+        </div>
+      ) : isNearLimit ? (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          padding: "0.6rem 0.85rem",
+          borderRadius: 8,
+          backgroundColor: "#fffbeb",
+          border: "1px solid #fcd34d",
+          marginBottom: 0,
+        }}>
+          <span style={{ fontSize: "1rem" }}>⚡</span>
+          <p style={{ margin: 0, fontSize: "0.83rem", fontWeight: 600, color: "#92400e" }}>
+            أوشكت على استهلاك كامل الحصة — تبقّى لك {limit - used} إعلان فقط.
+          </p>
+        </div>
+      ) : (
+        <p style={{ margin: 0, fontSize: "0.84rem", color: "#059669", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          <span>✅</span> يمكنك نشر المزيد من الإعلانات ({limit - used} متبقي)
+        </p>
+      )}
+
+      {/* Action buttons */}
+      {(sub.canRepurchaseNow || sub.canRenewEarlyNow) && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginTop: "1rem" }}>
+          {sub.canRepurchaseNow && (
+            <Link
+              href={`${plansHref}?repurchase=${sub.planId}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.6rem 1.35rem",
+                borderRadius: 10,
+                backgroundColor: "#1d4ed8",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: "0.88rem",
+                textDecoration: "none",
+                boxShadow: "0 2px 8px rgba(29,78,216,0.25)",
+              }}
+            >
+              🔄 إعادة شراء الباقة
+            </Link>
+          )}
+          {sub.canRenewEarlyNow && (
+            <Link
+              href={`${plansHref}?earlyRenew=${sub.planId}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.6rem 1.35rem",
+                borderRadius: 10,
+                backgroundColor: "#059669",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: "0.88rem",
+                textDecoration: "none",
+                boxShadow: "0 2px 8px rgba(5,150,105,0.25)",
+              }}
+            >
+              ♻️ تجديد الآن
+            </Link>
+          )}
+          <Link
+            href={plansHref}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              padding: "0.6rem 1.1rem",
+              borderRadius: 10,
+              backgroundColor: "#f8fafc",
+              color: "#475569",
+              fontWeight: 600,
+              fontSize: "0.88rem",
+              textDecoration: "none",
+              border: "1.5px solid #e2e8f0",
+            }}
+          >
+            عرض الباقات
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function SubscriptionPage() {
@@ -649,88 +821,33 @@ export default function SubscriptionPage() {
           )}
         </div>
 
-        {/* Quota exhaustion banner */}
-        {sub.isQuotaExhausted && (
-          <div style={{
-            margin: "0.75rem 0 0",
-            padding: "0.85rem 1rem",
-            borderRadius: 10,
-            backgroundColor: "#fffbeb",
-            border: "1.5px solid #fcd34d",
-            fontSize: "0.85rem",
-            color: "#92400e",
-            fontWeight: 600,
-          }}>
-            ⚠️ لقد استهلكت كامل حصة الإعلانات المتاحة ({sub.listingQuotaUsed} / {sub.listingLimit > 0 ? sub.listingLimit : "∞"}).
-            {sub.canRepurchaseNow && " يمكنك إعادة شراء الباقة للحصول على حصة جديدة."}
-            {sub.canRenewEarlyNow && " يمكنك التجديد المبكر للحصول على دورة جديدة."}
-          </div>
-        )}
-
-        {/* Repurchase / Early Renewal + Cancel buttons */}
-        {(sub.canRepurchaseNow || sub.canRenewEarlyNow || isCancelable) && (
-          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "center" }}>
-            {sub.canRepurchaseNow && (
-              <Link
-                href={`/dashboard/subscription/plans?repurchase=${sub.planId}`}
-                style={{
-                  padding: "0.55rem 1.25rem",
-                  borderRadius: 9,
-                  border: "1.5px solid #3b82f6",
-                  backgroundColor: "#eff6ff",
-                  color: "#1d4ed8",
-                  fontSize: "0.85rem",
-                  fontWeight: 700,
-                  textDecoration: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                }}
-              >
-                🔄 إعادة الشراء
-              </Link>
-            )}
-            {sub.canRenewEarlyNow && (
-              <Link
-                href={`/dashboard/subscription/plans?earlyRenew=${sub.planId}`}
-                style={{
-                  padding: "0.55rem 1.25rem",
-                  borderRadius: 9,
-                  border: "1.5px solid #059669",
-                  backgroundColor: "#ecfdf5",
-                  color: "#065f46",
-                  fontSize: "0.85rem",
-                  fontWeight: 700,
-                  textDecoration: "none",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                }}
-              >
-                ♻️ تجديد مبكر
-              </Link>
-            )}
-            {isCancelable && (
-              <button
-                onClick={() => setShowCancel(true)}
-                type="button"
-                style={{
-                  padding: "0.55rem 1.1rem",
-                  borderRadius: 9,
-                  border: "1.5px solid #fca5a5",
-                  backgroundColor: "#fff",
-                  color: "#dc2626",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                إلغاء الاشتراك
-              </button>
-            )}
+        {/* Cancel button */}
+        {isCancelable && (
+          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "1rem" }}>
+            <button
+              onClick={() => setShowCancel(true)}
+              type="button"
+              style={{
+                padding: "0.55rem 1.1rem",
+                borderRadius: 9,
+                border: "1.5px solid #fca5a5",
+                backgroundColor: "#fff",
+                color: "#dc2626",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              إلغاء الاشتراك
+            </button>
           </div>
         )}
       </div>
+
+      {/* ── Listing Quota Usage Card ──────────────────────────────────────────── */}
+      {sub.listingLimit > 0 && (
+        <UsageCard sub={sub} />
+      )}
 
       {/* Limits + Features row */}
       <div style={{
