@@ -621,10 +621,30 @@ function CollapsibleSection({
   );
 }
 
+// ── getPlanVisibleName ────────────────────────────────────────────────────────
+//
+// Single source of truth for user-facing plan name.
+// Always prefer displayNameAr in Arabic UI, with displayNameEn as fallback,
+// and internal `name` as last resort. NEVER expose internal name directly.
+
+function getPlanVisibleName(
+  displayNameAr: string,
+  displayNameEn: string,
+  internalName: string,
+  locale: "ar" | "en" = "ar",
+): string {
+  if (locale === "ar") {
+    return displayNameAr.trim() || displayNameEn.trim() || internalName.trim() || "";
+  }
+  return displayNameEn.trim() || displayNameAr.trim() || internalName.trim() || "";
+}
+
 // ── PlanPreviewCard ─────────────────────────────────────────────────────────────
 
 function PlanPreviewCard({
-  name,
+  displayNameAr,
+  displayNameEn,
+  internalName,
   badgeText,
   planColor,
   isRecommended,
@@ -633,7 +653,9 @@ function PlanPreviewCard({
   enabledFeatures,
   limits,
 }: {
-  name: string;
+  displayNameAr: string;
+  displayNameEn: string;
+  internalName: string;
   badgeText: string;
   planColor: string;
   isRecommended: boolean;
@@ -642,6 +664,7 @@ function PlanPreviewCard({
   enabledFeatures: PlanFeatureItem[];
   limits?: PlanLimitItem[];
 }) {
+  const visibleName = getPlanVisibleName(displayNameAr, displayNameEn, internalName);
   const accent = planColor.trim() || "#2e7d32";
   const price  = parseFloat(basePriceMonthly);
 
@@ -670,7 +693,7 @@ function PlanPreviewCard({
           {badgeText}
         </div>
       )}
-      <h3 style={{ margin: "0 0 0.2rem", fontSize: "1.1rem", fontWeight: 800 }}>{name || "اسم الباقة"}</h3>
+      <h3 style={{ margin: "0 0 0.2rem", fontSize: "1.1rem", fontWeight: 800 }}>{visibleName || "اسم الباقة"}</h3>
       {planCategory && (
         <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", color: "#888" }}>
           {planCategory === "Individual" ? "للأفراد" : planCategory === "Business" ? "للأعمال" : planCategory}
@@ -830,6 +853,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [downgradePlanCode, setDowngradePlanCode] = useState(plan?.downgradePlanCode ?? "");
   const [planCategory, setPlanCategory]           = useState(plan?.planCategory ?? "");
   const [displayNameAr, setDisplayNameAr]         = useState(plan?.displayNameAr ?? "");
+  const [displayNameEn, setDisplayNameEn]         = useState(plan?.displayNameEn ?? "");
   const [audienceType, setAudienceType]           = useState(plan?.audienceType ?? "");
   const [tier, setTier]                           = useState(plan?.tier ?? "");
   const [badgeText, setBadgeText]                 = useState(plan?.badgeText ?? "");
@@ -882,6 +906,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         result = await adminApi.createPlan({
           name:                   name.trim(),
           displayNameAr:          displayNameAr.trim() || undefined,
+          displayNameEn:          displayNameEn.trim() || undefined,
           audienceType:           audienceType || undefined,
           tier:                   tier || undefined,
           description:            description.trim() || undefined,
@@ -925,6 +950,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           isRecommended,
           planCategory:           planCategory || undefined,
           displayNameAr:          displayNameAr.trim() || undefined,
+          displayNameEn:          displayNameEn.trim() || undefined,
           audienceType:           audienceType || undefined,
           tier:                   tier || undefined,
           billingMode,
@@ -1078,8 +1104,19 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     value={displayNameAr}
                     onChange={e => setDisplayNameAr(e.target.value)}
                     style={inputStyle}
-                    placeholder="مثال: باحث متقدم"
+                    placeholder="مثال: الباقة المتقدمة لملاك العقارات"
                     maxLength={120}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>الاسم الإنجليزي للعرض (DisplayNameEn)</label>
+                  <input
+                    value={displayNameEn}
+                    onChange={e => setDisplayNameEn(e.target.value)}
+                    style={inputStyle}
+                    placeholder="e.g. Advanced Owner Plan"
+                    maxLength={120}
+                    dir="ltr"
                   />
                 </div>
                 <div>
@@ -1604,7 +1641,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                 معاينة مباشرة لكيفية ظهور الخطة في صفحة التسعير.
               </p>
               <PlanPreviewCard
-                name={name}
+                displayNameAr={displayNameAr}
+                displayNameEn={displayNameEn}
+                internalName={name}
                 badgeText={badgeText}
                 planColor={planColor}
                 isRecommended={isRecommended}
