@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getRoleCategory } from "@/features/admin/constants";
+import { saveRedirectTarget } from "@/lib/authRedirect";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import UpsellModal from "@/components/dashboard/UpsellModal";
@@ -45,14 +46,22 @@ export default function DashboardLayout({
     return () => { document.body.style.overflow = ""; };
   }, [sidebarOpen]);
 
-  // ── Guard: redirect Admin/Staff out of the customer zone ──────────────────
+  // ── Guard: redirect unauthenticated users + Admin/Staff out of customer zone ──
   useEffect(() => {
     if (isAdminRoute) return;
     if (isLoading || redirected.current) return;
-    if (!user) return;
+
+    if (!user) {
+      console.log("[dashboard] Unauthenticated — redirecting to /login");
+      saveRedirectTarget();
+      redirected.current = true;
+      router.replace("/login");
+      return;
+    }
 
     const category = getRoleCategory(user.role);
     if (category === "admin" || category === "staff") {
+      console.log("[dashboard] Admin/Staff detected — redirecting to /dashboard/admin. Role:", user.role);
       redirected.current = true;
       router.replace("/dashboard/admin");
     }
@@ -63,12 +72,14 @@ export default function DashboardLayout({
     return <>{children}</>;
   }
 
-  // While redirecting admin/staff, render nothing to avoid flash
-  if (!isLoading && user) {
-    const category = getRoleCategory(user.role);
-    if (category === "admin" || category === "staff") {
-      return null;
-    }
+  // Render nothing while loading or while a redirect is pending
+  if (isLoading) return null;
+  if (!user) return null;
+
+  // Admin/Staff in customer zone — render nothing while redirect fires
+  const roleCategory = getRoleCategory(user.role);
+  if (roleCategory === "admin" || roleCategory === "staff") {
+    return null;
   }
 
   return (

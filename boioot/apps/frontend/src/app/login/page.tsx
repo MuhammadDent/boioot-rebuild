@@ -10,6 +10,7 @@ import { normalizeError } from "@/lib/api";
 import { EyeIcon } from "@/components/ui/EyeIcon";
 import Spinner from "@/components/ui/Spinner";
 import { consumeRedirectTarget } from "@/lib/authRedirect";
+import { getRoleCategory } from "@/features/admin/constants";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -45,9 +46,10 @@ export default function LoginPage() {
       console.log("[login] Login succeeded. Role:", res.user.role, "Permissions:", res.user.permissions?.length ?? 0);
       login(res.token, res.user, res.expiresAt);
       const target = consumeRedirectTarget();
-      const isStaff = (res.user.permissions?.length ?? 0) > 0;
-      const dest = target ?? (isStaff ? "/dashboard/admin" : "/dashboard");
-      console.log("[login] Redirecting to:", dest);
+      const category = getRoleCategory(res.user.role);
+      const isStaffOrAdmin = category === "admin" || category === "staff";
+      const dest = target ?? (isStaffOrAdmin ? "/dashboard/admin" : "/dashboard");
+      console.log("[login] Role category:", category, "→ redirecting to:", dest);
       router.push(dest);
     } catch (err) {
       const msg = normalizeError(err);

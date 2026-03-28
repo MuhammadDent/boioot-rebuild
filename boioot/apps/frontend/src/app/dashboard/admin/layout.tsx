@@ -53,7 +53,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [isLoading, user, router]);
 
-  if (isLoading) return null;
+  // Render nothing while loading OR while redirect is pending (user absent)
+  if (isLoading || !user) return null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>

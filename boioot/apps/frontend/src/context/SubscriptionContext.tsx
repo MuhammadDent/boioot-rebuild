@@ -34,6 +34,7 @@ import type { CurrentSubscriptionResponse } from "@/features/subscription/types"
 import type { FeatureKey, LimitKey } from "@/features/plan/types";
 import { UNLIMITED } from "@/features/plan/types";
 import { FREE_TIER_DEFAULTS } from "@/features/plan/plans.config";
+import { isStaffRole } from "@/lib/rbac";
 
 // ── Context value ─────────────────────────────────────────────────────────────
 
@@ -74,28 +75,31 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<CurrentSubscriptionResponse | null>(null);
   const [isLoading, setIsLoading]       = useState(false);
 
-  // Admin / Staff bypass — no plan fetch needed
-  const isAdminBypass =
-    user?.role === "Admin" ||
-    user?.role === "Staff";
+  // Admin / Staff bypass — no plan fetch needed.
+  // Covers ALL internal staff roles (Admin, AdminManager, ContentEditor, etc.)
+  const isAdminBypass = !!user && (user.role === "Admin" || isStaffRole(user.role));
 
   // ── Fetch subscription ─────────────────────────────────────────────────
 
   const fetchSubscription = useCallback(async () => {
     if (!isAuthenticated || isAdminBypass) {
+      if (isAdminBypass) console.log("[subscription] Admin/Staff bypass — skipping plan fetch for role:", user?.role);
       setSubscription(null);
       return;
     }
+    console.log("[subscription] Fetching plan for:", user?.email, "| role:", user?.role);
     setIsLoading(true);
     try {
       const data = await subscriptionApi.getCurrent();
+      console.log("[subscription] Plan loaded:", data?.planCode ?? "none", "| active:", data?.isActive);
       setSubscription(data);
-    } catch {
+    } catch (err) {
+      console.warn("[subscription] Failed to fetch subscription:", err);
       setSubscription(null);
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, isAdminBypass]);
+  }, [isAuthenticated, isAdminBypass, user?.email, user?.role]);
 
   useEffect(() => {
     if (authLoading) return;
