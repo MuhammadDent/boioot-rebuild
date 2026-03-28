@@ -161,18 +161,16 @@ const KNOWN_MARKETING: { key: string; icon: string; label: string; description: 
 
 // ── LimitRow (generic fallback) ───────────────────────────────────────────────
 
-function LimitRow({ limit, saving, onSave }: { limit: PlanLimitItem; saving: boolean; onSave: (val: string) => void }) {
-  const [val, setVal] = useState(String(limit.value));
+function LimitRow({ limit, value, onValueChange }: { limit: PlanLimitItem; value: string; onValueChange: (key: string, val: string) => void }) {
+  const isDirtyField = value !== String(limit.value);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", borderRadius: 8, background: "var(--color-bg-secondary, #f9fafb)" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", borderRadius: 8, background: "var(--color-bg-secondary, #f9fafb)", border: isDirtyField ? "1.5px solid #93c5fd" : "1.5px solid transparent" }}>
       <div>
         <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 500 }}>{limit.name}</p>
         {limit.unit && <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{limitLabel(limit.value)} {limit.unit}</p>}
       </div>
-      <input type="number" value={val} onChange={e => setVal(e.target.value)} style={{ ...inputStyle, width: 80, textAlign: "center", padding: "0.3rem 0.5rem", margin: 0 }} disabled={saving} />
-      <button className="btn btn-primary" style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem" }} disabled={saving || val === String(limit.value)} onClick={() => onSave(val)}>
-        {saving ? "..." : "حفظ"}
-      </button>
+      <input type="number" value={value} onChange={e => onValueChange(limit.key, e.target.value)} style={{ ...inputStyle, width: 80, textAlign: "center", padding: "0.3rem 0.5rem", margin: 0 }} />
+      {isDirtyField && <span style={{ fontSize: "0.68rem", color: "#2563eb", fontWeight: 600 }}>●</span>}
     </div>
   );
 }
@@ -198,28 +196,21 @@ function TypeBadge({ kind }: { kind: "limit" | "feature" }) {
 // ── NamedLimitField ───────────────────────────────────────────────────────────
 
 function NamedLimitField({
-  icon, label, limitKey, limits, limitSaving, onSave,
+  icon, label, limitKey, limits, value, onValueChange,
   dependsOnFeatureKey, dependsOnFeatureLabel, features,
 }: {
   icon: string;
   label: string;
   limitKey: string;
   limits: PlanLimitItem[];
-  limitSaving: string | null;
-  onSave: (key: string, val: string) => void;
+  value: string;
+  onValueChange: (key: string, val: string) => void;
   dependsOnFeatureKey?: string;
   dependsOnFeatureLabel?: string;
   features?: PlanFeatureItem[];
 }) {
   const item = limits.find(l => l.key === limitKey);
-  const [val, setVal] = useState(item ? String(item.value) : "0");
-
-  useEffect(() => {
-    if (item) setVal(String(item.value));
-  }, [item?.value]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const saving = limitSaving === limitKey;
-  const dirty  = item ? val !== String(item.value) : false;
+  const dirty  = item ? value !== String(item.value) : false;
 
   // Check whether a required feature is enabled for this plan
   const dependencyFeature = dependsOnFeatureKey && features
@@ -265,25 +256,18 @@ function NamedLimitField({
         </div>
         <input
           type="number"
-          value={val}
-          onChange={e => setVal(e.target.value)}
+          value={value}
           style={{ ...inputStyle, width: 76, textAlign: "center", padding: "0.35rem 0.5rem", margin: 0, flexShrink: 0, opacity: 0.5 }}
           disabled={true}
           min={-1}
+          readOnly
         />
-        <button
-          className="btn btn-primary"
-          style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem", flexShrink: 0 }}
-          disabled={true}
-        >
-          حفظ
-        </button>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#ffffff", border: "1.5px solid #e2e8f0" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#ffffff", border: dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0" }}>
       <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.1rem" }}>
@@ -292,32 +276,23 @@ function NamedLimitField({
         </div>
         <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>
           الحالي: <strong>{item.value === -1 ? "غير محدود ∞" : `${item.value}${item.unit ? ` ${item.unit}` : ""}`}</strong>
+          {dirty && <span style={{ color: "#2563eb", marginRight: "0.4rem" }}>· ● معلَّق</span>}
         </p>
       </div>
       <input
         type="number"
-        value={val}
-        onChange={e => setVal(e.target.value)}
+        value={value}
+        onChange={e => onValueChange(limitKey, e.target.value)}
         style={{ ...inputStyle, width: 76, textAlign: "center", padding: "0.35rem 0.5rem", margin: 0, flexShrink: 0 }}
-        disabled={saving}
         min={-1}
       />
       <button
         type="button"
         title="تعيين غير محدود (∞)"
-        style={{ padding: "0.3rem 0.55rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: val === "-1" ? "#f0fdf4" : "#f8fafc", fontSize: "0.82rem", cursor: "pointer", flexShrink: 0, color: val === "-1" ? "#166534" : "#475569", fontWeight: 700 }}
-        disabled={saving}
-        onClick={() => { setVal("-1"); onSave(limitKey, "-1"); }}
+        style={{ padding: "0.3rem 0.55rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: value === "-1" ? "#f0fdf4" : "#f8fafc", fontSize: "0.82rem", cursor: "pointer", flexShrink: 0, color: value === "-1" ? "#166534" : "#475569", fontWeight: 700 }}
+        onClick={() => onValueChange(limitKey, "-1")}
       >
         ∞
-      </button>
-      <button
-        className="btn btn-primary"
-        style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem", flexShrink: 0 }}
-        disabled={saving || !dirty}
-        onClick={() => onSave(limitKey, val)}
-      >
-        {saving ? "..." : "حفظ"}
       </button>
     </div>
   );
@@ -884,9 +859,11 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
 
   const [saving, setSaving]               = useState(false);
   const [error, setError]                 = useState("");
-  const [limitSaving, setLimitSaving]     = useState<string | null>(null);
   const [featureSaving, setFeatureSaving] = useState<string | null>(null);
   const [saveStatus, setSaveStatus]       = useState<"idle" | "dirty" | "saving" | "saved">("idle");
+  const [limitValues, setLimitValues]     = useState<Record<string, string>>(
+    () => Object.fromEntries((plan?.limits ?? []).map(l => [l.key, String(l.value)]))
+  );
 
   const initialSnapshot = useRef<string>("");
   const formRef = useRef<HTMLFormElement>(null);
@@ -900,6 +877,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     availableForSelfSignup, requiresAdminApproval, allowAddOns, allowUpgrade,
     allowDowngrade, autoDowngradeOnExpiry, allowRepurchaseOnConsumption,
     allowEarlyRenewalOnConsumption,
+    limitValues,
   });
 
   const isDirty = formSnapshot !== initialSnapshot.current;
@@ -959,9 +937,26 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         allowRepurchaseOnConsumption,
         allowEarlyRenewalOnConsumption,
       });
-      setLimits(result.limits);
+      const updatedLimits = [...result.limits];
+
+      const changedLimits = Object.entries(limitValues).filter(([key, val]) => {
+        const original = result.limits.find(l => l.key === key);
+        return original && val !== String(original.value) && !isNaN(parseInt(val, 10));
+      });
+
+      if (changedLimits.length > 0) {
+        await Promise.all(changedLimits.map(async ([key, rawVal]) => {
+          const val = parseInt(rawVal, 10);
+          const updated = await adminApi.setPlanLimit(plan!.id, key, val);
+          const idx = updatedLimits.findIndex(l => l.key === key);
+          if (idx >= 0) updatedLimits[idx] = updated;
+        }));
+      }
+
+      setLimits(updatedLimits);
+      setLimitValues(Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)])));
       setFeatures(result.features);
-      onSaved(result);
+      onSaved({ ...result, limits: updatedLimits });
       initialSnapshot.current = formSnapshot;
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2500);
@@ -1042,17 +1037,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     }
   }
 
-  async function handleLimitChange(key: string, rawVal: string) {
-    const planId = plan?.id;
-    if (!planId) return;
-    const val = parseInt(rawVal, 10);
-    if (isNaN(val)) return;
-    setLimitSaving(key); setError("");
-    try {
-      const updated = await adminApi.setPlanLimit(planId, key, val);
-      setLimits(prev => prev.map(l => l.key === key ? updated : l));
-    } catch (e) { setError(normalizeError(e)); }
-    finally { setLimitSaving(null); }
+  function handleLimitChange(key: string, rawVal: string) {
+    setLimitValues(prev => ({ ...prev, [key]: rawVal }));
   }
 
   async function handleFeatureToggle(key: string, newVal: boolean) {
@@ -1587,8 +1573,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     label={kl.label}
                     limitKey={kl.key}
                     limits={limits}
-                    limitSaving={limitSaving}
-                    onSave={handleLimitChange}
+                    value={limitValues[kl.key] ?? String(limits.find(l => l.key === kl.key)?.value ?? 0)}
+                    onValueChange={handleLimitChange}
                     dependsOnFeatureKey={kl.dependsOnFeatureKey}
                     dependsOnFeatureLabel={kl.dependsOnFeatureLabel}
                     features={features}
@@ -1599,8 +1585,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                   <LimitRow
                     key={lim.key}
                     limit={lim}
-                    saving={limitSaving === lim.key}
-                    onSave={(val) => handleLimitChange(lim.key, val)}
+                    value={limitValues[lim.key] ?? String(lim.value)}
+                    onValueChange={handleLimitChange}
                   />
                 ))}
               </div>
@@ -1680,8 +1666,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     label={km.label}
                     limitKey={km.key}
                     limits={limits}
-                    limitSaving={limitSaving}
-                    onSave={handleLimitChange}
+                    value={limitValues[km.key] ?? String(limits.find(l => l.key === km.key)?.value ?? 0)}
+                    onValueChange={handleLimitChange}
                   />
                 ))}
               </div>
