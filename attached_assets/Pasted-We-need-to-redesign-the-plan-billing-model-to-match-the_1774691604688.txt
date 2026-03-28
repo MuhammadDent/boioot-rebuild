@@ -1,0 +1,140 @@
+We need to redesign the plan billing model to match the real business rules.
+
+GOAL:
+Support free default plans, fixed-term one-time plans, and recurring plans in a unified and clean way.
+
+BUSINESS RULES:
+
+1) Free plans
+- Each user gets a default free plan automatically at registration
+- The free plan depends on account type
+Examples:
+- seeker_free
+- owner_free
+- broker_free
+- office_free
+- company_free (if applicable)
+
+2) Advanced seeker individual plan
+- This plan is NOT monthly or yearly
+- It is a one-time fixed-term paid plan
+- Duration: 90 days from purchase date
+- It has a limited listing quota
+- If listing quota is consumed OR the 90-day period ends:
+  -> automatically downgrade user back to seeker_free
+
+3) Owner / Broker / Office / Company paid plans
+- They can support:
+  a) one-time fixed-term purchase
+  b) monthly subscription
+  c) yearly subscription
+
+- For the one-time fixed-term option:
+  - duration: 180 days
+  - if quota is consumed OR term ends:
+    -> automatically downgrade to the corresponding free plan
+
+4) Users must NOT be able to buy the same one-time fixed-term plan again while it is still active and not fully consumed.
+- Repurchase is allowed only after expiry/downgrade.
+
+========================================
+REQUIRED MODEL CHANGES
+========================================
+
+Introduce a clearer billing structure:
+
+1) billingMode
+Allowed values:
+- free_default
+- one_time_fixed_term
+- recurring
+
+2) recurringCycle
+Allowed values:
+- monthly
+- yearly
+- null
+
+3) durationDays
+Examples:
+- 90 for seeker advanced
+- 180 for broker/owner/office/company one-time plans
+- null for free plans
+
+4) consumptionPolicy
+Allowed values:
+- none
+- listing_quota
+
+5) expiryRule
+Allowed values:
+- expire_by_date
+- expire_by_consumption
+- expire_by_whichever_comes_first
+
+Use:
+- expire_by_whichever_comes_first
+for one-time fixed-term plans with listing quota
+
+6) downgradePlanCode
+Store which free plan the user should return to automatically after expiry/consumption.
+
+========================================
+RUNTIME LOGIC
+========================================
+
+1) On registration
+- assign default free plan automatically based on account type
+
+2) On purchase of one_time_fixed_term plan
+- activate plan
+- set startDate
+- set endDate = startDate + durationDays
+- initialize usage counters
+
+3) On listing creation/publication
+- consume listing quota if plan uses listing_quota
+
+4) Background or runtime validation
+If:
+- endDate passed
+OR
+- listing quota fully consumed
+OR both depending on expiryRule
+
+Then:
+- deactivate current paid plan
+- automatically downgrade user to downgradePlanCode
+
+5) Repurchase rules
+- block repurchase of same one-time plan while still active and not fully expired/consumed
+- allow repurchase after automatic downgrade
+
+========================================
+ADMIN UI CHANGES
+========================================
+
+Replace the current simplistic billing cycle model with clearer fields:
+
+Plan Type / Billing Mode:
+- Free Default
+- One-Time Fixed Term
+- Recurring
+
+If Recurring:
+- show Monthly / Yearly options
+
+If One-Time Fixed Term:
+- show duration in days
+- show expiry rule
+- show downgrade target plan
+- show whether listing quota consumption applies
+
+========================================
+IMPORTANT
+========================================
+
+Do NOT treat all paid plans as subscriptions.
+Some plans are consumable time-bound packages, not recurring subscriptions.
+
+We need a clean hybrid billing model that matches the real business logic.

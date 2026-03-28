@@ -822,6 +822,12 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [isRecommended, setIsRecommended]         = useState(plan?.isRecommended ?? false);
   const [displayOrder, setDisplayOrder]           = useState(String(plan?.displayOrder ?? 0));
   const [billingMode, setBillingMode]             = useState(plan?.billingMode ?? "InternalOnly");
+  const [planBillingType, setPlanBillingType]     = useState(plan?.planBillingType ?? "recurring");
+  const [recurringCycle, setRecurringCycle]       = useState(plan?.recurringCycle ?? "monthly");
+  const [durationDays, setDurationDays]           = useState(String(plan?.durationDays ?? ""));
+  const [consumptionPolicy, setConsumptionPolicy] = useState(plan?.consumptionPolicy ?? "none");
+  const [expiryRule, setExpiryRule]               = useState(plan?.expiryRule ?? "expire_by_date");
+  const [downgradePlanCode, setDowngradePlanCode] = useState(plan?.downgradePlanCode ?? "");
   const [planCategory, setPlanCategory]           = useState(plan?.planCategory ?? "");
   const [displayNameAr, setDisplayNameAr]         = useState(plan?.displayNameAr ?? "");
   const [audienceType, setAudienceType]           = useState(plan?.audienceType ?? "");
@@ -883,6 +889,12 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           planCategory:           planCategory || undefined,
           displayOrder:           parseInt(displayOrder) || 0,
           billingMode,
+          planBillingType,
+          recurringCycle:         planBillingType === "recurring" ? (recurringCycle || undefined) : undefined,
+          durationDays:           planBillingType === "one_time_fixed_term" ? (parseInt(durationDays) || undefined) : undefined,
+          consumptionPolicy:      planBillingType === "one_time_fixed_term" ? consumptionPolicy : "none",
+          expiryRule:             planBillingType === "one_time_fixed_term" ? expiryRule : "expire_by_date",
+          downgradePlanCode:      downgradePlanCode.trim() || undefined,
           badgeText:              badgeText.trim() || undefined,
           planColor:              planColor.trim() || undefined,
           hasTrial,
@@ -912,6 +924,12 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           audienceType:           audienceType || undefined,
           tier:                   tier || undefined,
           billingMode,
+          planBillingType,
+          recurringCycle:         planBillingType === "recurring" ? (recurringCycle || undefined) : undefined,
+          durationDays:           planBillingType === "one_time_fixed_term" ? (parseInt(durationDays) || undefined) : undefined,
+          consumptionPolicy:      planBillingType === "one_time_fixed_term" ? consumptionPolicy : "none",
+          expiryRule:             planBillingType === "one_time_fixed_term" ? expiryRule : "expire_by_date",
+          downgradePlanCode:      downgradePlanCode.trim() || undefined,
           badgeText:              badgeText.trim() || undefined,
           planColor:              planColor.trim() || undefined,
           hasTrial,
@@ -1188,6 +1206,107 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                 </div>
               </CollapsibleSection>
             )}
+
+            {/* ── Section 3b: Billing Lifecycle ── */}
+            <CollapsibleSection title="دورة حياة الخطة (نمط الفوترة)" icon="♻️" defaultOpen={planBillingType !== "recurring"}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                {/* PlanBillingType */}
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>نمط الفوترة</label>
+                  <select
+                    value={planBillingType}
+                    onChange={e => setPlanBillingType(e.target.value)}
+                    style={selectStyle}
+                    disabled={saving}
+                  >
+                    <option value="free_default">مجاني دائم (free_default)</option>
+                    <option value="recurring">اشتراك متكرر شهري/سنوي (recurring)</option>
+                    <option value="one_time_fixed_term">شراء مرة واحدة – محدود المدة (one_time_fixed_term)</option>
+                  </select>
+                </div>
+
+                {/* RecurringCycle — only for recurring */}
+                {planBillingType === "recurring" && (
+                  <div>
+                    <label style={labelStyle}>دورة التجديد</label>
+                    <select
+                      value={recurringCycle}
+                      onChange={e => setRecurringCycle(e.target.value)}
+                      style={selectStyle}
+                      disabled={saving}
+                    >
+                      <option value="monthly">شهري</option>
+                      <option value="yearly">سنوي</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* DurationDays — only for one_time_fixed_term */}
+                {planBillingType === "one_time_fixed_term" && (
+                  <div>
+                    <label style={labelStyle}>مدة الصلاحية (أيام)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={durationDays}
+                      onChange={e => setDurationDays(e.target.value)}
+                      style={inputStyle}
+                      placeholder="مثال: 90"
+                      disabled={saving}
+                    />
+                  </div>
+                )}
+
+                {/* ConsumptionPolicy — only for one_time_fixed_term */}
+                {planBillingType === "one_time_fixed_term" && (
+                  <div>
+                    <label style={labelStyle}>سياسة الاستهلاك</label>
+                    <select
+                      value={consumptionPolicy}
+                      onChange={e => setConsumptionPolicy(e.target.value)}
+                      style={selectStyle}
+                      disabled={saving}
+                    >
+                      <option value="none">لا يوجد (none)</option>
+                      <option value="listing_quota">حصة إعلانات (listing_quota)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* ExpiryRule — only for one_time_fixed_term */}
+                {planBillingType === "one_time_fixed_term" && (
+                  <div>
+                    <label style={labelStyle}>قاعدة الانتهاء</label>
+                    <select
+                      value={expiryRule}
+                      onChange={e => setExpiryRule(e.target.value)}
+                      style={selectStyle}
+                      disabled={saving}
+                    >
+                      <option value="expire_by_date">بالتاريخ فقط (expire_by_date)</option>
+                      <option value="expire_by_consumption">بالاستهلاك فقط (expire_by_consumption)</option>
+                      <option value="expire_by_whichever_comes_first">الأسبق — تاريخ أو استهلاك (expire_by_whichever_comes_first)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* DowngradePlanCode */}
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>كود خطة التخفيض التلقائي عند الانتهاء</label>
+                  <input
+                    type="text"
+                    value={downgradePlanCode}
+                    onChange={e => setDowngradePlanCode(e.target.value)}
+                    style={inputStyle}
+                    placeholder='مثال: seeker_free — اتركه فارغاً إذا لا تريد تخفيضاً تلقائياً'
+                    disabled={saving}
+                  />
+                  <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                    عند تفعيل &quot;تخفيض تلقائي عند الانتهاء&quot; (في القواعد التجارية)، سيتم الانتقال لهذه الخطة.
+                  </p>
+                </div>
+              </div>
+            </CollapsibleSection>
 
             {/* ── Section 4: Trial Settings ── */}
             <CollapsibleSection title="إعدادات الفترة التجريبية" icon="🎁" defaultOpen={false}>

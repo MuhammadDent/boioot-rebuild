@@ -85,6 +85,22 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         var plan = await _db.Plans.FirstOrDefaultAsync(p => p.Id == dto.PlanId, ct)
             ?? throw new BoiootException("الخطة المطلوبة غير موجودة.", 404);
 
+        // Block repurchase of an active one_time_fixed_term plan (same plan must have expired/downgraded first)
+        if (string.Equals(plan.PlanBillingType, "one_time_fixed_term", StringComparison.OrdinalIgnoreCase))
+        {
+            var hasActiveSamePlan = await _db.Subscriptions
+                .AnyAsync(s => s.AccountId == accountId
+                            && s.PlanId == plan.Id
+                            && s.IsActive
+                            && (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial), ct);
+
+            if (hasActiveSamePlan)
+                throw new BoiootException(
+                    $"لديك اشتراك نشط بالفعل في خطة '{plan.DisplayNameAr ?? plan.Name}'. " +
+                    "لا يمكن إعادة الشراء حتى ينتهي الاشتراك الحالي أو يُستهلك بالكامل.",
+                    409);
+        }
+
         // FIX-6: Validate plan–role (audience) compatibility
         if (!string.IsNullOrWhiteSpace(plan.AudienceType))
         {
@@ -567,15 +583,42 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             sub.UpdatedAt = DateTime.UtcNow;
         }
 
-        // Calculate subscription dates based on billing cycle.
-        // OneTime purchases have no expiry (EndDate = null) and are non-recurring.
+        // Load the plan to determine billing type and duration
+        var activationPlan = await _db.Plans
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == req.RequestedPlanId, ct);
+
+        // Calculate subscription dates based on plan billing type.
+        // one_time_fixed_term: EndDate = StartDate + DurationDays (if set)
+        // recurring: EndDate based on billing cycle (Monthly/Yearly)
+        // free_default: EndDate = null (perpetual)
         var startDate = DateTime.UtcNow;
-        DateTime? endDate = req.BillingCycle switch
+        DateTime? endDate;
+        bool isAutoRenew;
+
+        if (activationPlan != null && string.Equals(activationPlan.PlanBillingType, "one_time_fixed_term", StringComparison.OrdinalIgnoreCase))
         {
-            "Yearly"  => startDate.AddYears(1),
-            "OneTime" => null,                    // perpetual — no renewal, no expiry
-            _         => startDate.AddMonths(1),  // Monthly (default)
-        };
+            endDate     = activationPlan.DurationDays.HasValue
+                ? startDate.AddDays(activationPlan.DurationDays.Value)
+                : null;
+            isAutoRenew = false;
+        }
+        else if (activationPlan != null && string.Equals(activationPlan.PlanBillingType, "free_default", StringComparison.OrdinalIgnoreCase))
+        {
+            endDate     = null;
+            isAutoRenew = false;
+        }
+        else
+        {
+            // Recurring: use billing cycle from the payment request
+            endDate = req.BillingCycle switch
+            {
+                "Yearly"  => startDate.AddYears(1),
+                "OneTime" => null,
+                _         => startDate.AddMonths(1),
+            };
+            isAutoRenew = true;
+        }
 
         _db.Subscriptions.Add(new Subscription
         {
@@ -586,7 +629,7 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             StartDate  = startDate,
             EndDate    = endDate,
             IsActive   = true,
-            AutoRenew  = false,  // one_time purchases are never auto-renewed
+            AutoRenew  = isAutoRenew,
             PaymentRef = req.Id.ToString(),
             CreatedAt  = DateTime.UtcNow,
             UpdatedAt  = DateTime.UtcNow,

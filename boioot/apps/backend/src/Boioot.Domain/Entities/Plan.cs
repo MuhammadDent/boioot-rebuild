@@ -132,6 +132,54 @@ public class Plan : BaseEntity
     /// <summary>Controls which billing providers are offered for this plan. "InternalOnly" | "StripeOnly" | "Hybrid".</summary>
     public string BillingMode { get; set; } = "InternalOnly";
 
+    // ── Billing Type (new hybrid billing model) ───────────────────────────────
+
+    /// <summary>
+    /// Billing type that controls subscription lifecycle behaviour.
+    /// free_default   — no payment, assigned automatically at registration, perpetual.
+    /// one_time_fixed_term — single paid purchase with a fixed duration (DurationDays) and optional consumption policy.
+    /// recurring      — standard monthly or yearly subscription (AutoRenew = true).
+    /// </summary>
+    public string PlanBillingType { get; set; } = "recurring";
+
+    /// <summary>
+    /// Applicable only when PlanBillingType = "recurring".
+    /// Allowed values: "monthly" | "yearly" | null.
+    /// </summary>
+    public string? RecurringCycle { get; set; }
+
+    /// <summary>
+    /// Number of days the plan is valid after purchase.
+    /// 90 for seeker advanced, 180 for broker/owner/office/company one-time plans.
+    /// Null for free plans and recurring plans.
+    /// </summary>
+    public int? DurationDays { get; set; }
+
+    /// <summary>
+    /// What triggers plan expiry or consumption.
+    /// none                            — plan has no quota or expiry (free_default).
+    /// listing_quota                   — plan expires when the listing quota is consumed.
+    /// expire_by_date                  — plan expires when DurationDays is reached.
+    /// expire_by_consumption           — plan expires when listing quota is fully used.
+    /// expire_by_whichever_comes_first — plan expires when either date OR quota is hit.
+    /// </summary>
+    public string ConsumptionPolicy { get; set; } = "none";
+
+    /// <summary>
+    /// Rule controlling when the subscription becomes expired.
+    /// expire_by_date                  — expires when EndDate is reached.
+    /// expire_by_consumption           — expires when listing quota is fully consumed.
+    /// expire_by_whichever_comes_first — expires on date OR consumption, whichever comes first.
+    /// </summary>
+    public string ExpiryRule { get; set; } = "expire_by_date";
+
+    /// <summary>
+    /// The Code of the plan this account should be downgraded to automatically on expiry/consumption.
+    /// E.g. "seeker_free", "owner_free". Null = no auto-downgrade (admin must intervene).
+    /// Only evaluated when AutoDowngradeOnExpiry = true.
+    /// </summary>
+    public string? DowngradePlanCode { get; set; }
+
     /// <summary>Optional short badge/label shown on the pricing card (e.g. "الأكثر مبيعاً").</summary>
     public string? BadgeText { get; set; }
 

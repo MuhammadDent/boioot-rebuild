@@ -500,25 +500,68 @@ public sealed class SubscriptionService : ISubscriptionService
     // ── Private: auto-expiry detection ────────────────────────────────────────
 
     /// <summary>
-    /// Finds subscriptions where IsActive=true, status is Active/Trial, but EndDate has passed.
-    /// Marks them as Expired and writes a history event. Called before every read.
+    /// Finds subscriptions where IsActive=true, status is Active/Trial, but EndDate has passed
+    /// OR listing quota has been fully consumed (for one_time_fixed_term plans).
+    /// Marks them as Expired, writes a history event, and auto-downgrades to DowngradePlanCode if configured.
+    /// Called before every read.
     /// </summary>
     private async Task ExpireStaleSubscriptionsAsync(
         Guid accountId, DateTime now, CancellationToken ct)
     {
-        var stale = await _db.Subscriptions
+        var candidates = await _db.Subscriptions
+            .Include(s => s.Plan)
             .Where(s =>
                 s.AccountId == accountId &&
                 s.IsActive  &&
-                (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial) &&
-                s.EndDate != null &&
-                s.EndDate < now)
+                (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial))
             .ToListAsync(ct);
+
+        var stale = candidates.Where(s =>
+        {
+            // Expired by date
+            bool dateExpired = s.EndDate != null && s.EndDate < now;
+
+            // Expired by consumption (listing quota exhausted)
+            bool quotaExhausted = false;
+            if (s.Plan != null &&
+                !string.Equals(s.Plan.ConsumptionPolicy, "none", StringComparison.OrdinalIgnoreCase) &&
+                s.Plan.ListingLimit > 0 &&
+                s.ListingQuotaUsed >= s.Plan.ListingLimit)
+            {
+                quotaExhausted = true;
+            }
+
+            return s.Plan?.ExpiryRule switch
+            {
+                "expire_by_date"                  => dateExpired,
+                "expire_by_consumption"           => quotaExhausted,
+                "expire_by_whichever_comes_first" => dateExpired || quotaExhausted,
+                _                                 => dateExpired, // default: date-based
+            };
+        }).ToList();
 
         if (stale.Count == 0) return;
 
+        var downgradePlanCodes = stale
+            .Where(s => s.Plan?.AutoDowngradeOnExpiry == true && !string.IsNullOrWhiteSpace(s.Plan.DowngradePlanCode))
+            .Select(s => s.Plan!.DowngradePlanCode!)
+            .Distinct()
+            .ToList();
+
+        // Pre-load downgrade plans by code
+        var downgradePlans = downgradePlanCodes.Count > 0
+            ? await _db.Plans.AsNoTracking()
+                .Where(p => p.Code != null && downgradePlanCodes.Contains(p.Code) && p.IsActive)
+                .ToListAsync(ct)
+            : [];
+
         foreach (var s in stale)
         {
+            var quotaConsumed = s.Plan?.ListingLimit > 0 && s.ListingQuotaUsed >= s.Plan.ListingLimit;
+            var notes = quotaConsumed
+                ? "انتهاء تلقائي — استهلاك حصة الإعلانات بالكامل"
+                : "انتهاء تلقائي بناءً على تاريخ انتهاء الاشتراك";
+
             s.IsActive  = false;
             s.Status    = SubscriptionStatus.Expired;
             s.EndedAt   = s.EndDate ?? now;
@@ -530,10 +573,47 @@ public sealed class SubscriptionService : ISubscriptionService
                 EventType       = "expired",
                 OldPlanId       = s.PlanId,
                 NewPlanId       = null,
-                Notes           = "انتهاء تلقائي بناءً على تاريخ انتهاء الاشتراك",
+                Notes           = notes,
                 CreatedByUserId = null,
                 CreatedAtUtc    = now,
             });
+
+            // Auto-downgrade to the configured plan if applicable
+            if (s.Plan?.AutoDowngradeOnExpiry == true && !string.IsNullOrWhiteSpace(s.Plan.DowngradePlanCode))
+            {
+                var downgradePlan = downgradePlans.FirstOrDefault(p =>
+                    string.Equals(p.Code, s.Plan.DowngradePlanCode, StringComparison.OrdinalIgnoreCase));
+
+                if (downgradePlan != null)
+                {
+                    var downgradesSub = new Subscription
+                    {
+                        AccountId          = s.AccountId,
+                        PlanId             = downgradePlan.Id,
+                        PricingId          = null,
+                        Status             = SubscriptionStatus.Active,
+                        StartDate          = now,
+                        EndDate            = null,
+                        IsActive           = true,
+                        AutoRenew          = false,
+                        PaymentRef         = "auto_downgrade",
+                        CreatedAt          = now,
+                        UpdatedAt          = now,
+                    };
+                    _db.Subscriptions.Add(downgradesSub);
+
+                    _db.SubscriptionHistories.Add(new SubscriptionHistory
+                    {
+                        SubscriptionId  = downgradesSub.Id,
+                        EventType       = "downgraded",
+                        OldPlanId       = s.PlanId,
+                        NewPlanId       = downgradePlan.Id,
+                        Notes           = $"تخفيض تلقائي إلى خطة: {downgradePlan.DisplayNameAr ?? downgradePlan.Code ?? downgradePlan.Name}",
+                        CreatedByUserId = null,
+                        CreatedAtUtc    = now,
+                    });
+                }
+            }
         }
 
         await _db.SaveChangesAsync(ct);

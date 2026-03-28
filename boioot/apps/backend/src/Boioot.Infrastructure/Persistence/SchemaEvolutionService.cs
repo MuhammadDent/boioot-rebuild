@@ -333,6 +333,8 @@ public sealed class SchemaEvolutionService
         await TryAlter("Subscriptions", "EndedAt",                 "TEXT",                           ct);
         await TryAlter("Subscriptions", "ExternalProvider",        "TEXT",                           ct);
         await TryAlter("Subscriptions", "ExternalSubscriptionId",  "TEXT",                           ct);
+        // Phase 4: consumption tracking for one_time_fixed_term plans
+        await TryAlter("Subscriptions", "ListingQuotaUsed",        "INTEGER NOT NULL DEFAULT 0",     ct);
 
         // SubscriptionHistory table (Phase 3A audit log)
         await TryExec(@"
@@ -375,6 +377,21 @@ public sealed class SchemaEvolutionService
         await TryAlter("Plans", "AllowUpgrade",            "INTEGER NOT NULL DEFAULT 1",            ct);
         await TryAlter("Plans", "AllowDowngrade",          "INTEGER NOT NULL DEFAULT 1",            ct);
         await TryAlter("Plans", "AutoDowngradeOnExpiry",   "INTEGER NOT NULL DEFAULT 1",            ct);
+
+        // ── Hybrid billing model (Phase 4) ────────────────────────────────────
+        await TryAlter("Plans", "PlanBillingType",   "TEXT NOT NULL DEFAULT 'recurring'",                       ct);
+        await TryAlter("Plans", "RecurringCycle",    "TEXT",                                                     ct);
+        await TryAlter("Plans", "DurationDays",      "INTEGER",                                                  ct);
+        await TryAlter("Plans", "ConsumptionPolicy", "TEXT NOT NULL DEFAULT 'none'",                             ct);
+        await TryAlter("Plans", "ExpiryRule",        "TEXT NOT NULL DEFAULT 'expire_by_date'",                   ct);
+        await TryAlter("Plans", "DowngradePlanCode", "TEXT",                                                     ct);
+
+        // Backfill: mark existing free-tier plans as free_default (by Tier only — avoids missing-column risk)
+        await TryExec(
+            "UPDATE Plans SET PlanBillingType = 'free_default' " +
+            "WHERE Tier = 'free' " +
+            "AND PlanBillingType = 'recurring'",
+            ct, warnOnError: true);
     }
 
     private async Task ApplyInvoicePatchesAsync(CancellationToken ct)

@@ -667,6 +667,19 @@ export interface AdminPlanSummary {
   rank: number;
   badgeText?: string;
   planColor?: string;
+  // Hybrid billing model
+  /** free_default | one_time_fixed_term | recurring */
+  planBillingType: string;
+  /** monthly | yearly | null */
+  recurringCycle?: string;
+  /** validity days for one_time_fixed_term (e.g. 90, 180) */
+  durationDays?: number;
+  /** none | listing_quota */
+  consumptionPolicy: string;
+  /** expire_by_date | expire_by_consumption | expire_by_whichever_comes_first */
+  expiryRule: string;
+  /** plan Code to auto-downgrade to on expiry */
+  downgradePlanCode?: string;
   // Trial
   hasTrial: boolean;
   trialDays: number;

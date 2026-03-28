@@ -28,6 +28,25 @@ public class PlanSummaryResponse
     public string? BadgeText               { get; set; }
     public string? PlanColor               { get; set; }
 
+    // ── Hybrid Billing Type ─────────────────────────────────────────────────
+    /// <summary>free_default | one_time_fixed_term | recurring</summary>
+    public string  PlanBillingType         { get; set; } = "recurring";
+
+    /// <summary>monthly | yearly | null</summary>
+    public string? RecurringCycle          { get; set; }
+
+    /// <summary>Validity period in days for one_time_fixed_term plans. Null for others.</summary>
+    public int?    DurationDays            { get; set; }
+
+    /// <summary>none | listing_quota</summary>
+    public string  ConsumptionPolicy       { get; set; } = "none";
+
+    /// <summary>expire_by_date | expire_by_consumption | expire_by_whichever_comes_first</summary>
+    public string  ExpiryRule              { get; set; } = "expire_by_date";
+
+    /// <summary>Plan Code to auto-downgrade to on expiry.</summary>
+    public string? DowngradePlanCode       { get; set; }
+
     // ── Trial ──────────────────────────────────────────────────────────────
     public bool    HasTrial                { get; set; }
     public int     TrialDays               { get; set; }

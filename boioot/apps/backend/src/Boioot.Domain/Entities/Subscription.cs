@@ -51,6 +51,15 @@ public class Subscription : BaseEntity
     /// <summary>External subscription reference ID from the payment gateway.</summary>
     public string? ExternalSubscriptionId { get; set; }
 
+    // ── Consumption Tracking ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Number of listings created/published under this subscription.
+    /// Used for plans with ConsumptionPolicy = "listing_quota" or "expire_by_whichever_comes_first".
+    /// Incremented on each listing creation. Compared against Plan.ListingLimit to detect exhaustion.
+    /// </summary>
+    public int ListingQuotaUsed { get; set; } = 0;
+
     // ── Navigation ────────────────────────────────────────────────────────────
 
     public Account Account { get; set; } = null!;

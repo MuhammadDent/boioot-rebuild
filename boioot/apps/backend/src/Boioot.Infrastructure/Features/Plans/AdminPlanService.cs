@@ -89,6 +89,12 @@ public class AdminPlanService : IAdminPlanService
                 Rank                    = p.Rank,
                 BadgeText               = p.BadgeText,
                 PlanColor               = p.PlanColor,
+                PlanBillingType         = p.PlanBillingType,
+                RecurringCycle          = p.RecurringCycle,
+                DurationDays            = p.DurationDays,
+                ConsumptionPolicy       = p.ConsumptionPolicy,
+                ExpiryRule              = p.ExpiryRule,
+                DowngradePlanCode       = p.DowngradePlanCode,
                 HasTrial                = p.HasTrial,
                 TrialDays               = p.TrialDays,
                 RequiresPaymentForTrial = p.RequiresPaymentForTrial,
@@ -230,6 +236,12 @@ public class AdminPlanService : IAdminPlanService
             PlanColor               = string.IsNullOrWhiteSpace(request.PlanColor)    ? null : request.PlanColor.Trim(),
             PlanCategory            = string.IsNullOrWhiteSpace(request.PlanCategory) ? null : request.PlanCategory.Trim(),
             BillingMode             = string.IsNullOrWhiteSpace(request.BillingMode)  ? "InternalOnly" : request.BillingMode.Trim(),
+            PlanBillingType         = string.IsNullOrWhiteSpace(request.PlanBillingType) ? "recurring" : request.PlanBillingType.Trim(),
+            RecurringCycle          = string.IsNullOrWhiteSpace(request.RecurringCycle)  ? null : request.RecurringCycle.Trim(),
+            DurationDays            = request.DurationDays,
+            ConsumptionPolicy       = string.IsNullOrWhiteSpace(request.ConsumptionPolicy) ? "none" : request.ConsumptionPolicy.Trim(),
+            ExpiryRule              = string.IsNullOrWhiteSpace(request.ExpiryRule) ? "expire_by_date" : request.ExpiryRule.Trim(),
+            DowngradePlanCode       = string.IsNullOrWhiteSpace(request.DowngradePlanCode) ? null : request.DowngradePlanCode.Trim(),
             IsActive                = true,
             HasTrial                = request.HasTrial,
             TrialDays               = request.TrialDays,
@@ -324,6 +336,12 @@ public class AdminPlanService : IAdminPlanService
         plan.AllowUpgrade            = request.AllowUpgrade;
         plan.AllowDowngrade          = request.AllowDowngrade;
         plan.AutoDowngradeOnExpiry   = request.AutoDowngradeOnExpiry;
+        plan.PlanBillingType         = string.IsNullOrWhiteSpace(request.PlanBillingType) ? "recurring" : request.PlanBillingType.Trim();
+        plan.RecurringCycle          = string.IsNullOrWhiteSpace(request.RecurringCycle)  ? null : request.RecurringCycle.Trim();
+        plan.DurationDays            = request.DurationDays;
+        plan.ConsumptionPolicy       = string.IsNullOrWhiteSpace(request.ConsumptionPolicy) ? "none" : request.ConsumptionPolicy.Trim();
+        plan.ExpiryRule              = string.IsNullOrWhiteSpace(request.ExpiryRule) ? "expire_by_date" : request.ExpiryRule.Trim();
+        plan.DowngradePlanCode       = string.IsNullOrWhiteSpace(request.DowngradePlanCode) ? null : request.DowngradePlanCode.Trim();
 
         await _db.SaveChangesAsync(ct);
 
@@ -384,6 +402,12 @@ public class AdminPlanService : IAdminPlanService
             PlanCategory            = source.PlanCategory,
             BillingMode             = source.BillingMode,
             Rank                    = source.Rank,
+            PlanBillingType         = source.PlanBillingType,
+            RecurringCycle          = source.RecurringCycle,
+            DurationDays            = source.DurationDays,
+            ConsumptionPolicy       = source.ConsumptionPolicy,
+            ExpiryRule              = source.ExpiryRule,
+            DowngradePlanCode       = source.DowngradePlanCode,
             HasTrial                = source.HasTrial,
             TrialDays               = source.TrialDays,
             RequiresPaymentForTrial = source.RequiresPaymentForTrial,
@@ -617,6 +641,12 @@ public class AdminPlanService : IAdminPlanService
         Rank                    = p.Rank,
         BadgeText               = p.BadgeText,
         PlanColor               = p.PlanColor,
+        PlanBillingType         = p.PlanBillingType,
+        RecurringCycle          = p.RecurringCycle,
+        DurationDays            = p.DurationDays,
+        ConsumptionPolicy       = p.ConsumptionPolicy,
+        ExpiryRule              = p.ExpiryRule,
+        DowngradePlanCode       = p.DowngradePlanCode,
         HasTrial                = p.HasTrial,
         TrialDays               = p.TrialDays,
         RequiresPaymentForTrial = p.RequiresPaymentForTrial,
