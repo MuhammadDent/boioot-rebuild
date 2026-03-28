@@ -1,0 +1,112 @@
+We have confirmed that the backend auth endpoint itself works correctly:
+
+- Direct backend test / curl returns 200 OK
+- Backend logs confirm successful login
+
+But the frontend browser request still gets 502 Bad Gateway.
+
+So this is NOT an authentication logic problem.
+This is a frontend-to-backend routing/proxy/environment issue.
+
+========================================
+GOAL
+========================================
+
+Fix the API routing so browser login requests reach the real backend reliably.
+
+========================================
+REQUIRED INVESTIGATION
+========================================
+
+1) TRACE THE EXACT REQUEST URL
+
+- Log the final URL used by login request in the browser
+- Confirm whether frontend is calling:
+  - /api/auth/login
+  - a Next.js API route
+  - a rewritten proxy route
+  - or the real backend base URL
+
+----------------------------------------
+
+2) CHECK FOR ROUTE COLLISION
+
+Look for any Next.js route handlers such as:
+- app/api/auth/login/*
+- pages/api/auth/login/*
+- middleware rewriting /api/*
+- proxy loops
+
+If both Next and backend use /api/auth/login, resolve the conflict.
+
+----------------------------------------
+
+3) STOP RELYING ON AMBIGUOUS /api DURING DEVELOPMENT
+
+Refactor frontend API client to use an explicit environment-based backend URL:
+
+NEXT_PUBLIC_API_BASE_URL=...
+
+Then make login request call:
+
+${NEXT_PUBLIC_API_BASE_URL}/api/auth/login
+or
+${NEXT_PUBLIC_API_BASE_URL}/auth/login
+
+depending on actual backend structure.
+
+Do NOT rely on fragile local rewrite/proxy behavior in Replit preview.
+
+----------------------------------------
+
+4) VERIFY NEXT.JS REWRITES
+
+If rewrites are used, confirm they point to the correct backend target
+that is actually reachable from Replit preview/browser context.
+
+Add logging or diagnostics to show:
+- source path
+- destination path
+- actual target port/domain
+
+----------------------------------------
+
+5) TEST FROM BROWSER CONTEXT, NOT CURL ONLY
+
+Add a temporary frontend diagnostics page/button that performs:
+- GET health check
+- POST login test
+- shows status code
+- shows response headers
+- shows response body text
+
+This must run in the browser preview environment.
+
+----------------------------------------
+
+6) CHECK REPLIT PORT/EXPOSURE
+
+Verify:
+- backend process is listening on the correct host and port
+- the port is accessible to the frontend preview environment
+- no mismatch between localhost/internal port and public preview routing
+
+----------------------------------------
+
+7) IMPROVE ERROR LOGGING
+
+Keep current ApiError, but also log:
+- final request URL
+- response status
+- response content-type
+- raw body text if non-JSON
+- whether request hit Next route or external backend
+
+========================================
+EXPECTED RESULT
+========================================
+
+After the fix:
+- browser login request must reach the real backend
+- no 502 from proxy
+- frontend login should succeed using the same credentials already proven valid by backend logs
