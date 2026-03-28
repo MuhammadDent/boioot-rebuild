@@ -42,9 +42,10 @@ function dispatchUpsellTrigger(payload: PlanLimitPayload): void {
 }
 
 export class NetworkError extends Error {
-  constructor() {
+  constructor(cause?: unknown) {
     super("تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.");
     this.name = "NetworkError";
+    if (cause) console.error("[api] Network error cause:", cause);
   }
 }
 
@@ -75,14 +76,17 @@ async function silentRefresh(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async (): Promise<boolean> => {
+    const refreshUrl = `${apiConfig.baseUrl}/auth/refresh`;
+    console.log("[api] Silent refresh →", refreshUrl);
     try {
-      const res = await fetch(`${apiConfig.baseUrl}/auth/refresh`, {
+      const res = await fetch(refreshUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
         // Same-origin — cookie is sent automatically; no credentials override needed.
       });
 
+      console.log("[api] Silent refresh ←", res.status);
       if (!res.ok) return false;
 
       const data = await res.json();
@@ -92,7 +96,8 @@ async function silentRefresh(): Promise<boolean> {
       if (data.expiresAt) tokenStorage.setExpiresAt(data.expiresAt);
 
       return true;
-    } catch {
+    } catch (err) {
+      console.error("[api] Silent refresh failed:", err);
       return false;
     }
   })().finally(() => {
@@ -112,9 +117,34 @@ function terminateSession(): never {
   throw new ApiError(SESSION_EXPIRED_MSG, 401, null);
 }
 
+// ─── Try to extract a readable error message from any response body ────────────
+
+async function extractErrorMessage(res: Response, fallback: string): Promise<string> {
+  const rawBody = await res.text().catch(() => "");
+  if (!rawBody.trim()) {
+    return `${fallback} (HTTP ${res.status})`;
+  }
+  // Try JSON first
+  try {
+    const payload = JSON.parse(rawBody) as Record<string, unknown>;
+    const msg =
+      (payload?.error as string | undefined) ??
+      (payload?.message as string | undefined) ??
+      (payload?.title as string | undefined);
+    if (msg) return msg;
+  } catch {
+    // Not JSON — body might be HTML (e.g. 502 from proxy)
+    console.warn("[api] Non-JSON error body:", rawBody.slice(0, 200));
+  }
+  return `${fallback} (HTTP ${res.status})`;
+}
+
 // ─── Core request ──────────────────────────────────────────────────────────────
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const method = (options.method ?? "GET").toUpperCase();
+  const fullUrl = `${apiConfig.baseUrl}${path}`;
+
   // ── Preemptive silent refresh ──────────────────────────────────────────────
   // Only try if we actually have an access token that is expiring soon.
   // Without a stored token there is nothing to refresh (unauthenticated request).
@@ -133,10 +163,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
+    console.log(`[api] → ${method} ${fullUrl}`);
     try {
-      return await fetch(`${apiConfig.baseUrl}${path}`, { ...options, headers });
-    } catch {
-      throw new NetworkError();
+      const response = await fetch(fullUrl, { ...options, headers });
+      console.log(`[api] ← ${method} ${fullUrl} ${response.status}`);
+      return response;
+    } catch (err) {
+      console.error(`[api] ✗ ${method} ${fullUrl}`, err);
+      throw new NetworkError(err);
     }
   };
 
@@ -167,28 +201,36 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       }
     } else {
       // No access token stored → unauthenticated request (e.g. login failure)
-      const payload = await res.json().catch(() => null);
-      const message =
-        payload?.error ??
-        payload?.message ??
-        payload?.title ??
-        "بيانات الدخول غير صحيحة";
-      throw new ApiError(message, 401, payload);
+      const message = await extractErrorMessage(res, "بيانات الدخول غير صحيحة");
+      throw new ApiError(message, 401, null);
     }
   }
 
   if (!res.ok) {
-    const payload = await res.json().catch(() => null);
+    // Clone before reading body (body can only be consumed once)
+    const bodyText = await res.text().catch(() => "");
+    let payload: Record<string, unknown> | null = null;
+
+    try {
+      if (bodyText.trim()) payload = JSON.parse(bodyText) as Record<string, unknown>;
+    } catch {
+      console.warn(`[api] Non-JSON error body for ${method} ${fullUrl}:`, bodyText.slice(0, 200));
+    }
 
     // ── Plan limit interception ──────────────────────────────────────────────
     if (res.status === 422 && payload?.code === "PLAN_LIMIT_EXCEEDED") {
-      const planPayload = payload as PlanLimitPayload;
+      const planPayload = payload as unknown as PlanLimitPayload;
       dispatchUpsellTrigger(planPayload);
       throw new PlanLimitError(planPayload);
     }
 
     const message =
-      payload?.error ?? payload?.message ?? payload?.title ?? "حدث خطأ غير متوقع";
+      (payload?.error as string | undefined) ??
+      (payload?.message as string | undefined) ??
+      (payload?.title as string | undefined) ??
+      `خطأ من الخادم (${res.status})`;
+
+    console.error(`[api] Error ${res.status} for ${method} ${fullUrl}:`, message, payload);
     throw new ApiError(message, res.status, payload);
   }
 
@@ -204,8 +246,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     try {
       return JSON.parse(raw) as T;
     } catch (err) {
-      console.error("[api] Invalid JSON response", { raw, err });
-      throw new Error("Invalid JSON response from server");
+      console.error("[api] Invalid JSON response", { path, raw: raw.slice(0, 200), err });
+      throw new ApiError("استجابة غير صالحة من الخادم", 0, { raw });
     }
   }
 
@@ -245,83 +287,42 @@ export const api = {
     return request<T>(path, { method: "DELETE" });
   },
 
-  async postForm<T>(path: string, form: FormData): Promise<T> {
-    // ── Preemptive silent refresh for form uploads too ─────────────────────
-    if (tokenStorage.getToken() && tokenStorage.isExpiredOrExpiringSoon(30)) {
-      const ok = await silentRefresh();
-      if (!ok) terminateSession();
-    }
+  /**
+   * POST with FormData (file uploads). Does NOT set Content-Type — browser
+   * sets it automatically with the correct boundary.
+   */
+  upload<T>(path: string, formData: FormData): Promise<T> {
+    const method = "POST";
+    const fullUrl = `${apiConfig.baseUrl}${path}`;
+    const token = tokenStorage.getToken();
 
-    const executeFormRequest = async (): Promise<Response> => {
-      const token = tokenStorage.getToken();
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      try {
-        return await fetch(`${apiConfig.baseUrl}${path}`, {
-          method: "POST",
-          headers,
-          body: form,
-        });
-      } catch {
-        throw new NetworkError();
-      }
-    };
-
-    let res = await executeFormRequest();
-
-    // ── 401 with stored token → try refresh once → retry ──────────────────
-    if (res.status === 401) {
-      const hadToken = !!tokenStorage.getToken();
-
-      if (hadToken) {
-        const refreshed = await silentRefresh();
-        if (refreshed) {
-          res = await executeFormRequest();
-          if (res.status === 401) terminateSession();
-        } else {
-          terminateSession();
+    console.log(`[api] → ${method} ${fullUrl} (upload)`);
+    return fetch(fullUrl, {
+      method,
+      headers,
+      body: formData,
+    })
+      .then(async (res) => {
+        console.log(`[api] ← ${method} ${fullUrl} ${res.status}`);
+        if (!res.ok) {
+          const message = await extractErrorMessage(res, "فشل رفع الملف");
+          throw new ApiError(message, res.status);
         }
-      } else {
-        const payload = await res.json().catch(() => null);
-        const message =
-          payload?.error ?? payload?.message ?? "بيانات الدخول غير صحيحة";
-        throw new ApiError(message, 401, payload);
-      }
-    }
-
-    if (!res.ok) {
-      const payload = await res.json().catch(() => null);
-
-      // ── Plan limit interception ────────────────────────────────────────────
-      if (res.status === 422 && payload?.code === "PLAN_LIMIT_EXCEEDED") {
-        const planPayload = payload as PlanLimitPayload;
-        dispatchUpsellTrigger(planPayload);
-        throw new PlanLimitError(planPayload);
-      }
-
-      const message =
-        payload?.error ?? payload?.message ?? "حدث خطأ أثناء رفع الملف";
-      throw new ApiError(message, res.status, payload);
-    }
-
-    if (res.status === 204) return undefined as T;
-
-    const formContentType = res.headers.get("content-type") ?? "";
-    const formRaw = await res.text();
-
-    if (!formRaw || !formRaw.trim()) return undefined as T;
-
-    if (formContentType.includes("application/json")) {
-      try {
-        return JSON.parse(formRaw) as T;
-      } catch (err) {
-        console.error("[api] Invalid JSON response (postForm)", { formRaw, err });
-        throw new Error("Invalid JSON response from server");
-      }
-    }
-
-    return formRaw as unknown as T;
+        if (res.status === 204) return undefined as T;
+        const contentType = res.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          return res.json() as Promise<T>;
+        }
+        return res.text() as unknown as Promise<T>;
+      })
+      .catch((err) => {
+        if (err instanceof ApiError) throw err;
+        console.error(`[api] ✗ ${method} ${fullUrl}`, err);
+        throw new NetworkError(err);
+      });
   },
 };
 
@@ -336,7 +337,9 @@ export function normalizeError(err: unknown): string {
     return err.message;
   }
   if (err instanceof Error) {
-    return err.message;
+    return err.message || "حدث خطأ غير متوقع";
   }
+  if (typeof err === "string") return err;
+  console.error("[api] Unknown error type:", err);
   return "حدث خطأ غير متوقع";
 }

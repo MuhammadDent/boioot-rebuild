@@ -11,6 +11,8 @@ import { EyeIcon } from "@/components/ui/EyeIcon";
 import Spinner from "@/components/ui/Spinner";
 import { consumeRedirectTarget } from "@/lib/authRedirect";
 
+const IS_DEV = process.env.NODE_ENV === "development";
+
 export default function LoginPage() {
   const { login, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
@@ -20,12 +22,11 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [debugDetail, setDebugDetail] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      // Authenticated users visiting /login are redirected to their stored target
-      // (e.g. a listing they were on) or fall back to /dashboard.
       const target = consumeRedirectTarget();
       router.replace(target ?? "/dashboard");
     }
@@ -34,17 +35,27 @@ export default function LoginPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setDebugDetail("");
     setSubmitting(true);
+
+    console.log("[login] Attempting login for:", email);
 
     try {
       const res = await authApi.login({ email, password, rememberMe });
+      console.log("[login] Login succeeded. Role:", res.user.role, "Permissions:", res.user.permissions?.length ?? 0);
       login(res.token, res.user, res.expiresAt);
-      // Return to the exact page the guest was on, or fall back intelligently.
       const target = consumeRedirectTarget();
       const isStaff = (res.user.permissions?.length ?? 0) > 0;
-      router.push(target ?? (isStaff ? "/dashboard/admin" : "/dashboard"));
+      const dest = target ?? (isStaff ? "/dashboard/admin" : "/dashboard");
+      console.log("[login] Redirecting to:", dest);
+      router.push(dest);
     } catch (err) {
-      setError(normalizeError(err));
+      const msg = normalizeError(err);
+      console.error("[login] Login failed:", err);
+      setError(msg);
+      if (IS_DEV && err instanceof Error) {
+        setDebugDetail(`${err.name}: ${err.message}`);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -67,7 +78,22 @@ export default function LoginPage() {
         </div>
         <h1 className="login-page__title">تسجيل الدخول</h1>
 
-        {error && <div className="error-banner">{error}</div>}
+        {error && (
+          <div className="error-banner">
+            {error}
+            {IS_DEV && debugDetail && (
+              <div style={{
+                marginTop: "0.4rem",
+                fontSize: "0.72rem",
+                opacity: 0.75,
+                fontFamily: "monospace",
+                wordBreak: "break-all",
+              }}>
+                {debugDetail}
+              </div>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
