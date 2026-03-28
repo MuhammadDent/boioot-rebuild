@@ -430,7 +430,8 @@ function PricingRow({ entry, planId, onUpdated, onDeleted }: PricingRowProps) {
     finally { setDeleting(false); }
   }
 
-  const cycleLabel = entry.billingCycle === "Monthly" ? "شهري" : entry.billingCycle === "Yearly" ? "سنوي" : entry.billingCycle;
+  const CYCLE_LABELS: Record<string, string> = { Monthly: "شهري", Yearly: "سنوي", OneTime: "مرة واحدة" };
+  const cycleLabel = CYCLE_LABELS[entry.billingCycle] ?? entry.billingCycle;
 
   if (!editing) {
     return (
@@ -458,6 +459,7 @@ function PricingRow({ entry, planId, onUpdated, onDeleted }: PricingRowProps) {
           <select value={cycle} onChange={e => setCycle(e.target.value)} style={selectStyle}>
             <option value="Monthly">شهري</option>
             <option value="Yearly">سنوي</option>
+            <option value="OneTime">مرة واحدة</option>
           </select>
         </div>
         <div>
@@ -527,6 +529,7 @@ function AddPricingForm({ planId, onCreated, onCancel }: AddPricingFormProps) {
           <select value={cycle} onChange={e => setCycle(e.target.value)} style={selectStyle}>
             <option value="Monthly">شهري</option>
             <option value="Yearly">سنوي</option>
+            <option value="OneTime">مرة واحدة</option>
           </select>
         </div>
         <div>

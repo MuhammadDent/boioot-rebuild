@@ -29,7 +29,7 @@ public class AdminPlanPricingController : BaseController
         return Ok(result);
     }
 
-    /// <summary>POST /api/admin/plans/{planId}/pricing — add a pricing entry (Monthly or Yearly)</summary>
+    /// <summary>POST /api/admin/plans/{planId}/pricing — add a pricing entry (Monthly, Yearly, or OneTime)</summary>
     [HttpPost]
     public async Task<IActionResult> Create(Guid planId, [FromBody] UpsertPlanPricingRequest request, CancellationToken ct)
     {

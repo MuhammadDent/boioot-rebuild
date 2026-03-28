@@ -128,8 +128,8 @@ public class AdminPlanPricingService : IAdminPlanPricingService
 
     private static void ValidateBillingCycle(string cycle)
     {
-        if (cycle is not ("Monthly" or "Yearly"))
-            throw new BoiootException("BillingCycle يجب أن يكون 'Monthly' أو 'Yearly'", 400);
+        if (cycle is not ("Monthly" or "Yearly" or "OneTime"))
+            throw new BoiootException("BillingCycle يجب أن يكون 'Monthly' أو 'Yearly' أو 'OneTime'", 400);
     }
 
     private static PlanPricingResponse ToResponse(PlanPricing pp) => new(

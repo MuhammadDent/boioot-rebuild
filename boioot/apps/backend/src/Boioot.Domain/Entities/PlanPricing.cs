@@ -10,7 +10,7 @@ public class PlanPricing : BaseEntity
 {
     public Guid PlanId { get; set; }
 
-    /// <summary>Billing cycle: 'Monthly' or 'Yearly'.</summary>
+    /// <summary>Billing cycle: 'Monthly', 'Yearly', or 'OneTime'.</summary>
     public string BillingCycle { get; set; } = "Monthly";
 
     /// <summary>Price amount in the given currency.</summary>

@@ -1,6 +1,6 @@
 "use client";
 
-export type BillingCycle = "Monthly" | "Yearly";
+export type BillingCycle = "Monthly" | "Yearly" | "OneTime";
 
 interface BillingToggleProps {
   cycle: BillingCycle;

@@ -683,6 +683,10 @@ public sealed class SubscriptionService : ISubscriptionService
         public int  Limit(string key) => Limits.TryGetValue(key, out var v) ? v : 0;
     }
 
-    private static string ArabicCycle(string cycle) =>
-        cycle == "Yearly" ? "سنوياً" : "شهرياً";
+    private static string ArabicCycle(string cycle) => cycle switch
+    {
+        "Yearly"  => "سنوياً",
+        "OneTime" => "دفعة واحدة",
+        _         => "شهرياً",
+    };
 }

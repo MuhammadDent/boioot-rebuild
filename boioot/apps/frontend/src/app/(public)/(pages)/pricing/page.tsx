@@ -312,7 +312,7 @@ export default function PricingPage() {
             <span>
               باقتك الحالية: <strong>{currentSub.planName}</strong>
               {" — "}
-              {currentSub.billingCycle === "Yearly" ? "سنوي" : "شهري"}
+              {currentSub.billingCycle === "OneTime" ? "دفعة واحدة" : currentSub.billingCycle === "Yearly" ? "سنوي" : "شهري"}
             </span>
           </div>
         )}

@@ -567,11 +567,15 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             sub.UpdatedAt = DateTime.UtcNow;
         }
 
-        // Calculate subscription dates based on billing cycle
+        // Calculate subscription dates based on billing cycle.
+        // OneTime purchases have no expiry (EndDate = null) and are non-recurring.
         var startDate = DateTime.UtcNow;
-        var endDate   = req.BillingCycle == "Yearly"
-            ? startDate.AddYears(1)
-            : startDate.AddMonths(1);
+        DateTime? endDate = req.BillingCycle switch
+        {
+            "Yearly"  => startDate.AddYears(1),
+            "OneTime" => null,                    // perpetual — no renewal, no expiry
+            _         => startDate.AddMonths(1),  // Monthly (default)
+        };
 
         _db.Subscriptions.Add(new Subscription
         {
@@ -582,7 +586,7 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
             StartDate  = startDate,
             EndDate    = endDate,
             IsActive   = true,
-            AutoRenew  = false,
+            AutoRenew  = false,  // one_time purchases are never auto-renewed
             PaymentRef = req.Id.ToString(),
             CreatedAt  = DateTime.UtcNow,
             UpdatedAt  = DateTime.UtcNow,

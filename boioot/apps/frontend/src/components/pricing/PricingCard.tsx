@@ -21,7 +21,11 @@ function resolveCta(
   cycle: BillingCycle,
   sub: CurrentSubscriptionResponse | null
 ): { kind: CtaKind; pricingId: string | null } {
-  const entry = plan.pricing.find((p) => p.billingCycle === cycle);
+  // For one-time plans, use the OneTime entry regardless of toggle cycle
+  const isOneTimePlan = plan.pricing.every((p) => p.billingCycle === "OneTime");
+  const entry = isOneTimePlan
+    ? plan.pricing.find((p) => p.billingCycle === "OneTime") ?? plan.pricing[0]
+    : plan.pricing.find((p) => p.billingCycle === cycle);
   if (!entry) return { kind: "start", pricingId: null };
 
   const isFree = entry.priceAmount === 0;
@@ -79,9 +83,15 @@ export default function PricingCard({
   const isCurrent  = kind === "current";
   const isUpgrade  = kind === "upgrade";
 
-  const entry = plan.pricing.find((p) => p.billingCycle === cycle)
-    ?? plan.pricing.find((p) => p.billingCycle === "Monthly")
-    ?? plan.pricing[0];
+  const oneTimeEntry = plan.pricing.find((p) => p.billingCycle === "OneTime");
+  const isOneTimePlan = plan.pricing.every((p) => p.billingCycle === "OneTime");
+
+  // For one-time plans, always show the OneTime entry regardless of toggle cycle
+  const entry = isOneTimePlan
+    ? oneTimeEntry ?? plan.pricing[0]
+    : plan.pricing.find((p) => p.billingCycle === cycle)
+        ?? plan.pricing.find((p) => p.billingCycle === "Monthly")
+        ?? plan.pricing[0];
 
   const monthlyEntry = plan.pricing.find((p) => p.billingCycle === "Monthly");
   const yearlyEntry  = plan.pricing.find((p) => p.billingCycle === "Yearly");
@@ -248,41 +258,62 @@ export default function PricingCard({
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.3rem", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
-                {cycle === "Monthly" ? "/ شهرياً" : "/ سنوياً"}
-              </span>
+              {entry?.billingCycle === "OneTime" ? (
+                <>
+                  <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
+                    دفعة واحدة
+                  </span>
+                  <span style={{
+                    background:   "#f0fdf4",
+                    color:        "#15803d",
+                    fontSize:     "0.72rem",
+                    fontWeight:   700,
+                    padding:      "0.1rem 0.45rem",
+                    borderRadius: "999px",
+                    border:       "1px solid #bbf7d0",
+                  }}>
+                    غير متكرر
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
+                    {cycle === "Monthly" ? "/ شهرياً" : "/ سنوياً"}
+                  </span>
 
-              {cycle === "Yearly" && yearlyEntry && (
-                <span style={{ fontSize: "0.76rem", color: "var(--color-text-muted)" }}>
-                  ({Math.round(yearlyEntry.priceAmount / 12).toLocaleString("ar-SY")} {yearlyEntry.currencyCode} / شهر)
-                </span>
-              )}
+                  {cycle === "Yearly" && yearlyEntry && (
+                    <span style={{ fontSize: "0.76rem", color: "var(--color-text-muted)" }}>
+                      ({Math.round(yearlyEntry.priceAmount / 12).toLocaleString("ar-SY")} {yearlyEntry.currencyCode} / شهر)
+                    </span>
+                  )}
 
-              {cycle === "Monthly" && saving > 0 && yearlyEntry && (
-                <span style={{
-                  background:   "#fff7ed",
-                  color:        "#c2410c",
-                  fontSize:     "0.72rem",
-                  fontWeight:   700,
-                  padding:      "0.1rem 0.45rem",
-                  borderRadius: "999px",
-                  border:       "1px solid #fed7aa",
-                }}>
-                  وفّر {saving}% سنوياً
-                </span>
-              )}
+                  {cycle === "Monthly" && saving > 0 && yearlyEntry && (
+                    <span style={{
+                      background:   "#fff7ed",
+                      color:        "#c2410c",
+                      fontSize:     "0.72rem",
+                      fontWeight:   700,
+                      padding:      "0.1rem 0.45rem",
+                      borderRadius: "999px",
+                      border:       "1px solid #fed7aa",
+                    }}>
+                      وفّر {saving}% سنوياً
+                    </span>
+                  )}
 
-              {cycle === "Yearly" && saving > 0 && (
-                <span style={{
-                  background:   "var(--color-primary)",
-                  color:        "#fff",
-                  fontSize:     "0.72rem",
-                  fontWeight:   700,
-                  padding:      "0.1rem 0.45rem",
-                  borderRadius: "999px",
-                }}>
-                  وفّر {saving}%
-                </span>
+                  {cycle === "Yearly" && saving > 0 && (
+                    <span style={{
+                      background:   "var(--color-primary)",
+                      color:        "#fff",
+                      fontSize:     "0.72rem",
+                      fontWeight:   700,
+                      padding:      "0.1rem 0.45rem",
+                      borderRadius: "999px",
+                    }}>
+                      وفّر {saving}%
+                    </span>
+                  )}
+                </>
               )}
             </div>
           </>
