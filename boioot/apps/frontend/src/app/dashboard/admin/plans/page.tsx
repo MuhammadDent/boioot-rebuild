@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
@@ -886,6 +886,23 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [error, setError]                 = useState("");
   const [limitSaving, setLimitSaving]     = useState<string | null>(null);
   const [featureSaving, setFeatureSaving] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus]       = useState<"idle" | "dirty" | "saving" | "saved">("idle");
+
+  const initialSnapshot = useRef<string>("");
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const formSnapshot = JSON.stringify({
+    name, description, applicableAccountType, priceMonthly, priceYearly,
+    isActive, isPublic, isRecommended, displayOrder, billingMode, planBillingType,
+    recurringCycle, durationDays, consumptionPolicy, expiryRule, downgradePlanCode,
+    planCategory, displayNameAr, displayNameEn, audienceType, tier, badgeText, planColor,
+    hasTrial, trialDays, requiresPaymentForTrial, isDefaultForNewUsers,
+    availableForSelfSignup, requiresAdminApproval, allowAddOns, allowUpgrade,
+    allowDowngrade, autoDowngradeOnExpiry, allowRepurchaseOnConsumption,
+    allowEarlyRenewalOnConsumption,
+  });
+
+  const isDirty = formSnapshot !== initialSnapshot.current;
 
   useEffect(() => {
     if (!isNew && plan?.id) {
@@ -895,93 +912,131 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         .catch(() => {})
         .finally(() => setPricingLoading(false));
     }
-  }, [isNew, plan?.id]);
+    initialSnapshot.current = formSnapshot;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async function handleSavePlan(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true); setError("");
+  const doSaveRef = useRef<(() => Promise<void>) | null>(null);
+
+  async function doSave() {
+    if (!plan?.id || saving) return;
+    setSaving(true); setSaveStatus("saving"); setError("");
     try {
-      let result: AdminPlanDetail;
-      if (isNew) {
-        result = await adminApi.createPlan({
-          name:                   name.trim(),
-          displayNameAr:          displayNameAr.trim() || undefined,
-          displayNameEn:          displayNameEn.trim() || undefined,
-          audienceType:           audienceType || undefined,
-          tier:                   tier || undefined,
-          description:            description.trim() || undefined,
-          basePriceMonthly:       parseFloat(priceMonthly) || 0,
-          basePriceYearly:        parseFloat(priceYearly)  || 0,
-          applicableAccountType:  applicableAccountType || undefined,
-          planCategory:           planCategory || undefined,
-          displayOrder:           parseInt(displayOrder) || 0,
-          billingMode,
-          planBillingType,
-          recurringCycle:         planBillingType === "recurring" ? (recurringCycle || undefined) : undefined,
-          durationDays:           planBillingType === "one_time_fixed_term" ? (parseInt(durationDays) || undefined) : undefined,
-          consumptionPolicy:      planBillingType === "one_time_fixed_term" ? consumptionPolicy : "none",
-          expiryRule:             planBillingType === "one_time_fixed_term" ? expiryRule : "expire_by_date",
-          downgradePlanCode:      downgradePlanCode.trim() || undefined,
-          badgeText:              badgeText.trim() || undefined,
-          planColor:              planColor.trim() || undefined,
-          hasTrial,
-          trialDays:              hasTrial ? (parseInt(trialDays) || 0) : 0,
-          requiresPaymentForTrial: hasTrial ? requiresPaymentForTrial : false,
-          isDefaultForNewUsers,
-          availableForSelfSignup,
-          requiresAdminApproval,
-          allowAddOns,
-          allowUpgrade,
-          allowDowngrade,
-          autoDowngradeOnExpiry,
-          allowRepurchaseOnConsumption,
-          allowEarlyRenewalOnConsumption,
-        });
-      } else {
-        result = await adminApi.updatePlan(plan!.id, {
-          name:                   name.trim(),
-          description:            description.trim() || undefined,
-          basePriceMonthly:       parseFloat(priceMonthly) || 0,
-          basePriceYearly:        parseFloat(priceYearly)  || 0,
-          isActive,
-          applicableAccountType:  applicableAccountType || undefined,
-          displayOrder:           parseInt(displayOrder) || 0,
-          isPublic,
-          isRecommended,
-          planCategory:           planCategory || undefined,
-          displayNameAr:          displayNameAr.trim() || undefined,
-          displayNameEn:          displayNameEn.trim() || undefined,
-          audienceType:           audienceType || undefined,
-          tier:                   tier || undefined,
-          billingMode,
-          planBillingType,
-          recurringCycle:         planBillingType === "recurring" ? (recurringCycle || undefined) : undefined,
-          durationDays:           planBillingType === "one_time_fixed_term" ? (parseInt(durationDays) || undefined) : undefined,
-          consumptionPolicy:      planBillingType === "one_time_fixed_term" ? consumptionPolicy : "none",
-          expiryRule:             planBillingType === "one_time_fixed_term" ? expiryRule : "expire_by_date",
-          downgradePlanCode:      downgradePlanCode.trim() || undefined,
-          badgeText:              badgeText.trim() || undefined,
-          planColor:              planColor.trim() || undefined,
-          hasTrial,
-          trialDays:               hasTrial ? (parseInt(trialDays) || 0) : 0,
-          requiresPaymentForTrial: hasTrial ? requiresPaymentForTrial : false,
-          isDefaultForNewUsers,
-          availableForSelfSignup,
-          requiresAdminApproval,
-          allowAddOns,
-          allowUpgrade,
-          allowDowngrade,
-          autoDowngradeOnExpiry,
-          allowRepurchaseOnConsumption,
-          allowEarlyRenewalOnConsumption,
-        });
-      }
+      const result = await adminApi.updatePlan(plan.id, {
+        name:                   name.trim(),
+        description:            description.trim() || undefined,
+        basePriceMonthly:       parseFloat(priceMonthly) || 0,
+        basePriceYearly:        parseFloat(priceYearly)  || 0,
+        isActive,
+        applicableAccountType:  applicableAccountType || undefined,
+        displayOrder:           parseInt(displayOrder) || 0,
+        isPublic,
+        isRecommended,
+        planCategory:           planCategory || undefined,
+        displayNameAr:          displayNameAr.trim() || undefined,
+        displayNameEn:          displayNameEn.trim() || undefined,
+        audienceType:           audienceType || undefined,
+        tier:                   tier || undefined,
+        billingMode,
+        planBillingType,
+        recurringCycle:         planBillingType === "recurring" ? (recurringCycle || undefined) : undefined,
+        durationDays:           planBillingType === "one_time_fixed_term" ? (parseInt(durationDays) || undefined) : undefined,
+        consumptionPolicy:      planBillingType === "one_time_fixed_term" ? consumptionPolicy : "none",
+        expiryRule:             planBillingType === "one_time_fixed_term" ? expiryRule : "expire_by_date",
+        downgradePlanCode:      downgradePlanCode.trim() || undefined,
+        badgeText:              badgeText.trim() || undefined,
+        planColor:              planColor.trim() || undefined,
+        hasTrial,
+        trialDays:               hasTrial ? (parseInt(trialDays) || 0) : 0,
+        requiresPaymentForTrial: hasTrial ? requiresPaymentForTrial : false,
+        isDefaultForNewUsers,
+        availableForSelfSignup,
+        requiresAdminApproval,
+        allowAddOns,
+        allowUpgrade,
+        allowDowngrade,
+        autoDowngradeOnExpiry,
+        allowRepurchaseOnConsumption,
+        allowEarlyRenewalOnConsumption,
+      });
       setLimits(result.limits);
       setFeatures(result.features);
       onSaved(result);
-      if (isNew) onClose();
+      initialSnapshot.current = formSnapshot;
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2500);
     } catch (e) {
       setError(normalizeError(e));
+      setSaveStatus("dirty");
+    } finally {
+      setSaving(false);
+    }
+  }
+  doSaveRef.current = doSave;
+
+  function handleCloseModal() {
+    if (isDirty) {
+      if (!window.confirm("لديك تغييرات غير محفوظة، هل تريد الخروج؟")) return;
+    }
+    onClose();
+  }
+
+  useEffect(() => {
+    if (isNew || !isDirty) return;
+    setSaveStatus("dirty");
+    const timer = setTimeout(() => {
+      void doSaveRef.current?.();
+    }, 1200);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formSnapshot]);
+
+  async function handleSavePlan(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isNew) { void doSave(); return; }
+    setSaving(true); setSaveStatus("saving"); setError("");
+    try {
+      const result = await adminApi.createPlan({
+        name:                   name.trim(),
+        displayNameAr:          displayNameAr.trim() || undefined,
+        displayNameEn:          displayNameEn.trim() || undefined,
+        audienceType:           audienceType || undefined,
+        tier:                   tier || undefined,
+        description:            description.trim() || undefined,
+        basePriceMonthly:       parseFloat(priceMonthly) || 0,
+        basePriceYearly:        parseFloat(priceYearly)  || 0,
+        applicableAccountType:  applicableAccountType || undefined,
+        planCategory:           planCategory || undefined,
+        displayOrder:           parseInt(displayOrder) || 0,
+        billingMode,
+        planBillingType,
+        recurringCycle:         planBillingType === "recurring" ? (recurringCycle || undefined) : undefined,
+        durationDays:           planBillingType === "one_time_fixed_term" ? (parseInt(durationDays) || undefined) : undefined,
+        consumptionPolicy:      planBillingType === "one_time_fixed_term" ? consumptionPolicy : "none",
+        expiryRule:             planBillingType === "one_time_fixed_term" ? expiryRule : "expire_by_date",
+        downgradePlanCode:      downgradePlanCode.trim() || undefined,
+        badgeText:              badgeText.trim() || undefined,
+        planColor:              planColor.trim() || undefined,
+        hasTrial,
+        trialDays:              hasTrial ? (parseInt(trialDays) || 0) : 0,
+        requiresPaymentForTrial: hasTrial ? requiresPaymentForTrial : false,
+        isDefaultForNewUsers,
+        availableForSelfSignup,
+        requiresAdminApproval,
+        allowAddOns,
+        allowUpgrade,
+        allowDowngrade,
+        autoDowngradeOnExpiry,
+        allowRepurchaseOnConsumption,
+        allowEarlyRenewalOnConsumption,
+      });
+      setLimits(result.limits);
+      setFeatures(result.features);
+      onSaved(result);
+      onClose();
+    } catch (e) {
+      setError(normalizeError(e));
+      setSaveStatus("dirty");
     } finally {
       setSaving(false);
     }
@@ -1023,21 +1078,29 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const modalContent = (
     <div
       style={{ position: "fixed", inset: 0, zIndex: 3000, backgroundColor: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => e.target === e.currentTarget && handleCloseModal()}
     >
       <div style={{ backgroundColor: "#ffffff", borderRadius: 14, width: "100%", maxWidth: 780, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "hidden" }}>
 
         {/* ── Sticky Header ── */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.5rem", borderBottom: "1px solid var(--color-border, #e5e7eb)", flexShrink: 0, backgroundColor: "#ffffff" }}>
           <button
-            onClick={onClose}
+            onClick={handleCloseModal}
             style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1, color: "var(--color-text-secondary)", padding: "0.15rem 0.5rem", borderRadius: 6 }}
           >
             ×
           </button>
-          <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700 }}>
-            {isNew ? "✦ إنشاء خطة جديدة" : `تعديل: ${plan!.name}`}
-          </h2>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.2rem" }}>
+            <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700 }}>
+              {isNew ? "✦ إنشاء خطة جديدة" : `تعديل: ${getPlanVisibleName(displayNameAr, displayNameEn, plan!.name)}`}
+            </h2>
+            {!isNew && isDirty && (
+              <span style={{ fontSize: "0.72rem", color: "#b45309", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#b45309", display: "inline-block" }} />
+                لديك تغييرات غير محفوظة
+              </span>
+            )}
+          </div>
         </div>
 
         {/* ── Scrollable Body ── */}
@@ -1049,7 +1112,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
             </div>
           )}
 
-          <form onSubmit={handleSavePlan}>
+          <form ref={formRef} onSubmit={handleSavePlan}>
 
             {/* ── Section 1: Basic Info ── */}
             <CollapsibleSection title="المعلومات الأساسية" icon="📋" defaultOpen={true}>
@@ -1431,15 +1494,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
               </p>
             </CollapsibleSection>
 
-            {/* ── Save Button ── */}
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: "100%", marginBottom: "0.75rem" }}
-              disabled={saving}
-            >
-              {saving ? "جاري الحفظ..." : isNew ? "إنشاء الخطة" : "حفظ المعلومات الأساسية"}
-            </button>
           </form>
 
           {/* ── Section 4: Pricing Entries (existing plans only) ── */}
@@ -1656,6 +1710,57 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           )}
 
         </div>
+
+        {/* ── Sticky Save Footer ── */}
+        <div style={{
+          flexShrink: 0,
+          borderTop: "1px solid var(--color-border, #e5e7eb)",
+          backgroundColor: "#ffffff",
+          padding: "0.85rem 1.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "0.75rem",
+        }}>
+          {/* Save status text */}
+          <div style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", minWidth: 140 }}>
+            {saveStatus === "saving" && (
+              <span style={{ color: "#2563eb", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #2563eb", borderTop: "2px solid transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                جارٍ الحفظ...
+              </span>
+            )}
+            {saveStatus === "saved" && (
+              <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ تم الحفظ</span>
+            )}
+            {saveStatus === "dirty" && (
+              <span style={{ color: "#b45309" }}>لم يتم الحفظ بعد</span>
+            )}
+          </div>
+
+          {/* Buttons */}
+          <div style={{ display: "flex", gap: "0.65rem", alignItems: "center" }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={handleCloseModal}
+              disabled={saving}
+              style={{ minWidth: 80 }}
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => { if (isNew) { formRef.current?.requestSubmit(); } else void doSave(); }}
+              disabled={saving || (!isNew && !isDirty)}
+              style={{ minWidth: 130 }}
+            >
+              {saving ? "جارٍ الحفظ..." : isNew ? "إنشاء الخطة" : "حفظ التغييرات"}
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );
