@@ -9,6 +9,7 @@ import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
 import { ROLE_LABELS, getRoleCategory } from "@/features/admin/constants";
 import { hasPermission } from "@/lib/permissions";
+import { canAccessFeature } from "@/features/access/featureAccess";
 import { formatPrice, LISTING_TYPE_LABELS } from "@/features/properties/constants";
 import type { DashboardSummary, DashboardAnalytics, FavoriteResponse } from "@/types";
 import { api, ApiError } from "@/lib/api";
@@ -136,8 +137,9 @@ export default function DashboardPage() {
   if (getRoleCategory(user.role) === "admin" || getRoleCategory(user.role) === "staff") return null;
 
   const isManagementRole = canSeeSummary(user.role);
-  const isCompanyOrAdmin = hasPermission(user, "projects.create");
-  const canManageAgents  = hasPermission(user, "agents.manage");
+  // Use the central FeatureAccess map — single source of truth for all feature gates.
+  const isCompanyOrAdmin = canAccessFeature(user, "projects");
+  const canManageAgents  = canAccessFeature(user, "agents");
 
   const initial = user.fullName.charAt(0).toUpperCase();
 

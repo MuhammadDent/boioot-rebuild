@@ -169,10 +169,11 @@ const I = {
 };
 /* eslint-enable react/jsx-key */
 
-// ── Access helpers — Single source of truth for permission checks ──────────────
+// ── Access helpers — Thin wrappers around the central featureAccess map ─────────
 //
-// Used both by the sidebar (to show/hide "المشاريع") and by page-level guards.
-// Import these from this file, never from component files.
+// These thin wrappers are kept for backwards-compatibility with existing
+// import sites. New code should import canAccessFeature from
+// @/features/access/featureAccess instead of using these helpers directly.
 
 export function canAccessProjects(accountType?: string | null): boolean {
   return accountType === "Company";
@@ -414,7 +415,12 @@ SIDEBAR_CONFIG["Staff"] = SIDEBAR_CONFIG["Admin"];
 
 /**
  * Returns the sidebar groups for the given user.
- * Injects "المشاريع" for CompanyOwner + accountType === "Company".
+ *
+ * CompanyOwner (Office + Company):
+ *   - Always injects "الوكلاء" link (both Office and Company manage agents).
+ *   - Injects "المشاريع" only when accountType === "Company".
+ *
+ * All other roles: base config from SIDEBAR_CONFIG is returned as-is.
  */
 export function getSidebarGroups(
   role: string | undefined,
@@ -422,28 +428,36 @@ export function getSidebarGroups(
 ): SidebarGroup[] {
   const groups: SidebarGroup[] = SIDEBAR_CONFIG[role ?? ""] ?? SIDEBAR_CONFIG["User"];
 
-  if (role === "CompanyOwner" && canAccessProjects(accountType)) {
-    return groups.map((g) => {
-      if (g.id === "business") {
-        const already = g.items.some((i) => i.href === "/dashboard/projects");
-        if (!already) {
-          return {
-            ...g,
-            items: [
-              ...g.items,
-              {
-                href: "/dashboard/projects",
-                label: "المشاريع",
-                icon: I.projects,
-                feature: "project_management" as FeatureKey,
-              },
-            ],
-          };
-        }
-      }
-      return g;
-    });
-  }
+  if (role !== "CompanyOwner") return groups;
 
-  return groups;
+  const canProjects = canAccessProjects(accountType);
+  const canAgents   = canAccessAgents(role);
+
+  return groups.map((g) => {
+    if (g.id !== "business") return g;
+
+    const extraItems: SidebarItem[] = [];
+
+    // Inject "الوكلاء" for all CompanyOwner accounts (Office + Company).
+    if (canAgents && !g.items.some((i) => i.href === "/dashboard/agents")) {
+      extraItems.push({
+        href: "/dashboard/agents",
+        label: "الوكلاء",
+        icon: I.team,
+      });
+    }
+
+    // Inject "المشاريع" only for Company accounts.
+    if (canProjects && !g.items.some((i) => i.href === "/dashboard/projects")) {
+      extraItems.push({
+        href: "/dashboard/projects",
+        label: "المشاريع",
+        icon: I.projects,
+        feature: "project_management" as FeatureKey,
+      });
+    }
+
+    if (extraItems.length === 0) return g;
+    return { ...g, items: [...g.items, ...extraItems] };
+  });
 }

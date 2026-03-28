@@ -1,0 +1,132 @@
+We have a critical UX and permission leakage issue.
+
+Currently:
+Owner and Broker users can see features like:
+- Agents
+- Team Members
+- Projects
+
+These features MUST be visible ONLY for:
+- Office accounts
+- Company accounts
+
+========================================
+GOAL
+========================================
+
+Implement strict feature visibility control based on:
+1) User Type (role)
+2) Plan features
+
+========================================
+USER TYPES
+========================================
+
+- seeker
+- owner
+- broker
+- office
+- company
+
+========================================
+REQUIRED FIX
+========================================
+
+1) Create a Feature Access Map
+
+Example:
+
+const FeatureAccess = {
+  agents: ['office', 'company'],
+  team_management: ['office', 'company'],
+  projects: ['office', 'company'],
+  listings: ['owner', 'broker', 'office', 'company'],
+  messages: ['owner', 'broker', 'office', 'company'],
+  analytics: ['broker', 'office', 'company']
+};
+
+========================================
+2) Build a helper function
+
+function canAccessFeature(user, featureKey) {
+  if (!user) return false;
+
+  const allowedRoles = FeatureAccess[featureKey] || [];
+
+  return allowedRoles.includes(user.type);
+}
+
+========================================
+3) Apply filtering in Sidebar
+
+In Sidebar rendering:
+
+DO NOT render items like:
+- Agents
+- Projects
+- Team
+
+Unless:
+canAccessFeature(user, 'agents') === true
+
+========================================
+4) Apply filtering in Dashboard Widgets
+
+Hide any cards or stats related to:
+- Agents count
+- Projects count
+
+For:
+- owner
+- broker
+
+========================================
+5) Backend Protection (IMPORTANT)
+
+Even if UI is hidden:
+Protect API routes:
+
+Example:
+
+if (user.type !== 'office' && user.type !== 'company') {
+  return 403 Forbidden;
+}
+
+Apply to:
+- /agents
+- /projects
+- /team
+
+========================================
+6) Clean Existing UI
+
+Remove any hardcoded counters like:
+"عدد الوكلاء"
+"عدد المشاريع"
+
+from shared components.
+
+========================================
+7) Future-Proof (IMPORTANT)
+
+Make system driven by:
+- feature keys (not hardcoded UI)
+- plan.features
+
+So later admin can enable/disable features per plan.
+
+========================================
+EXPECTED RESULT
+========================================
+
+Owner & Broker:
+- DO NOT see agents
+- DO NOT see projects
+- Clean simple dashboard
+
+Office & Company:
+- Full access to team, agents, projects
+
+No permission leakage
+No confusion
+Clean UX

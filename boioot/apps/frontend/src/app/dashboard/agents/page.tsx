@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { api } from "@/lib/api";
-import { hasPermission } from "@/lib/permissions";
 import Spinner from "@/components/ui/Spinner";
 
 interface AgentSummary {
@@ -36,8 +34,11 @@ const EMPTY_FORM: CreateAgentForm = {
 };
 
 export default function AgentsPage() {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
+  // Route guard: only Admin and CompanyOwner (Office + Company) may manage agents.
+  // Owner, Broker, Agent, User are redirected to /dashboard automatically.
+  const { user, isLoading } = useProtectedRoute({
+    allowedRoles: ["Admin", "CompanyOwner"],
+  });
 
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -49,20 +50,11 @@ export default function AgentsPage() {
   const [formError, setFormError] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  // "agents.manage" → CompanyOwner, Admin only (see PLATFORM_ROLE_PERMISSIONS in rbac.ts).
-  // Broker does NOT have this permission — brokers cannot manage agents.
-  const canManageAgents = hasPermission(user, "agents.manage");
-
   useEffect(() => {
-    if (!isLoading && !canManageAgents) {
-      router.replace("/dashboard");
+    if (!isLoading && user) {
+      fetchAgents();
     }
-  }, [isLoading, canManageAgents, router]);
-
-  useEffect(() => {
-    if (!canManageAgents) return;
-    fetchAgents();
-  }, [canManageAgents]);
+  }, [isLoading, user]);
 
   async function fetchAgents() {
     try {
