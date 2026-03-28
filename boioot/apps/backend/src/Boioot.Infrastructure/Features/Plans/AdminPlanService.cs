@@ -105,6 +105,8 @@ public class AdminPlanService : IAdminPlanService
                 AllowUpgrade            = p.AllowUpgrade,
                 AllowDowngrade          = p.AllowDowngrade,
                 AutoDowngradeOnExpiry   = p.AutoDowngradeOnExpiry,
+                AllowRepurchaseOnConsumption   = p.AllowRepurchaseOnConsumption,
+                AllowEarlyRenewalOnConsumption = p.AllowEarlyRenewalOnConsumption,
                 // ── Key Limits ──────────────────────────────────────────────
                 ListingsLimit    = LimitVal("max_active_listings"),
                 AgentsLimit      = LimitVal("max_agents"),
@@ -253,6 +255,8 @@ public class AdminPlanService : IAdminPlanService
             AllowUpgrade            = request.AllowUpgrade,
             AllowDowngrade          = request.AllowDowngrade,
             AutoDowngradeOnExpiry   = request.AutoDowngradeOnExpiry,
+            AllowRepurchaseOnConsumption   = request.AllowRepurchaseOnConsumption,
+            AllowEarlyRenewalOnConsumption = request.AllowEarlyRenewalOnConsumption,
         };
 
         _db.Set<Plan>().Add(plan);
@@ -335,7 +339,9 @@ public class AdminPlanService : IAdminPlanService
         plan.AllowAddOns             = request.AllowAddOns;
         plan.AllowUpgrade            = request.AllowUpgrade;
         plan.AllowDowngrade          = request.AllowDowngrade;
-        plan.AutoDowngradeOnExpiry   = request.AutoDowngradeOnExpiry;
+        plan.AutoDowngradeOnExpiry          = request.AutoDowngradeOnExpiry;
+        plan.AllowRepurchaseOnConsumption   = request.AllowRepurchaseOnConsumption;
+        plan.AllowEarlyRenewalOnConsumption = request.AllowEarlyRenewalOnConsumption;
         plan.PlanBillingType         = string.IsNullOrWhiteSpace(request.PlanBillingType) ? "recurring" : request.PlanBillingType.Trim();
         plan.RecurringCycle          = string.IsNullOrWhiteSpace(request.RecurringCycle)  ? null : request.RecurringCycle.Trim();
         plan.DurationDays            = request.DurationDays;
@@ -417,7 +423,9 @@ public class AdminPlanService : IAdminPlanService
             AllowAddOns             = source.AllowAddOns,
             AllowUpgrade            = source.AllowUpgrade,
             AllowDowngrade          = source.AllowDowngrade,
-            AutoDowngradeOnExpiry   = source.AutoDowngradeOnExpiry,
+            AutoDowngradeOnExpiry          = source.AutoDowngradeOnExpiry,
+            AllowRepurchaseOnConsumption   = source.AllowRepurchaseOnConsumption,
+            AllowEarlyRenewalOnConsumption = source.AllowEarlyRenewalOnConsumption,
         };
 
         _db.Set<Plan>().Add(copy);
@@ -602,7 +610,9 @@ public class AdminPlanService : IAdminPlanService
         AllowAddOns             = p.AllowAddOns,
         AllowUpgrade            = p.AllowUpgrade,
         AllowDowngrade          = p.AllowDowngrade,
-        AutoDowngradeOnExpiry   = p.AutoDowngradeOnExpiry,
+        AutoDowngradeOnExpiry          = p.AutoDowngradeOnExpiry,
+        AllowRepurchaseOnConsumption   = p.AllowRepurchaseOnConsumption,
+        AllowEarlyRenewalOnConsumption = p.AllowEarlyRenewalOnConsumption,
         // ── Key Limits ──────────────────────────────────────────────────────
         ListingsLimit     = LimitValue(p, "max_active_listings"),
         AgentsLimit       = LimitValue(p, "max_agents"),
@@ -656,7 +666,9 @@ public class AdminPlanService : IAdminPlanService
         AllowAddOns             = p.AllowAddOns,
         AllowUpgrade            = p.AllowUpgrade,
         AllowDowngrade          = p.AllowDowngrade,
-        AutoDowngradeOnExpiry   = p.AutoDowngradeOnExpiry,
+        AutoDowngradeOnExpiry          = p.AutoDowngradeOnExpiry,
+        AllowRepurchaseOnConsumption   = p.AllowRepurchaseOnConsumption,
+        AllowEarlyRenewalOnConsumption = p.AllowEarlyRenewalOnConsumption,
         // ── Key Limits (denormalized from PlanLimits) ────────────────────────
         ListingsLimit     = LimitValue(p, "max_active_listings"),
         AgentsLimit       = LimitValue(p, "max_agents"),

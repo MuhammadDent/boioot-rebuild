@@ -386,6 +386,9 @@ public sealed class SchemaEvolutionService
         await TryAlter("Plans", "ExpiryRule",        "TEXT NOT NULL DEFAULT 'expire_by_date'",                   ct);
         await TryAlter("Plans", "DowngradePlanCode", "TEXT",                                                     ct);
 
+        await TryAlter("Plans", "AllowRepurchaseOnConsumption",  "INTEGER NOT NULL DEFAULT 0", ct);
+        await TryAlter("Plans", "AllowEarlyRenewalOnConsumption","INTEGER NOT NULL DEFAULT 0", ct);
+
         // Backfill: mark existing free-tier plans as free_default (by Tier only — avoids missing-column risk)
         await TryExec(
             "UPDATE Plans SET PlanBillingType = 'free_default' " +

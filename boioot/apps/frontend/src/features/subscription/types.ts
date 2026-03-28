@@ -38,6 +38,15 @@ export interface CurrentSubscriptionResponse {
   maxImagesPerListing:    number;
   maxAgents:              number;
   maxFeaturedSlots:       number;
+  // ── Billing lifecycle (Phase 4) ─────────────────────────────────────────
+  planBillingType:               string | null;
+  listingQuotaUsed:              number;
+  listingLimit:                  number;
+  isQuotaExhausted:              boolean;
+  allowRepurchaseOnConsumption:  boolean;
+  allowEarlyRenewalOnConsumption: boolean;
+  canRepurchaseNow:              boolean;
+  canRenewEarlyNow:              boolean;
   // ── Dynamic capability maps (Phase 3A hardened) ───────────────────────────
   features: Record<string, boolean>;
   limits:   Record<string, number>;

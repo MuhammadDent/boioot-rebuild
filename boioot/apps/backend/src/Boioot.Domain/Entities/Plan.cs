@@ -101,6 +101,18 @@ public class Plan : BaseEntity
     /// <summary>When true, the account is automatically downgraded on subscription expiry.</summary>
     public bool AutoDowngradeOnExpiry { get; set; } = true;
 
+    /// <summary>
+    /// For one_time_fixed_term plans: when true, the user can repurchase this plan
+    /// immediately once listing quota is fully consumed, without waiting for DurationDays to end.
+    /// </summary>
+    public bool AllowRepurchaseOnConsumption { get; set; } = false;
+
+    /// <summary>
+    /// For recurring plans: when true, the user can renew early once listing quota
+    /// is fully consumed, without waiting for the billing period to end.
+    /// </summary>
+    public bool AllowEarlyRenewalOnConsumption { get; set; } = false;
+
     // ── Display ───────────────────────────────────────────────────
     /// <summary>JSON TEXT array of marketing feature strings shown on the pricing page.</summary>
     public string? Features { get; set; }

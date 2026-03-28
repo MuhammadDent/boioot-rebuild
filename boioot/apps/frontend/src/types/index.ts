@@ -692,6 +692,10 @@ export interface AdminPlanSummary {
   allowUpgrade: boolean;
   allowDowngrade: boolean;
   autoDowngradeOnExpiry: boolean;
+  /** Allow one-time repurchase of this plan when listing quota is consumed */
+  allowRepurchaseOnConsumption: boolean;
+  /** Allow early renewal of recurring plan when listing quota is consumed */
+  allowEarlyRenewalOnConsumption: boolean;
   // Key Limits (denormalized — 0 = not set, -1 = unlimited)
   listingsLimit: number;    // max_active_listings
   agentsLimit: number;      // max_agents

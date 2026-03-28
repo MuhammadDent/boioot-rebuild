@@ -647,6 +647,15 @@ public sealed class SubscriptionService : ISubscriptionService
             IsExpired        = false,
             IsCanceled       = false,
             StartDate        = DateTime.MinValue,
+            // Billing lifecycle
+            PlanBillingType                = freePlan?.PlanBillingType ?? "free_default",
+            ListingQuotaUsed               = 0,
+            ListingLimit                   = ent.Limit("max_active_listings"),
+            IsQuotaExhausted               = false,
+            AllowRepurchaseOnConsumption   = freePlan?.AllowRepurchaseOnConsumption  ?? false,
+            AllowEarlyRenewalOnConsumption = freePlan?.AllowEarlyRenewalOnConsumption ?? false,
+            CanRepurchaseNow               = false,
+            CanRenewEarlyNow               = false,
             // Backward-compat
             HasAnalyticsDashboard = ent.Feat("analytics_dashboard"),
             HasVideoUpload        = ent.Feat("video_upload"),
@@ -679,6 +688,21 @@ public sealed class SubscriptionService : ISubscriptionService
                         || (sub.EndDate.HasValue && sub.EndDate < now);
         var isCanceled = sub.Status == SubscriptionStatus.Cancelled;
 
+        // Quota exhaustion
+        var listingLimit     = ent.Limit("max_active_listings");
+        var listingQuotaUsed = sub.ListingQuotaUsed;
+        var isQuotaExhausted = !string.Equals(plan.ConsumptionPolicy, "none", StringComparison.OrdinalIgnoreCase)
+                               && listingLimit > 0
+                               && listingQuotaUsed >= listingLimit;
+
+        var canRepurchaseNow = isQuotaExhausted
+                               && plan.AllowRepurchaseOnConsumption
+                               && string.Equals(plan.PlanBillingType, "one_time_fixed_term", StringComparison.OrdinalIgnoreCase);
+
+        var canRenewEarlyNow = isQuotaExhausted
+                               && plan.AllowEarlyRenewalOnConsumption
+                               && string.Equals(plan.PlanBillingType, "recurring", StringComparison.OrdinalIgnoreCase);
+
         return new CurrentSubscriptionResponse
         {
             SubscriptionId     = sub.Id,
@@ -705,6 +729,15 @@ public sealed class SubscriptionService : ISubscriptionService
             CurrentPeriodEnd   = sub.CurrentPeriodEnd,
             CanceledAt         = sub.CanceledAt,
             EndedAt            = sub.EndedAt,
+            // Billing lifecycle
+            PlanBillingType                = plan.PlanBillingType,
+            ListingQuotaUsed               = listingQuotaUsed,
+            ListingLimit                   = listingLimit,
+            IsQuotaExhausted               = isQuotaExhausted,
+            AllowRepurchaseOnConsumption   = plan.AllowRepurchaseOnConsumption,
+            AllowEarlyRenewalOnConsumption = plan.AllowEarlyRenewalOnConsumption,
+            CanRepurchaseNow               = canRepurchaseNow,
+            CanRenewEarlyNow               = canRenewEarlyNow,
             // Backward-compat
             HasAnalyticsDashboard = ent.Feat("analytics_dashboard"),
             HasVideoUpload        = ent.Feat("video_upload"),

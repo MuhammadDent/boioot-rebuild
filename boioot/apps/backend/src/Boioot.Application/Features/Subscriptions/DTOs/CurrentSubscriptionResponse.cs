@@ -47,6 +47,37 @@ public sealed class CurrentSubscriptionResponse
     /// <summary>True if the subscription is cancelled.</summary>
     public bool IsCanceled { get; init; }
 
+    // ── Billing lifecycle (new in Phase 4) ─────────────────────────────────
+    /// <summary>free_default | one_time_fixed_term | recurring</summary>
+    public string PlanBillingType { get; init; } = "recurring";
+
+    /// <summary>How many listings have been used from the plan quota. 0 when not applicable.</summary>
+    public int ListingQuotaUsed { get; init; }
+
+    /// <summary>The plan's max_active_listings limit. -1 = unlimited, 0 = not set.</summary>
+    public int ListingLimit { get; init; }
+
+    /// <summary>True when listing quota is configured and fully consumed.</summary>
+    public bool IsQuotaExhausted { get; init; }
+
+    /// <summary>True when this one_time_fixed_term plan allows repurchase after quota is consumed.</summary>
+    public bool AllowRepurchaseOnConsumption { get; init; }
+
+    /// <summary>True when this recurring plan allows early renewal after quota is consumed.</summary>
+    public bool AllowEarlyRenewalOnConsumption { get; init; }
+
+    /// <summary>
+    /// True when the user can repurchase right now:
+    /// IsQuotaExhausted &amp;&amp; AllowRepurchaseOnConsumption &amp;&amp; PlanBillingType == "one_time_fixed_term"
+    /// </summary>
+    public bool CanRepurchaseNow { get; init; }
+
+    /// <summary>
+    /// True when the user can renew early right now:
+    /// IsQuotaExhausted &amp;&amp; AllowEarlyRenewalOnConsumption &amp;&amp; PlanBillingType == "recurring"
+    /// </summary>
+    public bool CanRenewEarlyNow { get; init; }
+
     // ── Backward-compat named entitlements (kept for existing consumers) ────
     public bool HasAnalyticsDashboard  { get; init; }
     public bool HasVideoUpload         { get; init; }

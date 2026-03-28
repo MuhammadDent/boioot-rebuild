@@ -60,6 +60,10 @@ public class PlanSummaryResponse
     public bool    AllowUpgrade            { get; set; }
     public bool    AllowDowngrade          { get; set; }
     public bool    AutoDowngradeOnExpiry   { get; set; }
+    /// <summary>one_time_fixed_term: allow repurchase once listing quota consumed.</summary>
+    public bool    AllowRepurchaseOnConsumption  { get; set; }
+    /// <summary>recurring: allow early renewal once listing quota consumed.</summary>
+    public bool    AllowEarlyRenewalOnConsumption { get; set; }
 
     // ── Key Limits (denormalized for list view) ────────────────────────────
     /// <summary>max_active_listings. -1 = unlimited. 0 = not set.</summary>

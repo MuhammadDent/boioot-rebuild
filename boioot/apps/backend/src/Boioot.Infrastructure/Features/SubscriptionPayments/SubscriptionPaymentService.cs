@@ -85,20 +85,46 @@ public class SubscriptionPaymentService : ISubscriptionPaymentService
         var plan = await _db.Plans.FirstOrDefaultAsync(p => p.Id == dto.PlanId, ct)
             ?? throw new BoiootException("الخطة المطلوبة غير موجودة.", 404);
 
-        // Block repurchase of an active one_time_fixed_term plan (same plan must have expired/downgraded first)
-        if (string.Equals(plan.PlanBillingType, "one_time_fixed_term", StringComparison.OrdinalIgnoreCase))
+        // Repurchase / early-renewal guard for one_time_fixed_term and recurring plans
+        if (string.Equals(plan.PlanBillingType, "one_time_fixed_term", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(plan.PlanBillingType, "recurring", StringComparison.OrdinalIgnoreCase))
         {
-            var hasActiveSamePlan = await _db.Subscriptions
-                .AnyAsync(s => s.AccountId == accountId
-                            && s.PlanId == plan.Id
-                            && s.IsActive
-                            && (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial), ct);
+            var activeSub = await _db.Subscriptions
+                .FirstOrDefaultAsync(s => s.AccountId == accountId
+                                       && s.PlanId == plan.Id
+                                       && s.IsActive
+                                       && (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Trial), ct);
 
-            if (hasActiveSamePlan)
-                throw new BoiootException(
-                    $"لديك اشتراك نشط بالفعل في خطة '{plan.DisplayNameAr ?? plan.Name}'. " +
-                    "لا يمكن إعادة الشراء حتى ينتهي الاشتراك الحالي أو يُستهلك بالكامل.",
-                    409);
+            if (activeSub != null)
+            {
+                // Check if quota is fully consumed — unlocks repurchase/early renewal
+                bool quotaExhausted = false;
+                if (!string.Equals(plan.ConsumptionPolicy, "none", StringComparison.OrdinalIgnoreCase)
+                    && plan.ListingLimit > 0
+                    && activeSub.ListingQuotaUsed >= plan.ListingLimit)
+                {
+                    quotaExhausted = true;
+                }
+
+                bool repurchaseAllowed = quotaExhausted
+                    && string.Equals(plan.PlanBillingType, "one_time_fixed_term", StringComparison.OrdinalIgnoreCase)
+                    && plan.AllowRepurchaseOnConsumption;
+
+                bool earlyRenewalAllowed = quotaExhausted
+                    && string.Equals(plan.PlanBillingType, "recurring", StringComparison.OrdinalIgnoreCase)
+                    && plan.AllowEarlyRenewalOnConsumption;
+
+                if (!repurchaseAllowed && !earlyRenewalAllowed)
+                {
+                    var hint = quotaExhausted
+                        ? "لا يسمح هذا النوع من الخطط بالشراء المبكر عند استنزاف الحصة."
+                        : "لا يمكن إعادة الشراء أو التجديد حتى ينتهي الاشتراك الحالي أو تُستهلك حصته بالكامل.";
+
+                    throw new BoiootException(
+                        $"لديك اشتراك نشط بالفعل في خطة '{plan.DisplayNameAr ?? plan.Name}'. {hint}",
+                        409);
+                }
+            }
         }
 
         // FIX-6: Validate plan–role (audience) compatibility

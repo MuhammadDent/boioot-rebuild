@@ -649,25 +649,85 @@ export default function SubscriptionPage() {
           )}
         </div>
 
-        {/* Cancel button */}
-        {isCancelable && (
-          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "1rem" }}>
-            <button
-              onClick={() => setShowCancel(true)}
-              type="button"
-              style={{
-                padding: "0.55rem 1.1rem",
-                borderRadius: 9,
-                border: "1.5px solid #fca5a5",
-                backgroundColor: "#fff",
-                color: "#dc2626",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              إلغاء الاشتراك
-            </button>
+        {/* Quota exhaustion banner */}
+        {sub.isQuotaExhausted && (
+          <div style={{
+            margin: "0.75rem 0 0",
+            padding: "0.85rem 1rem",
+            borderRadius: 10,
+            backgroundColor: "#fffbeb",
+            border: "1.5px solid #fcd34d",
+            fontSize: "0.85rem",
+            color: "#92400e",
+            fontWeight: 600,
+          }}>
+            ⚠️ لقد استهلكت كامل حصة الإعلانات المتاحة ({sub.listingQuotaUsed} / {sub.listingLimit > 0 ? sub.listingLimit : "∞"}).
+            {sub.canRepurchaseNow && " يمكنك إعادة شراء الباقة للحصول على حصة جديدة."}
+            {sub.canRenewEarlyNow && " يمكنك التجديد المبكر للحصول على دورة جديدة."}
+          </div>
+        )}
+
+        {/* Repurchase / Early Renewal + Cancel buttons */}
+        {(sub.canRepurchaseNow || sub.canRenewEarlyNow || isCancelable) && (
+          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "center" }}>
+            {sub.canRepurchaseNow && (
+              <Link
+                href={`/dashboard/subscription/plans?repurchase=${sub.planId}`}
+                style={{
+                  padding: "0.55rem 1.25rem",
+                  borderRadius: 9,
+                  border: "1.5px solid #3b82f6",
+                  backgroundColor: "#eff6ff",
+                  color: "#1d4ed8",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                }}
+              >
+                🔄 إعادة الشراء
+              </Link>
+            )}
+            {sub.canRenewEarlyNow && (
+              <Link
+                href={`/dashboard/subscription/plans?earlyRenew=${sub.planId}`}
+                style={{
+                  padding: "0.55rem 1.25rem",
+                  borderRadius: 9,
+                  border: "1.5px solid #059669",
+                  backgroundColor: "#ecfdf5",
+                  color: "#065f46",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                }}
+              >
+                ♻️ تجديد مبكر
+              </Link>
+            )}
+            {isCancelable && (
+              <button
+                onClick={() => setShowCancel(true)}
+                type="button"
+                style={{
+                  padding: "0.55rem 1.1rem",
+                  borderRadius: 9,
+                  border: "1.5px solid #fca5a5",
+                  backgroundColor: "#fff",
+                  color: "#dc2626",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                إلغاء الاشتراك
+              </button>
+            )}
           </div>
         )}
       </div>

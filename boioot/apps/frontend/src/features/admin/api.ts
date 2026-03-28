@@ -438,6 +438,8 @@ export const adminApi = {
     allowUpgrade?: boolean;
     allowDowngrade?: boolean;
     autoDowngradeOnExpiry?: boolean;
+    allowRepurchaseOnConsumption?: boolean;
+    allowEarlyRenewalOnConsumption?: boolean;
   }): Promise<AdminPlanDetail> {
     return api.post("/admin/plans", payload);
   },
@@ -471,6 +473,8 @@ export const adminApi = {
     allowUpgrade?: boolean;
     allowDowngrade?: boolean;
     autoDowngradeOnExpiry?: boolean;
+    allowRepurchaseOnConsumption?: boolean;
+    allowEarlyRenewalOnConsumption?: boolean;
   }): Promise<AdminPlanDetail> {
     return api.put(`/admin/plans/${id}`, payload);
   },

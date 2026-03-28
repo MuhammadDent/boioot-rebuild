@@ -89,4 +89,6 @@ public class UpdatePlanRequest
     public bool    AllowUpgrade            { get; set; } = true;
     public bool    AllowDowngrade          { get; set; } = true;
     public bool    AutoDowngradeOnExpiry   { get; set; } = true;
+    public bool    AllowRepurchaseOnConsumption   { get; set; } = false;
+    public bool    AllowEarlyRenewalOnConsumption { get; set; } = false;
 }

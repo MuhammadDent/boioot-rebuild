@@ -851,6 +851,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [allowUpgrade, setAllowUpgrade]                   = useState(plan?.allowUpgrade ?? true);
   const [allowDowngrade, setAllowDowngrade]               = useState(plan?.allowDowngrade ?? true);
   const [autoDowngradeOnExpiry, setAutoDowngradeOnExpiry] = useState(plan?.autoDowngradeOnExpiry ?? true);
+  const [allowRepurchaseOnConsumption, setAllowRepurchaseOnConsumption]     = useState(plan?.allowRepurchaseOnConsumption ?? false);
+  const [allowEarlyRenewalOnConsumption, setAllowEarlyRenewalOnConsumption] = useState(plan?.allowEarlyRenewalOnConsumption ?? false);
 
   const [pricing, setPricing]               = useState<AdminPlanPricingEntry[]>([]);
   const [pricingLoading, setPricingLoading] = useState(false);
@@ -907,6 +909,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           allowUpgrade,
           allowDowngrade,
           autoDowngradeOnExpiry,
+          allowRepurchaseOnConsumption,
+          allowEarlyRenewalOnConsumption,
         });
       } else {
         result = await adminApi.updatePlan(plan!.id, {
@@ -942,6 +946,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           allowUpgrade,
           allowDowngrade,
           autoDowngradeOnExpiry,
+          allowRepurchaseOnConsumption,
+          allowEarlyRenewalOnConsumption,
         });
       }
       setLimits(result.limits);
@@ -1373,6 +1379,14 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <label style={{ ...labelStyle, marginBottom: 0 }}>تخفيض تلقائي عند الانتهاء</label>
                   <ToggleSwitch checked={autoDowngradeOnExpiry} onChange={setAutoDowngradeOnExpiry} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>إعادة الشراء عند استنزاف الحصة</label>
+                  <ToggleSwitch checked={allowRepurchaseOnConsumption} onChange={setAllowRepurchaseOnConsumption} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تجديد مبكر عند استنزاف الحصة</label>
+                  <ToggleSwitch checked={allowEarlyRenewalOnConsumption} onChange={setAllowEarlyRenewalOnConsumption} disabled={saving} />
                 </div>
               </div>
               <p style={{ margin: "0.75rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
