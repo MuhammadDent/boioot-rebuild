@@ -271,10 +271,13 @@ export default function AdminOverviewPage() {
   const [brokers, setBrokers]     = useState(0);
   const [companies, setCompanies] = useState(0);
   const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState(false);
+  const [retryKey, setRetryKey]   = useState(0);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("30d");
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const [aRes, uRes, bRes, cRes] = await Promise.allSettled([
         dashboardSummaryApi.getAnalytics(),
@@ -286,10 +289,11 @@ export default function AdminOverviewPage() {
       if (uRes.status === "fulfilled") setUsers((uRes.value as { totalCount?: number })?.totalCount ?? 0);
       if (bRes.status === "fulfilled") setBrokers((bRes.value as { totalCount?: number })?.totalCount ?? 0);
       if (cRes.status === "fulfilled") setCompanies((cRes.value as { totalCount?: number })?.totalCount ?? 0);
-    } catch {/* silent */} finally { setLoading(false); }
+      if (aRes.status === "rejected" && uRes.status === "rejected") setError(true);
+    } catch { setError(true); } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (user) load(); }, [user, load]);
+  useEffect(() => { if (user) load(); }, [user, load, retryKey]);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
   const a = analytics;
@@ -334,7 +338,11 @@ export default function AdminOverviewPage() {
     ];
   }, [a, users]);
 
-  if (isLoading || !user) return null;
+  if (isLoading || !user) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 36, height: 36, borderRadius: "50%", border: "4px solid #e2e8f0", borderTopColor: "var(--color-primary)", animation: "spin 0.8s linear infinite" }} />
+    </div>
+  );
 
   const roleLabel = STAFF_ROLE_LABELS[user.role as keyof typeof STAFF_ROLE_LABELS] ?? user.role;
   const hour = new Date().getHours();
@@ -349,7 +357,7 @@ export default function AdminOverviewPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.2rem" }}>
-            <h1 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700, color: "#1e293b" }}>{greeting}، {user.fullName.split(" ")[0]}</h1>
+            <h1 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700, color: "#1e293b" }}>{greeting}، {(user.fullName ?? "").split(" ")[0]}</h1>
             <span style={{ backgroundColor: "#fef2f2", color: "#dc2626", fontSize: "0.67rem", fontWeight: 700, padding: "0.15rem 0.6rem", borderRadius: 20 }}>{roleLabel}</span>
           </div>
           <p style={{ margin: 0, color: "#64748b", fontSize: "0.8rem" }}>مركز قرارات الأعمال — بيانات حقيقية محسوبة تلقائيًا</p>
@@ -373,6 +381,30 @@ export default function AdminOverviewPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Error banner ─────────────────────────────────────────────────── */}
+      {!loading && error && (
+        <div style={{
+          background: "#fef2f2", border: "1.5px solid #fecaca",
+          borderRadius: 12, padding: "1rem 1.25rem",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: "0.75rem", marginBottom: "1.1rem",
+        }}>
+          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#991b1b" }}>
+            تعذّر تحميل بيانات لوحة التحكم — قد تكون البيانات غير مكتملة
+          </p>
+          <button
+            onClick={() => setRetryKey(k => k + 1)}
+            style={{
+              padding: "0.45rem 1.1rem", borderRadius: 8, border: "none",
+              backgroundColor: "#dc2626", color: "#fff",
+              fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", flexShrink: 0,
+            }}
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
 
       {/* ── Priority action panel ─────────────────────────────────────────── */}
       {!loading && actions.length > 0 && (

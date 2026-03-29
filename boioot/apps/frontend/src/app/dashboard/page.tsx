@@ -51,13 +51,19 @@ export default function DashboardPage() {
   type TrialStats = { used: number; limit: number; isFreeTrial: boolean };
   const [trialStats, setTrialStats] = useState<TrialStats | null>(null);
 
+  const [summaryError, setSummaryError]     = useState(false);
+  const [analyticsError, setAnalyticsError] = useState(false);
+  const [summaryRetryKey, setSummaryRetryKey]     = useState(0);
+  const [analyticsRetryKey, setAnalyticsRetryKey] = useState(0);
+
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
+    setSummaryError(false);
     try {
       const data = await dashboardSummaryApi.getSummary();
       setSummary(data);
     } catch {
-      /* silent */
+      setSummaryError(true);
     } finally {
       setSummaryLoading(false);
     }
@@ -65,9 +71,9 @@ export default function DashboardPage() {
 
   const loadAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
+    setAnalyticsError(false);
     try {
       const data = await dashboardSummaryApi.getAnalytics();
-      console.log("[dashboard] analytics response:", data);
       setAnalytics({
         totalListings:    data?.totalListings    ?? 0,
         activeListings:   data?.activeListings   ?? 0,
@@ -89,7 +95,7 @@ export default function DashboardPage() {
       if (code === "FEATURE_DISABLED") {
         setAnalyticsGated(true);
       } else {
-        console.error("[dashboard] analytics error:", e);
+        setAnalyticsError(true);
       }
     } finally {
       setAnalyticsLoading(false);
@@ -100,12 +106,19 @@ export default function DashboardPage() {
     if (!user) return;
     if (canSeeSummary(user.role)) {
       loadSummary();
-      loadAnalytics();
     } else {
       setSummaryLoading(false);
+    }
+  }, [user, loadSummary, summaryRetryKey]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (canSeeSummary(user.role)) {
+      loadAnalytics();
+    } else {
       setAnalyticsLoading(false);
     }
-  }, [user, loadSummary, loadAnalytics]);
+  }, [user, loadAnalytics, analyticsRetryKey]);
 
   useEffect(() => {
     if (!user) return;
@@ -128,7 +141,7 @@ export default function DashboardPage() {
     if (!canSeeSummary(user.role)) {
       api.get<{ used: number; limit: number; isFreeTrial: boolean }>("/properties/my-listings/stats")
         .then(s => setTrialStats({ used: s.used, limit: s.limit, isFreeTrial: !!s.isFreeTrial }))
-        .catch(() => setTrialStats({ used: 0, limit: 0, isFreeTrial: false }));
+        .catch(() => setTrialStats(null));
     }
   }, [user]);
 
@@ -369,6 +382,26 @@ export default function DashboardPage() {
                   ترقية الخطة ←
                 </Link>
               </div>
+            ) : analyticsError ? (
+              <div style={{
+                background: "#fef2f2", border: "1.5px solid #fecaca",
+                borderRadius: 12, padding: "1.25rem 1.25rem",
+                textAlign: "center",
+              }}>
+                <p style={{ margin: "0 0 0.6rem", fontWeight: 600, color: "#991b1b", fontSize: "0.88rem" }}>
+                  تعذّر تحميل بيانات الأداء
+                </p>
+                <button
+                  onClick={() => { setSummaryRetryKey(k => k + 1); setAnalyticsRetryKey(k => k + 1); }}
+                  style={{
+                    padding: "0.45rem 1.1rem", borderRadius: 8, border: "none",
+                    backgroundColor: "#dc2626", color: "#fff",
+                    fontSize: "0.82rem", fontWeight: 700, cursor: "pointer",
+                  }}
+                >
+                  إعادة المحاولة
+                </button>
+              </div>
             ) : analytics ? (
               <>
                 {/* ── Row 1: Listings KPIs ── */}
@@ -453,7 +486,33 @@ export default function DashboardPage() {
                     href="/dashboard/requests"
                     icon={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>}
                   />
-                  {summary && (
+                  {summaryLoading ? (
+                    <div style={{
+                      height: 78, borderRadius: 12,
+                      background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",
+                      backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite",
+                    }} />
+                  ) : summaryError ? (
+                    <div style={{
+                      background: "#fef2f2", border: "1.5px solid #fecaca",
+                      borderRadius: 12, padding: "0.85rem 1rem",
+                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.6rem",
+                    }}>
+                      <span style={{ fontSize: "0.78rem", color: "#991b1b", fontWeight: 500 }}>
+                        تعذّر تحميل بيانات المحادثات
+                      </span>
+                      <button
+                        onClick={() => setSummaryRetryKey(k => k + 1)}
+                        style={{
+                          padding: "0.3rem 0.75rem", borderRadius: 7, border: "none",
+                          backgroundColor: "#dc2626", color: "#fff",
+                          fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", flexShrink: 0,
+                        }}
+                      >
+                        إعادة المحاولة
+                      </button>
+                    </div>
+                  ) : summary ? (
                     <KpiCard
                       label="المحادثات"
                       value={summary.totalConversations}
@@ -463,7 +522,7 @@ export default function DashboardPage() {
                       badge={summary.unreadMessages > 0 ? `${summary.unreadMessages} غير مقروء` : undefined}
                       icon={<path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>}
                     />
-                  )}
+                  ) : null}
                 </div>
               </>
             ) : null}

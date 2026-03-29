@@ -1,0 +1,77 @@
+DAY 3 – Dashboard Stability and Data Reliability
+
+We are continuing the stabilization plan.
+
+IMPORTANT:
+- Do NOT add new features
+- Do NOT refactor architecture
+- Do NOT change backend contracts
+- Do NOT rewrite large components
+- Only stabilize behavior, data consistency, and UI reliability
+
+TARGET:
+Dashboard pages:
+- /dashboard
+- any dashboard summary components (KPIs, stats, charts)
+- loadSummary and related data loaders
+
+----------------------------------
+GOALS
+----------------------------------
+
+1) Stabilize loadSummary behavior
+- Ensure loading state is clear (spinner or skeleton)
+- Ensure error state is visible (not silent)
+- Add retry mechanism if fetch fails
+- Do NOT display misleading values (like 0 or empty) on error
+- Only display real data after successful fetch
+
+2) Enforce single source of truth
+- Ensure all dashboard stats (KPIs, counters, charts) come from the SAME dataset
+- Avoid mixing:
+  - partial API responses
+  - stale state
+  - derived inconsistent values
+
+3) Prevent misleading UI states
+- Do NOT show "0" if data failed to load
+- Do NOT show partial data while other parts failed
+- Do NOT render stats before data is ready
+
+4) Add null safety
+- Protect all fields:
+  - user data
+  - counts
+  - stats
+- No runtime crashes allowed
+
+5) Improve error visibility
+- If any dashboard data fails:
+  - show clear message
+  - provide retry option
+- Avoid silent failures
+
+6) Conditional rendering
+- Render dashboard sections ONLY when required data is available
+- Avoid rendering components with undefined props
+
+----------------------------------
+STRICT RULES
+----------------------------------
+
+- No backend changes
+- No DB changes
+- No architectural refactor
+- Only safe, incremental fixes
+
+----------------------------------
+OUTPUT REQUIRED
+----------------------------------
+
+1) Files modified
+2) Exact fixes applied
+3) Any inconsistencies found
+4) Confirmation:
+   - Dashboard is now stable
+   - Data is consistent
+   - No misleading UI states
