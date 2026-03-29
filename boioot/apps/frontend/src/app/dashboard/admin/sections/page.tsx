@@ -42,6 +42,10 @@ export default function AdminPageSectionsPage() {
     setStatus("idle");
   }, []);
 
+  function setGlobal(key: "showFooter" | "showHero", value: boolean) {
+    setConfig((prev) => ({ ...prev, [key]: value }));
+  }
+
   function setFooterCTA(key: keyof PageSectionsConfig["footerCTA"], value: string | boolean) {
     setConfig((prev) => ({
       ...prev,
@@ -63,6 +67,34 @@ export default function AdminPageSectionsPage() {
           تحكّم في المحتوى الديناميكي للموقع — بدون لمس الكود.
           يمكن إضافة مقاطع جديدة (بانرات، عروض، صفحات هبوط) هنا مستقبلاً.
         </p>
+      </div>
+
+      {/* ── Visibility Flags ────────────────────────────────────────────────── */}
+      <div style={cardStyle}>
+        <div style={{ padding: "1.1rem 1.5rem", borderBottom: "1px solid #f3f4f6", background: "#fafafa" }}>
+          <span style={badgeStyle}>Visibility</span>
+          <h2 style={{ margin: "0.4rem 0 0", fontSize: "1rem", fontWeight: 700, color: "#111827" }}>
+            إظهار / إخفاء الأقسام
+          </h2>
+          <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: "#6b7280" }}>
+            تحكّم في ظهور الأقسام الرئيسية للموقع — يُطبَّق فوراً على جميع الزوار.
+          </p>
+        </div>
+
+        <div style={{ padding: "1.25rem 1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <FlagRow
+            label="Footer (التذييل)"
+            hint="الجزء السفلي من كل صفحة — الروابط وبيانات الشركة"
+            enabled={config.showFooter}
+            onToggle={() => setGlobal("showFooter", !config.showFooter)}
+          />
+          <FlagRow
+            label="Hero Slider (شريط الصور الرئيسي)"
+            hint="الشريط الكبير بالصور في الجزء العلوي من الصفحة الرئيسية"
+            enabled={config.showHero}
+            onToggle={() => setGlobal("showHero", !config.showHero)}
+          />
+        </div>
       </div>
 
       {/* ── Section card: Footer CTA ─────────────────────────────────────────── */}
@@ -174,19 +206,6 @@ export default function AdminPageSectionsPage() {
         </div>
       </div>
 
-      {/* ── Future sections placeholder ──────────────────────────────────────── */}
-      <div style={comingSoonCardStyle}>
-        <span style={{ fontSize: "1.1rem" }}>＋</span>
-        <div>
-          <div style={{ fontWeight: 600, color: "#374151", fontSize: "0.9rem" }}>
-            مقاطع إضافية قادمة
-          </div>
-          <div style={{ color: "#9ca3af", fontSize: "0.8rem", marginTop: "0.2rem" }}>
-            بانر الصفحة الرئيسية · شريط العروض الترويجية · Hero صفحة الهبوط
-          </div>
-        </div>
-      </div>
-
       {/* ── Action bar ──────────────────────────────────────────────────────── */}
       <div style={actionBarStyle}>
         <button onClick={handleReset} style={resetBtnStyle}>
@@ -217,7 +236,50 @@ export default function AdminPageSectionsPage() {
   );
 }
 
-// ── Sub-component ─────────────────────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function FlagRow({
+  label,
+  hint,
+  enabled,
+  onToggle,
+}: {
+  label: string;
+  hint?: string;
+  enabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "0.75rem 0",
+      borderBottom: "1px solid #f3f4f6",
+    }}>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: "0.88rem", color: "#111827" }}>{label}</div>
+        {hint && <div style={{ fontSize: "0.76rem", color: "#9ca3af", marginTop: "0.15rem" }}>{hint}</div>}
+      </div>
+      <label style={toggleWrapStyle} aria-label={`تبديل ${label}`}>
+        <span style={{ fontSize: "0.79rem", color: enabled ? "#166534" : "#6b7280", fontWeight: 600 }}>
+          {enabled ? "ظاهر" : "مخفي"}
+        </span>
+        <div
+          role="switch"
+          aria-checked={enabled}
+          onClick={onToggle}
+          style={{ ...toggleTrackStyle, background: enabled ? "#16a34a" : "#d1d5db" }}
+        >
+          <div style={{
+            ...toggleThumbStyle,
+            transform: enabled ? "translateX(-20px)" : "translateX(0)",
+          }} />
+        </div>
+      </label>
+    </div>
+  );
+}
 
 function FieldRow({
   label,
@@ -316,17 +378,6 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
-const comingSoonCardStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "1rem",
-  padding: "1rem 1.5rem",
-  background: "#f9fafb",
-  border: "1.5px dashed #e5e7eb",
-  borderRadius: 12,
-  marginBottom: "1.5rem",
-  color: "#6b7280",
-};
 
 const actionBarStyle: React.CSSProperties = {
   display: "flex",

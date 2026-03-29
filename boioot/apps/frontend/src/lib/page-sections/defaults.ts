@@ -8,6 +8,8 @@
 import type { PageSectionsConfig } from "./types";
 
 export const PAGE_SECTIONS_DEFAULTS: PageSectionsConfig = {
+  showFooter: true,
+  showHero: true,
   footerCTA: {
     isEnabled: true,
     overline: "منصة عقارية سورية",

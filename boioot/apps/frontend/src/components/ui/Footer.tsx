@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import FooterCTASection from "@/components/sections/FooterCTASection";
 import { useContent } from "@/context/ContentContext";
+import { loadPageSections, PAGE_SECTIONS_DEFAULTS } from "@/lib/page-sections";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (inline SVG — no external dependency)
@@ -167,6 +169,15 @@ const SOCIAL_LINKS = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Footer() {
+  // showFooter flag — initialize true (matches SSR default) then sync from store.
+  // Using true as initial state avoids hydration mismatch (SSR always sees defaults).
+  const [showFooter, setShowFooter] = useState(PAGE_SECTIONS_DEFAULTS.showFooter);
+
+  useEffect(() => {
+    const cfg = loadPageSections();
+    setShowFooter(cfg.showFooter);
+  }, []);
+
   const footerAboutText = useContent(
     "footer.aboutText",
     "منصة عقارية متكاملة لشراء وبيع وتأجير العقارات في سوريا.\n              نربط الملاك بالمشترين والمستأجرين بكل شفافية وسهولة.",
@@ -175,6 +186,8 @@ export default function Footer() {
     "footer.copyright",
     "© 2026 بيوت سوريا. جميع الحقوق محفوظة.",
   );
+
+  if (!showFooter) return null;
 
   return (
     <footer className="footer2" role="contentinfo" aria-label="تذييل الصفحة">

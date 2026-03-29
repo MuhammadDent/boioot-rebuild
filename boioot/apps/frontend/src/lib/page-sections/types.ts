@@ -39,6 +39,10 @@ export interface FooterCTAConfig {
 
 /** The full Page Sections config object stored & managed by the system. */
 export interface PageSectionsConfig {
+  /** Whether the entire site Footer renders. Defaults to true. */
+  showFooter: boolean;
+  /** Whether the hero image slider renders on the homepage. Defaults to true. */
+  showHero: boolean;
   footerCTA: FooterCTAConfig;
   // heroBanner?: HeroBannerConfig;
   // promoStrip?: PromoStripConfig;

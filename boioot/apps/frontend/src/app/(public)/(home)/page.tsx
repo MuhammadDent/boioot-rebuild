@@ -13,6 +13,7 @@ import type { PropertyResponse } from "@/types";
 import { PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
 import { useCities } from "@/hooks/useCities";
 import { useContent } from "@/context/ContentContext";
+import { loadPageSections, PAGE_SECTIONS_DEFAULTS } from "@/lib/page-sections";
 
 // ─── Slider data ──────────────────────────────────────────────────────────────
 // NOTE: SLIDES[0] (the main hero) is CMS-driven — built inside the component.
@@ -157,6 +158,14 @@ export default function HomePage() {
 
   // Favorites
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  // showHero flag — initialize from defaults (true), then sync from store on mount.
+  const [showHero, setShowHero] = useState(PAGE_SECTIONS_DEFAULTS.showHero);
+
+  useEffect(() => {
+    const cfg = loadPageSections();
+    setShowHero(cfg.showHero);
+  }, []);
 
   // ── Auto-advance slider ─────────────────────────────────────────────────────
 
@@ -399,8 +408,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── HERO SLIDER ──────────────────────────────────────────────────────── */}
-      <div style={{ position: "relative", width: "100%", height: 460, overflow: "hidden" }}>
+      {/* ── HERO SLIDER — controlled by showHero flag in page-sections ──────── */}
+      {showHero && <div style={{ position: "relative", width: "100%", height: 460, overflow: "hidden" }}>
         <div style={{
           display: "flex",
           width: `${slides.length * 100}%`,
@@ -459,7 +468,7 @@ export default function HomePage() {
             />
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* ── SEARCH BAR ───────────────────────────────────────────────────────── */}
       <div style={{ background: "#fff", borderBottom: "1px solid var(--color-border)", padding: "0.75rem 1.25rem" }}>
