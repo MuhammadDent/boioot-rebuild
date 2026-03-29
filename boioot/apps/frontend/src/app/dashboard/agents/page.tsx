@@ -115,7 +115,7 @@ export default function AgentsPage() {
         )
       );
     } catch {
-      alert("تعذّر تحديث الحالة");
+      setFetchError("تعذّر تحديث حالة الوكيل. يرجى المحاولة مجدداً.");
     } finally {
       setTogglingId(null);
     }

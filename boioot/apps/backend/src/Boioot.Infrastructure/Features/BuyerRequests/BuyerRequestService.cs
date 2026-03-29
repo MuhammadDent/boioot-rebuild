@@ -218,6 +218,9 @@ public class BuyerRequestService : IBuyerRequestService
     public async Task<BuyerRequestCommentResponse> AdminRespondAsync(
         Guid adminUserId, Guid requestId, string content, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(content))
+            throw new BoiootException("نص الرد مطلوب ولا يمكن أن يكون فارغاً", 400);
+
         var exists = await _context.BuyerRequests.AnyAsync(r => r.Id == requestId, ct);
         if (!exists) throw new BoiootException("الطلب غير موجود", 404);
 

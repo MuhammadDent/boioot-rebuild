@@ -142,8 +142,8 @@ function validate(fields: FormFields, mode: "create" | "edit"): FormErrors {
   if (mode === "edit" && !fields.status) errors.status = "حالة العقار مطلوبة";
 
   const price = Number(fields.price);
-  if (fields.price === "" || isNaN(price) || price < 0)
-    errors.price = "السعر يجب أن يكون صفراً أو أكثر";
+  if (fields.price === "" || isNaN(price) || price <= 0)
+    errors.price = "السعر يجب أن يكون أكبر من صفر";
 
   const area = Number(fields.area);
   if (!fields.area || isNaN(area) || area < 1)

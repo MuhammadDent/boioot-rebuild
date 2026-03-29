@@ -127,6 +127,15 @@ async function extractErrorMessage(res: Response, fallback: string): Promise<str
   // Try JSON first
   try {
     const payload = JSON.parse(rawBody) as Record<string, unknown>;
+
+    // ASP.NET DataAnnotations validation errors: { errors: { Field: ["msg1"] }, title: "..." }
+    if (payload?.errors && typeof payload.errors === "object") {
+      const allMsgs = Object.values(payload.errors as Record<string, string[]>)
+        .flat()
+        .filter(Boolean);
+      if (allMsgs.length > 0) return allMsgs.join(" | ");
+    }
+
     const msg =
       (payload?.error as string | undefined) ??
       (payload?.message as string | undefined) ??

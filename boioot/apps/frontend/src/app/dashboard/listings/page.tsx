@@ -118,7 +118,7 @@ export default function ListingsPage() {
       setListings((prev) => prev.filter((p) => p.id !== id));
       setStats((prev) => prev ? { ...prev, used: Math.max(0, prev.used - 1) } : prev);
     } catch (e) {
-      alert(normalizeError(e));
+      setListingsError(normalizeError(e));
     } finally {
       setDeletingId(null);
     }

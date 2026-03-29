@@ -885,7 +885,7 @@ export default function PlansPage() {
         .then(sub => setCurrentSub(sub))
         .catch(() => {});
     } catch (err) {
-      alert(normalizeError(err));
+      setError(normalizeError(err));
     } finally {
       setFreeActivatingId(null);
     }

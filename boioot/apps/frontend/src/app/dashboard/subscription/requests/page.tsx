@@ -573,7 +573,7 @@ export default function MyRequestsPage() {
       setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
       setCancelId(null);
     } catch (err) {
-      alert(normalizeError(err));
+      setError(normalizeError(err));
     } finally {
       setCancelling(false);
     }

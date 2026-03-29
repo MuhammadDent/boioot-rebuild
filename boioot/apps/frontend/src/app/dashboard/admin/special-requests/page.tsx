@@ -94,7 +94,7 @@ export default function AdminSpecialRequestsPage() {
       setTotal(prev => prev - 1);
       if (selected?.id === id) setSelected(null);
     } catch (err) {
-      alert(normalizeError(err));
+      setError(normalizeError(err));
     }
   }
 
@@ -104,7 +104,7 @@ export default function AdminSpecialRequestsPage() {
       setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
       if (selected?.id === id) setSelected(updated);
     } catch (err) {
-      alert(normalizeError(err));
+      setError(normalizeError(err));
     }
   }
 
@@ -113,7 +113,7 @@ export default function AdminSpecialRequestsPage() {
       const updated = await adminUpdateSpecialRequest(id, { notesInternal: notes });
       if (selected?.id === id) setSelected(updated);
     } catch (err) {
-      alert(normalizeError(err));
+      setError(normalizeError(err));
     }
   }
 

@@ -20,7 +20,7 @@ public class CreatePropertyRequest
     [MaxLength(100)]
     public string ListingType { get; set; } = string.Empty;
 
-    [Range(0, 9_999_999_999, ErrorMessage = "السعر يجب أن يكون رقماً موجباً")]
+    [Range(0.001, 9_999_999_999.0, ErrorMessage = "السعر يجب أن يكون أكبر من صفر")]
     public decimal Price { get; set; }
 
     [MaxLength(10)]
