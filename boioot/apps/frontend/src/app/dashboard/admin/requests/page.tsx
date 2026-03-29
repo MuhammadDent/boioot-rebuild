@@ -9,7 +9,6 @@ import { DashboardBackLink }    from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner }         from "@/components/dashboard/InlineBanner";
 import { LoadingRow }           from "@/components/dashboard/LoadingRow";
 import { adminApi }             from "@/features/admin/api";
-import { MOCK_ADMIN_REQUESTS }  from "@/features/dashboard/requests/mockData";
 import { ADMIN_PAGE_SIZE }      from "@/features/admin/constants";
 import {
   REQUEST_STATUS_LABELS,
@@ -87,10 +86,9 @@ export default function AdminRequestsPage() {
     setFetchError("");
     try {
       const result = await adminApi.getRequests(1, FETCH_SIZE, {});
-      setAllRequests(result.items.length > 0 ? result.items : MOCK_ADMIN_REQUESTS);
+      setAllRequests(result.items);
     } catch (e) {
       setFetchError(normalizeError(e));
-      setAllRequests(MOCK_ADMIN_REQUESTS);
     } finally {
       setFetching(false);
     }
