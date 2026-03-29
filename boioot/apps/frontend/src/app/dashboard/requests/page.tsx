@@ -11,7 +11,8 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import {
   dashboardRequestsApi,
 } from "@/features/dashboard/requests/api";
-import { MOCK_REQUESTS } from "@/features/dashboard/requests/mockData";
+// TODO(stabilization): MOCK_REQUESTS import removed — real empty state is shown instead
+// import { MOCK_REQUESTS } from "@/features/dashboard/requests/mockData";
 import {
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_BADGE,
@@ -47,10 +48,11 @@ export default function DashboardRequestsPage() {
     setFetchError("");
     try {
       const result = await dashboardRequestsApi.getList(1, FETCH_SIZE);
-      setAllRequests(result.items.length > 0 ? result.items : MOCK_REQUESTS);
+      // TODO(stabilization): MOCK_REQUESTS removed — always show real data (empty or not)
+      setAllRequests(result.items ?? []);
     } catch (e) {
       setFetchError(normalizeError(e));
-      setAllRequests(MOCK_REQUESTS);
+      setAllRequests([]);
     } finally {
       setFetching(false);
     }

@@ -1,0 +1,75 @@
+We are starting a 14-day stabilization plan for the Boioot SaaS real estate platform.
+
+Current stack:
+- Frontend: Next.js (App Router)
+- Backend: .NET Core API
+- Database: SQLite with EF Core
+- Custom schema evolution service already exists
+- RBAC already exists
+- Admin dashboard exists
+- Requests module exists but is only partially reliable
+
+IMPORTANT RULES:
+- Do NOT add new features
+- Do NOT redesign the system
+- Do NOT migrate the database
+- Do NOT perform risky refactors
+- Do NOT rewrite major modules
+- Prefer analysis, containment, and low-risk fixes only
+
+DAY 1 GOAL:
+Perform a safe stabilization audit and only apply very low-risk fixes that prevent crashes or empty broken pages.
+
+Please do the following:
+
+1) Audit the core user-critical pages and flows:
+- Home page
+- Login / registration
+- Main dashboard(s)
+- Requests listing page
+- Request details page
+- Key admin pages
+- Any pricing/subscription page that is part of the active user flow
+
+2) For each important page, identify:
+- whether it loads successfully
+- whether it has runtime error risk
+- whether navigation to/from it is reliable
+- whether buttons/actions are wired or dead
+- whether it uses API, fallback, mock data, or mixed sources
+- whether it can render an empty/broken state incorrectly
+
+3) Produce a concise report grouped by:
+- Stable
+- Needs low-risk fix now
+- Needs later stabilization
+- High-risk / do not touch yet
+
+4) Detect specifically:
+- null/undefined rendering risks
+- page crash risks
+- broken routes/navigation
+- buttons with missing handlers
+- mixed mock/API/fallback data usage
+- requests filters and analytics using different datasets
+- false empty states
+
+5) Apply ONLY very low-risk fixes today, limited to:
+- null guards
+- safe conditional rendering
+- preventing blank pages
+- preventing crashes when API data is missing
+- temporarily disabling obviously broken actions if needed
+- adding TODO comments for risky areas instead of changing them
+
+6) Do NOT change business logic deeply.
+Do NOT refactor architecture yet.
+Do NOT change database structure.
+
+7) At the end, provide:
+- the exact files inspected
+- the exact low-risk fixes applied
+- a prioritized list of the next stabilization targets for Day 2
+
+Work carefully and conservatively.
+If something is risky, report it but do not change it yet.

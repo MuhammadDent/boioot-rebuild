@@ -141,7 +141,7 @@ export default function DashboardPage() {
   const isCompanyOrAdmin = canAccessFeature(user, "projects");
   const canManageAgents  = canAccessFeature(user, "agents");
 
-  const initial = user.fullName.charAt(0).toUpperCase();
+  const initial = (user.fullName || "؟").charAt(0).toUpperCase();
 
   return (
     <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 0 3rem" }}>

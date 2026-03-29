@@ -201,6 +201,7 @@ export default function PricingPage() {
   const [intent,          setIntent]          = useState<UpgradeIntentResponse | null>(null);
   const [modalPricingId,  setModalPricingId]  = useState<string>("");
   const [intentLoading,   setIntentLoading]   = useState(false);
+  const [intentError,     setIntentError]     = useState("");
 
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
@@ -223,12 +224,13 @@ export default function PricingPage() {
 
   const handleUpgradeIntent = useCallback(async (pricingId: string) => {
     setIntentLoading(true);
+    setIntentError("");
     try {
       const result = await subscriptionApi.getUpgradeIntent(pricingId);
       setModalPricingId(pricingId);
       setIntent(result);
-    } catch {
-      // Silently ignore
+    } catch (e) {
+      setIntentError(normalizeError(e));
     } finally {
       setIntentLoading(false);
     }
@@ -330,6 +332,12 @@ export default function PricingPage() {
         style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "2.5rem 1.5rem 4rem" }}
       >
         {plansLoading && <Spinner />}
+
+        {intentError && (
+          <div style={{ textAlign: "center", padding: "0.75rem 1rem", marginBottom: "1rem", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", fontWeight: 600, fontSize: "0.9rem" }}>
+            {intentError}
+          </div>
+        )}
 
         {plansError && (
           <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-error)", fontWeight: 600 }}>

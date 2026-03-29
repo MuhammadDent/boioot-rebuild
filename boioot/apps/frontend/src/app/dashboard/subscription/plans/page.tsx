@@ -79,8 +79,9 @@ function PlanCard({
   user: { role?: string | null; accountType?: string | null } | null;
 }) {
   const pricing = plan.pricing.find(p => p.billingCycle === cycle)
-    ?? plan.pricing[0];
+    ?? (plan.pricing.length > 0 ? plan.pricing[0] : undefined);
 
+  // TODO(stabilization): plan.pricing may be empty for misconfigured plans — guard below
   const isFree = pricing ? pricing.priceAmount === 0 : plan.pricing.every(p => p.priceAmount === 0);
   const isCurrent = plan.planId === currentPlanId;
   const isRecommended = plan.isRecommended;
