@@ -14,4 +14,8 @@ public sealed class DbProviderInfo
     /// <summary>True when the app is backed by SQLite.</summary>
     public bool IsSqlite =>
         Provider.Equals("SQLite", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True when the app is backed by PostgreSQL.</summary>
+    public bool IsPostgres =>
+        Provider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase);
 }

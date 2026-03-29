@@ -17,7 +17,7 @@ I prefer simple language. I want iterative development. Ask before making major 
 **Backend:**
 - **Technology:** ASP.NET Core Web API (.NET 8)
 - **Architecture:** Modular Monolith design pattern.
-- **Database:** SQLite + EF Core.
+- **Database:** PostgreSQL (Replit built-in, `heliumdb`) + EF Core. SQLite supported via `Database:Provider=SQLite` env override for local dev.
 - **Core Features:**
     - **Authentication & Authorization:** JWT-based with HttpOnly refresh tokens, BCrypt for password hashing, and role-based authorization (Admin, CompanyOwner, Broker, Agent, Owner, User).
     - **Entity Management:** Logical deletion (`ISoftDeletable`) for core entities.
@@ -57,10 +57,20 @@ I prefer simple language. I want iterative development. Ask before making major 
 - All API calls go through Next.js rewrites: `/api/*` → `http://localhost:5233/api/*` (.NET backend).
 - `NEXT_PUBLIC_API_URL=/api`. All `api.get/post` calls use paths WITHOUT `/api` prefix.
 
+**PostgreSQL Migration Strategy (Day 12):**
+- `appsettings.json` sets `Database:Provider=PostgreSQL` as default.
+- On fresh DB: `EnsureCreated()` creates all tables from current EF Core model, then `InjectAllMigrationIdsAsync()` marks all 5 migrations as applied (bypasses SQLite-era migration SQL).
+- On subsequent restarts: `__EFMigrationsHistory` table exists → `MigrateAsync()` runs (finds 0 pending → no-op).
+- Future migrations: `dotnet ef migrations add <Name>` → `MigrateAsync()` applies automatically.
+- `HasFilter("\"Code\" IS NOT NULL")` — uses quoted column name for PostgreSQL compat (also valid in SQLite).
+- ModelSnapshot updated to match PG-safe filter expression.
+- Missing 5th migration Designer file: harmless; migration ID manually injected into `__EFMigrationsHistory`.
+
 ## External Dependencies
 
 - **Database:**
-    - `SQLite`: For local development.
+    - `Npgsql.EntityFrameworkCore.PostgreSQL` v8.0.10: PostgreSQL provider (production default).
+    - `Microsoft.EntityFrameworkCore.Sqlite`: For local development (switch via `Database:Provider=SQLite`).
     - `Microsoft.EntityFrameworkCore.SqlServer`: ORM for database interaction.
 - **Authentication/Security:**
     - `BCrypt.Net-Next`: For password hashing.

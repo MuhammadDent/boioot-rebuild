@@ -64,26 +64,35 @@ public static class ServiceCollectionExtensions
         // Switch between providers via config only:
         //
         //   appsettings.json:
-        //     "Database": { "Provider": "SQLite" }        ← default
-        //     "Database": { "Provider": "SqlServer" }     ← SQL Server
+        //     "Database": { "Provider": "SQLite" }        ← default (dev)
+        //     "Database": { "Provider": "PostgreSQL" }    ← production
+        //     "Database": { "Provider": "SqlServer" }     ← SQL Server (legacy)
         //
-        //   Connection strings (appsettings.json → ConnectionStrings):
-        //     "DefaultConnection"    — used when Provider = SQLite
-        //     "SqlServerConnection"  — used when Provider = SqlServer
-        //                             (falls back to DefaultConnection if not set)
+        //   Connection strings:
+        //     "DefaultConnection"    — SQLite file path
+        //     "SqlServerConnection"  — SQL Server (falls back to DefaultConnection)
+        //     "Postgres"             — Explicit Npgsql connection string
+        //                             Falls back to DATABASE_URL environment variable
         var dbProvider = configuration["Database:Provider"] ?? "SQLite";
-
-        var connStr = dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase)
-            ? (configuration.GetConnectionString("SqlServerConnection")
-               ?? configuration.GetConnectionString("DefaultConnection"))
-            : configuration.GetConnectionString("DefaultConnection");
 
         services.AddDbContext<BoiootDbContext>(options =>
         {
-            if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+            if (dbProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+            {
+                var connStr = ResolvePostgresConnectionString(configuration);
+                options.UseNpgsql(connStr);
+            }
+            else if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+            {
+                var connStr = configuration.GetConnectionString("SqlServerConnection")
+                              ?? configuration.GetConnectionString("DefaultConnection");
                 options.UseSqlServer(connStr);
+            }
             else
+            {
+                var connStr = configuration.GetConnectionString("DefaultConnection");
                 options.UseSqlite(connStr);
+            }
         });
 
         // Expose the provider name so startup code can gate SQLite-specific SQL
@@ -143,5 +152,45 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RbacRepository>();
 
         return services;
+    }
+
+    // ── PostgreSQL connection string resolver ─────────────────────────────────
+    // Priority:
+    //   1. ConnectionStrings:Postgres in appsettings.json
+    //   2. DATABASE_URL environment variable (Replit / Heroku / Railway format)
+    //      Converts  postgresql://user:pass@host:port/db?sslmode=disable
+    //      to        Host=host;Port=port;Database=db;Username=user;Password=pass;SSL Mode=Disable
+    private static string ResolvePostgresConnectionString(IConfiguration configuration)
+    {
+        var explicit_ = configuration.GetConnectionString("Postgres");
+        if (!string.IsNullOrWhiteSpace(explicit_))
+            return explicit_;
+
+        var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+        if (!string.IsNullOrWhiteSpace(databaseUrl))
+        {
+            try
+            {
+                var uri    = new Uri(databaseUrl);
+                var host   = uri.Host;
+                var port   = uri.Port > 0 ? uri.Port : 5432;
+                var db     = uri.AbsolutePath.TrimStart('/');
+                if (db.Contains('?')) db = db[..db.IndexOf('?')];
+
+                var userInfo = uri.UserInfo.Split(':', 2);
+                var user     = Uri.UnescapeDataString(userInfo[0]);
+                var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
+
+                return $"Host={host};Port={port};Database={db};Username={user};Password={password};SSL Mode=Disable";
+            }
+            catch
+            {
+                // Fall through to error below
+            }
+        }
+
+        throw new InvalidOperationException(
+            "No PostgreSQL connection string found. " +
+            "Set ConnectionStrings:Postgres in appsettings.json or the DATABASE_URL environment variable.");
     }
 }

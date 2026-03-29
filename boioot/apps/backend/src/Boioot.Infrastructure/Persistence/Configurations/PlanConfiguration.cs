@@ -12,7 +12,7 @@ public class PlanConfiguration : IEntityTypeConfiguration<Plan>
 
         builder.Property(p => p.Name).IsRequired().HasMaxLength(100);
         builder.Property(p => p.Code).HasMaxLength(100);
-        builder.HasIndex(p => p.Code).IsUnique().HasFilter("Code IS NOT NULL");
+        builder.HasIndex(p => p.Code).IsUnique().HasFilter("\"Code\" IS NOT NULL");
         builder.Property(p => p.DisplayNameAr).HasMaxLength(100);
         builder.Property(p => p.DisplayNameEn).HasMaxLength(100);
         builder.Property(p => p.AudienceType).HasMaxLength(30);
