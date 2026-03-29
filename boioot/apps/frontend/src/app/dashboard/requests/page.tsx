@@ -642,9 +642,9 @@ function RequestCard({ request: r }: { request: DashboardRequestItem }) {
 
           {/* Date */}
           <p style={{ margin: 0, fontSize: "0.75rem", color: "#94a3b8" }}>
-            {new Date(r.createdAt).toLocaleDateString("ar-SY", {
-              year: "numeric", month: "long", day: "numeric",
-            })}
+            {r.createdAt
+              ? new Date(r.createdAt).toLocaleDateString("ar-SY", { year: "numeric", month: "long", day: "numeric" })
+              : "—"}
           </p>
         </div>
 

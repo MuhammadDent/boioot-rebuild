@@ -271,10 +271,9 @@ function CommentNode({
                 {comment.userName}
               </span>
               <span style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-                {new Date(comment.createdAt).toLocaleDateString("en-GB", {
-                  year: "numeric", month: "numeric", day: "numeric",
-                  hour: "2-digit", minute: "2-digit",
-                })}
+                {comment.createdAt
+                  ? new Date(comment.createdAt).toLocaleDateString("en-GB", { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                  : "—"}
               </span>
               {isOwn && (
                 <button
@@ -410,6 +409,7 @@ export default function RequestDetailPage() {
   const [request,    setRequest]    = useState<BuyerRequest | null>(null);
   const [reqLoading, setReqLoading] = useState(true);
   const [reqError,   setReqError]   = useState("");
+  const [reqRetryKey, setReqRetryKey] = useState(0);
 
   // Flat list from API; tree is derived
   const [flatComments,  setFlatComments]  = useState<Comment[]>([]);
@@ -431,11 +431,13 @@ export default function RequestDetailPage() {
   // Load request
   useEffect(() => {
     if (!id) return;
+    setReqLoading(true);
+    setReqError("");
     api.get<BuyerRequest>(`/buyer-requests/${id}`)
       .then(setRequest)
       .catch(e => setReqError(normalizeError(e)))
       .finally(() => setReqLoading(false));
-  }, [id]);
+  }, [id, reqRetryKey]);
 
   // Load comments
   useEffect(() => {
@@ -502,9 +504,27 @@ export default function RequestDetailPage() {
 
   if (reqError || !request) {
     return (
-      <div dir="rtl" style={{ backgroundColor: "#f8fafc", padding: "2rem 1.25rem", textAlign: "center" }}>
-        <p style={{ color: "#dc2626", fontWeight: 600 }}>{reqError || "الطلب غير موجود"}</p>
-        <Link href="/requests" style={{ color: "var(--color-primary)", fontWeight: 700 }}>← العودة للطلبات</Link>
+      <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", padding: "3rem 1.25rem", textAlign: "center" }}>
+        <p style={{ color: "#dc2626", fontWeight: 600, marginBottom: "1rem" }}>
+          {reqError || "الطلب غير موجود"}
+        </p>
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+          {reqError && (
+            <button
+              onClick={() => setReqRetryKey(k => k + 1)}
+              style={{
+                padding: "0.45rem 1.1rem", borderRadius: 8, border: "1.5px solid #dc2626",
+                backgroundColor: "transparent", color: "#dc2626",
+                cursor: "pointer", fontSize: "0.85rem", fontWeight: 600, fontFamily: "inherit",
+              }}
+            >
+              إعادة المحاولة
+            </button>
+          )}
+          <Link href="/requests" style={{ color: "var(--color-primary)", fontWeight: 700, padding: "0.45rem 0" }}>
+            ← العودة للطلبات
+          </Link>
+        </div>
       </div>
     );
   }
@@ -534,7 +554,7 @@ export default function RequestDetailPage() {
           </svg>
         </button>
         <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1e293b", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {request.title}
+          {request.title ?? "تفاصيل الطلب"}
         </span>
         <Link href="/requests" style={{ fontSize: "0.78rem", color: "#64748b", textDecoration: "none", whiteSpace: "nowrap" }}>
           كل الطلبات
@@ -561,9 +581,9 @@ export default function RequestDetailPage() {
               {PROPERTY_TYPE_LABELS[request.propertyType] ?? request.propertyType}
             </span>
             <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
-              {new Date(request.createdAt).toLocaleDateString("en-GB", {
-                year: "numeric", month: "numeric", day: "numeric",
-              })}
+              {request.createdAt
+                ? new Date(request.createdAt).toLocaleDateString("en-GB", { year: "numeric", month: "numeric", day: "numeric" })
+                : "—"}
             </span>
           </div>
 

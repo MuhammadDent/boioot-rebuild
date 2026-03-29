@@ -29,6 +29,7 @@ export default function RequestDetailPage() {
   const [request, setRequest]       = useState<RequestResponse | null>(null);
   const [fetching, setFetching]     = useState(true);
   const [fetchError, setFetchError] = useState("");
+  const [fetchRetryKey, setFetchRetryKey] = useState(0);
 
   // Status update state
   const [selectedStatus, setSelectedStatus] = useState("");
@@ -59,7 +60,7 @@ export default function RequestDetailPage() {
       })
       .catch((e) => setFetchError(normalizeError(e)))
       .finally(() => setFetching(false));
-  }, [authLoading, user, id]);
+  }, [authLoading, user, id, fetchRetryKey]);
 
   async function handleStatusUpdate(e: FormEvent) {
     e.preventDefault();
@@ -110,7 +111,20 @@ export default function RequestDetailPage() {
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
           <DashboardBackLink href="/dashboard/requests" label="← الطلبات والاستفسارات" marginBottom="1rem" />
-          <InlineBanner message={fetchError} />
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <InlineBanner message={fetchError} />
+            <button
+              onClick={() => setFetchRetryKey(k => k + 1)}
+              style={{
+                padding: "0.45rem 1rem", borderRadius: 8, border: "1.5px solid #dc2626",
+                backgroundColor: "transparent", color: "#dc2626",
+                cursor: "pointer", fontSize: "0.82rem", fontWeight: 600,
+                fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0,
+              }}
+            >
+              إعادة المحاولة
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -136,10 +150,9 @@ export default function RequestDetailPage() {
               {REQUEST_STATUS_LABELS[request.status] ?? request.status}
             </span>
             <span style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-              {new Date(request.createdAt).toLocaleDateString("en-GB", {
-                year: "numeric", month: "numeric", day: "numeric",
-                hour: "2-digit", minute: "2-digit",
-              })}
+              {request.createdAt
+                ? new Date(request.createdAt).toLocaleDateString("en-GB", { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                : "—"}
             </span>
           </div>
         </div>
@@ -150,8 +163,8 @@ export default function RequestDetailPage() {
             معلومات المتواصل
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-            <DetailRow label="الاسم"             value={request.name} />
-            <DetailRow label="رقم الهاتف"        value={request.phone} ltr />
+            <DetailRow label="الاسم"             value={request.name  ?? "—"} />
+            <DetailRow label="رقم الهاتف"        value={request.phone ?? "—"} ltr />
             {request.email && (
               <DetailRow label="البريد الإلكتروني" value={request.email} ltr />
             )}
@@ -249,10 +262,9 @@ export default function RequestDetailPage() {
             margin: "1rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)",
           }}>
             آخر تحديث:{" "}
-            {new Date(request.updatedAt).toLocaleDateString("en-GB", {
-              year: "numeric", month: "numeric", day: "numeric",
-              hour: "2-digit", minute: "2-digit",
-            })}
+            {request.updatedAt
+              ? new Date(request.updatedAt).toLocaleDateString("en-GB", { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+              : "—"}
           </p>
         </div>
 

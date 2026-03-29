@@ -73,6 +73,7 @@ function RequestsContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [hasNext, setHasNext]       = useState(false);
   const [hasPrev, setHasPrev]       = useState(false);
+  const [retryKey, setRetryKey]     = useState(0);
 
   // Draft filters (local, not yet applied)
   const [draftType, setDraftType] = useState(typeParam);
@@ -106,7 +107,7 @@ function RequestsContent() {
       })
       .catch(e => setError(normalizeError(e)))
       .finally(() => setLoading(false));
-  }, [typeParam, cityParam, pageParam]);
+  }, [typeParam, cityParam, pageParam, retryKey]);
 
   function applyFilters(e: React.FormEvent) {
     e.preventDefault();
@@ -277,9 +278,21 @@ function RequestsContent() {
           <div style={{
             backgroundColor: "#fef2f2", border: "1px solid #fecaca",
             borderRadius: 10, padding: "0.75rem 1rem",
-            color: "#dc2626", fontSize: "0.85rem", marginBottom: "1rem",
+            marginBottom: "1rem",
+            display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap",
           }}>
-            {error}
+            <span style={{ color: "#dc2626", fontSize: "0.85rem", flex: 1 }}>{error}</span>
+            <button
+              onClick={() => setRetryKey(k => k + 1)}
+              style={{
+                padding: "0.35rem 0.9rem", borderRadius: 7, border: "1.5px solid #dc2626",
+                backgroundColor: "transparent", color: "#dc2626",
+                cursor: "pointer", fontSize: "0.8rem", fontWeight: 600,
+                fontFamily: "inherit", whiteSpace: "nowrap",
+              }}
+            >
+              إعادة المحاولة
+            </button>
           </div>
         )}
 
@@ -360,7 +373,9 @@ function RequestsContent() {
                       {PROPERTY_TYPE_LABELS[req.propertyType] ?? req.propertyType}
                     </span>
                     <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                      {new Date(req.createdAt).toLocaleDateString("en-GB", { month: "numeric", day: "numeric" })}
+                      {req.createdAt
+                        ? new Date(req.createdAt).toLocaleDateString("en-GB", { month: "numeric", day: "numeric" })
+                        : "—"}
                     </span>
                   </div>
 
@@ -469,7 +484,7 @@ function RequestsContent() {
 export default function RequestsPage() {
   return (
     <Suspense fallback={
-      <div dir="rtl" style={{ backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Spinner />
       </div>
     }>

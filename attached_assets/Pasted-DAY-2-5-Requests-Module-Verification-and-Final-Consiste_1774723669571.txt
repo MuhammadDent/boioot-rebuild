@@ -1,0 +1,74 @@
+DAY 2.5 – Requests Module Verification and Final Consistency Pass
+
+We are NOT moving to Day 3 yet.
+
+We need to verify and finalize Requests module stabilization before closing this area.
+
+IMPORTANT:
+- Do NOT refactor the architecture
+- Do NOT rewrite the module
+- Do NOT change backend contracts
+- Do NOT add features
+- Only verify, unify behavior, and close remaining reliability gaps
+
+TARGET PAGES:
+- /requests
+- /requests/[id]
+- /dashboard/requests
+- /dashboard/requests/[id]
+
+GOALS:
+
+1) Verify single source of truth
+- Confirm that filters, displayed request list, counters, and analytics all use the SAME filtered dataset where appropriate
+- If any page still mixes:
+  - raw API data
+  - derived filtered data
+  - fallback/mock data
+  fix this safely without deep refactor
+
+2) Verify loading / error / empty behavior
+For each requests page:
+- Loading state must appear only during fetch
+- Error state must show a clear message
+- Retry button must work where fetch can fail
+- Empty state must appear only when the final dataset is truly empty
+- No false empty states during loading or error
+
+3) Verify detail pages
+- Request detail pages must not crash if:
+  - request is missing
+  - request.user is missing
+  - request title/name/phone/status is missing
+- Show safe fallback UI instead of broken rendering
+
+4) Remove hidden inconsistency
+- Check if any request counters or analytics are still calculated from a different source than the visible list
+- If yes, safely align them
+
+5) Output a strict verification report
+For each target page, state clearly:
+- data source used
+- loading state status
+- error state status
+- empty state status
+- whether filters and analytics are aligned
+- whether the page is now stable enough to close
+
+6) Apply only low-risk fixes if needed
+Allowed:
+- guards
+- conditional rendering
+- retry wiring
+- dataset alignment
+- safe fallback labels
+Not allowed:
+- architecture rewrite
+- backend changes
+- new features
+
+At the end provide:
+- exact files modified
+- exact fixes applied
+- any remaining known issues
+- explicit verdict: “Requests module stable enough to close” or “not yet”
