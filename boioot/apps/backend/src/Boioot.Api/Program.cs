@@ -217,7 +217,10 @@ app.MapControllers();
         startupLogger.LogError(ex, "تعذّر تهيئة قاعدة البيانات أو تنفيذ بيانات البذر");
     }
 }
-// Use DOTNET_PORT for the .NET backend port (default: 5233).
-// The PORT env var is reserved for the Node.js proxy layer (port 8080).
-var port = Environment.GetEnvironmentVariable("DOTNET_PORT") ?? "5233";
+// Bind to DOTNET_PORT (set in dev by run-api.sh so it doesn't conflict with the
+// Node.js proxy on PORT=8080).  Fall back to PORT (Replit sets this in production
+// when the proxy is not involved), then to 5233 as a last resort.
+var port = Environment.GetEnvironmentVariable("DOTNET_PORT")
+        ?? Environment.GetEnvironmentVariable("PORT")
+        ?? "5233";
 app.Run($"http://0.0.0.0:{port}");
