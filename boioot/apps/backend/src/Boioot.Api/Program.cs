@@ -217,5 +217,7 @@ app.MapControllers();
         startupLogger.LogError(ex, "تعذّر تهيئة قاعدة البيانات أو تنفيذ بيانات البذر");
     }
 }
-
-app.Run();
+// Use DOTNET_PORT for the .NET backend port (default: 5233).
+// The PORT env var is reserved for the Node.js proxy layer (port 8080).
+var port = Environment.GetEnvironmentVariable("DOTNET_PORT") ?? "5233";
+app.Run($"http://0.0.0.0:{port}");

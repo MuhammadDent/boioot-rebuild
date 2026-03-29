@@ -11,3 +11,12 @@ paths = ["/"]
 
 [services.development]
 run = "cd /home/runner/workspace/boioot/apps/frontend && rm -f .next/dev/lock && node_modules/.bin/next dev --webpack -p 3000"
+
+[services.production]
+build = "cd boioot/apps/frontend && node_modules/.bin/next build"
+
+[services.production.run]
+args = ["sh", "-c", "cd boioot/apps/frontend && node_modules/.bin/next start -p $PORT"]
+
+[services.production.health.startup]
+path = "/"

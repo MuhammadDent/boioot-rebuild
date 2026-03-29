@@ -7,33 +7,36 @@ export PATH="$PATH:$DOTNET_ROOT"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKSPACE_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
+PROXY_PORT="${PORT:-8080}"
+BACKEND_PORT="${DOTNET_PORT:-5233}"
+
+# ─── Clear stale processes (pkill is available; fuser/lsof are not) ───────────
+pkill -f "Boioot.Api" 2>/dev/null || true
+pkill -f "dotnet.*Boioot" 2>/dev/null || true
+pkill -f "proxy.mjs" 2>/dev/null || true
+sleep 2
+
 # ─── Start the Node.js API proxy in the background ────────────────────────────
-# Uses PORT=8080 (the port the Replit proxy routes /api/* to).
-# If another instance is already running on 8080, the subshell exits quietly.
+# Proxy listens on PORT (set by Replit, default 8080).
+# .NET backend runs on DOTNET_PORT (default 5233) — no conflict.
 (
   cd "$WORKSPACE_DIR"
-  PORT=8080 node artifacts/api-server/src/proxy.mjs 2>/dev/null
+  exec node artifacts/api-server/src/proxy.mjs
 ) &
 PROXY_PID=$!
 
-# Give the proxy a moment to bind, then check it came up
 sleep 1
 if kill -0 "$PROXY_PID" 2>/dev/null; then
-  echo "[run-api] API proxy started (pid $PROXY_PID) → :8080 ⟶ .NET backend :5233"
+  echo "[run-api] proxy started (pid $PROXY_PID) → :$PROXY_PORT ⟶ .NET :$BACKEND_PORT"
 else
-  echo "[run-api] API proxy already running on :8080 — skipping"
+  echo "[run-api] WARNING: proxy failed to start on :$PROXY_PORT"
 fi
 
 # ─── Start the .NET backend (foreground) ──────────────────────────────────────
-# Set Development environment so appsettings.json (not Production override) is
-# used during local/Replit development. In real production deployments set
-# ASPNETCORE_ENVIRONMENT=Production and provide Jwt__Key + AllowedOrigins via
-# environment variables or secrets manager.
+# Program.cs reads DOTNET_PORT (default: 5233). PORT env var is reserved for proxy.
 export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
 
 cd "$SCRIPT_DIR"
 exec dotnet run \
   --project src/Boioot.Api \
-  --no-launch-profile \
-  -- \
-  --urls "http://+:5233"
+  --no-launch-profile

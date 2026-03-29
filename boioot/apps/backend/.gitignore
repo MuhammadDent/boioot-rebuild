@@ -1,3 +1,6 @@
 
 # Secure proof file storage (outside wwwroot)
 proof-storage/
+
+# Production publish output (built by deployment build step)
+publish/
