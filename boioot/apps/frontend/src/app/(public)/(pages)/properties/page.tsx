@@ -69,6 +69,7 @@ function PropertiesContent() {
   const [totalCount, setTotalCount]   = useState(0);
   const [hasNext, setHasNext]         = useState(false);
   const [hasPrev, setHasPrev]         = useState(false);
+  const [retryKey, setRetryKey]       = useState(0);
 
   // Sync draft form when URL changes externally (browser back/forward)
   useEffect(() => {
@@ -83,7 +84,7 @@ function PropertiesContent() {
     });
   }, [provinceParam, cityParam, neighborhoodParam, typeParam, listingTypeParam, minPriceParam, maxPriceParam]);
 
-  // Fetch data whenever the applied URL params change
+  // Fetch data whenever the applied URL params change (retryKey forces re-fetch on retry)
   useEffect(() => {
     setLoading(true);
     setError("");
@@ -108,7 +109,7 @@ function PropertiesContent() {
       })
       .catch(() => setError("تعذّر تحميل العقارات. يرجى المحاولة مجدداً."))
       .finally(() => setLoading(false));
-  }, [provinceParam, cityParam, neighborhoodParam, typeParam, listingTypeParam, minPriceParam, maxPriceParam, pageParam]);
+  }, [provinceParam, cityParam, neighborhoodParam, typeParam, listingTypeParam, minPriceParam, maxPriceParam, pageParam, retryKey]);
 
   // ── URL helpers ─────────────────────────────────────────────────────────────
 
@@ -200,7 +201,14 @@ function PropertiesContent() {
 
             {loading && <PropertyCardSkeletonGrid count={PROPERTIES_PAGE_SIZE} />}
 
-            {!loading && error && <div className="error-banner">{error}</div>}
+            {!loading && error && (
+              <div className="error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                <span>{error}</span>
+                <button className="btn btn-outline btn-sm" onClick={() => setRetryKey((k) => k + 1)}>
+                  إعادة المحاولة
+                </button>
+              </div>
+            )}
 
             {!loading && !error && properties.length === 0 && (
               <div className="empty-state">

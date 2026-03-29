@@ -43,6 +43,7 @@ function ProjectsContent() {
   const [totalCount, setTotalCount] = useState(0);
   const [hasNext, setHasNext]       = useState(false);
   const [hasPrev, setHasPrev]       = useState(false);
+  const [retryKey, setRetryKey]     = useState(0);
 
   // Sync draft form when URL changes externally (browser back/forward)
   useEffect(() => {
@@ -69,7 +70,7 @@ function ProjectsContent() {
       })
       .catch(() => setError("تعذّر تحميل المشاريع. يرجى المحاولة مجدداً."))
       .finally(() => setLoading(false));
-  }, [cityParam, statusParam, pageParam]);
+  }, [cityParam, statusParam, pageParam, retryKey]);
 
   // ── URL helpers ─────────────────────────────────────────────────────────────
 
@@ -173,7 +174,12 @@ function ProjectsContent() {
 
         {/* Error */}
         {!loading && error && (
-          <div className="error-banner">{error}</div>
+          <div className="error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+            <span>{error}</span>
+            <button className="btn btn-outline btn-sm" onClick={() => setRetryKey((k) => k + 1)}>
+              إعادة المحاولة
+            </button>
+          </div>
         )}
 
         {/* Empty state */}

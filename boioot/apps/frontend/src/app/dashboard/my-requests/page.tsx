@@ -236,7 +236,15 @@ export default function MyRequestsPage() {
           أضف طلب جديد
         </Link>
 
-        <InlineBanner message={fetchError || deleteError} />
+        {fetchError && (
+          <div className="error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
+            <span>{fetchError}</span>
+            <button className="btn btn-outline btn-sm" onClick={() => load(page)}>
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
+        <InlineBanner message={deleteError} />
 
         {/* Skeleton */}
         {fetching && (

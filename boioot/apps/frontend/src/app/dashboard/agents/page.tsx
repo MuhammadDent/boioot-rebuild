@@ -49,12 +49,14 @@ export default function AgentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!isLoading && user) {
       fetchAgents();
     }
-  }, [isLoading, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, user, retryKey]);
 
   async function fetchAgents() {
     try {
@@ -221,7 +223,12 @@ export default function AgentsPage() {
       {fetching ? (
         <div style={{ textAlign: "center", padding: "3rem" }}><Spinner /></div>
       ) : fetchError ? (
-        <div className="error-banner">{fetchError}</div>
+        <div className="error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+          <span>{fetchError}</span>
+          <button className="btn btn-outline btn-sm" onClick={() => setRetryKey((k) => k + 1)}>
+            إعادة المحاولة
+          </button>
+        </div>
       ) : agents.length === 0 ? (
         <div style={{
           textAlign: "center", padding: "4rem 2rem",
