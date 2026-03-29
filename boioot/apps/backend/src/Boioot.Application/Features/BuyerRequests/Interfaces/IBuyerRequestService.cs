@@ -12,6 +12,10 @@ public interface IBuyerRequestService
     Task<PagedResult<BuyerRequestResponse>> GetAllForAdminAsync(int page, int pageSize, string? search, CancellationToken ct = default);
     Task DeleteAsync(Guid userId, Guid id, CancellationToken ct = default);
     Task AdminDeleteAsync(Guid id, CancellationToken ct = default);
+    /// <summary>Admin: set request status (Open | Closed | Reviewed).</summary>
+    Task AdminSetStatusAsync(Guid id, string status, CancellationToken ct = default);
+    /// <summary>Admin: post a comment reply to a buyer request on behalf of admin.</summary>
+    Task<BuyerRequestCommentResponse> AdminRespondAsync(Guid adminUserId, Guid requestId, string content, CancellationToken ct = default);
 
     Task<List<BuyerRequestCommentResponse>> GetCommentsAsync(Guid requestId, CancellationToken ct = default);
     Task<BuyerRequestCommentResponse> AddCommentAsync(Guid userId, Guid requestId, AddCommentDto dto, CancellationToken ct = default);

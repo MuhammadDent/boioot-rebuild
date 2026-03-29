@@ -6,6 +6,7 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { api, normalizeError } from "@/lib/api";
+import { adminApi } from "@/features/admin/api";
 import type { PagedResult } from "@/types";
 
 interface BuyerRequest {
@@ -20,7 +21,15 @@ interface BuyerRequest {
   commentsCount: number;
   createdAt: string;
   isPublished: boolean;
+  status?: string;
 }
+
+// ─── Status badge config ───────────────────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
+  Open:     { label: "مفتوح",     bg: "#f0fdf4", color: "#15803d" },
+  Closed:   { label: "مغلق",      bg: "#f1f5f9", color: "#64748b" },
+  Reviewed: { label: "تمت المراجعة", bg: "#fefce8", color: "#a16207" },
+};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -90,18 +99,33 @@ export default function AdminBuyerRequestsPage() {
     setSearch(searchInput.trim());
   }
 
+  const [settingStatusId, setSettingStatusId] = useState<string | null>(null);
+
   async function handleDelete(id: string) {
     if (!confirm("هل أنت متأكد من حذف هذا الطلب؟ سيُحذف مع جميع تعليقاته.")) return;
     setDeletingId(id);
     setDeleteError("");
     try {
-      await api.delete(`/buyer-requests/admin/${id}`);
+      await adminApi.adminDeleteBuyerRequest(id);
       setRequests(prev => prev.filter(r => r.id !== id));
       setTotal(prev => Math.max(0, prev - 1));
     } catch (err) {
       setDeleteError(normalizeError(err));
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleSetStatus(id: string, status: string) {
+    setSettingStatusId(id);
+    setDeleteError("");
+    try {
+      await adminApi.adminSetBuyerRequestStatus(id, status);
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+    } catch (err) {
+      setDeleteError(normalizeError(err));
+    } finally {
+      setSettingStatusId(null);
     }
   }
 
@@ -192,7 +216,7 @@ export default function AdminBuyerRequestsPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
           <thead>
             <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-              {["الطلب", "النوع", "الموقع", "الناشر", "التعليقات", "التاريخ", ""].map((h, i) => (
+              {["الطلب", "النوع", "الموقع", "الناشر", "الحالة", "التعليقات", "التاريخ", ""].map((h, i) => (
                 <th key={i} style={{
                   padding: "0.7rem 0.9rem", textAlign: "right",
                   fontWeight: 700, color: "#475569", fontSize: "0.78rem",
@@ -260,6 +284,22 @@ export default function AdminBuyerRequestsPage() {
                     <span style={{ fontWeight: 600, color: "#1e293b", fontSize: "0.82rem" }}>{r.userName}</span>
                   </td>
 
+                  {/* Status */}
+                  <td style={{ padding: "0.75rem 0.9rem", whiteSpace: "nowrap" }}>
+                    {(() => {
+                      const cfg = STATUS_CONFIG[r.status ?? "Open"] ?? STATUS_CONFIG.Open;
+                      return (
+                        <span style={{
+                          backgroundColor: cfg.bg, color: cfg.color,
+                          borderRadius: 20, padding: "0.15rem 0.6rem",
+                          fontSize: "0.74rem", fontWeight: 700,
+                        }}>
+                          {cfg.label}
+                        </span>
+                      );
+                    })()}
+                  </td>
+
                   {/* Comments count */}
                   <td style={{ padding: "0.75rem 0.9rem", textAlign: "center", color: "#64748b" }}>
                     <span style={{
@@ -281,8 +321,8 @@ export default function AdminBuyerRequestsPage() {
                   </td>
 
                   {/* Actions */}
-                  <td style={{ padding: "0.75rem 0.9rem", whiteSpace: "nowrap" }}>
-                    <div style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end" }}>
+                  <td style={{ padding: "0.75rem 0.9rem" }}>
+                    <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
                       <Link
                         href={`/requests/${r.id}`}
                         target="_blank"
@@ -295,17 +335,43 @@ export default function AdminBuyerRequestsPage() {
                       >
                         عرض
                       </Link>
+                      {/* Status quick-change buttons */}
+                      {(["Open", "Closed", "Reviewed"] as const).map(s => {
+                        const cfg = STATUS_CONFIG[s];
+                        const isCurrent = (r.status ?? "Open") === s;
+                        const busy = settingStatusId === r.id;
+                        if (isCurrent) return null;
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => handleSetStatus(r.id, s)}
+                            disabled={busy}
+                            title={cfg.label}
+                            style={{
+                              padding: "0.3rem 0.55rem", borderRadius: 6,
+                              backgroundColor: cfg.bg, color: cfg.color,
+                              border: "none", fontWeight: 700, fontSize: "0.72rem",
+                              cursor: busy ? "not-allowed" : "pointer",
+                              fontFamily: "inherit", whiteSpace: "nowrap",
+                              opacity: busy ? 0.6 : 1,
+                            }}
+                          >
+                            {busy ? "..." : cfg.label}
+                          </button>
+                        );
+                      })}
                       <button
                         onClick={() => handleDelete(r.id)}
-                        disabled={deletingId === r.id}
+                        disabled={!!deletingId}
                         style={{
                           padding: "0.3rem 0.65rem", borderRadius: 6,
-                          backgroundColor: deletingId === r.id ? "#fef2f2" : "#fef2f2",
+                          backgroundColor: "#fef2f2",
                           color: "#ef4444", border: "none",
                           fontWeight: 700, fontSize: "0.74rem",
-                          cursor: deletingId === r.id ? "not-allowed" : "pointer",
+                          cursor: deletingId ? "not-allowed" : "pointer",
                           fontFamily: "inherit",
                           opacity: deletingId === r.id ? 0.6 : 1,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {deletingId === r.id ? "..." : "حذف"}

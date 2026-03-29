@@ -37,6 +37,24 @@ public class BuyerRequestsController : BaseController
         return NoContent();
     }
 
+    [HttpPatch("admin/{id:guid}/status")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AdminSetStatus(
+        Guid id, [FromBody] SetBuyerRequestStatusRequest request, CancellationToken ct)
+    {
+        await _service.AdminSetStatusAsync(id, request.Status, ct);
+        return NoContent();
+    }
+
+    [HttpPost("admin/{id:guid}/respond")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AdminRespond(
+        Guid id, [FromBody] AdminRespondRequest request, CancellationToken ct)
+    {
+        var result = await _service.AdminRespondAsync(GetUserId(), id, request.Content, ct);
+        return StatusCode(201, result);
+    }
+
     // ── Listing ───────────────────────────────────────────────────────────────
 
     [HttpGet]
@@ -117,3 +135,6 @@ public class BuyerRequestsController : BaseController
         return NoContent();
     }
 }
+
+public record SetBuyerRequestStatusRequest(string Status);
+public record AdminRespondRequest(string Content);

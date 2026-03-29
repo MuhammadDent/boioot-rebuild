@@ -317,6 +317,17 @@ export default function AdminPropertiesPage() {
     }
   }, []);
 
+  const handleModerationChange = useCallback(async (id: string, moderationStatus: string) => {
+    setActionLoading(true);
+    try {
+      await adminApi.setPropertyModeration(id, moderationStatus);
+      setAllProperties(prev => prev.map(p => p.id === id ? { ...p, moderationStatus } : p));
+      setSelected(prev => prev?.id === id ? { ...prev, moderationStatus } : prev);
+    } finally {
+      setActionLoading(false);
+    }
+  }, []);
+
   const handleDelete = useCallback(async (id: string) => {
     setActionLoading(true);
     try {
@@ -571,6 +582,7 @@ export default function AdminPropertiesPage() {
         property={selected}
         onClose={() => setSelected(null)}
         onStatusChange={handleStatusChange}
+        onModerationChange={handleModerationChange}
         onDelete={handleDelete}
         onEdit={(id) => router.push(`/dashboard/admin/properties/${id}/edit`)}
         actionLoading={actionLoading}

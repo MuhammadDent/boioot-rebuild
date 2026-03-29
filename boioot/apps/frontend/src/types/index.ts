@@ -169,6 +169,8 @@ export interface PropertyResponse {
   recipientId?: string;
   // Analytics
   viewCount?: number;
+  // Moderation (admin-controlled)
+  moderationStatus?: string;
 }
 
 export interface ListingTypeConfig {

@@ -59,6 +59,9 @@ public class Property : BaseEntity, ISoftDeletable
     /// </summary>
     public Guid? CreatedByCompanyId { get; set; }
 
+    // Moderation (admin-controlled visibility control)
+    public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.Active;
+
     // Analytics
     public int ViewCount { get; set; } = 0;
 

@@ -9,6 +9,9 @@ public class BuyerRequest : BaseEntity
     public string? Neighborhood { get; set; }
     public bool IsPublished { get; set; } = true;
 
+    // Moderation status: Open | Closed | Reviewed
+    public string Status { get; set; } = "Open";
+
     public Guid UserId { get; set; }
     public User? User { get; set; }
 }

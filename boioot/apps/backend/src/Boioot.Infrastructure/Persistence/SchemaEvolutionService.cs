@@ -712,6 +712,12 @@ public sealed class SchemaEvolutionService
         // Composite: public listing page (status + isDeleted + createdAt is the most common filter)
         await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_Status_IsDeleted_CreatedAt ON Properties(Status, IsDeleted, CreatedAt DESC)", ct, warnOnError: true);
         await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_City_Status ON Properties(City, Status)",                  ct, warnOnError: true);
+
+        // ── Day 10: Moderation columns ────────────────────────────────────────
+        await TryAlter("Properties",    "ModerationStatus", "TEXT NOT NULL DEFAULT 'Active'", ct);
+        await TryAlter("BuyerRequests", "Status",           "TEXT NOT NULL DEFAULT 'Open'",   ct);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Properties_ModerationStatus ON Properties(ModerationStatus)", ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_BuyerRequests_Status        ON BuyerRequests(Status)",        ct, warnOnError: true);
     }
 
     // ── Helper methods ────────────────────────────────────────────────────────

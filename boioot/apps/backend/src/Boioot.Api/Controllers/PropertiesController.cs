@@ -105,4 +105,17 @@ public class PropertiesController : BaseController
         var (used, limit, isFreeTrial) = await _propertyService.GetMonthlyListingStatsAsync(GetUserId(), GetUserRole(), ct);
         return Ok(new { used, limit, isFreeTrial });
     }
+
+    // ── Admin moderation ──────────────────────────────────────────────────────
+
+    [Authorize(Roles = "Admin")]
+    [HttpPatch("admin/{id:guid}/moderation")]
+    public async Task<IActionResult> AdminSetModeration(
+        Guid id, [FromBody] SetModerationRequest request, CancellationToken ct)
+    {
+        await _propertyService.AdminSetModerationAsync(id, request.ModerationStatus, ct);
+        return NoContent();
+    }
 }
+
+public record SetModerationRequest(string ModerationStatus);

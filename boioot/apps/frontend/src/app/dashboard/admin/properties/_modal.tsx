@@ -25,10 +25,18 @@ function Row({ label, value }: { label: string; value?: string | number | null }
 }
 
 // ─── Main Modal ───────────────────────────────────────────────────────────────
+// ─── Moderation badge config ──────────────────────────────────────────────────
+const MODERATION_CONFIG: Record<string, { label: string; bg: string; color: string; border: string }> = {
+  Active:   { label: "نشط",     bg: "#f0fdf4", color: "#15803d", border: "#86efac" },
+  Pending:  { label: "قيد المراجعة", bg: "#fefce8", color: "#a16207", border: "#fde68a" },
+  Rejected: { label: "مرفوض",   bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+};
+
 export function PropertyDetailModal({
   property,
   onClose,
   onStatusChange,
+  onModerationChange,
   onDelete,
   onEdit,
   actionLoading,
@@ -36,21 +44,26 @@ export function PropertyDetailModal({
   property: PropertyResponse | null;
   onClose: () => void;
   onStatusChange: (id: string, status: string) => Promise<void>;
+  onModerationChange: (id: string, moderationStatus: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onEdit: (id: string) => void;
   actionLoading: boolean;
 }) {
-  const [pendingStatus, setPendingStatus]       = useState("");
-  const [confirmDelete, setConfirmDelete]       = useState(false);
-  const [statusSuccess, setStatusSuccess]       = useState(false);
-  const [localError, setLocalError]             = useState("");
+  const [pendingStatus,     setPendingStatus]     = useState("");
+  const [pendingModeration, setPendingModeration] = useState("Active");
+  const [confirmDelete,     setConfirmDelete]     = useState(false);
+  const [statusSuccess,     setStatusSuccess]     = useState(false);
+  const [moderSuccess,      setModerSuccess]      = useState(false);
+  const [localError,        setLocalError]        = useState("");
 
-  // Sync pendingStatus when property changes
+  // Sync state when property changes
   useEffect(() => {
     if (property) {
       setPendingStatus(property.status);
+      setPendingModeration(property.moderationStatus ?? "Active");
       setConfirmDelete(false);
       setStatusSuccess(false);
+      setModerSuccess(false);
       setLocalError("");
     }
   }, [property?.id]);
@@ -84,6 +97,20 @@ export function PropertyDetailModal({
       await onStatusChange(property.id, pendingStatus);
       setStatusSuccess(true);
       setTimeout(() => setStatusSuccess(false), 2000);
+    } catch (e) {
+      setLocalError(String(e));
+    }
+  }
+
+  async function handleModerationApply(newStatus: string) {
+    if (newStatus === (property.moderationStatus ?? "Active")) return;
+    setLocalError("");
+    setModerSuccess(false);
+    try {
+      await onModerationChange(property.id, newStatus);
+      setPendingModeration(newStatus);
+      setModerSuccess(true);
+      setTimeout(() => setModerSuccess(false), 2000);
     } catch (e) {
       setLocalError(String(e));
     }
@@ -149,6 +176,19 @@ export function PropertyDetailModal({
                 <span className={PROPERTY_STATUS_BADGE[property.status] ?? "badge badge-gray"}>
                   {PROPERTY_STATUS_LABELS[property.status] ?? property.status}
                 </span>
+                {(() => {
+                  const ms = pendingModeration;
+                  const cfg = MODERATION_CONFIG[ms] ?? MODERATION_CONFIG.Active;
+                  return (
+                    <span style={{
+                      backgroundColor: cfg.bg, color: cfg.color,
+                      border: `1px solid ${cfg.border}`, borderRadius: 20,
+                      padding: "0.15rem 0.65rem", fontSize: "0.76rem", fontWeight: 700,
+                    }}>
+                      {cfg.label}
+                    </span>
+                  );
+                })()}
                 <span style={{
                   backgroundColor: "#f1f5f9", borderRadius: 20,
                   padding: "0.15rem 0.65rem", fontSize: "0.76rem", color: "#475569", fontWeight: 600,
@@ -273,11 +313,51 @@ export function PropertyDetailModal({
             <div style={{ height: 1, backgroundColor: "#f1f5f9", marginBottom: "1rem" }} />
           )}
 
+          {/* ─── Moderation control ──── */}
+          {!confirmDelete && (
+            <div style={{ marginBottom: "1rem" }}>
+              <p style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748b", margin: "0 0 0.5rem" }}>
+                حالة الإشراف
+              </p>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                {(["Active", "Pending", "Rejected"] as const).map(ms => {
+                  const cfg = MODERATION_CONFIG[ms];
+                  const isActive = pendingModeration === ms;
+                  return (
+                    <button
+                      key={ms}
+                      onClick={() => handleModerationApply(ms)}
+                      disabled={actionLoading || isActive}
+                      style={{
+                        padding: "0.4rem 0.9rem", borderRadius: 20,
+                        border: `1.5px solid ${isActive ? cfg.border : "#e2e8f0"}`,
+                        backgroundColor: isActive ? cfg.bg : "#f8fafc",
+                        color: isActive ? cfg.color : "#64748b",
+                        fontSize: "0.82rem", fontWeight: 700,
+                        cursor: actionLoading || isActive ? "default" : "pointer",
+                        fontFamily: "inherit",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {cfg.label}
+                    </button>
+                  );
+                })}
+                {moderSuccess && (
+                  <span style={{ fontSize: "0.82rem", color: "#16a34a", fontWeight: 600, alignSelf: "center" }}>✓ تم</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Divider */}
+          {!confirmDelete && <div style={{ height: 1, backgroundColor: "#f1f5f9", marginBottom: "1rem" }} />}
+
           {/* Status change */}
           {!confirmDelete && (
             <div style={{ marginBottom: "1rem" }}>
               <p style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748b", margin: "0 0 0.5rem" }}>
-                تغيير الحالة
+                تغيير حالة العقار
               </p>
               <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}>
                 <select

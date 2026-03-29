@@ -492,6 +492,23 @@ public class PropertyService : IPropertyService
             propertyId, userId);
     }
 
+    public async Task AdminSetModerationAsync(Guid propertyId, string moderationStatus, CancellationToken ct = default)
+    {
+        var allowed = new[] { "Active", "Pending", "Rejected" };
+        if (!allowed.Contains(moderationStatus))
+            throw new BoiootException("حالة الإشراف غير صالحة", 400);
+
+        var property = await _context.Properties
+            .FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct)
+            ?? throw new BoiootException("العقار غير موجود", 404);
+
+        property.ModerationStatus = Enum.Parse<ModerationStatus>(moderationStatus);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Property moderation status set to {Status}: {PropertyId}", moderationStatus, propertyId);
+    }
+
     public async Task<PagedResult<PropertyResponse>> GetDashboardListAsync(
         Guid userId, string userRole, PropertyFilters filters, CancellationToken ct = default)
     {
@@ -1107,6 +1124,7 @@ public class PropertyService : IPropertyService
             })
             .ToList(),
         ViewCount = p.ViewCount,
+        ModerationStatus = p.ModerationStatus.ToString(),
         CreatedAt = p.CreatedAt,
         UpdatedAt = p.UpdatedAt,
         // ── Audit ─────────────────────────────────────────────────────────────

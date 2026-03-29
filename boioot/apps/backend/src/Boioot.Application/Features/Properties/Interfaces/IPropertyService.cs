@@ -21,4 +21,7 @@ public interface IPropertyService
     /// isFreeTrial = false for all other roles (monthly limits apply).
     /// </summary>
     Task<(int used, int limit, bool isFreeTrial)> GetMonthlyListingStatsAsync(Guid userId, string userRole, CancellationToken ct = default);
+
+    /// <summary>Admin: set the moderation status of a property (Active | Pending | Rejected).</summary>
+    Task AdminSetModerationAsync(Guid propertyId, string moderationStatus, CancellationToken ct = default);
 }

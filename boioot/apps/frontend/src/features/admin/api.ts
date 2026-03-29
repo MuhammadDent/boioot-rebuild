@@ -189,6 +189,26 @@ export const adminApi = {
     return api.patch(`/admin/properties/${id}/status`, { status });
   },
 
+  /** PATCH /api/properties/admin/{id}/moderation — set ModerationStatus (Active|Pending|Rejected) */
+  setPropertyModeration(id: string, moderationStatus: string): Promise<void> {
+    return api.patch(`/properties/admin/${id}/moderation`, { moderationStatus });
+  },
+
+  /** DELETE /api/buyer-requests/admin/{id} */
+  adminDeleteBuyerRequest(id: string): Promise<void> {
+    return api.delete(`/buyer-requests/admin/${id}`);
+  },
+
+  /** PATCH /api/buyer-requests/admin/{id}/status — set Status (Open|Closed|Reviewed) */
+  adminSetBuyerRequestStatus(id: string, status: string): Promise<void> {
+    return api.patch(`/buyer-requests/admin/${id}/status`, { status });
+  },
+
+  /** POST /api/buyer-requests/admin/{id}/respond — admin posts a reply comment */
+  adminRespondToBuyerRequest(id: string, content: string): Promise<unknown> {
+    return api.post(`/buyer-requests/admin/${id}/respond`, { content });
+  },
+
   getProjects(
     page: number,
     pageSize: number,

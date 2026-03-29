@@ -201,6 +201,47 @@ public class BuyerRequestService : IBuyerRequestService
         await _context.SaveChangesAsync(ct);
     }
 
+    public async Task AdminSetStatusAsync(Guid id, string status, CancellationToken ct = default)
+    {
+        var allowed = new[] { "Open", "Closed", "Reviewed" };
+        if (!allowed.Contains(status))
+            throw new BoiootException("الحالة غير صالحة", 400);
+
+        var entity = await _context.BuyerRequests
+            .FirstOrDefaultAsync(r => r.Id == id, ct)
+            ?? throw new BoiootException("الطلب غير موجود", 404);
+
+        entity.Status = status;
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task<BuyerRequestCommentResponse> AdminRespondAsync(
+        Guid adminUserId, Guid requestId, string content, CancellationToken ct = default)
+    {
+        var exists = await _context.BuyerRequests.AnyAsync(r => r.Id == requestId, ct);
+        if (!exists) throw new BoiootException("الطلب غير موجود", 404);
+
+        var adminUser = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == adminUserId, ct);
+
+        var comment = new BuyerRequestComment
+        {
+            Id              = Guid.NewGuid(),
+            Content         = content,
+            UserId          = adminUserId,
+            BuyerRequestId  = requestId,
+            ParentCommentId = null,
+            CreatedAt       = DateTime.UtcNow,
+            UpdatedAt       = DateTime.UtcNow,
+        };
+
+        _context.BuyerRequestComments.Add(comment);
+        await _context.SaveChangesAsync(ct);
+
+        return MapComment(comment, adminUser?.FullName ?? "الإدارة");
+    }
+
     // ── Comments ──────────────────────────────────────────────────────────────
 
     public async Task<List<BuyerRequestCommentResponse>> GetCommentsAsync(
@@ -381,6 +422,7 @@ public class BuyerRequestService : IBuyerRequestService
         City          = r.City,
         Neighborhood  = r.Neighborhood,
         IsPublished   = r.IsPublished,
+        Status        = r.Status,
         UserId        = r.UserId,
         UserName      = userName,
         CommentsCount = commentsCount,
