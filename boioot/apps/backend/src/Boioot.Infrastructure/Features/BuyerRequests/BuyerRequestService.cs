@@ -57,16 +57,39 @@ public class BuyerRequestService : IBuyerRequestService
 
     public async Task<BuyerRequestResponse> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var entity = await _context.BuyerRequests
-            .Include(r => r.User)
+        // Project: load only FullName from User, not the full entity
+        var row = await _context.BuyerRequests
             .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Id == id, ct)
+            .Where(r => r.Id == id)
+            .Select(r => new
+            {
+                r.Id, r.Title, r.PropertyType, r.Description, r.City,
+                r.Neighborhood, r.IsPublished, r.Status, r.UserId,
+                r.CreatedAt, r.UpdatedAt,
+                UserName = r.User != null ? r.User.FullName : ""
+            })
+            .FirstOrDefaultAsync(ct)
             ?? throw new BoiootException("الطلب غير موجود", 404);
 
         var commentsCount = await _context.BuyerRequestComments
             .CountAsync(c => c.BuyerRequestId == id, ct);
 
-        return MapToResponse(entity, entity.User?.FullName ?? "", commentsCount);
+        return new BuyerRequestResponse
+        {
+            Id            = row.Id,
+            Title         = row.Title,
+            PropertyType  = row.PropertyType,
+            Description   = row.Description,
+            City          = row.City,
+            Neighborhood  = row.Neighborhood,
+            IsPublished   = row.IsPublished,
+            Status        = row.Status,
+            UserId        = row.UserId,
+            UserName      = row.UserName,
+            CommentsCount = commentsCount,
+            CreatedAt     = row.CreatedAt,
+            UpdatedAt     = row.UpdatedAt,
+        };
     }
 
     // ── My requests ───────────────────────────────────────────────────────────
@@ -78,18 +101,25 @@ public class BuyerRequestService : IBuyerRequestService
         pageSize = Math.Clamp(pageSize, 1, 50);
 
         var query = _context.BuyerRequests
-            .Include(r => r.User)
             .Where(r => r.UserId == userId)
             .OrderByDescending(r => r.CreatedAt)
             .AsNoTracking();
 
         var total = await query.CountAsync(ct);
-        var items = await query
+
+        var rows = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(r => new
+            {
+                r.Id, r.Title, r.PropertyType, r.Description, r.City,
+                r.Neighborhood, r.IsPublished, r.Status, r.UserId,
+                r.CreatedAt, r.UpdatedAt,
+                UserName = r.User != null ? r.User.FullName : ""
+            })
             .ToListAsync(ct);
 
-        var ids = items.Select(r => r.Id).ToList();
+        var ids = rows.Select(r => r.Id).ToList();
         var commentCounts = await _context.BuyerRequestComments
             .Where(c => ids.Contains(c.BuyerRequestId))
             .GroupBy(c => c.BuyerRequestId)
@@ -97,7 +127,22 @@ public class BuyerRequestService : IBuyerRequestService
             .ToDictionaryAsync(g => g.Id, g => g.Count, ct);
 
         return new PagedResult<BuyerRequestResponse>(
-            items.Select(r => MapToResponse(r, r.User?.FullName ?? "", commentCounts.GetValueOrDefault(r.Id, 0))).ToList(),
+            rows.Select(r => new BuyerRequestResponse
+            {
+                Id            = r.Id,
+                Title         = r.Title,
+                PropertyType  = r.PropertyType,
+                Description   = r.Description,
+                City          = r.City,
+                Neighborhood  = r.Neighborhood,
+                IsPublished   = r.IsPublished,
+                Status        = r.Status,
+                UserId        = r.UserId,
+                UserName      = r.UserName,
+                CommentsCount = commentCounts.GetValueOrDefault(r.Id, 0),
+                CreatedAt     = r.CreatedAt,
+                UpdatedAt     = r.UpdatedAt,
+            }).ToList(),
             page, pageSize, total);
     }
 
@@ -110,18 +155,25 @@ public class BuyerRequestService : IBuyerRequestService
         pageSize = Math.Clamp(pageSize, 1, 50);
 
         var query = _context.BuyerRequests
-            .Include(r => r.User)
             .Where(r => r.IsPublished)
             .OrderByDescending(r => r.CreatedAt)
             .AsNoTracking();
 
         var total = await query.CountAsync(ct);
-        var items = await query
+
+        var rows = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(r => new
+            {
+                r.Id, r.Title, r.PropertyType, r.Description, r.City,
+                r.Neighborhood, r.IsPublished, r.Status, r.UserId,
+                r.CreatedAt, r.UpdatedAt,
+                UserName = r.User != null ? r.User.FullName : ""
+            })
             .ToListAsync(ct);
 
-        var ids = items.Select(r => r.Id).ToList();
+        var ids = rows.Select(r => r.Id).ToList();
         var commentCounts = await _context.BuyerRequestComments
             .Where(c => ids.Contains(c.BuyerRequestId))
             .GroupBy(c => c.BuyerRequestId)
@@ -129,7 +181,22 @@ public class BuyerRequestService : IBuyerRequestService
             .ToDictionaryAsync(g => g.Id, g => g.Count, ct);
 
         return new PagedResult<BuyerRequestResponse>(
-            items.Select(r => MapToResponse(r, r.User?.FullName ?? "", commentCounts.GetValueOrDefault(r.Id, 0))).ToList(),
+            rows.Select(r => new BuyerRequestResponse
+            {
+                Id            = r.Id,
+                Title         = r.Title,
+                PropertyType  = r.PropertyType,
+                Description   = r.Description,
+                City          = r.City,
+                Neighborhood  = r.Neighborhood,
+                IsPublished   = r.IsPublished,
+                Status        = r.Status,
+                UserId        = r.UserId,
+                UserName      = r.UserName,
+                CommentsCount = commentCounts.GetValueOrDefault(r.Id, 0),
+                CreatedAt     = r.CreatedAt,
+                UpdatedAt     = r.UpdatedAt,
+            }).ToList(),
             page, pageSize, total);
     }
 
@@ -141,10 +208,7 @@ public class BuyerRequestService : IBuyerRequestService
         page     = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
-        var query = _context.BuyerRequests
-            .Include(r => r.User)
-            .AsNoTracking()
-            .AsQueryable();
+        var query = _context.BuyerRequests.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -159,12 +223,20 @@ public class BuyerRequestService : IBuyerRequestService
         query = query.OrderByDescending(r => r.CreatedAt);
 
         var total = await query.CountAsync(ct);
-        var items = await query
+
+        var rows = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .Select(r => new
+            {
+                r.Id, r.Title, r.PropertyType, r.Description, r.City,
+                r.Neighborhood, r.IsPublished, r.Status, r.UserId,
+                r.CreatedAt, r.UpdatedAt,
+                UserName = r.User != null ? r.User.FullName : ""
+            })
             .ToListAsync(ct);
 
-        var ids = items.Select(r => r.Id).ToList();
+        var ids = rows.Select(r => r.Id).ToList();
         var commentCounts = await _context.BuyerRequestComments
             .Where(c => ids.Contains(c.BuyerRequestId))
             .GroupBy(c => c.BuyerRequestId)
@@ -172,7 +244,22 @@ public class BuyerRequestService : IBuyerRequestService
             .ToDictionaryAsync(g => g.Id, g => g.Count, ct);
 
         return new PagedResult<BuyerRequestResponse>(
-            items.Select(r => MapToResponse(r, r.User?.FullName ?? "", commentCounts.GetValueOrDefault(r.Id, 0))).ToList(),
+            rows.Select(r => new BuyerRequestResponse
+            {
+                Id            = r.Id,
+                Title         = r.Title,
+                PropertyType  = r.PropertyType,
+                Description   = r.Description,
+                City          = r.City,
+                Neighborhood  = r.Neighborhood,
+                IsPublished   = r.IsPublished,
+                Status        = r.Status,
+                UserId        = r.UserId,
+                UserName      = r.UserName,
+                CommentsCount = commentCounts.GetValueOrDefault(r.Id, 0),
+                CreatedAt     = r.CreatedAt,
+                UpdatedAt     = r.UpdatedAt,
+            }).ToList(),
             page, pageSize, total);
     }
 
@@ -224,9 +311,11 @@ public class BuyerRequestService : IBuyerRequestService
         var exists = await _context.BuyerRequests.AnyAsync(r => r.Id == requestId, ct);
         if (!exists) throw new BoiootException("الطلب غير موجود", 404);
 
-        var adminUser = await _context.Users
+        var adminName = await _context.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == adminUserId, ct);
+            .Where(u => u.Id == adminUserId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync(ct) ?? "الإدارة";
 
         var comment = new BuyerRequestComment
         {
@@ -242,7 +331,7 @@ public class BuyerRequestService : IBuyerRequestService
         _context.BuyerRequestComments.Add(comment);
         await _context.SaveChangesAsync(ct);
 
-        return MapComment(comment, adminUser?.FullName ?? "الإدارة");
+        return MapComment(comment, adminName);
     }
 
     // ── Comments ──────────────────────────────────────────────────────────────
@@ -253,24 +342,34 @@ public class BuyerRequestService : IBuyerRequestService
         var exists = await _context.BuyerRequests.AnyAsync(r => r.Id == requestId, ct);
         if (!exists) throw new BoiootException("الطلب غير موجود", 404);
 
-        // Materialize to in-memory list first, then project.
-        // Cannot call MapComment inside IQueryable.Select() because MapComment has an
-        // optional parameter (actorName), which causes CS0854 in expression trees.
+        // Project: only FullName from User, not the full entity
         var rows = await _context.BuyerRequestComments
-            .Include(c => c.User)
             .Where(c => c.BuyerRequestId == requestId)
             .OrderBy(c => c.CreatedAt)
             .AsNoTracking()
+            .Select(c => new
+            {
+                c.Id, c.Content, c.UserId, c.BuyerRequestId,
+                c.ParentCommentId, c.CreatedAt,
+                UserName = c.User != null ? c.User.FullName : ""
+            })
             .ToListAsync(ct);
 
-        return rows.Select(c => MapComment(c)).ToList();
+        return rows.Select(c => new BuyerRequestCommentResponse
+        {
+            Id              = c.Id,
+            Content         = c.Content,
+            UserId          = c.UserId,
+            UserName        = c.UserName,
+            BuyerRequestId  = c.BuyerRequestId,
+            ParentCommentId = c.ParentCommentId,
+            CreatedAt       = c.CreatedAt,
+        }).ToList();
     }
 
     public async Task<BuyerRequestCommentResponse> AddCommentAsync(
         Guid userId, Guid requestId, AddCommentDto dto, CancellationToken ct = default)
     {
-        // Fetch the request to validate existence AND retrieve the owner's UserId.
-        // We need the owner to send a notification — do NOT use AnyAsync here.
         var request = await _context.BuyerRequests
             .Where(r => r.Id == requestId && r.IsPublished)
             .Select(r => new { r.UserId, r.Title })
@@ -278,7 +377,6 @@ public class BuyerRequestService : IBuyerRequestService
 
         if (request is null) throw new BoiootException("الطلب غير موجود", 404);
 
-        // ── Validate parent comment (if replying) ──────────────────────────────────
         Guid? parentAuthorId = null;
         if (dto.ParentCommentId.HasValue)
         {
@@ -305,30 +403,15 @@ public class BuyerRequestService : IBuyerRequestService
         _context.BuyerRequestComments.Add(comment);
         await _context.SaveChangesAsync(ct);
 
-        // Fetch commenter's name for notification body and comment response.
-        // NOTE: Do NOT assign comment.User = new User{...} on a tracked entity.
-        // EF Core's change-tracker would queue it for INSERT → UNIQUE constraint on UserCode.
         var actorName = await _context.Users
             .Where(u => u.Id == userId)
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(ct) ?? "";
 
-        // ── Notifications: multi-recipient, priority-ordered, deduplicated ────────
-        //
-        //  Priority:
-        //    0) Parent comment author (if reply)    → "تم الرد على تعليقك"         (request_reply)
-        //    A) Request owner (if different)        → "تعليق جديد على طلبك"         (request_comment)
-        //    B) Other previous participants         → "نشاط جديد في نقاش شاركت فيه" (request_discussion_activity)
-        //
-        //  Rules:
-        //    • Never notify the actor.
-        //    • Never duplicate — first assignment wins (HashSet<Guid>).
-        //    • Owner gets message A even if they also commented before.
-
         var previousParticipantIds = await _context.BuyerRequestComments
             .Where(c => c.BuyerRequestId == requestId
-                     && c.Id             != comment.Id   // exclude just-saved comment
-                     && c.UserId         != userId)      // exclude actor
+                     && c.Id             != comment.Id
+                     && c.UserId         != userId)
             .Select(c => c.UserId)
             .Distinct()
             .ToListAsync(ct);
@@ -336,7 +419,6 @@ public class BuyerRequestService : IBuyerRequestService
         var recipientSet  = new HashSet<Guid>();
         var notifications = new List<NotificationRequest>();
 
-        // 0) Parent comment author — most specific message for replies
         if (parentAuthorId.HasValue && parentAuthorId.Value != userId
                                     && recipientSet.Add(parentAuthorId.Value))
         {
@@ -349,7 +431,6 @@ public class BuyerRequestService : IBuyerRequestService
                 RelatedEntityType : "BuyerRequest"));
         }
 
-        // A) Request owner
         if (request.UserId != userId && recipientSet.Add(request.UserId))
         {
             notifications.Add(new NotificationRequest(
@@ -361,7 +442,6 @@ public class BuyerRequestService : IBuyerRequestService
                 RelatedEntityType : "BuyerRequest"));
         }
 
-        // B) Other previous participants
         foreach (var pId in previousParticipantIds)
         {
             if (!recipientSet.Add(pId)) continue;
@@ -433,8 +513,6 @@ public class BuyerRequestService : IBuyerRequestService
         UpdatedAt     = r.UpdatedAt,
     };
 
-    // actorName overrides the navigation property — avoids EF change-tracker issues
-    // when the caller cannot safely set c.User = new User{...} on a tracked entity.
     private static BuyerRequestCommentResponse MapComment(BuyerRequestComment c, string? actorName = null) => new()
     {
         Id              = c.Id,

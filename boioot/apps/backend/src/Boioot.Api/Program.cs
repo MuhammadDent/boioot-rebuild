@@ -29,6 +29,7 @@ builder.Services.Configure<BankInstructionsOptions>(
 builder.Services.Configure<StripeOptions>(
     builder.Configuration.GetSection(StripeOptions.SectionName));
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddMemoryCache();
 
 builder.Services.AddCors(options =>
 {

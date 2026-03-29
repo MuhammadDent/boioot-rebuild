@@ -41,6 +41,11 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.HasIndex(p => p.Type);
         builder.HasIndex(p => p.CreatedAt);
 
+        // Composite indexes for common listing queries
+        builder.HasIndex(p => new { p.Status, p.CreatedAt });             // public list: WHERE Status=Available ORDER BY CreatedAt DESC
+        builder.HasIndex(p => new { p.CompanyId, p.Status, p.CreatedAt }); // dashboard: WHERE CompanyId=X AND Status=Y ORDER BY CreatedAt DESC
+        builder.HasIndex(p => new { p.OwnerId, p.CreatedAt });             // personal listings: WHERE OwnerId=X ORDER BY CreatedAt DESC
+
         builder.HasQueryFilter(p => !p.IsDeleted && !p.Company.IsDeleted);
     }
 }

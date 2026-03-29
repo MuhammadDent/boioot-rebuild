@@ -427,6 +427,23 @@ public class DataSeeder
 
         var companyId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
+        var sentinelExists = await _context.Companies
+            .IgnoreQueryFilters()
+            .AnyAsync(c => c.Id == companyId);
+
+        if (!sentinelExists)
+        {
+            _context.Companies.Add(new Company
+            {
+                Id          = companyId,
+                Name        = "بيوت - عقارات شخصية",
+                CompanyType = "RealEstateOffice",
+                IsVerified  = true,
+                IsProfileComplete = true,
+            });
+            await _context.SaveChangesAsync();
+        }
+
         var properties = new[]
         {
             new Property

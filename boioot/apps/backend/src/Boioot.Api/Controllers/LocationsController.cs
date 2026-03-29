@@ -3,6 +3,7 @@ using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Boioot.Api.Controllers;
 
@@ -11,11 +12,20 @@ public class LocationsController : BaseController
 {
     private readonly BoiootDbContext          _db;
     private readonly ILocationMasterService   _locationService;
+    private readonly IMemoryCache             _cache;
 
-    public LocationsController(BoiootDbContext db, ILocationMasterService locationService)
+    private static readonly TimeSpan CitiesTtl        = TimeSpan.FromHours(6);
+    private static readonly TimeSpan NeighborhoodsTtl = TimeSpan.FromHours(2);
+    private static readonly TimeSpan PropOptionsTtl   = TimeSpan.FromMinutes(5);
+
+    public LocationsController(
+        BoiootDbContext        db,
+        ILocationMasterService locationService,
+        IMemoryCache           cache)
     {
         _db              = db;
         _locationService = locationService;
+        _cache           = cache;
     }
 
     // ─── Provinces ─────────────────────────────────────────────────────────────
@@ -26,6 +36,10 @@ public class LocationsController : BaseController
     {
         Response.Headers.Append("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
 
+        const string key = "loc:provinces";
+        if (_cache.TryGetValue(key, out List<string>? cached) && cached is not null)
+            return Ok(cached);
+
         var provinces = await _db.LocationCities
             .AsNoTracking()
             .Where(c => c.IsActive && !string.IsNullOrEmpty(c.Province))
@@ -34,6 +48,7 @@ public class LocationsController : BaseController
             .OrderBy(p => p)
             .ToListAsync(ct);
 
+        _cache.Set(key, provinces, CitiesTtl);
         return Ok(provinces);
     }
 
@@ -48,31 +63,42 @@ public class LocationsController : BaseController
     {
         Response.Headers.Append("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
 
-        var query = _db.LocationCities.AsNoTracking();
-
+        // Only cache the standard active-cities query (no inactive, optional province filter)
         if (!includeInactive)
-            query = query.Where(c => c.IsActive);
+        {
+            var cacheKey = string.IsNullOrWhiteSpace(province)
+                ? "loc:cities"
+                : $"loc:cities:{province}";
 
+            if (_cache.TryGetValue(cacheKey, out object? hit))
+                return Ok(hit);
+
+            var query = _db.LocationCities.AsNoTracking().Where(c => c.IsActive);
+            if (!string.IsNullOrWhiteSpace(province))
+                query = query.Where(c => c.Province == province);
+
+            var cities = await query
+                .OrderBy(c => c.Name)
+                .Select(c => new { c.Id, c.Name, c.Province })
+                .ToListAsync(ct);
+
+            _cache.Set(cacheKey, cities, CitiesTtl);
+            return Ok(cities);
+        }
+
+        // includeInactive=true — admin-only path, skip cache
+        var rawQuery = _db.LocationCities.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(province))
-            query = query.Where(c => c.Province == province);
+            rawQuery = rawQuery.Where(c => c.Province == province);
 
-        var cities = await query
+        var allCities = await rawQuery
             .OrderBy(c => c.Name)
             .Select(c => new { c.Id, c.Name, c.Province })
             .ToListAsync(ct);
 
-        return Ok(cities);
+        return Ok(allCities);
     }
 
-    /// <summary>
-    /// POST /api/locations/cities
-    ///
-    /// Delegates all creation logic to <see cref="ILocationMasterService"/>.
-    /// Response shape:
-    ///   { status: "created"|"exists"|"similar",
-    ///     item: {...} | null,
-    ///     suggestions: [...] }          ← always an array (empty unless status="similar")
-    /// </summary>
     [HttpPost("cities")]
     [Authorize]
     public async Task<IActionResult> AddCity(
@@ -89,6 +115,15 @@ public class LocationsController : BaseController
                 req.Province ?? string.Empty,
                 req.ForceCreate ?? false,
                 ct);
+
+            // Invalidate city/province caches on successful creation
+            if (result.Status == "created")
+            {
+                _cache.Remove("loc:provinces");
+                _cache.Remove("loc:cities");
+                if (!string.IsNullOrWhiteSpace(req.Province))
+                    _cache.Remove($"loc:cities:{req.Province}");
+            }
 
             return Ok(new LocationApiResult(result.Status, result.Item, result.Suggestions));
         }
@@ -109,11 +144,27 @@ public class LocationsController : BaseController
     {
         Response.Headers.Append("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
 
-        var query = _db.LocationNeighborhoods.AsNoTracking();
+        if (!includeInactive && !string.IsNullOrWhiteSpace(city))
+        {
+            var cacheKey = $"loc:nbrs:{city}";
+            if (_cache.TryGetValue(cacheKey, out object? hit))
+                return Ok(hit);
 
+            var nbrs = await _db.LocationNeighborhoods
+                .AsNoTracking()
+                .Where(n => n.IsActive && n.City == city)
+                .OrderBy(n => n.Name)
+                .Select(n => new { n.Id, n.Name, n.City })
+                .ToListAsync(ct);
+
+            _cache.Set(cacheKey, nbrs, NeighborhoodsTtl);
+            return Ok(nbrs);
+        }
+
+        // Uncached path: no city filter or includeInactive=true
+        var query = _db.LocationNeighborhoods.AsNoTracking();
         if (!includeInactive)
             query = query.Where(n => n.IsActive);
-
         if (!string.IsNullOrWhiteSpace(city))
             query = query.Where(n => n.City == city);
 
@@ -125,11 +176,6 @@ public class LocationsController : BaseController
         return Ok(neighborhoods);
     }
 
-    /// <summary>
-    /// POST /api/locations/neighborhoods
-    ///
-    /// Response shape identical to POST /cities.
-    /// </summary>
     [HttpPost("neighborhoods")]
     [Authorize]
     public async Task<IActionResult> AddNeighborhood(
@@ -148,6 +194,10 @@ public class LocationsController : BaseController
                 req.City,
                 req.ForceCreate ?? false,
                 ct);
+
+            // Invalidate neighborhood cache on successful creation
+            if (result.Status == "created" && !string.IsNullOrWhiteSpace(req.City))
+                _cache.Remove($"loc:nbrs:{req.City}");
 
             return Ok(new LocationApiResult(result.Status, result.Item, result.Suggestions));
         }
@@ -186,6 +236,10 @@ public class LocationsController : BaseController
     {
         Response.Headers.Append("Cache-Control", "public, max-age=120, stale-while-revalidate=30");
 
+        var cacheKey = $"loc:prop-opts:{province ?? "_"}:{city ?? "_"}";
+        if (_cache.TryGetValue(cacheKey, out object? cachedOpts))
+            return Ok(cachedOpts);
+
         var baseQuery = _db.Properties
             .AsNoTracking()
             .IgnoreQueryFilters()
@@ -220,12 +274,15 @@ public class LocationsController : BaseController
             .OrderBy(x => x.Neighborhood)
             .ToListAsync(ct);
 
-        return Ok(new
+        var result = new
         {
             provinces,
             cities        = cities.Select(x => new { name = x.City, province = x.Province }),
             neighborhoods = neighborhoods.Select(x => new { name = x.Neighborhood, city = x.City, province = x.Province }),
-        });
+        };
+
+        _cache.Set(cacheKey, result, PropOptionsTtl);
+        return Ok(result);
     }
 }
 
@@ -234,13 +291,6 @@ public class LocationsController : BaseController
 public record AddCityRequest(string? Name, string? Province, bool? ForceCreate);
 public record AddNeighborhoodRequest(string? Name, string? City, bool? ForceCreate);
 
-/// <summary>
-/// Unified response for POST /cities and POST /neighborhoods.
-///
-/// status:      "created" | "exists" | "similar"
-/// item:        the saved or found location (null only when status = "similar")
-/// suggestions: similar candidates — empty list unless status = "similar"
-/// </summary>
 public record LocationApiResult(
     string                          Status,
     LocationItemDto?                Item,
