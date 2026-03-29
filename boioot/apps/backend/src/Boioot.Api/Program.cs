@@ -33,8 +33,21 @@ builder.Services.AddMemoryCache();
 
 builder.Services.AddCors(options =>
 {
+    var rawOrigins = builder.Configuration["AllowedOrigins"];
+    var origins = rawOrigins?
+        .Split(",", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Where(o => !string.IsNullOrWhiteSpace(o))
+        .ToArray();
+
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    {
+        if (origins?.Length > 0)
+            // Production: restrict to explicit allowed origins only
+            policy.WithOrigins(origins).AllowAnyMethod().AllowAnyHeader().AllowCredentials();
+        else
+            // Development / local: allow all origins (no credentials restriction)
+            policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+    });
 });
 
 var jwtKey = builder.Configuration["Jwt:Key"]

@@ -66,6 +66,24 @@ I prefer simple language. I want iterative development. Ask before making major 
 - ModelSnapshot updated to match PG-safe filter expression.
 - Missing 5th migration Designer file: harmless; migration ID manually injected into `__EFMigrationsHistory`.
 
+**Performance Optimizations (Day 13):**
+- `IMemoryCache`: Cities cached 6h, provinces 6h, neighborhoods 2h, property-options 5min. Cities 200ms → 44ms (↓78%).
+- `BuyerRequestService`: All list/detail queries use `.Select()` projections — no more `Include(User)`. Only `FullName` joined.
+- Composite indexes applied directly to PostgreSQL: `IX_Properties_Status_CreatedAt`, `IX_Properties_CompanyId_Status_CreatedAt`, `IX_Properties_OwnerId_CreatedAt`, `IX_BuyerRequests_IsPublished_CreatedAt`, `IX_BuyerRequests_UserId_CreatedAt`.
+- Seeder bug fixed: sentinel company `00000000-0000-0000-0000-000000000001` now created before sample properties.
+- Frontend: `PropertyCard` and `ProjectCard` have `loading="lazy"`, `decoding="async"`, `memo()`. `usePropertyLocations` has module-level singleton cache.
+
+**Production Readiness (Day 14):**
+- CORS: Environment-based (`AllowedOrigins` config key). In production set comma-separated origins; dev/unset = AllowAnyOrigin.
+- `run-api.sh`: Sets `ASPNETCORE_ENVIRONMENT=Development` by default (can be overridden via env var for real deployments).
+- `appsettings.Production.json` created: Overrides logging levels for production; relies on env vars for sensitive config.
+- `appsettings.json`: SQL Server connection string password removed (blank). JWT key remains for dev.
+- Sensitive data in API: PasswordHash, tokens, secrets never returned in API responses (verified via DTO audit).
+- Admin endpoints: All require `[Authorize]` + RBAC `[RequirePermission]`. Verified: 401 without token.
+- Error handling: Global exception handler logs all unhandled exceptions, returns Arabic message (no stack trace exposed).
+- Frontend: `EmptyState`, `ErrorState`, `InlineBanner` components used consistently. `normalizeError` handles all error types.
+- TypeScript: Fixed null-check closure errors in `_modal.tsx` (non-nullable alias `const p = property`). Fixed duplicate `color` key in `_analytics.tsx`.
+
 ## External Dependencies
 
 - **Database:**

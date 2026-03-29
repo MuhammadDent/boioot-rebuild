@@ -268,7 +268,7 @@ export function AnalyticsSection({
         </h3>
         <span style={{
           marginRight: "auto",
-          fontSize: "0.75rem", color: "#64748b",
+          fontSize: "0.75rem",
           backgroundColor: hasIsolation ? "#eff6ff" : "#f1f5f9",
           color: hasIsolation ? "#1d4ed8" : "#64748b",
           borderRadius: 10, padding: "0.15rem 0.6rem",

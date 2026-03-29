@@ -87,14 +87,16 @@ export function PropertyDetailModal({
 
   if (!property) return null;
 
-  const primaryImage = property.images?.find(i => i.isPrimary) ?? property.images?.[0];
+  // Local non-nullable alias — keeps TypeScript happy inside async closures
+  const p = property;
+  const primaryImage = p.images?.find(i => i.isPrimary) ?? p.images?.[0];
 
   async function handleStatusApply() {
-    if (pendingStatus === property.status) return;
+    if (pendingStatus === p.status) return;
     setLocalError("");
     setStatusSuccess(false);
     try {
-      await onStatusChange(property.id, pendingStatus);
+      await onStatusChange(p.id, pendingStatus);
       setStatusSuccess(true);
       setTimeout(() => setStatusSuccess(false), 2000);
     } catch (e) {
@@ -103,11 +105,11 @@ export function PropertyDetailModal({
   }
 
   async function handleModerationApply(newStatus: string) {
-    if (newStatus === (property.moderationStatus ?? "Active")) return;
+    if (newStatus === (p.moderationStatus ?? "Active")) return;
     setLocalError("");
     setModerSuccess(false);
     try {
-      await onModerationChange(property.id, newStatus);
+      await onModerationChange(p.id, newStatus);
       setPendingModeration(newStatus);
       setModerSuccess(true);
       setTimeout(() => setModerSuccess(false), 2000);
@@ -119,7 +121,7 @@ export function PropertyDetailModal({
   async function handleDeleteConfirm() {
     setLocalError("");
     try {
-      await onDelete(property.id);
+      await onDelete(p.id);
       onClose();
     } catch (e) {
       setLocalError(String(e));

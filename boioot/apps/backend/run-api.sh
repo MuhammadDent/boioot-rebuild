@@ -25,6 +25,12 @@ else
 fi
 
 # ─── Start the .NET backend (foreground) ──────────────────────────────────────
+# Set Development environment so appsettings.json (not Production override) is
+# used during local/Replit development. In real production deployments set
+# ASPNETCORE_ENVIRONMENT=Production and provide Jwt__Key + AllowedOrigins via
+# environment variables or secrets manager.
+export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
+
 cd "$SCRIPT_DIR"
 exec dotnet run \
   --project src/Boioot.Api \

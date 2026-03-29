@@ -13,6 +13,8 @@ import {
 } from "@/features/properties/constants";
 import type { PropertyResponse } from "@/types";
 import { PropertyDetailModal } from "./_modal";
+import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import Spinner from "@/components/ui/Spinner";
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const DISPLAY_PAGE_SIZE = 20;
@@ -504,17 +506,11 @@ export default function AdminPropertiesPage() {
       {/* Body */}
       <div style={{ marginTop: "1rem" }}>
         {fetching ? (
-          <div style={{ textAlign: "center", padding: "3rem", color: "#94a3b8", fontSize: "0.9rem" }}>
-            جارٍ تحميل العقارات...
+          <div style={{ display: "flex", justifyContent: "center", padding: "3rem" }}>
+            <Spinner />
           </div>
         ) : fetchError ? (
-          <div style={{
-            backgroundColor: "#fef2f2", border: "1px solid #fecaca",
-            borderRadius: 12, padding: "1.25rem", textAlign: "center",
-            color: "#dc2626", fontSize: "0.88rem",
-          }}>
-            {fetchError}
-          </div>
+          <InlineBanner message={fetchError} />
         ) : sorted.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "#94a3b8", fontSize: "0.9rem" }}>
             {activeCount > 0 ? "لا توجد نتائج تطابق معايير التصفية" : "لا توجد عقارات بعد"}
