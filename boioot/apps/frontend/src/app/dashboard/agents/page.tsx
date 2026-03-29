@@ -157,7 +157,7 @@ export default function AgentsPage() {
           <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1rem" }}>إنشاء وكيل جديد</h2>
 
           {formError && (
-            <div className="error-banner" style={{ marginBottom: "1rem" }}>{formError}</div>
+            <div className="error-banner">{formError}</div>
           )}
 
           <form onSubmit={handleCreateAgent} noValidate>
@@ -223,7 +223,7 @@ export default function AgentsPage() {
       {fetching ? (
         <div style={{ textAlign: "center", padding: "3rem" }}><Spinner /></div>
       ) : fetchError ? (
-        <div className="error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div className="error-banner">
           <span>{fetchError}</span>
           <button className="btn btn-outline btn-sm" onClick={() => setRetryKey((k) => k + 1)}>
             إعادة المحاولة

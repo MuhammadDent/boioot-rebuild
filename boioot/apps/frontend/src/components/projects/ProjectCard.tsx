@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { memo } from "react";
 import type { ProjectResponse } from "@/types";
 import {
   PROJECT_STATUS_LABELS,
@@ -10,7 +11,7 @@ interface ProjectCardProps {
   project: ProjectResponse;
 }
 
-export default function ProjectCard({ project }: ProjectCardProps) {
+function ProjectCardInner({ project }: ProjectCardProps) {
   const mainImage =
     project.images.find((img) => img.isPrimary) ?? project.images[0];
 
@@ -18,7 +19,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   const statusBadge = PROJECT_STATUS_BADGE[project.status] ?? "badge-gray";
 
   return (
-    <Link href={`/projects/${project.id}`} style={{ textDecoration: "none" }}>
+    <Link href={`/projects/${project.id}`} style={{ textDecoration: "none", display: "block" }}>
       <article className="card project-card">
         {mainImage ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -26,6 +27,8 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             src={mainImage.imageUrl}
             alt={project.title}
             className="project-card__img"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="project-card__img-placeholder">🏗️</div>
@@ -40,11 +43,13 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
           <p className="project-card__city">📍 {project.city}</p>
 
-          <span className={`badge ${statusBadge}`}>{statusLabel}</span>
-
-          <p className="project-card__company">{project.companyName}</p>
+          <div className="project-card__tags">
+            <span className={`badge ${statusBadge}`}>{statusLabel}</span>
+          </div>
         </div>
       </article>
     </Link>
   );
 }
+
+export default memo(ProjectCardInner);

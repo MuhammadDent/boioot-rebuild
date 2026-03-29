@@ -110,12 +110,13 @@ function ProjectsContent() {
         {/* Page Header */}
         <div className="page-header">
           <h1 className="page-header__title">المشاريع العقارية</h1>
-          {!loading && !error && (
+          {!loading && !error && totalCount > 0 && (
             <p className="page-header__subtitle">
-              {totalCount > 0
-                ? `${totalCount.toLocaleString("en")} مشروع`
-                : hasActiveFilters ? "لا توجد نتائج" : "لا توجد مشاريع حالياً"}
+              {totalCount.toLocaleString("en")} مشروع
             </p>
+          )}
+          {!loading && !error && totalCount === 0 && hasActiveFilters && (
+            <p className="page-header__subtitle">لا توجد نتائج</p>
           )}
         </div>
 
@@ -174,7 +175,7 @@ function ProjectsContent() {
 
         {/* Error */}
         {!loading && error && (
-          <div className="error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+          <div className="error-banner">
             <span>{error}</span>
             <button className="btn btn-outline btn-sm" onClick={() => setRetryKey((k) => k + 1)}>
               إعادة المحاولة

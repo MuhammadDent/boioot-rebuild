@@ -262,7 +262,7 @@ export default function OnboardingPage() {
           </p>
         </div>
 
-        {error && <div className="error-banner" style={{ marginBottom: "1rem" }}>{error}</div>}
+        {error && <div className="error-banner">{error}</div>}
 
         {/* ── Form ─────────────────────────────────────────────────────────── */}
         <form onSubmit={handleSubmit} noValidate>

@@ -245,7 +245,7 @@ export default function RegisterPage() {
               حدّد نوع حسابك حتى نُخصّص تجربتك
             </p>
 
-            {error && <div className="error-banner" style={{ marginBottom: "1rem" }}>{error}</div>}
+            {error && <div className="error-banner">{error}</div>}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.5rem" }}>
               {ROLES.map((role, i) => (

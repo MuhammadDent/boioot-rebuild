@@ -202,7 +202,7 @@ function PropertiesContent() {
             {loading && <PropertyCardSkeletonGrid count={PROPERTIES_PAGE_SIZE} />}
 
             {!loading && error && (
-              <div className="error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div className="error-banner">
                 <span>{error}</span>
                 <button className="btn btn-outline btn-sm" onClick={() => setRetryKey((k) => k + 1)}>
                   إعادة المحاولة
@@ -348,7 +348,7 @@ function PropertiesContent() {
 
             {/* Actions */}
             <div className="filter-sidebar__actions">
-              <button type="submit" className="btn btn-primary btn-sm">تطبيق الفلتر</button>
+              <button type="submit" className="btn btn-primary btn-sm">تطبيق</button>
               {hasActiveFilters && (
                 <button type="button" className="btn btn-ghost btn-sm" onClick={handleClear}>
                   مسح الفلاتر

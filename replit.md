@@ -31,6 +31,14 @@ I prefer simple language. I want iterative development. Ask before making major 
     - **Global Error Handling:** Consistent, localized JSON error responses.
     - **Plan-Based Access Control (PBAC):** Frontend-driven feature gating and limit enforcement based on user's subscription plan, with graceful degradation.
 
+**UI Consistency (Day 8 pass):**
+- `PropertyCard`: description block removed → all cards have equal heights; `memo()` wrap preserved.
+- `ProjectCard`: `memo()` added; `loading="lazy"` + `decoding="async"` on images; uses `.project-card__tags` for badge alignment.
+- `.error-banner` CSS class now includes flex layout by default — all inline `display:flex` overrides removed across the codebase.
+- Projects page subtitle suppressed when `totalCount === 0 && !hasActiveFilters` to avoid double empty-state messaging.
+- Filter apply button standardized to "تطبيق" across all list pages.
+- `.project-card__tags` CSS class added (mirrors `.property-card__tags` — `margin-top: auto` pushes badges to card bottom).
+
 **Key Design Decisions:**
 - Logical deletion is used for key entities.
 - Query filters are applied at the EF Core level for soft deletes and role-based access.

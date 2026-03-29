@@ -237,7 +237,7 @@ export default function MyRequestsPage() {
         </Link>
 
         {fetchError && (
-          <div className="error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
+          <div className="error-banner">
             <span>{fetchError}</span>
             <button className="btn btn-outline btn-sm" onClick={() => load(page)}>
               إعادة المحاولة

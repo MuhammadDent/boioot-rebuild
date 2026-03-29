@@ -87,20 +87,6 @@ function PropertyCardInner({ property, initialIsFavorited = false }: PropertyCar
           <div className="property-card__body">
             <h3 className="property-card__title">{property.title}</h3>
             <p className="property-card__price">{formatPrice(property.price, property.currency)}</p>
-            {property.description && (
-              <p style={{
-                fontSize: "0.8rem",
-                color: "var(--color-text-secondary)",
-                margin: "0.25rem 0 0.4rem",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-                lineHeight: 1.5,
-              }}>
-                {property.description}
-              </p>
-            )}
             <p className="property-card__city">📍 {property.city}</p>
 
             <div className="property-card__tags">
