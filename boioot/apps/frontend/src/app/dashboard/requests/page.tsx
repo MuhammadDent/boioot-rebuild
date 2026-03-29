@@ -8,6 +8,7 @@ import {
   TrendingUp, Users, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import Spinner from "@/components/ui/Spinner";
 import {
   dashboardRequestsApi,
 } from "@/features/dashboard/requests/api";
@@ -98,9 +99,10 @@ export default function DashboardRequestsPage() {
       list = list.filter(r => !!r.projectTitle);
     if (search.trim())
       list = list.filter(r =>
-        r.name.includes(search) || r.phone.includes(search) ||
+        (r.name  ?? "").includes(search) ||
+        (r.phone ?? "").includes(search) ||
         (r.propertyTitle ?? "").includes(search) ||
-        (r.projectTitle ?? "").includes(search)
+        (r.projectTitle  ?? "").includes(search)
       );
     list.sort((a, b) => {
       if (sortBy === "newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -123,7 +125,13 @@ export default function DashboardRequestsPage() {
 
   useEffect(() => { setCurrentPage(1); }, [search, statusFilter, subjectFilter, sortBy]);
 
-  if (isLoading || !user) return null;
+  if (isLoading || !user) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f8fafc" }}>
+        <Spinner />
+      </div>
+    );
+  }
 
   const statusColors: Record<string, { bar: string; badge: string }> = {
     New:       { bar: "#3b82f6", badge: "bg-blue-100 text-blue-700" },
@@ -160,7 +168,22 @@ export default function DashboardRequestsPage() {
           </div>
         </div>
 
-        <InlineBanner message={fetchError} />
+        {fetchError && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+            <InlineBanner message={fetchError} />
+            <button
+              onClick={load}
+              style={{
+                padding: "0.45rem 1rem", borderRadius: 8, border: "1.5px solid #dc2626",
+                backgroundColor: "transparent", color: "#dc2626",
+                cursor: "pointer", fontSize: "0.82rem", fontWeight: 600,
+                fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0,
+              }}
+            >
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
 
         {/* ═══ 2. KPI Cards ═══════════════════════════════════════════════════ */}
         {!fetching && (
@@ -583,7 +606,7 @@ function RequestCard({ request: r }: { request: DashboardRequestItem }) {
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "0.85rem", fontWeight: 700, flexShrink: 0,
             }}>
-              {r.name.charAt(0)}
+              {(r.name ?? "؟").charAt(0)}
             </div>
             <div>
               <p style={{ margin: 0, fontWeight: 700, fontSize: "0.95rem", color: "#1e293b" }}>

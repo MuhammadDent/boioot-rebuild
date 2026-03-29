@@ -247,7 +247,9 @@ function RequestsContent() {
         {!loading && (
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
             <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
-              {totalCount} طلب
+              {(typeParam || cityParam)
+                ? `${requests.length} طلب مطابق في هذه الصفحة`
+                : `${totalCount} طلب`}
             </span>
             {typeParam && (
               <span style={{

@@ -494,7 +494,7 @@ export default function RequestDetailPage() {
 
   if (reqLoading) {
     return (
-      <div dir="rtl" style={{ backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Spinner />
       </div>
     );

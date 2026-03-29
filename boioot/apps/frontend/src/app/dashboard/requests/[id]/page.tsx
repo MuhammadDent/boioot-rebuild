@@ -6,6 +6,7 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import Spinner from "@/components/ui/Spinner";
 import { dashboardRequestsApi } from "@/features/dashboard/requests/api";
 import {
   REQUEST_STATUS_LABELS,
@@ -83,7 +84,13 @@ export default function RequestDetailPage() {
     }
   }
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "var(--color-bg)" }}>
+        <Spinner />
+      </div>
+    );
+  }
 
   // ── Loading ──
   if (fetching) {
