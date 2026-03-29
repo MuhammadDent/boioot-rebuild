@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -26,7 +26,14 @@ export default function LoginPage() {
   const [debugDetail, setDebugDetail] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Prevents the useEffect from double-navigating after a fresh login from this page.
+  // The submit handler already calls consumeRedirectTarget() and router.push() itself.
+  const justLoggedIn = useRef(false);
+
+  // Redirect already-authenticated users away from /login (e.g. back navigation).
+  // Skipped when this page performed the login itself.
   useEffect(() => {
+    if (justLoggedIn.current) return;
     if (!isLoading && isAuthenticated) {
       const target = consumeRedirectTarget();
       router.replace(target ?? "/dashboard");
@@ -44,6 +51,7 @@ export default function LoginPage() {
     try {
       const res = await authApi.login({ email, password, rememberMe });
       console.log("[login] Login succeeded. Role:", res.user.role, "Permissions:", res.user.permissions?.length ?? 0);
+      justLoggedIn.current = true;
       login(res.token, res.user, res.expiresAt);
       const target = consumeRedirectTarget();
       const category = getRoleCategory(res.user.role);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -115,7 +115,14 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<Partial<FormState>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Prevents the useEffect from double-navigating after a fresh register from this page.
+  // The submit handler already calls consumeRedirectTarget() and router.push() itself.
+  const justRegistered = useRef(false);
+
+  // Redirect already-authenticated users away from /register (e.g. back navigation).
+  // Skipped when this page performed the registration itself.
   useEffect(() => {
+    if (justRegistered.current) return;
     if (!isLoading && isAuthenticated) {
       const target = consumeRedirectTarget();
       router.replace(target ?? "/dashboard");
@@ -178,6 +185,7 @@ export default function RegisterPage() {
         companyName: needsBusinessName ? businessName : undefined,
         companyType: option.companyType ?? undefined,
       });
+      justRegistered.current = true;
       login(res.token, res.user, res.expiresAt);
       // Business accounts go to onboarding to complete their profile first.
       const role = option.value;

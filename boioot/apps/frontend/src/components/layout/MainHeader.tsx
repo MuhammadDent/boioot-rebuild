@@ -13,7 +13,8 @@ import { getRoleCategory } from "@/features/admin/constants";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function userInitials(name: string): string {
+function userInitials(name: string | null | undefined): string {
+  if (!name) return "؟";
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
@@ -156,12 +157,12 @@ export default function MainHeader() {
                   {user?.profileImageUrl ? (
                     <img
                       src={user.profileImageUrl}
-                      alt={user.fullName}
+                      alt={user.fullName ?? "صورة المستخدم"}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
                     <span className="main-hdr__initials">
-                      {user ? userInitials(user.fullName) : "؟"}
+                      {userInitials(user?.fullName)}
                     </span>
                   )}
                 </Link>

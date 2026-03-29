@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getRoleCategory } from "@/features/admin/constants";
+import { saveRedirectTarget } from "@/lib/authRedirect";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import AdminToolbar from "@/components/admin/AdminToolbar";
 import AdminBreadcrumb from "@/components/admin/AdminBreadcrumb";
@@ -35,6 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (isLoading || redirected.current) return;
 
     if (!user) {
+      saveRedirectTarget();
       redirected.current = true;
       router.replace("/login");
       return;
