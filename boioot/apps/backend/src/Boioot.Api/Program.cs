@@ -15,18 +15,16 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Kestrel: bind to PORT (production) or DOTNET_PORT (dev) ──────────────────
-// Production (Replit Autoscale): PORT is assigned dynamically; DOTNET_PORT not set.
-// Dev (run-api.sh):              DOTNET_PORT=5233; PORT=8080 belongs to the proxy.
-var kestrelPortStr = Environment.GetEnvironmentVariable("DOTNET_PORT")
-                  ?? Environment.GetEnvironmentVariable("PORT")
-                  ?? "8080";
-var kestrelPort = int.TryParse(kestrelPortStr, out var p) ? p : 8080;
-Console.WriteLine($"[startup] PORT={Environment.GetEnvironmentVariable("PORT") ?? "(not set)"}  DOTNET_PORT={Environment.GetEnvironmentVariable("DOTNET_PORT") ?? "(not set)"}  Kestrel→{kestrelPort}");
+// ── Kestrel: always bind to PORT ──────────────────────────────────────────────
+// Production (Replit Autoscale): PORT is assigned dynamically by Replit.
+// Dev (run-api.sh):              run-api.sh sets PORT=DOTNET_PORT=5233 for this
+//                                process; the Node proxy owns the external port.
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+Console.WriteLine($"[STARTUP] PORT={port}");
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(kestrelPort);
+    options.ListenAnyIP(int.Parse(port));
     options.Limits.MaxRequestBodySize = 104_857_600; // 100 MB
 });
 
@@ -236,6 +234,6 @@ _ = Task.Run(async () =>
 });
 
 // app.Run() binds to PORT immediately — health check responds at t=0.
-Console.WriteLine($"[startup] Server starting on port {kestrelPort} ...");
+Console.WriteLine($"[startup] Server starting on port {port} ...");
 app.Run();
 Console.WriteLine($"[startup] Server stopped.");

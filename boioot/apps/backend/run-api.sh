@@ -35,11 +35,11 @@ else
 fi
 
 # ─── Start the .NET backend (foreground) ──────────────────────────────────────
-# Program.cs reads DOTNET_PORT (exported above = 5233).
-# PORT env var stays at 8080 for the proxy; .NET won't touch it.
+# Program.cs now reads PORT directly.  Override PORT to DOTNET_PORT (5233)
+# so dotnet does not conflict with the Node proxy that owns the external PORT.
 export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
 
 cd "$SCRIPT_DIR"
-exec dotnet run \
+PORT="$DOTNET_PORT" exec dotnet run \
   --project src/Boioot.Api \
   --no-launch-profile

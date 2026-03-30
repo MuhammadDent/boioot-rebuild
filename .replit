@@ -9,7 +9,7 @@ id = "artifacts/mockup-sandbox"
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "dotnet ./out/Boioot.Api.dll --urls http://0.0.0.0:$PORT"]
+run = ["sh", "-c", "dotnet /home/runner/workspace/out/Boioot.Api.dll --urls http://0.0.0.0:$PORT"]
 build = ["sh", "-c", "bash boioot/apps/backend/build-prod.sh"]
 
 [deployment.postBuild]
