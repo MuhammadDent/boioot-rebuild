@@ -13,13 +13,16 @@ paths = ["/workspace-api"]
 run = "bash /home/runner/workspace/boioot/apps/backend/run-api.sh"
 
 [services.production]
-build = "bash boioot/apps/backend/build-prod.sh"
+# Build:
+#   1. Publish .NET to {workspace}/out/ (same path referenced by dist/index.cjs)
+#   2. Copy entry.cjs -> dist/index.cjs so Replit can run it
+build = "bash -c 'export DOTNET_ROOT=/nix/store/1blv644vinali34masnw6g5fjjjaa4y6-dotnet-sdk-8.0.416/share/dotnet && export PATH=$PATH:$DOTNET_ROOT && dotnet publish boioot/apps/backend/src/Boioot.Api/Boioot.Api.csproj -c Release -o out && mkdir -p artifacts/api-server/dist && cp artifacts/api-server/src/entry.cjs artifacts/api-server/dist/index.cjs'"
 
 [services.production.run]
-args = ["bash", "boioot/apps/backend/run-api-prod.sh"]
+args = ["node", "artifacts/api-server/dist/index.cjs"]
 
 [services.production.run.env]
 PORT = "8080"
 
 [services.production.health.startup]
-path = "/workspace-api/healthz"
+path = "/health"
