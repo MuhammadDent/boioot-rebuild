@@ -14,9 +14,7 @@ run = "bash /home/runner/workspace/boioot/apps/backend/run-api.sh"
 
 [services.production]
 build = "bash boioot/apps/backend/build-prod.sh"
-
-[services.production.run]
-args = ["node", "artifacts/api-server/dist/index.cjs"]
+run = "node artifacts/api-server/dist/index.cjs"
 
 [services.production.health.startup]
 path = "/health"
