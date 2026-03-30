@@ -13,15 +13,15 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.BACKEND_URL ?? "http://localhost:5233"}/api/:path*`,
+        destination: `${process.env.BACKEND_URL ?? "http://localhost:8080"}/api/:path*`,
       },
       {
         source: "/videos/:path*",
-        destination: `${process.env.BACKEND_URL ?? "http://localhost:5233"}/videos/:path*`,
+        destination: `${process.env.BACKEND_URL ?? "http://localhost:8080"}/videos/:path*`,
       },
       {
         source: "/uploads/:path*",
-        destination: `${process.env.BACKEND_URL ?? "http://localhost:5233"}/uploads/:path*`,
+        destination: `${process.env.BACKEND_URL ?? "http://localhost:8080"}/uploads/:path*`,
       },
     ];
   },

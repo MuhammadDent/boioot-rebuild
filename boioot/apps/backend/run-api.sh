@@ -5,41 +5,22 @@ export DOTNET_ROOT="/nix/store/1blv644vinali34masnw6g5fjjjaa4y6-dotnet-sdk-8.0.4
 export PATH="$PATH:$DOTNET_ROOT"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-WORKSPACE_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
-PROXY_PORT="${PORT:-8080}"
-# DOTNET_PORT controls what port the .NET backend binds to.
-# Must be different from PROXY_PORT to avoid conflicts.
-export DOTNET_PORT="${DOTNET_PORT:-5233}"
-BACKEND_PORT="$DOTNET_PORT"
-
-# ─── Clear stale processes (pkill is available; fuser/lsof are not) ───────────
+# ─── Clear stale processes ─────────────────────────────────────────────────────
 pkill -f "Boioot.Api" 2>/dev/null || true
 pkill -f "dotnet.*Boioot" 2>/dev/null || true
 pkill -f "proxy.mjs" 2>/dev/null || true
-sleep 2
-
-# ─── Start the Node.js API proxy in the background ────────────────────────────
-# Proxy listens on PORT (set by Replit, default 8080) and forwards to .NET.
-(
-  cd "$WORKSPACE_DIR"
-  exec node artifacts/api-server/src/proxy.mjs
-) &
-PROXY_PID=$!
-
 sleep 1
-if kill -0 "$PROXY_PID" 2>/dev/null; then
-  echo "[run-api] proxy started (pid $PROXY_PID) → :$PROXY_PORT ⟶ .NET :$BACKEND_PORT"
-else
-  echo "[run-api] WARNING: proxy failed to start on :$PROXY_PORT"
-fi
 
-# ─── Start the .NET backend (foreground) ──────────────────────────────────────
-# Program.cs now reads PORT directly.  Override PORT to DOTNET_PORT (5233)
-# so dotnet does not conflict with the Node proxy that owns the external PORT.
+# ─── Start .NET backend directly on PORT ──────────────────────────────────────
+# Program.cs reads PORT env var and calls ListenAnyIP(port).
+# No proxy layer — dotnet owns PORT directly (same as production).
 export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
+export PORT="${PORT:-8080}"
+
+echo "[run-api] Starting .NET on PORT=$PORT"
 
 cd "$SCRIPT_DIR"
-PORT="$DOTNET_PORT" exec dotnet run \
+exec dotnet run \
   --project src/Boioot.Api \
   --no-launch-profile
