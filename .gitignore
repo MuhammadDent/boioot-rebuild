@@ -2,6 +2,9 @@
 
 # compiled output
 dist
+# Keep the .NET launcher so Replit deployment finds it (dist/ is gitignored globally)
+!artifacts/api-server/dist/
+!artifacts/api-server/dist/index.cjs
 tmp
 out-tsc
 *.tsbuildinfo
