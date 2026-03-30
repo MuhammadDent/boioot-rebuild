@@ -15,10 +15,11 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Kestrel: bind to PORT (Replit production) or DOTNET_PORT (dev) ────────────
-// DOTNET_PORT is exported by run-api.sh in dev (5233) so it does not clash with
-// the Replit proxy on PORT=8080.  In production dist/index.cjs sets DOTNET_PORT
-// equal to PORT, so .NET binds directly on Replit's expected port.
+// ── Kestrel: bind on DOTNET_PORT (always), never directly on PORT ─────────────
+// Dev:        run-api.sh sets DOTNET_PORT=5233; node proxy.mjs owns PORT=8080.
+// Production: dist/index.cjs sets DOTNET_PORT=PORT+1; node HTTP proxy owns PORT.
+//   → Node binds PORT immediately (passes Replit's port-ready check even during
+//     .NET startup / DB seeding).  Node proxies all traffic to DOTNET_PORT.
 builder.WebHost.ConfigureKestrel(options =>
 {
     var rawPort = Environment.GetEnvironmentVariable("DOTNET_PORT")
