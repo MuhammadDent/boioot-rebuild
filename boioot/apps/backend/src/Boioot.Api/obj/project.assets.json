@@ -4194,7 +4194,9 @@
       "Boioot.Application >= 1.0.0",
       "Boioot.Infrastructure >= 1.0.0",
       "Microsoft.AspNetCore.Authentication.JwtBearer >= 8.0.10",
-      "Microsoft.EntityFrameworkCore.Design >= 8.0.10"
+      "Microsoft.EntityFrameworkCore >= 8.0.10",
+      "Microsoft.EntityFrameworkCore.Design >= 8.0.10",
+      "Microsoft.IdentityModel.Tokens >= 7.1.2"
     ]
   },
   "packageFolders": {
@@ -4250,11 +4252,19 @@
             "target": "Package",
             "version": "[8.0.10, )"
           },
+          "Microsoft.EntityFrameworkCore": {
+            "target": "Package",
+            "version": "[8.0.10, )"
+          },
           "Microsoft.EntityFrameworkCore.Design": {
             "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
             "suppressParent": "All",
             "target": "Package",
             "version": "[8.0.10, )"
+          },
+          "Microsoft.IdentityModel.Tokens": {
+            "target": "Package",
+            "version": "[7.1.2, )"
           }
         },
         "imports": [

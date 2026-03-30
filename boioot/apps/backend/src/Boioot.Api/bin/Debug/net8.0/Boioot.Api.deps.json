@@ -11,7 +11,9 @@
           "Boioot.Application": "1.0.0",
           "Boioot.Infrastructure": "1.0.0",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "8.0.10",
-          "Microsoft.EntityFrameworkCore.Design": "8.0.10"
+          "Microsoft.EntityFrameworkCore": "8.0.10",
+          "Microsoft.EntityFrameworkCore.Design": "8.0.10",
+          "Microsoft.IdentityModel.Tokens": "7.1.2"
         },
         "runtime": {
           "Boioot.Api.dll": {}
