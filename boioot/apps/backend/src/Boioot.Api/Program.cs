@@ -15,19 +15,18 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Kestrel: bind on DOTNET_PORT (always), never directly on PORT ─────────────
-// Dev:        run-api.sh sets DOTNET_PORT=5233; node proxy.mjs owns PORT=8080.
-// Production: dist/index.cjs sets DOTNET_PORT=PORT+1; node HTTP proxy owns PORT.
-//   → Node binds PORT immediately (passes Replit's port-ready check even during
-//     .NET startup / DB seeding).  Node proxies all traffic to DOTNET_PORT.
+// ── Kestrel: bind to PORT (production) or DOTNET_PORT (dev) ──────────────────
+// Production (Replit Autoscale): PORT is assigned dynamically; DOTNET_PORT not set.
+// Dev (run-api.sh):              DOTNET_PORT=5233; PORT=8080 belongs to the proxy.
+var kestrelPortStr = Environment.GetEnvironmentVariable("DOTNET_PORT")
+                  ?? Environment.GetEnvironmentVariable("PORT")
+                  ?? "8080";
+var kestrelPort = int.TryParse(kestrelPortStr, out var p) ? p : 8080;
+Console.WriteLine($"[startup] PORT={Environment.GetEnvironmentVariable("PORT") ?? "(not set)"}  DOTNET_PORT={Environment.GetEnvironmentVariable("DOTNET_PORT") ?? "(not set)"}  Kestrel→{kestrelPort}");
+
 builder.WebHost.ConfigureKestrel(options =>
 {
-    var rawPort = Environment.GetEnvironmentVariable("DOTNET_PORT")
-               ?? Environment.GetEnvironmentVariable("PORT")
-               ?? "5233";
-    if (int.TryParse(rawPort, out var kestrelPort))
-        options.ListenAnyIP(kestrelPort);
-
+    options.ListenAnyIP(kestrelPort);
     options.Limits.MaxRequestBodySize = 104_857_600; // 100 MB
 });
 
@@ -192,40 +191,51 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 
-// ── Database initialization and seeding ───────────────────────────────────────────────
+// ── Database initialization and seeding (runs in background after app binds PORT) ────
+// IMPORTANT: Must run AFTER app.StartAsync() so Kestrel is already listening.
+// This prevents Replit's health check from timing out during long DB init.
+_ = Task.Run(async () =>
 {
-    using var startupScope = app.Services.CreateScope();
-    var startupServices = startupScope.ServiceProvider;
-    var startupLogger   = startupServices.GetRequiredService<ILogger<Program>>();
+    // Brief delay to ensure the server is fully bound before we start DB work.
+    await Task.Delay(TimeSpan.FromSeconds(2));
+
+    await using var bgScope = app.Services.CreateAsyncScope();
+    var bgServices = bgScope.ServiceProvider;
+    var bgLogger   = bgServices.GetRequiredService<ILogger<Program>>();
 
     try
     {
-        await startupServices
+        bgLogger.LogInformation("[startup] Starting database initialization...");
+
+        await bgServices
             .GetRequiredService<DatabaseStartupService>()
             .InitializeAsync();
 
-        await startupServices
+        await bgServices
             .GetRequiredService<SchemaEvolutionService>()
             .ApplyPatchesAsync();
 
-        await startupServices
+        await bgServices
             .GetRequiredService<DataSeeder>()
             .SeedAsync();
 
-        await startupServices
+        await bgServices
             .GetRequiredService<PlanCatalogSeeder>()
             .SeedAsync();
 
-        await startupServices
+        await bgServices
             .GetRequiredService<SiteContentSeeder>()
             .SeedAsync();
 
-        startupLogger.LogInformation("Database initialization and seeding complete.");
+        bgLogger.LogInformation("[startup] Database initialization and seeding complete.");
     }
     catch (Exception ex)
     {
-        startupLogger.LogError(ex, "تعذّر تهيئة قاعدة البيانات أو تنفيذ بيانات البذر");
+        bgLogger.LogError(ex, "[startup] تعذّر تهيئة قاعدة البيانات أو تنفيذ بيانات البذر — التطبيق يستمر بدون قاعدة البيانات");
     }
-}
-// Port is configured via Kestrel.ConfigureKestrel above (reads DOTNET_PORT → PORT → 5233).
+});
+
+// app.Run() binds to PORT immediately — health check responds at t=0.
+Console.WriteLine($"[startup] Server starting on port {kestrelPort} ...");
 app.Run();
+Console.WriteLine($"[startup] Server stopped.");
