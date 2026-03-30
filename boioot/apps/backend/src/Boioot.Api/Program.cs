@@ -233,7 +233,8 @@ _ = Task.Run(async () =>
     }
 });
 
-// app.Run() binds to PORT immediately — health check responds at t=0.
+// app.Run() is the final statement — it blocks until shutdown signal.
+// Nothing executes after this line while the server is alive.
 Console.WriteLine($"[startup] Server starting on port {port} ...");
+Console.WriteLine("[STARTUP] App is running and will stay alive");
 app.Run();
-Console.WriteLine($"[startup] Server stopped.");
