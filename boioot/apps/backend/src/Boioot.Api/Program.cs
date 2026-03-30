@@ -15,9 +15,18 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Allow large request bodies (base64 images in JSON) ────────────────────────
+// ── Kestrel: bind to PORT (Replit production) or DOTNET_PORT (dev) ────────────
+// DOTNET_PORT is exported by run-api.sh in dev (5233) so it does not clash with
+// the Replit proxy on PORT=8080.  In production dist/index.cjs sets DOTNET_PORT
+// equal to PORT, so .NET binds directly on Replit's expected port.
 builder.WebHost.ConfigureKestrel(options =>
 {
+    var rawPort = Environment.GetEnvironmentVariable("DOTNET_PORT")
+               ?? Environment.GetEnvironmentVariable("PORT")
+               ?? "5233";
+    if (int.TryParse(rawPort, out var kestrelPort))
+        options.ListenAnyIP(kestrelPort);
+
     options.Limits.MaxRequestBodySize = 104_857_600; // 100 MB
 });
 
@@ -217,10 +226,5 @@ app.MapControllers();
         startupLogger.LogError(ex, "تعذّر تهيئة قاعدة البيانات أو تنفيذ بيانات البذر");
     }
 }
-// Bind to DOTNET_PORT (set in dev by run-api.sh so it doesn't conflict with the
-// Node.js proxy on PORT=8080).  Fall back to PORT (Replit sets this in production
-// when the proxy is not involved), then to 5233 as a last resort.
-var port = Environment.GetEnvironmentVariable("DOTNET_PORT")
-        ?? Environment.GetEnvironmentVariable("PORT")
-        ?? "5233";
-app.Run($"http://0.0.0.0:{port}");
+// Port is configured via Kestrel.ConfigureKestrel above (reads DOTNET_PORT → PORT → 5233).
+app.Run();

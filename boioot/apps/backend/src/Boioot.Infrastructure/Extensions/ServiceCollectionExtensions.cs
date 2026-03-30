@@ -156,10 +156,12 @@ public static class ServiceCollectionExtensions
 
     // ── PostgreSQL connection string resolver ─────────────────────────────────
     // Priority:
-    //   1. ConnectionStrings:Postgres in appsettings.json
+    //   1. ConnectionStrings:Postgres in appsettings.json / environment override
     //   2. DATABASE_URL environment variable (Replit / Heroku / Railway format)
-    //      Converts  postgresql://user:pass@host:port/db?sslmode=disable
+    //      Converts  postgresql://user:pass@host:port/db
     //      to        Host=host;Port=port;Database=db;Username=user;Password=pass;SSL Mode=Disable
+    //   3. Individual PG* env vars (PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD)
+    //      Replit always sets these alongside DATABASE_URL — useful as a final fallback.
     private static string ResolvePostgresConnectionString(IConfiguration configuration)
     {
         var explicit_ = configuration.GetConnectionString("Postgres");
@@ -185,12 +187,22 @@ public static class ServiceCollectionExtensions
             }
             catch
             {
-                // Fall through to error below
+                // Fall through to PG* vars below
             }
         }
 
+        // Fallback: individual PG* env vars (Replit sets these automatically)
+        var pgHost     = Environment.GetEnvironmentVariable("PGHOST");
+        var pgPort     = Environment.GetEnvironmentVariable("PGPORT") ?? "5432";
+        var pgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+        var pgUser     = Environment.GetEnvironmentVariable("PGUSER");
+        var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD") ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(pgHost) && !string.IsNullOrWhiteSpace(pgDatabase))
+            return $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword};SSL Mode=Disable";
+
         throw new InvalidOperationException(
             "No PostgreSQL connection string found. " +
-            "Set ConnectionStrings:Postgres in appsettings.json or the DATABASE_URL environment variable.");
+            "Set ConnectionStrings:Postgres, DATABASE_URL, or the PGHOST/PGDATABASE environment variables.");
     }
 }

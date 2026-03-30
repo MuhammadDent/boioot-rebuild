@@ -7,26 +7,26 @@
 const { spawnSync } = require("child_process");
 const path = require("path");
 
-const DOTNET_ROOT =
-  "/nix/store/1blv644vinali34masnw6g5fjjjaa4y6-dotnet-sdk-8.0.416/share/dotnet";
-
-// Build step publishes the DLL to {workspace}/out/ (same path the [deployment]
-// block uses, so both artifact and direct-deployment modes are compatible).
+// Build step publishes the DLL to {workspace}/out/
 const WORKSPACE = path.resolve(__dirname, "../../..");
 const DLL = path.join(WORKSPACE, "out", "Boioot.Api.dll");
 const PORT = process.env.PORT || "8080";
 
 console.log(`[launcher] Starting .NET → dotnet ${DLL} on :${PORT}`);
 
+if (!require("fs").existsSync(DLL)) {
+  console.error(`[launcher] FATAL: DLL not found at ${DLL}`);
+  process.exit(1);
+}
+
+// Do NOT override DOTNET_ROOT or PATH — the deployment container already has
+// dotnet-8.0 on PATH via Replit modules.  Just tell Program.cs which port to use.
 const result = spawnSync("dotnet", [DLL], {
   stdio: "inherit",
   env: {
     ...process.env,
-    DOTNET_ROOT,
-    PATH: `${DOTNET_ROOT}:${process.env.PATH || ""}`,
-    // DOTNET_PORT tells Program.cs which port to bind.
-    // In production there is no proxy, so .NET binds directly to PORT.
     DOTNET_PORT: PORT,
+    ASPNETCORE_ENVIRONMENT: "Production",
   },
 });
 
