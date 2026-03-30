@@ -13,3 +13,6 @@
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Application/obj/Release/net8.0/refint/Boioot.Application.dll
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Application/obj/Release/net8.0/Boioot.Application.pdb
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Application/obj/Release/net8.0/ref/Boioot.Application.dll
+/tmp/bc_release/Boioot.Application.deps.json
+/tmp/bc_release/Boioot.Application.dll
+/tmp/bc_release/Boioot.Application.pdb

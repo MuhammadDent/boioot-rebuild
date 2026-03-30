@@ -1,3 +1,8 @@
+/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.csproj.AssemblyReference.cache
+/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.AssemblyInfoInputs.cache
+/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.AssemblyInfo.cs
+/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.csproj.CoreCompileInputs.cache
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/bin/Debug/net8.0/Boioot.Infrastructure.deps.json
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/bin/Debug/net8.0/Boioot.Infrastructure.runtimeconfig.json
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/bin/Debug/net8.0/Boioot.Infrastructure.dll
@@ -6,11 +11,6 @@
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/bin/Debug/net8.0/Boioot.Domain.dll
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/bin/Debug/net8.0/Boioot.Domain.pdb
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/bin/Debug/net8.0/Boioot.Application.pdb
-/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.csproj.AssemblyReference.cache
-/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
-/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.AssemblyInfoInputs.cache
-/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.AssemblyInfo.cs
-/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.csproj.CoreCompileInputs.cache
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.I.C39CB7D7.Up2Date
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.dll
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/refint/Boioot.Infrastructure.dll

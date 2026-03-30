@@ -1,3 +1,9 @@
+/tmp/boioot_build_check/Boioot.Application.deps.json
+/tmp/boioot_build_check/Boioot.Application.dll
+/tmp/boioot_build_check/Boioot.Application.pdb
+/tmp/bc_infra/Boioot.Application.deps.json
+/tmp/bc_infra/Boioot.Application.dll
+/tmp/bc_infra/Boioot.Application.pdb
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Application/bin/Debug/net8.0/Boioot.Application.deps.json
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Application/bin/Debug/net8.0/Boioot.Application.dll
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Application/bin/Debug/net8.0/Boioot.Application.pdb
