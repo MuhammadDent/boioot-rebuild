@@ -57,8 +57,20 @@ builder.Services.AddCors(options =>
     });
 });
 
+// ── JWT key: prefer environment variable JWT_KEY (Replit Secrets / production)
+//            fall back to appsettings.json value for local development.
+//            .NET env-var convention uses __ as the section separator, but Replit
+//            Secrets use plain names, so we map JWT_KEY → Jwt:Key explicitly.
+var jwtKeyFromEnv = Environment.GetEnvironmentVariable("JWT_KEY");
+if (!string.IsNullOrWhiteSpace(jwtKeyFromEnv))
+{
+    builder.Configuration["Jwt:Key"] = jwtKeyFromEnv;
+    Console.WriteLine("[STARTUP] Jwt:Key loaded from JWT_KEY environment variable.");
+}
+
 var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("Jwt:Key is not configured in appsettings");
+    ?? throw new InvalidOperationException(
+        "Jwt:Key is not configured. Set the JWT_KEY environment variable (Replit Secret) or add Jwt:Key to appsettings.json.");
 
 if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
     throw new InvalidOperationException("Jwt:Key must be at least 32 bytes");
