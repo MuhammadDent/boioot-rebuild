@@ -14,7 +14,7 @@ run = "bash /home/runner/workspace/boioot/apps/backend/run-api.sh"
 
 [services.production]
 build = "bash boioot/apps/backend/build-prod.sh"
-run = "dotnet ./out/Boioot.Api.dll --urls http://0.0.0.0:$PORT"
+run = "dotnet /home/runner/workspace/out/Boioot.Api.dll --urls http://0.0.0.0:$PORT"
 
 [services.production.health.startup]
 path = "/health"
