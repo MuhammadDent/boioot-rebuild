@@ -17,3 +17,4 @@
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.pdb
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.genruntimeconfig.cache
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/ref/Boioot.Infrastructure.dll
+/home/runner/workspace/boioot/apps/backend/src/Boioot.Infrastructure/obj/Debug/net8.0/Boioot.Infrastructure.sourcelink.json

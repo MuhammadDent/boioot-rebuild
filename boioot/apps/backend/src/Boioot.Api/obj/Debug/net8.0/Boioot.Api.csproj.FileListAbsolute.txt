@@ -165,3 +165,4 @@
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Api/obj/Debug/net8.0/Boioot.Api.pdb
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Api/obj/Debug/net8.0/Boioot.Api.genruntimeconfig.cache
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Api/obj/Debug/net8.0/ref/Boioot.Api.dll
+/home/runner/workspace/boioot/apps/backend/src/Boioot.Api/obj/Debug/net8.0/Boioot.Api.sourcelink.json

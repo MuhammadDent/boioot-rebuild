@@ -19,3 +19,4 @@
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Application/obj/Debug/net8.0/refint/Boioot.Application.dll
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Application/obj/Debug/net8.0/Boioot.Application.pdb
 /home/runner/workspace/boioot/apps/backend/src/Boioot.Application/obj/Debug/net8.0/ref/Boioot.Application.dll
+/home/runner/workspace/boioot/apps/backend/src/Boioot.Application/obj/Debug/net8.0/Boioot.Application.sourcelink.json
