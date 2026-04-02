@@ -1,0 +1,28 @@
+# Node
+node_modules/
+.next/
+out/
+
+# Logs
+*.log
+
+# Env
+.env
+.env.*
+
+# .NET
+bin/
+obj/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Replit
+.replit
+.cache
+.upm
+
+# Build
+dist/
+build/
