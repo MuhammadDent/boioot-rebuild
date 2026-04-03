@@ -873,7 +873,7 @@ namespace Boioot.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique()
-                        .HasFilter("Code IS NOT NULL");
+                        .HasFilter("\"Code\" IS NOT NULL");
 
                     b.HasIndex("Name")
                         .IsUnique();

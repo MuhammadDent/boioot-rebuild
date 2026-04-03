@@ -1,0 +1,106 @@
+أنت Senior .NET / EF Core / PostgreSQL Architect.
+
+أعمل على مشروع ASP.NET Core + EF Core + PostgreSQL، ويوجد عندي تعارض واضح بين EF Core naming conventions و PostgreSQL بسبب استخدام `UseSnakeCaseNamingConvention()` مع وجود بعض الـ configurations / constraints / filters / raw SQL التي ما زالت تستخدم أسماء PascalCase مثل `"Code"` و `"Rating"`.
+
+المطلوب منك تنفيذ **إصلاح نوعي شامل ودقيق** داخل المشروع، وليس مجرد تعديل سطر واحد:
+
+## المشكلة الحالية
+
+عند تشغيل migrations أو التطبيق تظهر أخطاء من هذا النوع:
+
+* `column "Code" does not exist`
+* Hint: perhaps you meant `plans.code`
+* `column "Rating" does not exist`
+* Hint: perhaps you meant `reviews.rating`
+
+هذا يعني أن قاعدة البيانات تستخدم snake_case / lowercase مثل:
+
+* `plans.code`
+* `reviews.rating`
+
+بينما بعض إعدادات EF Core أو SQL اليدوي ما زالت تشير إلى:
+
+* `"Code"`
+* `"Rating"`
+
+## المطلوب منك
+
+أريد منك القيام بالمهمات التالية بدقة:
+
+### 1) فحص شامل
+
+ابحث في المشروع كله عن:
+
+* `HasFilter(...)`
+* `HasCheckConstraint(...)`
+* `ExecuteSqlRaw`
+* `ExecuteSqlRawAsync`
+* `FromSqlRaw`
+* أي SQL string literals
+* أي configurations داخل `Persistence/Configurations`
+* أي seeding داخل `Persistence/Seeding`
+* أي migration definitions أو snapshot أو designer files
+
+### 2) توحيد naming مع PostgreSQL + Snake Case
+
+بما أن المشروع يستخدم:
+
+```csharp
+.UseSnakeCaseNamingConvention()
+```
+
+فيجب تصحيح كل references داخل:
+
+* check constraints
+* filtered indexes
+* raw SQL
+* custom SQL fragments
+
+بحيث تستخدم أسماء PostgreSQL الفعلية:
+
+* `code` بدل `"Code"`
+* `rating` بدل `"Rating"`
+* وأي أعمدة أخرى مشابهة تتحول إلى lowercase / snake_case الصحيحة
+
+### 3) إصلاح جذري وليس ترقيعي
+
+لا أريد إصلاحًا مؤقتًا.
+أريدك أن:
+
+* تحدد كل المواضع المتأثرة
+* تصححها كلها
+* تمنع تكرار المشكلة لاحقًا
+* تراجع كل configuration قديم يعتمد على PascalCase داخل SQL النصّي
+
+### 4) تنظيف migrations
+
+بعد إصلاح التعارضات:
+
+* احذف الـ migrations المولدة الخاطئة إن لزم
+* أعد توليد migration نظيف ومتوافق مع PostgreSQL
+* تأكد أن migration الجديد لا يحتوي على PascalCase داخل SQL النصي في constraints/filters
+* تأكد أن `database update` ينجح
+
+### 5) التحقق النهائي
+
+أريد منك في النهاية أن تتحقق من الآتي:
+
+* migrations can be added successfully
+* database update succeeds
+* application startup no longer fails بسبب:
+
+  * `Code`
+  * `Rating`
+  * أو أي عمود PascalCase مشابه
+
+## المطلوب في الرد
+
+أريد منك أن ترجع لي بشكل منظم:
+
+1. الملفات التي عدلتها
+2. ما السبب الجذري للمشكلة
+3. ما الإصلاحات التي نفذتها
+4. هل يحتاج المشروع refactor إضافي لمنع تكرار المشكلة
+5. إن وجدت أماكن خطرة مستقبلًا مرتبطة بـ raw SQL أو constraints فاذكرها
+
+نفذ التعديلات فعليًا داخل المشروع، ولا تكتفِ بالشرح النظري.

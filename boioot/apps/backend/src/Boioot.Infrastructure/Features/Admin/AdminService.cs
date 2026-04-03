@@ -1785,8 +1785,9 @@ public class AdminService : IAdminService
 
         try
         {
+            // PostgreSQL-compatible upsert (INSERT OR IGNORE is SQLite-only)
             await _context.Database.ExecuteSqlRawAsync(
-                $"INSERT OR IGNORE INTO UserTags (Id, UserId, Tag, CreatedAt) VALUES ('{newId}', '{userIdStr}', '{tagClean}', '{now}')",
+                $"INSERT INTO \"UserTags\" (\"Id\", \"UserId\", \"Tag\", \"CreatedAt\") VALUES ('{newId}', '{userIdStr}', '{tagClean}', '{now}') ON CONFLICT DO NOTHING",
                 ct);
         }
         catch (Exception ex)
@@ -1802,7 +1803,7 @@ public class AdminService : IAdminService
         var tagClean  = tag.Trim().Replace("'", "''");
         var userIdStr = userId.ToString();
         await _context.Database.ExecuteSqlRawAsync(
-            $"DELETE FROM UserTags WHERE UserId = '{userIdStr}' AND lower(Tag) = lower('{tagClean}')",
+            $"DELETE FROM \"UserTags\" WHERE \"UserId\" = '{userIdStr}' AND lower(\"Tag\") = lower('{tagClean}')",
             ct);
     }
 
@@ -1811,7 +1812,7 @@ public class AdminService : IAdminService
         try
         {
             return await _context.Database
-                .SqlQueryRaw<string>("SELECT DISTINCT Tag FROM UserTags ORDER BY Tag")
+                .SqlQueryRaw<string>("SELECT DISTINCT \"Tag\" FROM \"UserTags\" ORDER BY \"Tag\"")
                 .ToListAsync(ct);
         }
         catch

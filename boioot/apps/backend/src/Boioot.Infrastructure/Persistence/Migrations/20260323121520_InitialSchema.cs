@@ -1411,7 +1411,7 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                 table: "Plans",
                 column: "Code",
                 unique: true,
-                filter: "Code IS NOT NULL");
+                filter: "\"Code\" IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Plans_Name",
