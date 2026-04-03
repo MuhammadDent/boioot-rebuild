@@ -1,0 +1,139 @@
+أنت Senior .NET + EF Core + PostgreSQL Migration Specialist.
+
+أريد منك تنفيذ **إصلاح جذري نهائي** لمشكلة naming conflict بين EF Core و PostgreSQL في هذا المشروع.
+
+## الخلفية
+
+المشروع يستخدم:
+
+```csharp
+.UseSnakeCaseNamingConvention()
+```
+
+لذلك يجب أن تكون أسماء الجداول والأعمدة في PostgreSQL على شكل:
+
+* `plans.code`
+* `reviews.rating`
+* `user_tags.user_id`
+* وهكذا
+
+لكن يوجد داخل المشروع خلط خطير بين:
+
+* snake_case / lowercase
+* quoted PascalCase مثل:
+
+  * `"Code"`
+  * `"Rating"`
+  * `"UserId"`
+
+وهذا أدى إلى أخطاء مثل:
+
+* `column "Code" does not exist`
+* `column "Rating" does not exist`
+* ويفترض PostgreSQL الأعمدة:
+
+  * `plans.code`
+  * `reviews.rating`
+
+## المطلوب
+
+أريد منك تنفيذ **إصلاح شامل نهائي** داخل المشروع، وليس شرحًا فقط.
+
+### 1) اعتمد قاعدة واحدة فقط
+
+اعتمد نهائيًا هذا الأسلوب في المشروع كله:
+
+* مع وجود `.UseSnakeCaseNamingConvention()`
+* يجب أن تستخدم كل SQL fragments والقيود والفلاتر أسماء PostgreSQL الفعلية lowercase/snake_case
+* لا أريد أي استخدام لاحق لـ:
+
+  * `"Code"`
+  * `"Rating"`
+  * `"UserId"`
+  * أو أي PascalCase داخل SQL النصي
+
+### 2) افحص كل المشروع
+
+ابحث واصلح كل المواضع التالية:
+
+* `HasFilter(...)`
+* `HasCheckConstraint(...)`
+* `ExecuteSqlRaw`
+* `ExecuteSqlRawAsync`
+* `FromSqlRaw`
+* أي SQL string literals
+* أي migration files
+* model snapshot
+* designer files
+* seeding files
+* configuration files داخل `Persistence/Configurations`
+* services التي تبني SQL يدويًا
+
+### 3) أصلح هذه الأنماط
+
+حوّل أي SQL نصي من هذا الشكل:
+
+```csharp
+"\"Code\" IS NOT NULL"
+"\"Rating\" >= 1 AND \"Rating\" <= 5"
+```
+
+إلى الشكل الصحيح:
+
+```csharp
+"code IS NOT NULL"
+"rating >= 1 AND rating <= 5"
+```
+
+وحوّل أي SQL raw يستخدم أسماء tables/columns غير متوافقة مع PostgreSQL snake_case إلى الأسماء الصحيحة الفعلية.
+
+### 4) راجع ملفات معروفة بأنها متأثرة
+
+راجع بدقة خاصة:
+
+* `PlanConfiguration.cs`
+* `ReviewConfiguration.cs`
+* `PlanCatalogSeeder.cs`
+* `DatabaseStartupService.cs`
+* أي Admin service يحتوي `ExecuteSqlRaw`
+* أي migration قديم أو جديد
+* أي `HasFilter` أو `HasCheckConstraint`
+
+### 5) نظف الـ migrations بعد الإصلاح
+
+بعد إنهاء التعديلات:
+
+* احذف أي migrations غير متوافقة أو مولدة قبل الإصلاح
+* أعد توليد migration نظيف جديد
+* تأكد أن migration الجديد لا يحتوي على PascalCase داخل SQL النصي
+* ثم نفذ database update
+
+### 6) تحقق نهائي إلزامي
+
+أريد منك أن تتحقق فعليًا من:
+
+* `dotnet ef migrations add` succeeds
+* `dotnet ef database update` succeeds
+* startup no longer fails
+* لا توجد أخطاء:
+
+  * `column "Code" does not exist`
+  * `column "Rating" does not exist`
+  * أو أي خطأ مشابه ناتج عن naming
+
+### 7) شكل الرد المطلوب
+
+أعد لي تقريرًا منظمًا يحتوي فقط:
+
+1. الملفات التي عدلتها
+2. السبب الجذري الحقيقي
+3. ما الذي أصلحته بالضبط
+4. هل المشروع الآن متوافق بالكامل مع PostgreSQL snake_case
+5. الأوامر التي تنصحني بتنفيذها الآن بالترتيب
+6. إن بقيت أي مخاطر مستقبلية مرتبطة بـ raw SQL أو migrations فاذكرها بوضوح
+
+مهم:
+
+* نفذ التعديلات فعليًا داخل المشروع
+* لا تكتفِ بالشرح النظري
+* إذا وجدت خلطًا بين quoted PascalCase و snake_case، اجعل المشروع كله يتبع snake_case فقط
