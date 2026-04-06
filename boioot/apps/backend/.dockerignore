@@ -1,0 +1,13 @@
+# flyctl launch added from .gitignore
+
+# Secure proof file storage (outside wwwroot)
+**\proof-storage
+
+# Production publish output (built by deployment build step)
+**\publish
+
+# flyctl launch added from src\Boioot.Api\.gitignore
+
+# Secure proof file storage (outside wwwroot, not to be committed)
+src\Boioot.Api\**\proof-storage
+fly.toml

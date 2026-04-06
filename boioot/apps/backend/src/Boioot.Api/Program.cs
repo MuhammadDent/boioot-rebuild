@@ -250,4 +250,6 @@ _ = Task.Run(async () =>
 // Nothing executes after this line while the server is alive.
 Console.WriteLine($"[startup] Server starting on port {port} ...");
 Console.WriteLine("[STARTUP] App is running and will stay alive");
+app.UseSwagger();
+app.UseSwaggerUI();
 app.Run();
