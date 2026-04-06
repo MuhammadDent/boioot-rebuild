@@ -1,0 +1,167 @@
+We need to redesign the website header into a professional, unified global header used across ALL pages.
+
+==================================================
+GOAL
+==================================================
+
+Create one premium reusable header component that appears consistently on all public pages and important user-facing pages.
+
+The header must always include these two main CTA buttons:
+
+- أضف إعلانك
+- أضف طلب
+
+These buttons should appear in ALL pages inside the header, not only on the homepage.
+
+==================================================
+MAIN REQUIREMENT
+==================================================
+
+Make the header a shared global component/layout so the same header is rendered across:
+
+- الرئيسية
+- الإيجار اليومي
+- المشاريع
+- الطلبات
+- المدونة
+- صفحات العقارات
+- صفحات الشركات
+- صفحات التفاصيل العامة
+- any public marketplace page
+
+Do NOT keep separate inconsistent headers per page.
+
+==================================================
+HEADER DESIGN GOAL
+==================================================
+
+I want a premium, modern, professional real estate marketplace header.
+
+The header should feel:
+- clean
+- structured
+- elegant
+- SaaS-ready
+- marketplace-ready
+- consistent with Arabic RTL UX
+
+==================================================
+HEADER STRUCTURE
+==================================================
+
+Design the header in a clear professional hierarchy.
+
+Suggested structure:
+
+1. Right side:
+- Logo
+
+2. Center / navigation:
+- الرئيسية
+- الإيجار اليومي
+- المشاريع
+- الطلبات
+- المدونة
+
+3. Left side / action area:
+- أضف إعلانك
+- أضف طلب
+- الرسائل
+- المفضلة
+- الإشعارات
+- الملف الشخصي / تسجيل الدخول / لوحة التحكم حسب الحالة
+
+==================================================
+CTA BUTTONS
+==================================================
+
+The two CTA buttons must always be visible in the header:
+
+1. + أضف إعلانك
+2. + أضف طلب
+
+Use the final preferred style:
+- background: white
+- text: blue
+- + icon: blue
+- border: green
+- premium pill design
+- professional hover states
+
+Do not remove them on inner pages.
+
+==================================================
+AUTH / USER STATES
+==================================================
+
+If guest:
+- show login/register or auth modal behavior where appropriate
+
+If logged in:
+- show profile/avatar
+- messages icon
+- dashboard button if needed
+- logout if already part of the system
+
+==================================================
+RESPONSIVE BEHAVIOR
+==================================================
+
+Desktop:
+- full nav + CTA buttons + user actions visible cleanly
+
+Tablet/mobile:
+- responsive collapse behavior
+- keep CTA access easy
+- preserve RTL layout
+- use menu drawer if needed
+- do not lose the add listing / add request actions
+
+==================================================
+TECHNICAL REQUIREMENTS
+==================================================
+
+Refactor into a reusable shared component, for example:
+- components/layout/MainHeader.tsx
+
+Then use it across public layouts/pages instead of duplicating header JSX.
+
+Also:
+- centralize styles
+- remove old duplicated header code
+- keep consistent spacing, alignment, and icon sizing
+
+==================================================
+DESIGN DETAILS
+==================================================
+
+Header should include:
+- sticky or semi-sticky behavior if appropriate
+- clean bottom border or subtle shadow
+- balanced spacing
+- active nav state
+- polished icon buttons
+- visually strong CTA placement
+
+==================================================
+IMPORTANT
+==================================================
+
+This is not just about adding two buttons.
+This is about building a professional unified header system for the whole marketplace.
+
+I want:
+- one reusable header
+- same structure across pages
+- same CTA buttons across pages
+- consistent branding and UX
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+1. the proposed header component structure
+2. which layouts/pages were updated to use it
+3. the final shared JSX/component
+4. how responsive behavior is handled

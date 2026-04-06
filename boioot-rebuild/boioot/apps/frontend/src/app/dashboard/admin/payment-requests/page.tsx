@@ -1,0 +1,1451 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
+import { adminApi } from "@/features/admin/api";
+import {
+  STATUS_META,
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_METHOD_ICON,
+  CYCLE_LABELS,
+} from "@/features/subscriptionPayments/constants";
+import { normalizeError } from "@/lib/api";
+import type {
+  PaymentRequestResponse,
+  PaymentRequestStatus,
+  NotifyUserDto,
+  NotifyUserResult,
+  SubscriptionRequestActionResponse,
+} from "@/features/subscriptionPayments/types";
+import type { PagedResult } from "@/types";
+
+// ── State machine allowed actions per status ──────────────────────────────────
+
+const ALLOWED_ACTIONS: Record<string, string[]> = {
+  Pending:          ["under-review", "approve", "reject", "cancel"],
+  AwaitingPayment:  ["under-review", "approve", "reject", "cancel"],
+  ReceiptUploaded:  ["under-review", "approve", "reject", "cancel"],
+  UnderReview:      ["approve", "reject", "cancel"],
+  Approved:         ["activate", "cancel"],  // legacy: requests approved before combined flow
+  Rejected:         [],
+  Activated:        [],
+  Cancelled:        [],
+};
+
+function canDo(status: string, action: string): boolean {
+  return (ALLOWED_ACTIONS[status] ?? []).includes(action);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fmtDate(iso: string | null | undefined, withTime = false): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (withTime) {
+    return d.toLocaleString("ar-SY", {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  }
+  return d.toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function fmtAmount(amount: number, currency: string): string {
+  if (amount === 0) return "مجاني";
+  return `${amount.toLocaleString("ar-SY")} ${currency}`;
+}
+
+function shortId(id: string): string {
+  return id.slice(0, 8).toUpperCase();
+}
+
+// ── KPI summary card ──────────────────────────────────────────────────────────
+
+const KPI_STATUSES: { key: string; label: string; color: string; bg: string }[] = [
+  { key: "all",            label: "الكل",          color: "#374151", bg: "#f3f4f6" },
+  { key: "Pending",        label: "قيد الانتظار",  color: "#92400e", bg: "#fef3c7" },
+  { key: "AwaitingPayment",label: "بانتظار الدفع", color: "#0369a1", bg: "#e0f2fe" },
+  { key: "ReceiptUploaded",label: "الإيصال مرفوع", color: "#1d4ed8", bg: "#dbeafe" },
+  { key: "UnderReview",    label: "قيد المراجعة",  color: "#5b21b6", bg: "#f5f3ff" },
+  { key: "Approved",       label: "موافق عليه",    color: "#166534", bg: "#dcfce7" },
+  { key: "Activated",      label: "مُفعَّل",        color: "#065f46", bg: "#bbf7d0" },
+  { key: "Rejected",       label: "مرفوض",         color: "#b91c1c", bg: "#fee2e2" },
+  { key: "Cancelled",      label: "ملغى",          color: "#374151", bg: "#f3f4f6" },
+];
+
+function KpiCard({
+  label, count, color, bg, active, onClick,
+}: {
+  label: string; count: number; color: string; bg: string; active: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      type="button"
+      style={{
+        backgroundColor: active ? bg : "#fff",
+        border: active ? `2px solid ${color}` : "1.5px solid #e2e8f0",
+        borderRadius: 12,
+        padding: "0.85rem 1rem",
+        cursor: "pointer",
+        textAlign: "center",
+        minWidth: 0,
+        flex: "1 1 100px",
+      }}
+    >
+      <p style={{ margin: 0, fontSize: "1.5rem", fontWeight: 900, color }}>
+        {count}
+      </p>
+      <p style={{ margin: "0.15rem 0 0", fontSize: "0.72rem", fontWeight: 600, color: active ? color : "#64748b" }}>
+        {label}
+      </p>
+    </button>
+  );
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: string }) {
+  const meta = STATUS_META[status as PaymentRequestStatus];
+  if (!meta) return <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{status}</span>;
+  return (
+    <span style={{
+      display: "inline-block",
+      padding: "0.2rem 0.65rem",
+      borderRadius: 20,
+      backgroundColor: meta.bg,
+      color: meta.color,
+      fontSize: "0.72rem",
+      fontWeight: 700,
+      whiteSpace: "nowrap",
+    }}>
+      {meta.label}
+    </span>
+  );
+}
+
+// ── Action button ─────────────────────────────────────────────────────────────
+
+function ActionBtn({
+  label, color, bg, disabled, onClick,
+}: {
+  label: string; color: string; bg: string; disabled?: boolean; onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      type="button"
+      style={{
+        padding: "0.55rem 1.1rem",
+        borderRadius: 9,
+        border: `1.5px solid ${color}`,
+        backgroundColor: disabled ? "#f3f4f6" : bg,
+        color: disabled ? "#94a3b8" : color,
+        fontSize: "0.82rem",
+        fontWeight: 700,
+        cursor: disabled ? "default" : "pointer",
+        whiteSpace: "nowrap",
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ── Request Form Section ──────────────────────────────────────────────────────
+
+function FormBlock({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p style={{ margin: "0 0 0.55rem", fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.35rem" }}>
+        {label}
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.38rem" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FormRow({ label, value, mono, highlight }: { label: string; value?: string | null; mono?: boolean; highlight?: boolean }) {
+  if (!value) return null;
+  return (
+    <div style={{ display: "flex", gap: "0.5rem", fontSize: "0.82rem", alignItems: "flex-start" }}>
+      <span style={{ color: "#9ca3af", flexShrink: 0, minWidth: 100 }}>{label}:</span>
+      <span style={{
+        color: highlight ? "#0f172a" : "#1f2937",
+        fontWeight: highlight ? 700 : 500,
+        fontFamily: mono ? "monospace" : undefined,
+        wordBreak: "break-all",
+      }}>{value}</span>
+    </div>
+  );
+}
+
+function RequestFormSection({ req }: { req: PaymentRequestResponse }) {
+  const [expanded, setExpanded] = useState(true);
+
+  const planLabel = req.planDisplayNameAr
+    ? `${req.planDisplayNameAr} (${req.planName})`
+    : req.planName;
+
+  const cycleLabel = CYCLE_LABELS[req.billingCycle] ?? req.billingCycle;
+  const methodLabel = `${PAYMENT_METHOD_ICON[req.paymentMethod] ?? ""} ${PAYMENT_METHOD_LABELS[req.paymentMethod] ?? req.paymentMethod}`.trim();
+  const amountLabel = req.amount === 0 ? "مجاني" : `${req.amount.toLocaleString("ar-SY")} ${req.currency}`;
+
+  return (
+    <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
+      {/* Collapsible header */}
+      <button
+        type="button"
+        onClick={() => setExpanded(p => !p)}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "0.75rem 1rem", backgroundColor: "#f8fafc",
+          border: "none", cursor: "pointer", borderBottom: expanded ? "1px solid #e2e8f0" : "none",
+        }}
+      >
+        <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#374151", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          📋 نموذج الطلب المرسل
+        </span>
+        <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{expanded ? "▲ طي" : "▼ عرض"}</span>
+      </button>
+
+      {expanded && (
+        <div style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+          {/* 1 — مقدم الطلب */}
+          <FormBlock label="بيانات مقدم الطلب">
+            <FormRow label="الاسم"         value={req.userName}      highlight />
+            <FormRow label="البريد الإلكتروني" value={req.userEmail} />
+            <FormRow label="رقم الجوال"    value={req.userPhone} />
+            <FormRow label="نوع الحساب"    value={req.accountTypeAr ?? req.accountType} />
+          </FormBlock>
+
+          {/* 2 — بيانات الاشتراك */}
+          <FormBlock label="بيانات الاشتراك والدفع">
+            <FormRow label="الباقة المطلوبة" value={planLabel}      highlight />
+            <FormRow label="دورة الفوترة"   value={cycleLabel} />
+            <FormRow label="المبلغ"          value={amountLabel}     highlight />
+            <FormRow label="طريقة الدفع"    value={methodLabel} />
+            {req.salesRepresentativeName && (
+              <FormRow label="المندوب"         value={req.salesRepresentativeName} />
+            )}
+            {req.externalPaymentReference && (
+              <FormRow label="مرجع الدفع خارجي" value={req.externalPaymentReference} mono />
+            )}
+          </FormBlock>
+
+          {/* 3 — ملاحظة العميل (always shown) */}
+          <div>
+            <p style={{ margin: "0 0 0.45rem", fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.35rem" }}>
+              ملاحظة العميل
+            </p>
+            {req.customerNote ? (
+              <div style={{ backgroundColor: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "0.75rem" }}>
+                <p style={{ margin: 0, fontSize: "0.84rem", color: "#78350f", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                  {req.customerNote}
+                </p>
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: "0.82rem", color: "#9ca3af", fontStyle: "italic" }}>
+                لا توجد ملاحظة من العميل
+              </p>
+            )}
+          </div>
+
+          {/* 4 — المرفقات */}
+          <div>
+            <p style={{ margin: "0 0 0.45rem", fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.35rem" }}>
+              المرفقات
+            </p>
+            {req.receiptImageUrl ? (
+              <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 10, overflow: "hidden" }}>
+                <a href={req.receiptImageUrl} target="_blank" rel="noopener noreferrer" style={{ display: "block", textDecoration: "none" }}>
+                  <img
+                    src={req.receiptImageUrl}
+                    alt="إيصال الدفع"
+                    style={{ width: "100%", maxHeight: 200, objectFit: "cover", display: "block" }}
+                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                  <div style={{ padding: "0.5rem 0.75rem", backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "0.78rem", color: "#374151", fontWeight: 600 }}>
+                      📎 {req.receiptFileName ?? "إيصال الدفع"}
+                    </span>
+                    <span style={{ fontSize: "0.72rem", color: "#2563eb", fontWeight: 600 }}>🔗 فتح / تحميل</span>
+                  </div>
+                </a>
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: "0.82rem", color: "#9ca3af", fontStyle: "italic" }}>
+                لا توجد مرفقات
+              </p>
+            )}
+          </div>
+
+          {/* 5 — معلومات الإرسال */}
+          <FormBlock label="معلومات الإرسال">
+            <FormRow label="تاريخ التقديم" value={fmtDate(req.createdAt, true)} />
+            {req.reviewedAt  && <FormRow label="تاريخ المراجعة" value={fmtDate(req.reviewedAt, true)}  />}
+            {req.activatedAt && <FormRow label="تاريخ التفعيل"  value={fmtDate(req.activatedAt, true)} />}
+            {req.completedAt && <FormRow label="تاريخ الإتمام"  value={fmtDate(req.completedAt, true)} />}
+          </FormBlock>
+
+          {/* 6 — ملاحظة المراجع (if any) */}
+          {req.reviewNote && (
+            <div>
+              <p style={{ margin: "0 0 0.45rem", fontSize: "0.7rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9", paddingBottom: "0.35rem" }}>
+                ملاحظة المراجع
+              </p>
+              <div style={{ backgroundColor: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 8, padding: "0.75rem" }}>
+                <p style={{ margin: 0, fontSize: "0.84rem", color: "#78350f", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                  {req.reviewNote}
+                </p>
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Confirm modal ─────────────────────────────────────────────────────────────
+
+function ConfirmModal({
+  title,
+  body,
+  confirmLabel,
+  confirmColor,
+  withNote,
+  notePlaceholder,
+  noteRequired,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  confirmColor: string;
+  withNote?: boolean;
+  notePlaceholder?: string;
+  noteRequired?: boolean;
+  onConfirm: (note?: string) => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  const [note, setNote] = useState("");
+  const disabled = loading || (noteRequired && !note.trim());
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 2000,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
+    }}>
+      <div style={{
+        backgroundColor: "#fff", borderRadius: 16, padding: "1.75rem",
+        maxWidth: 420, width: "100%",
+      }}>
+        <h3 style={{ margin: "0 0 0.5rem", fontSize: "1rem", fontWeight: 800, color: "#1a2e1a" }}>
+          {title}
+        </h3>
+        <p style={{ margin: "0 0 1.1rem", fontSize: "0.85rem", color: "#64748b", lineHeight: 1.6 }}>
+          {body}
+        </p>
+        {withNote && (
+          <div style={{ marginBottom: "1.1rem" }}>
+            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#374151", marginBottom: "0.4rem" }}>
+              ملاحظة {noteRequired ? <span style={{ color: "#b91c1c" }}>*</span> : "(اختياري)"}
+            </label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder={notePlaceholder ?? "أدخل ملاحظة..."}
+              rows={3}
+              style={{
+                width: "100%", padding: "0.6rem 0.8rem", borderRadius: 9,
+                border: "1.5px solid #e2e8f0", fontSize: "0.85rem",
+                resize: "vertical", fontFamily: "inherit", boxSizing: "border-box",
+              }}
+            />
+          </div>
+        )}
+        <div style={{ display: "flex", gap: "0.65rem" }}>
+          <button
+            onClick={onCancel}
+            type="button"
+            disabled={loading}
+            style={{
+              flex: 1, padding: "0.7rem", borderRadius: 9,
+              border: "1.5px solid #e2e8f0", backgroundColor: "#f8fafc",
+              color: "#475569", fontSize: "0.88rem", fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            تراجع
+          </button>
+          <button
+            onClick={() => onConfirm(withNote ? note.trim() : undefined)}
+            type="button"
+            disabled={disabled}
+            style={{
+              flex: 1, padding: "0.7rem", borderRadius: 9, border: "none",
+              backgroundColor: disabled ? "#94a3b8" : confirmColor,
+              color: "#fff", fontSize: "0.88rem", fontWeight: 700,
+              cursor: disabled ? "default" : "pointer",
+            }}
+          >
+            {loading ? "جارٍ التنفيذ..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Timeline event ────────────────────────────────────────────────────────────
+
+function TimelineRow({
+  icon, label, date, note, color,
+}: { icon: string; label: string; date: string | null | undefined; note?: string | null; color: string }) {
+  if (!date) return null;
+  return (
+    <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: "50%", backgroundColor: color,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: "0.75rem", flexShrink: 0, color: "#fff",
+      }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, paddingBottom: "0.75rem", borderBottom: "1px dashed #f1f5f9" }}>
+        <p style={{ margin: 0, fontSize: "0.83rem", fontWeight: 700, color: "#1e293b" }}>{label}</p>
+        <p style={{ margin: "0.15rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>{fmtDate(date, true)}</p>
+        {note && (
+          <p style={{ margin: "0.35rem 0 0", fontSize: "0.78rem", color: "#64748b", lineHeight: 1.5 }}>
+            <em>{note}</em>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Detail panel ──────────────────────────────────────────────────────────────
+
+type ActionType = "under-review" | "approve" | "reject" | "activate" | "cancel";
+
+interface ModalState {
+  action: ActionType;
+  id: string;
+}
+
+// ── Notify User Modal ─────────────────────────────────────────────────────────
+
+const DECISION_OPTIONS = [
+  { value: "approved",     label: "موافقة",                   color: "#16a34a", bg: "#f0fdf4" },
+  { value: "rejected",     label: "رفض",                      color: "#dc2626", bg: "#fee2e2" },
+  { value: "missing_info", label: "طلب استكمال / نقص بيانات", color: "#d97706", bg: "#fffbeb" },
+] as const;
+
+const DEFAULT_TITLES: Record<string, string> = {
+  approved:     "تمت الموافقة على طلب الاشتراك",
+  rejected:     "تم رفض طلب الاشتراك",
+  missing_info: "يوجد نقص في طلب الاشتراك",
+};
+
+function NotifyUserModal({
+  req,
+  onClose,
+  onSuccess,
+}: {
+  req: PaymentRequestResponse;
+  onClose: () => void;
+  onSuccess: (result: NotifyUserResult) => void;
+}) {
+  const [decision, setDecision] = useState<"approved" | "rejected" | "missing_info">("approved");
+  const [title, setTitle]       = useState(DEFAULT_TITLES["approved"]);
+  const [message, setMessage]   = useState("");
+  const [sendInternal, setSendInternal] = useState(true);
+  const [sendEmail, setSendEmail]       = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+
+  function onDecisionChange(d: "approved" | "rejected" | "missing_info") {
+    setDecision(d);
+    setTitle(DEFAULT_TITLES[d]);
+  }
+
+  async function submit() {
+    if (!message.trim()) { setError("نص الرسالة مطلوب."); return; }
+    if (!sendInternal && !sendEmail) { setError("يجب اختيار طريقة إرسال واحدة على الأقل."); return; }
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await adminApi.paymentNotifyUser(req.id, {
+        decision, title, message, sendInternal, sendEmail,
+      });
+      onSuccess(result);
+    } catch (e) {
+      setError(normalizeError(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const decisionOpt = DECISION_OPTIONS.find(d => d.value === decision)!;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 2000,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "1rem",
+      backgroundColor: "rgba(0,0,0,0.4)",
+    }}>
+      <div style={{
+        backgroundColor: "#fff", borderRadius: 16, width: "100%", maxWidth: 520,
+        boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+        display: "flex", flexDirection: "column", maxHeight: "90vh", overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: "1.1rem 1.4rem",
+          borderBottom: "1px solid #f1f5f9",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#1a2e1a" }}>إشعار المستخدم</h3>
+            <p style={{ margin: "0.15rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
+              طلب #{req.id.slice(0,8).toUpperCase()} • {req.userName ?? req.userId.slice(0,8)}
+            </p>
+          </div>
+          <button onClick={onClose} type="button" style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: "1.25rem" }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "1.25rem 1.4rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+
+          {/* Decision */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "0.5rem" }}>
+              نوع القرار *
+            </label>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              {DECISION_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onDecisionChange(opt.value)}
+                  style={{
+                    padding: "0.5rem 1rem", borderRadius: 8, fontSize: "0.82rem", fontWeight: 700, cursor: "pointer",
+                    border: `2px solid ${decision === opt.value ? opt.color : "#e2e8f0"}`,
+                    backgroundColor: decision === opt.value ? opt.bg : "#f8fafc",
+                    color: decision === opt.value ? opt.color : "#94a3b8",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "0.5rem" }}>
+              عنوان الإشعار
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "0.6rem 0.8rem", borderRadius: 8, fontSize: "0.85rem",
+                border: "1.5px solid #e2e8f0", outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+          </div>
+
+          {/* Message */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "0.5rem" }}>
+              نص الرسالة / الملاحظة *
+            </label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={5}
+              placeholder={
+                decision === "approved"     ? "اكتب رسالة الموافقة للمستخدم..." :
+                decision === "rejected"     ? "اكتب سبب الرفض للمستخدم..." :
+                                              "اكتب النواقص أو البيانات المطلوبة من المستخدم..."
+              }
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "0.7rem 0.8rem", borderRadius: 8, fontSize: "0.85rem", lineHeight: 1.6,
+                border: "1.5px solid #e2e8f0", outline: "none", resize: "vertical",
+                fontFamily: "inherit", direction: "rtl",
+              }}
+            />
+          </div>
+
+          {/* Send options */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "0.65rem" }}>
+              خيارات الإرسال
+            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+              {[
+                { id: "internal", checked: sendInternal, onChange: setSendInternal, label: "إشعار داخلي (مُوصى به)", badge: "افتراضي", badgeColor: "#16a34a" },
+                { id: "email",    checked: sendEmail,    onChange: setSendEmail,    label: "البريد الإلكتروني", badge: "اختياري", badgeColor: "#2563eb" },
+              ].map(({ id, checked, onChange, label, badge, badgeColor }) => (
+                <label key={id} style={{
+                  display: "flex", alignItems: "center", gap: "0.65rem",
+                  padding: "0.65rem 0.85rem", borderRadius: 8,
+                  border: `1.5px solid ${checked ? badgeColor : "#e2e8f0"}`,
+                  backgroundColor: checked ? "#f8fafc" : "#fff",
+                  cursor: "pointer",
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={e => onChange(e.target.checked)}
+                    style={{ width: 17, height: 17, cursor: "pointer", accentColor: badgeColor }}
+                  />
+                  <span style={{ fontSize: "0.83rem", fontWeight: 600, color: "#374151", flex: 1 }}>{label}</span>
+                  <span style={{
+                    fontSize: "0.68rem", fontWeight: 700, padding: "0.15rem 0.5rem",
+                    borderRadius: 20, backgroundColor: badgeColor + "22", color: badgeColor,
+                  }}>{badge}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div style={{ backgroundColor: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 8, padding: "0.75rem", fontSize: "0.82rem", color: "#b91c1c" }}>
+              ⚠️ {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: "1rem 1.4rem", borderTop: "1px solid #f1f5f9",
+          display: "flex", gap: "0.65rem", justifyContent: "flex-start",
+        }}>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading || !message.trim()}
+            style={{
+              padding: "0.65rem 1.5rem", borderRadius: 8, border: "none", cursor: loading || !message.trim() ? "not-allowed" : "pointer",
+              backgroundColor: loading || !message.trim() ? "#e2e8f0" : decisionOpt.color,
+              color: loading || !message.trim() ? "#94a3b8" : "#fff",
+              fontSize: "0.85rem", fontWeight: 700,
+              transition: "all 0.15s",
+            }}
+          >
+            {loading ? "جاري الإرسال..." : "إرسال الإشعار"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "0.65rem 1.1rem", borderRadius: 8,
+              border: "1.5px solid #e2e8f0", backgroundColor: "#fff",
+              color: "#64748b", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Action history item ───────────────────────────────────────────────────────
+
+const DECISION_LABELS: Record<string, { label: string; color: string }> = {
+  approved:     { label: "موافقة", color: "#16a34a" },
+  rejected:     { label: "رفض",   color: "#dc2626" },
+  missing_info: { label: "طلب استكمال", color: "#d97706" },
+};
+
+function ActionHistoryItem({ item }: { item: SubscriptionRequestActionResponse }) {
+  const [expanded, setExpanded] = useState(false);
+  const dec = DECISION_LABELS[item.decision] ?? { label: item.decision, color: "#64748b" };
+  return (
+    <div style={{
+      border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden", fontSize: "0.82rem",
+    }}>
+      <div
+        style={{
+          display: "flex", alignItems: "center", gap: "0.65rem", padding: "0.65rem 0.85rem",
+          backgroundColor: "#f8fafc", cursor: "pointer",
+        }}
+        onClick={() => setExpanded(v => !v)}
+      >
+        <span style={{
+          fontSize: "0.7rem", fontWeight: 700, padding: "0.15rem 0.5rem", borderRadius: 20,
+          backgroundColor: dec.color + "22", color: dec.color, flexShrink: 0,
+        }}>{dec.label}</span>
+        <span style={{ flex: 1, color: "#374151", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {item.title}
+        </span>
+        <span style={{ color: "#94a3b8", fontSize: "0.72rem", whiteSpace: "nowrap", flexShrink: 0 }}>
+          {new Date(item.createdAt).toLocaleString("ar-SY", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+        </span>
+        <span style={{ color: "#94a3b8" }}>{expanded ? "▲" : "▼"}</span>
+      </div>
+      {expanded && (
+        <div style={{ padding: "0.75rem 0.85rem", borderTop: "1px solid #f1f5f9", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <p style={{ margin: 0, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-line" }}>{item.note}</p>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+            {item.sentInternally && (
+              <span style={{ fontSize: "0.7rem", fontWeight: 600, backgroundColor: "#dbeafe", color: "#1d4ed8", padding: "0.15rem 0.5rem", borderRadius: 20 }}>
+                ✓ إشعار داخلي
+              </span>
+            )}
+            {item.sentByEmail && (
+              <span style={{ fontSize: "0.7rem", fontWeight: 600, backgroundColor: "#dcfce7", color: "#16a34a", padding: "0.15rem 0.5rem", borderRadius: 20 }}>
+                ✓ إيميل مُرسَل
+              </span>
+            )}
+            {item.emailFailed && (
+              <span style={{ fontSize: "0.7rem", fontWeight: 600, backgroundColor: "#fee2e2", color: "#dc2626", padding: "0.15rem 0.5rem", borderRadius: 20 }}>
+                ✗ فشل إرسال الإيميل
+              </span>
+            )}
+          </div>
+          {item.performedByName && (
+            <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>بواسطة: {item.performedByName}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Detail Panel ──────────────────────────────────────────────────────────────
+
+function DetailPanel({
+  req,
+  onClose,
+  onUpdated,
+}: {
+  req: PaymentRequestResponse;
+  onClose: () => void;
+  onUpdated: (updated: PaymentRequestResponse) => void;
+}) {
+  const [modal, setModal]     = useState<ModalState | null>(null);
+  const [actLoading, setActLoading] = useState(false);
+  const [actError, setActError]   = useState<string | null>(null);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [notifyFeedback, setNotifyFeedback] = useState<string | null>(null);
+
+  async function handleAction(action: ActionType, note?: string) {
+    setActLoading(true);
+    setActError(null);
+    try {
+      let updated: PaymentRequestResponse;
+      switch (action) {
+        case "under-review": updated = await adminApi.paymentMarkUnderReview(req.id); break;
+        case "approve":      updated = await adminApi.paymentApprove(req.id, note); break;
+        case "reject":       updated = await adminApi.paymentReject(req.id, note ?? ""); break;
+        case "activate":     updated = await adminApi.paymentActivate(req.id); break;
+        case "cancel":       updated = await adminApi.paymentAdminCancel(req.id, note); break;
+      }
+      onUpdated(updated);
+      setModal(null);
+    } catch (err) {
+      setActError(normalizeError(err));
+    } finally {
+      setActLoading(false);
+    }
+  }
+
+  function handleNotifySuccess(result: NotifyUserResult) {
+    setNotifyOpen(false);
+    const parts: string[] = [];
+    if (result.sentInternally) parts.push("تم إرسال الإشعار الداخلي");
+    if (result.sentByEmail)    parts.push("تم إرسال الإيميل");
+    if (result.emailFailed)    parts.push("⚠️ فشل إرسال الإيميل: " + (result.emailError ?? "خطأ غير معروف"));
+    setNotifyFeedback(parts.join(" • "));
+    onUpdated(result.request);
+    setTimeout(() => setNotifyFeedback(null), 5000);
+  }
+
+  const s = req.status;
+
+  const MODAL_CONFIGS: Record<ActionType, {
+    title: string; body: string; confirmLabel: string; confirmColor: string;
+    withNote?: boolean; notePlaceholder?: string; noteRequired?: boolean;
+  }> = {
+    "under-review": {
+      title: "تحويل للمراجعة",
+      body: "هل تريد تحويل هذا الطلب إلى حالة 'قيد المراجعة'؟ سيتم إشعار العميل.",
+      confirmLabel: "تأكيد", confirmColor: "#5b21b6",
+    },
+    approve: {
+      title: "موافقة وتفعيل الاشتراك",
+      body: "تأكيد استلام الدفع والموافقة على هذا الطلب.\n\nسيتم تفعيل الاشتراك فوراً وإلغاء أي اشتراك نشط سابق.",
+      confirmLabel: "موافقة وتفعيل", confirmColor: "#166534",
+      withNote: true, notePlaceholder: "ملاحظة اختيارية للعميل...",
+    },
+    reject: {
+      title: "رفض الطلب",
+      body: "يرجى توضيح سبب الرفض. سيراه العميل في حالة طلبه.",
+      confirmLabel: "رفض", confirmColor: "#b91c1c",
+      withNote: true, notePlaceholder: "سبب الرفض...", noteRequired: true,
+    },
+    activate: {
+      title: "تفعيل الاشتراك",
+      body: "هل تريد تفعيل اشتراك هذا الطلب الآن؟ سيتم إلغاء أي اشتراك نشط سابق وإنشاء اشتراك جديد.",
+      confirmLabel: "تفعيل", confirmColor: "#059669",
+    },
+    cancel: {
+      title: "إلغاء الطلب إدارياً",
+      body: "هل تريد إلغاء هذا الطلب؟ لا يمكن التراجع عن هذا القرار.",
+      confirmLabel: "إلغاء الطلب", confirmColor: "#b91c1c",
+      withNote: true, notePlaceholder: "سبب الإلغاء (اختياري)...",
+    },
+  };
+
+  return (
+    <div style={{
+      position: "fixed", top: 0, bottom: 0, right: 0,
+      width: "min(480px, 100vw)",
+      backgroundColor: "#fff",
+      boxShadow: "-4px 0 24px rgba(0,0,0,0.12)",
+      zIndex: 1000,
+      display: "flex", flexDirection: "column",
+      overflowY: "auto",
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "1.1rem 1.25rem",
+        borderBottom: "1px solid #f1f5f9",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexShrink: 0,
+        backgroundColor: "#f8fafc",
+      }}>
+        <div>
+          <p style={{ margin: 0, fontSize: "0.68rem", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            طلب #{shortId(req.id)}
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.2rem" }}>
+            <StatusBadge status={s} />
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          type="button"
+          style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: "1.2rem" }}
+        >
+          ✕
+        </button>
+      </div>
+
+      <div style={{ flex: 1, padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+        {/* Notify feedback */}
+        {notifyFeedback && (
+          <div style={{
+            backgroundColor: "#f0fdf4", border: "1px solid #86efac",
+            borderRadius: 9, padding: "0.7rem", fontSize: "0.82rem", color: "#15803d", fontWeight: 600,
+          }}>
+            ✓ {notifyFeedback}
+          </div>
+        )}
+
+        {/* Action error */}
+        {actError && (
+          <div style={{
+            backgroundColor: "#fee2e2", border: "1px solid #fca5a5",
+            borderRadius: 9, padding: "0.7rem", fontSize: "0.82rem", color: "#b91c1c",
+          }}>
+            ⚠️ {actError}
+          </div>
+        )}
+
+        {/* User quick summary */}
+        {(req.userName || req.userEmail) && (
+          <div style={{ backgroundColor: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, padding: "0.75rem 0.9rem", display: "flex", alignItems: "center", gap: "0.65rem" }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: "#bae6fd", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ fontSize: "1rem", color: "#0369a1" }}>👤</span>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              {req.userName  && <p style={{ margin: 0, fontSize: "0.87rem", fontWeight: 700, color: "#0c4a6e" }}>{req.userName}</p>}
+              {req.userEmail && <p style={{ margin: 0, fontSize: "0.77rem", color: "#0369a1" }}>{req.userEmail}</p>}
+              {req.accountTypeAr && <p style={{ margin: 0, fontSize: "0.72rem", color: "#7dd3fc", fontWeight: 600 }}>{req.accountTypeAr}</p>}
+            </div>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div>
+          <p style={{ margin: "0 0 0.6rem", fontSize: "0.78rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            الإجراءات
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {canDo(s, "under-review") && (
+              <ActionBtn
+                label="🔍 قيد المراجعة"
+                color="#5b21b6" bg="#f5f3ff"
+                onClick={() => setModal({ action: "under-review", id: req.id })}
+              />
+            )}
+            {canDo(s, "approve") && (
+              <ActionBtn
+                label="✓ موافقة وتفعيل"
+                color="#166534" bg="#f0fdf4"
+                onClick={() => setModal({ action: "approve", id: req.id })}
+              />
+            )}
+            {canDo(s, "activate") && (
+              <ActionBtn
+                label="🚀 تفعيل الاشتراك"
+                color="#059669" bg="#d1fae5"
+                onClick={() => setModal({ action: "activate", id: req.id })}
+              />
+            )}
+            {canDo(s, "reject") && (
+              <ActionBtn
+                label="✕ رفض"
+                color="#b91c1c" bg="#fee2e2"
+                onClick={() => setModal({ action: "reject", id: req.id })}
+              />
+            )}
+            {canDo(s, "cancel") && (
+              <ActionBtn
+                label="إلغاء إداري"
+                color="#64748b" bg="#f1f5f9"
+                onClick={() => setModal({ action: "cancel", id: req.id })}
+              />
+            )}
+            {ALLOWED_ACTIONS[s]?.length === 0 && (
+              <p style={{ fontSize: "0.82rem", color: "#94a3b8", margin: 0 }}>
+                لا توجد إجراءات متاحة لهذه الحالة
+              </p>
+            )}
+          </div>
+          {/* Notify button — always available */}
+          <div style={{ marginTop: "0.6rem", paddingTop: "0.6rem", borderTop: "1px dashed #e2e8f0" }}>
+            <ActionBtn
+              label="📩 إشعار المستخدم"
+              color="#2563eb" bg="#eff6ff"
+              onClick={() => setNotifyOpen(true)}
+            />
+          </div>
+        </div>
+
+        {/* ── Request Form Section ─────────────────────────────── */}
+        <RequestFormSection req={req} />
+
+        {/* Timeline */}
+        <div>
+          <p style={{ margin: "0 0 0.75rem", fontSize: "0.75rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            المحطات الزمنية
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            <TimelineRow icon="📋" label="تم إنشاء الطلب"   date={req.createdAt}   color="#64748b" />
+            <TimelineRow icon="🔍" label="بدأت المراجعة"    date={req.reviewedAt}  color="#5b21b6" />
+            <TimelineRow icon="✓"  label="تمت الموافقة / الرفض" date={req.reviewedAt} note={req.reviewNote} color="#166534" />
+            <TimelineRow icon="🚀" label="تم تفعيل الاشتراك" date={req.activatedAt} color="#059669" />
+            <TimelineRow icon="✅" label="اكتمل الطلب"      date={req.completedAt} color="#065f46" />
+          </div>
+        </div>
+
+        {/* IDs for reference */}
+        <div style={{ backgroundColor: "#f8fafc", borderRadius: 10, padding: "0.85rem" }}>
+          <p style={{ margin: "0 0 0.5rem", fontSize: "0.7rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            معرّفات
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", fontSize: "0.75rem" }}>
+            <Row label="معرّف الطلب"   value={req.id} mono />
+            <Row label="معرّف الحساب"  value={req.accountId} mono />
+            <Row label="معرّف المستخدم" value={req.userId} mono />
+          </div>
+        </div>
+
+        {/* Action history */}
+        {req.actions && req.actions.length > 0 && (
+          <div>
+            <p style={{ margin: "0 0 0.75rem", fontSize: "0.75rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              سجل الإشعارات ({req.actions.length})
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {req.actions.map((action, i) => (
+                <ActionHistoryItem key={i} item={action} />
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Confirm modal */}
+      {modal && (() => {
+        const cfg = MODAL_CONFIGS[modal.action];
+        return (
+          <ConfirmModal
+            {...cfg}
+            loading={actLoading}
+            onConfirm={note => handleAction(modal.action, note)}
+            onCancel={() => { setModal(null); setActError(null); }}
+          />
+        );
+      })()}
+
+      {/* Notify user modal */}
+      {notifyOpen && (
+        <NotifyUserModal
+          req={req}
+          onClose={() => setNotifyOpen(false)}
+          onSuccess={handleNotifySuccess}
+        />
+      )}
+    </div>
+  );
+}
+
+function Row({
+  label, value, bold, mono,
+}: { label: string; value: string; bold?: boolean; mono?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
+      <span style={{ color: "#94a3b8", flexShrink: 0 }}>{label}</span>
+      <span style={{
+        fontWeight: bold ? 700 : 500, color: "#1e293b", textAlign: "left",
+        fontFamily: mono ? "monospace" : "inherit", fontSize: mono ? "0.72rem" : "inherit",
+        wordBreak: "break-all",
+      }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 30;
+
+const STATUSES: { value: string; label: string }[] = [
+  { value: "",               label: "جميع الحالات" },
+  { value: "Pending",        label: "قيد الانتظار" },
+  { value: "AwaitingPayment",label: "بانتظار الدفع" },
+  { value: "ReceiptUploaded",label: "الإيصال مرفوع" },
+  { value: "UnderReview",    label: "قيد المراجعة" },
+  { value: "Approved",       label: "موافق عليه" },
+  { value: "Activated",      label: "مُفعَّل" },
+  { value: "Rejected",       label: "مرفوض" },
+  { value: "Cancelled",      label: "ملغى" },
+];
+
+const METHODS = [
+  { value: "",                  label: "جميع طرق الدفع" },
+  { value: "bank_transfer",     label: "تحويل بنكي" },
+  { value: "cash_to_sales_rep", label: "دفع نقدي" },
+  { value: "receipt_upload",    label: "رفع إيصال" },
+  { value: "other_manual",      label: "أخرى" },
+];
+
+const selectSt = {
+  padding: "0.45rem 0.7rem",
+  borderRadius: 8,
+  border: "1.5px solid #e2e8f0",
+  backgroundColor: "#f8fafc",
+  fontSize: "0.82rem",
+  fontFamily: "inherit",
+  color: "#0f172a",
+  cursor: "pointer",
+};
+
+export default function AdminPaymentRequestsPage() {
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "billing.manage" });
+
+  const [items, setItems]           = useState<PaymentRequestResponse[]>([]);
+  const [paged, setPaged]           = useState<PagedResult<PaymentRequestResponse> | null>(null);
+  const [fetching, setFetching]     = useState(true);
+  const [fetchError, setFetchError] = useState("");
+  const [page, setPage]             = useState(1);
+
+  const [filterStatus, setFilterStatus]   = useState("");
+  const [filterMethod, setFilterMethod]   = useState("");
+  const [filterFrom,   setFilterFrom]     = useState("");
+  const [filterTo,     setFilterTo]       = useState("");
+  const [activeKpi,    setActiveKpi]      = useState("all");
+
+  const [selected, setSelected] = useState<PaymentRequestResponse | null>(null);
+
+  // KPI counts (derived from a "fetch-all" pass or from paged summary)
+  const [kpiCounts, setKpiCounts] = useState<Record<string, number>>({});
+
+  const filtersRef = useRef({ status: "", method: "", from: "", to: "" });
+
+  // fetch main list
+  const load = useCallback(async (p: number, params: {
+    status?: string; paymentMethod?: string; fromDate?: string; toDate?: string;
+  } = {}) => {
+    setFetching(true);
+    setFetchError("");
+    try {
+      const result = await adminApi.getPaymentRequests({ ...params, page: p, pageSize: PAGE_SIZE });
+      setItems(result.items as PaymentRequestResponse[]);
+      setPaged(result as unknown as PagedResult<PaymentRequestResponse>);
+      setPage(p);
+    } catch (e) {
+      setFetchError(normalizeError(e));
+    } finally {
+      setFetching(false);
+    }
+  }, []);
+
+  // fetch KPI counts (all statuses, unfiltered)
+  const loadKpis = useCallback(async () => {
+    const counts: Record<string, number> = { all: 0 };
+    await Promise.allSettled(
+      ["Pending","AwaitingPayment","ReceiptUploaded","UnderReview","Approved","Activated","Rejected","Cancelled"].map(async s => {
+        const r = await adminApi.getPaymentRequests({ status: s, pageSize: 1, page: 1 });
+        const total = (r as unknown as PagedResult<PaymentRequestResponse>).totalCount;
+        counts[s] = total;
+        counts["all"] = (counts["all"] ?? 0) + total;
+      })
+    );
+    setKpiCounts(counts);
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      load(1);
+      loadKpis();
+    }
+  }, [isLoading, user, load, loadKpis]);
+
+  function applyFilters() {
+    const params = {
+      status:        filterStatus || undefined,
+      paymentMethod: filterMethod || undefined,
+      fromDate:      filterFrom   || undefined,
+      toDate:        filterTo     || undefined,
+    };
+    filtersRef.current = { status: filterStatus, method: filterMethod, from: filterFrom, to: filterTo };
+    setActiveKpi("all");
+    setSelected(null);
+    load(1, params);
+  }
+
+  function applyKpi(key: string) {
+    setActiveKpi(key);
+    setFilterStatus(key === "all" ? "" : key);
+    setSelected(null);
+    load(1, {
+      status:        key === "all" ? undefined : key,
+      paymentMethod: filterMethod || undefined,
+      fromDate:      filterFrom   || undefined,
+      toDate:        filterTo     || undefined,
+    });
+  }
+
+  function resetFilters() {
+    setFilterStatus(""); setFilterMethod(""); setFilterFrom(""); setFilterTo("");
+    setActiveKpi("all");
+    setSelected(null);
+    load(1);
+  }
+
+  function onUpdated(updated: PaymentRequestResponse) {
+    setItems(prev => prev.map(r => r.id === updated.id ? updated : r));
+    setSelected(updated);
+    loadKpis();
+  }
+
+  if (isLoading || !user) return null;
+
+  const totalCount = paged?.totalCount ?? 0;
+  const totalPages = paged?.totalPages ?? 1;
+
+  return (
+    <div style={{ padding: "1.5rem", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
+
+      {/* Back link */}
+      <DashboardBackLink href="/dashboard/admin" label="العودة للوحة الإدارة" />
+
+      {/* Title */}
+      <div style={{ marginBottom: "1.25rem" }}>
+        <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 800, color: "#1a2e1a" }}>
+          طلبات الاشتراك
+        </h1>
+        <p style={{ margin: "0.2rem 0 0", fontSize: "0.82rem", color: "#64748b" }}>
+          مراجعة طلبات الدفع وتفعيل الاشتراكات
+        </p>
+      </div>
+
+      {/* KPI cards */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", marginBottom: "1.5rem" }}>
+        {KPI_STATUSES.map(k => (
+          <KpiCard
+            key={k.key}
+            label={k.label}
+            count={kpiCounts[k.key] ?? 0}
+            color={k.color}
+            bg={k.bg}
+            active={activeKpi === k.key}
+            onClick={() => applyKpi(k.key)}
+          />
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{
+        backgroundColor: "#fff", borderRadius: 12, padding: "1rem",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: "1.25rem",
+        display: "flex", flexWrap: "wrap", gap: "0.65rem", alignItems: "flex-end",
+      }}>
+        <div style={{ flex: "1 1 140px" }}>
+          <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 600, color: "#64748b", marginBottom: "0.3rem" }}>
+            الحالة
+          </label>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={selectSt}>
+            {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: "1 1 140px" }}>
+          <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 600, color: "#64748b", marginBottom: "0.3rem" }}>
+            طريقة الدفع
+          </label>
+          <select value={filterMethod} onChange={e => setFilterMethod(e.target.value)} style={selectSt}>
+            {METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: "1 1 130px" }}>
+          <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 600, color: "#64748b", marginBottom: "0.3rem" }}>
+            من تاريخ
+          </label>
+          <input
+            type="date"
+            value={filterFrom}
+            onChange={e => setFilterFrom(e.target.value)}
+            style={{ ...selectSt, width: "100%", boxSizing: "border-box" }}
+          />
+        </div>
+        <div style={{ flex: "1 1 130px" }}>
+          <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 600, color: "#64748b", marginBottom: "0.3rem" }}>
+            إلى تاريخ
+          </label>
+          <input
+            type="date"
+            value={filterTo}
+            onChange={e => setFilterTo(e.target.value)}
+            style={{ ...selectSt, width: "100%", boxSizing: "border-box" }}
+          />
+        </div>
+        <button
+          onClick={applyFilters}
+          type="button"
+          style={{
+            padding: "0.5rem 1.1rem", borderRadius: 8, border: "none",
+            backgroundColor: "#1a2e1a", color: "#fff",
+            fontSize: "0.82rem", fontWeight: 700, cursor: "pointer",
+            height: 36, alignSelf: "flex-end",
+          }}
+        >
+          بحث
+        </button>
+        <button
+          onClick={resetFilters}
+          type="button"
+          style={{
+            padding: "0.5rem 0.9rem", borderRadius: 8, border: "1.5px solid #e2e8f0",
+            backgroundColor: "transparent", color: "#64748b",
+            fontSize: "0.82rem", cursor: "pointer",
+            height: 36, alignSelf: "flex-end",
+          }}
+        >
+          إعادة ضبط
+        </button>
+      </div>
+
+      {/* Results count */}
+      <div style={{ marginBottom: "0.75rem", fontSize: "0.8rem", color: "#94a3b8" }}>
+        {fetching ? "جارٍ التحميل..." : `${totalCount.toLocaleString("ar-SY")} طلب`}
+      </div>
+
+      {/* Error */}
+      {fetchError && (
+        <div style={{
+          backgroundColor: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 10,
+          padding: "0.85rem", color: "#b91c1c", fontSize: "0.85rem", marginBottom: "1rem",
+        }}>
+          {fetchError}
+          <button onClick={() => load(page)} type="button"
+            style={{ marginRight: "0.75rem", color: "#b91c1c", textDecoration: "underline", background: "none", border: "none", cursor: "pointer" }}>
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {fetching && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+          {[0,1,2,3,4].map(i => (
+            <div key={i} style={{
+              height: 64, borderRadius: 10,
+              background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.4s infinite",
+            }} />
+          ))}
+        </div>
+      )}
+
+      {/* Table */}
+      {!fetching && !fetchError && (
+        <div style={{
+          backgroundColor: "#fff", borderRadius: 14,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+          overflow: "hidden",
+        }}>
+          {items.length === 0 ? (
+            <div style={{ padding: "3rem", textAlign: "center" }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📭</div>
+              <p style={{ margin: 0, color: "#94a3b8", fontSize: "0.88rem" }}>لا توجد طلبات تطابق الفلترة الحالية</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1.5px solid #e2e8f0" }}>
+                    {["المعرّف","اسم المستخدم","نوع الحساب","الباقة","المبلغ","طريقة الدفع","الحالة","التاريخ",""].map((h, i) => (
+                      <th key={i} style={{
+                        padding: "0.75rem 0.85rem", textAlign: "right",
+                        fontWeight: 700, color: "#64748b", fontSize: "0.75rem",
+                        textTransform: "uppercase", letterSpacing: "0.04em",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((req, idx) => {
+                    const isSelected = selected?.id === req.id;
+                    return (
+                      <tr
+                        key={req.id}
+                        style={{
+                          borderBottom: "1px solid #f1f5f9",
+                          backgroundColor: isSelected ? "#f0fdf4" : idx % 2 === 0 ? "#fff" : "#fafafa",
+                          cursor: "pointer",
+                          transition: "background-color 0.1s",
+                        }}
+                        onClick={() => setSelected(isSelected ? null : req)}
+                      >
+                        <td style={{ padding: "0.75rem 0.85rem", fontFamily: "monospace", color: "#64748b", fontSize: "0.72rem" }}>
+                          #{shortId(req.id)}
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem", color: "#1e293b", fontWeight: 600, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {req.userName ?? <span style={{ color: "#cbd5e1", fontWeight: 400, fontStyle: "italic" }}>—</span>}
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem", color: "#64748b", whiteSpace: "nowrap" }}>
+                          {req.accountTypeAr ?? "—"}
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem", fontWeight: 600, color: "#1e293b" }}>
+                          {req.planName}
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem", color: "#059669", fontWeight: 700, whiteSpace: "nowrap" }}>
+                          {fmtAmount(req.amount, req.currency)}
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem", color: "#374151", whiteSpace: "nowrap" }}>
+                          {PAYMENT_METHOD_ICON[req.paymentMethod]} {PAYMENT_METHOD_LABELS[req.paymentMethod] ?? req.paymentMethod}
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem" }}>
+                          <StatusBadge status={req.status} />
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem", color: "#94a3b8", whiteSpace: "nowrap" }}>
+                          {fmtDate(req.createdAt)}
+                        </td>
+                        <td style={{ padding: "0.75rem 0.85rem", textAlign: "center" }}>
+                          <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+                            {isSelected ? "◀" : "▶"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!fetching && totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", marginTop: "1.25rem" }}>
+          <button
+            onClick={() => load(page - 1, filtersRef.current)}
+            disabled={page <= 1}
+            type="button"
+            style={{
+              padding: "0.5rem 1rem", borderRadius: 8, border: "1.5px solid #e2e8f0",
+              backgroundColor: page <= 1 ? "#f3f4f6" : "#fff",
+              color: page <= 1 ? "#94a3b8" : "#1e293b",
+              fontSize: "0.82rem", cursor: page <= 1 ? "default" : "pointer",
+            }}
+          >
+            السابق
+          </button>
+          <span style={{ padding: "0.5rem 0.75rem", fontSize: "0.82rem", color: "#64748b" }}>
+            {page} / {totalPages}
+          </span>
+          <button
+            onClick={() => load(page + 1, filtersRef.current)}
+            disabled={page >= totalPages}
+            type="button"
+            style={{
+              padding: "0.5rem 1rem", borderRadius: 8, border: "1.5px solid #e2e8f0",
+              backgroundColor: page >= totalPages ? "#f3f4f6" : "#fff",
+              color: page >= totalPages ? "#94a3b8" : "#1e293b",
+              fontSize: "0.82rem", cursor: page >= totalPages ? "default" : "pointer",
+            }}
+          >
+            التالي
+          </button>
+        </div>
+      )}
+
+      {/* Detail panel overlay background */}
+      {selected && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 999,
+            backgroundColor: "rgba(0,0,0,0.25)",
+          }}
+          onClick={() => setSelected(null)}
+        />
+      )}
+
+      {/* Detail panel */}
+      {selected && (
+        <DetailPanel
+          req={selected}
+          onClose={() => setSelected(null)}
+          onUpdated={onUpdated}
+        />
+      )}
+
+    </div>
+  );
+}

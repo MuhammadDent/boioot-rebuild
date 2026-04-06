@@ -1,0 +1,218 @@
+We need to rebuild the Admin Subscription Plans module professionally.
+
+Current issue:
+The create/edit plan modal is incomplete both functionally and commercially.
+It currently only supports basic fields like name, description, category, color, badge, and monthly/yearly prices.
+This is NOT enough for a SaaS real estate platform.
+
+We need a full plan management system for Boioot.
+
+==================================================
+GOAL
+==================================================
+
+Redesign and rebuild:
+1) Plans list page
+2) Create plan modal/page
+3) Edit plan modal/page
+4) Backend contract / DTOs / validation
+5) Plan data model structure
+6) Proper error handling
+
+==================================================
+REQUIRED FUNCTIONAL STRUCTURE
+==================================================
+
+Each plan must support the following groups:
+
+A) Basic Information
+- name
+- internal code/slug
+- short description
+- marketing description
+- target account type:
+  - individual
+  - agent
+  - office
+  - developer
+  - all
+- plan category
+- status:
+  - active
+  - hidden
+  - archived
+- is public in pricing page
+- is default for new users
+- sort order
+- badge text
+- badge type
+- color
+
+B) Pricing
+- is free
+- monthly price
+- yearly price
+- currency
+- yearly discount percent
+- has trial
+- trial days
+- requires payment method for trial
+- activation fee (optional)
+
+C) Usage Limits
+- listings limit
+- requests limit
+- featured listings limit
+- pinned listings limit
+- images per listing limit
+- videos per listing limit
+- projects limit
+- units per project limit
+- team members limit
+- branches limit
+- monthly leads limit
+- messages limit
+- alerts limit
+- listing duration days
+- support unlimited toggles where needed
+
+D) Professional Features
+Boolean switches:
+- can feature listings
+- can pin listings
+- can show on homepage
+- can use analytics
+- can export reports
+- can manage team
+- can create company profile
+- can create agent profiles
+- can use WhatsApp/contact integrations
+- can use daily rental
+- can use projects module
+- can use lead distribution
+- can use SEO/project marketing tools
+- can use priority support
+- can use account verification
+- can upload videos
+- can upload PDFs
+- can access advanced dashboard
+
+E) Business Rules
+- available for self signup
+- requires admin approval
+- trial only plan
+- auto downgrade on expiry
+- publish requires moderation
+- allow add-ons
+- allow upgrade
+- allow downgrade
+- visible in public pricing page
+
+F) Preview
+Before save, show a plan summary card:
+- plan name
+- price
+- target account type
+- top limits
+- enabled features
+- badges/status
+
+==================================================
+UI/UX REQUIREMENTS
+==================================================
+
+1) Replace the long weak modal with a structured professional form:
+Either:
+- step wizard
+OR
+- accordion sections with sticky section navigation
+
+2) The sections must be:
+- Basic Info
+- Pricing
+- Limits
+- Features
+- Business Rules
+- Preview
+
+3) Add inline help text in Arabic for commercial fields.
+
+4) Add proper validation messages in Arabic.
+
+5) Create and Edit must share the same reusable PlanForm component.
+
+6) Plans list cards/table must show:
+- name
+- target account type
+- monthly/yearly price
+- key limits (listings, team, projects)
+- active/hidden status
+- public/private
+- sort order
+- top 3 features
+- actions: edit / archive / duplicate
+Do not keep the current shallow cards.
+
+==================================================
+BACKEND / MODEL REQUIREMENTS
+==================================================
+
+Refactor the plan model so the plan is not only basic metadata.
+
+Suggested structure:
+- Plan
+- PlanLimits
+- PlanFeatures
+- optional PlanPricingOption if needed later
+
+At minimum, the backend DTO must fully support all fields above.
+
+Add:
+- create DTO
+- update DTO
+- validation rules
+- mapping
+- proper API error responses
+
+==================================================
+CRITICAL FIXES
+==================================================
+
+1) Fix the current “internal server error” on plans page.
+Find root cause from API/network/DTO mismatch/database mapping and fix it properly.
+
+2) Fix create plan so saving actually persists all plan properties.
+
+3) Fix edit plan so it loads and updates all existing values correctly.
+
+4) Prevent deleting plans that are already assigned to subscribers.
+Use archive/soft delete instead.
+
+5) Add duplicate plan action for faster admin workflow.
+
+==================================================
+IMPORTANT BUSINESS CONTEXT
+==================================================
+
+This is a real estate SaaS platform.
+Plans are not just labels.
+They define commercial entitlements.
+
+Examples:
+- Free plan may allow only 2 listings as trial
+- Office plans may allow team members + more listings
+- Developer plans may allow projects and units
+- Premium plans may include featured placement and analytics
+
+So the system must be entitlement-driven, not just name/price driven.
+
+==================================================
+DELIVERABLES
+==================================================
+
+Implement the full rebuild and then provide:
+1) updated data model
+2) updated DTOs
+3) updated admin UI
+4) explanation of how create/edit/list now work
+5) what caused the server error and how it was fixed

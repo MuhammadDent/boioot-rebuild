@@ -1,0 +1,87 @@
+We introduced a new frontend error after the filtering/archive changes.
+
+Current issue:
+There is now a JSX/rendering problem in:
+src/components/layout/MainHeader.tsx
+
+The error points to the CTA buttons section around:
+<div className="cta-buttons">
+  <button ...
+
+There is also a hydration mismatch warning, which is likely a consequence of broken JSX structure in MainHeader.
+
+==================================================
+GOAL
+==================================================
+
+Fix MainHeader.tsx first so the app renders correctly again, then verify the archive/filter changes did not break layout rendering.
+
+==================================================
+TASK 1 — FIX JSX IN MainHeader
+==================================================
+
+Inspect the CTA buttons block in MainHeader.tsx around line 103.
+
+Check for:
+- unclosed <button>
+- missing >
+- missing closing tags
+- invalid nesting
+- accidental duplicated button markup
+- broken conditional rendering
+
+Rewrite the CTA buttons section into valid clean JSX.
+
+Use a safe structure like:
+
+<div className="cta-buttons">
+  <button
+    type="button"
+    onClick={() => guardHref("/post-ad")}
+    className="home-cta-primary"
+  >
+    + أضف إعلان
+  </button>
+
+  <button
+    type="button"
+    onClick={() => guardHref("/post-request")}
+    className="home-cta-secondary"
+  >
+    + أضف طلب
+  </button>
+</div>
+
+==================================================
+TASK 2 — FIX HYDRATION WARNING
+==================================================
+
+After fixing JSX, verify there is no SSR/client mismatch caused by:
+- invalid HTML structure
+- conditionals depending on window during initial render
+- Date.now / Math.random in render
+- browser-only values rendered on server
+
+If hydration warning remains, identify exact cause and fix it.
+
+==================================================
+TASK 3 — DO NOT TOUCH ARCHIVE LOGIC YET
+==================================================
+
+Do not continue archive/filter enhancements until MainHeader rendering is stable again.
+
+==================================================
+TASK 4 — VERIFY
+==================================================
+
+After the fix:
+1) app loads without console error
+2) MainHeader renders correctly
+3) CTA buttons render correctly
+4) no hydration warning
+5) plans page still opens normally
+
+Then explain:
+- root cause
+- exact JSX fix applied
+- whether hydration warning disappeared fully

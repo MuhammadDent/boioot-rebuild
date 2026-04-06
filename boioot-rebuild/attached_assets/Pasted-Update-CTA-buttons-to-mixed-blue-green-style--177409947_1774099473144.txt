@@ -1,0 +1,84 @@
+Update CTA buttons to mixed blue + green style.
+
+==================================================
+GOAL
+==================================================
+
+- Keep a clean white background
+- Use BLUE for text and "+" icon
+- Use GREEN for the border (brand color)
+
+==================================================
+STYLE
+==================================================
+
+- background: #ffffff
+- text color: #2563eb (blue)
+- "+" icon color: #2563eb (blue)
+- border: 1.5px solid #16a34a (green)
+- border-radius: 999px (pill)
+- padding: balanced (10px 18px)
+- font-weight: 600
+
+==================================================
+HOVER
+==================================================
+
+Option (recommended):
+
+- background: #f0fdf4 (very light green)
+- border stays green
+- text stays blue
+
+OR premium:
+
+- background: #16a34a (green)
+- text: white
+- "+" icon: white
+
+==================================================
+ACTIVE
+==================================================
+
+- scale(0.98)
+- subtle shadow reduction
+
+==================================================
+ICON
+==================================================
+
+- "+" icon must remain blue in default state
+- aligned properly with text
+- spacing: gap 8px
+
+==================================================
+EXAMPLE JSX
+==================================================
+
+<button
+  type="button"
+  style={{
+    background: "#fff",
+    color: "#2563eb",
+    border: "1.5px solid #16a34a",
+    borderRadius: "999px",
+    padding: "10px 18px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontWeight: 600,
+    transition: "all 0.2s ease",
+    cursor: "pointer",
+  }}
+>
+  <span style={{ color: "#2563eb" }}>+</span>
+  أضف إعلانك
+</button>
+
+==================================================
+IMPORTANT
+==================================================
+
+- Apply to both buttons
+- Keep existing logic (onClick / guardHref)
+- Keep RTL alignment

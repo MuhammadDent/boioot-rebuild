@@ -1,0 +1,264 @@
+We are now implementing Phase 3A of the Boioot SaaS platform billing system.
+
+IMPORTANT CONTEXT:
+We have an uploaded Excel pricing/plan matrix that must be treated as the initial source of truth for plan capabilities, limits, and feature mapping.
+Use that workbook as a reference while implementing this phase.
+
+The uploaded matrix includes:
+- plan columns for seeker/researcher, owner, broker, office, company
+- grouped feature sections
+- feature keys
+- value types such as Boolean, Limit, and text/manual policy-like values
+
+This means the system must not assume every plan capability is only a boolean or numeric limit.
+Some capabilities may be policy/text-based and should remain representable in the data model.
+
+GOAL:
+Build a real subscription core for plans/billing, so the system can assign plans to accounts, track subscription status, support upgrades/downgrades/cancellations, and prepare for future payment gateway integration.
+
+IMPORTANT:
+This is Phase 3A only.
+Do NOT integrate a payment gateway yet.
+Do NOT overbuild invoicing yet.
+Do NOT implement limit enforcement yet (that will be Phase 3B).
+In this phase we want the subscription data model, plan capability mapping, APIs, admin management, and user subscription visibility.
+
+CURRENT CONTEXT:
+- Auth system is complete
+- CMS is complete
+- Plans already exist
+- Plan features/limits exist or partially exist
+- We now need a proper subscription layer instead of plan display only
+
+REQUIREMENTS
+
+A) BACKEND — DATA MODEL
+1. Add a real subscription entity/table, e.g. AccountSubscription
+Suggested fields:
+- Id
+- AccountId
+- PlanId
+- Status (trialing, active, pending, past_due, canceled, expired)
+- StartsAtUtc
+- TrialEndsAtUtc
+- CurrentPeriodStartUtc
+- CurrentPeriodEndUtc
+- CanceledAtUtc
+- EndedAtUtc
+- AutoRenew
+- ExternalProvider
+- ExternalSubscriptionId
+- CreatedAtUtc
+- UpdatedAtUtc
+
+2. Add subscription history table/entity, e.g. SubscriptionHistory
+Suggested fields:
+- Id
+- SubscriptionId
+- EventType (created, upgraded, downgraded, renewed, canceled, expired, trial_started, trial_converted, assigned)
+- OldPlanId
+- NewPlanId
+- Notes
+- CreatedAtUtc
+- CreatedByUserId (optional if easy)
+
+3. Confirm plan model supports subscription needs
+Ensure plan data includes or can resolve:
+- Code
+- Display name
+- AudienceType
+- Tier
+- BillingInterval
+- Price
+- Currency
+- TrialDays
+- IsPublic
+- IsActive
+- SortOrder
+
+4. Architecture rule
+Do NOT rely on user.planId directly as the source of truth.
+Subscription must be resolved from the account/subscription layer.
+
+B) PLAN CAPABILITY MAPPING (VERY IMPORTANT)
+1. Use the uploaded Excel workbook as the initial source of truth for plan capabilities.
+Map its rows into canonical feature/capability records.
+
+2. Support multiple capability value types, not just boolean:
+- Boolean
+- Limit / numeric
+- Text / policy / mode
+
+3. The matrix contains examples like:
+- max_conversations
+- max_listings
+- max_images_per_listing
+- video_upload
+- 360_view_enabled
+- search_boost
+- homepage_boost
+- featured_ads
+- max_featured_ads
+- max_boost_days
+- priority_listing
+- verified_badge
+- crm_basic
+- crm_advanced
+- lead_tracking
+- client_notes
+- pipeline_management
+- lead_auto_assignment
+- analytics_dashboard
+- advanced_analytics
+- performance_tracking
+- analytics_history_days
+- export_reports
+- activity_logs
+- team_management
+- max_team_members
+- project_management
+- project_page
+- project_gallery
+- max_projects
+
+4. Normalize feature keys and value types cleanly in the backend so they can be resolved from subscriptions later.
+
+5. If the uploaded matrix contains plan variants that are not yet part of the official public catalog, do NOT break the current official structure.
+Instead:
+- preserve them as inactive/non-public draft plans if needed
+- or map them safely without exposing them publicly unless already intended
+
+6. Return plan capabilities in a structured way from subscription APIs:
+- boolean features
+- numeric limits
+- text/policy capabilities
+so Phase 3B enforcement can reuse the same model directly.
+
+C) BACKEND — SERVICES / LOGIC
+1. Add subscription service(s)
+Capabilities:
+- get current subscription for account
+- assign plan manually
+- change plan
+- cancel subscription
+- list subscription history
+- resolve current active plan
+- resolve plan capabilities from the mapped plan matrix
+- mark expired/canceled correctly
+
+2. Status handling
+Support at minimum:
+- trialing
+- active
+- pending
+- past_due
+- canceled
+- expired
+
+3. Lifecycle logic
+- assigning a plan creates or updates a subscription
+- changing plan records a history event
+- canceling records canceled status and timestamps
+- expired subscriptions remain historically visible
+- all timestamps in UTC
+
+D) BACKEND — API
+Add endpoints such as:
+1. GET /api/subscription/current
+Return:
+- current plan
+- status
+- features
+- limits
+- policy/text capabilities
+- current period dates
+- trial/end/cancel info
+
+2. POST /api/subscription/assign
+For admin/manual testing for now.
+Assign a plan to an account.
+
+3. POST /api/subscription/change-plan
+Upgrade/downgrade current subscription.
+
+4. POST /api/subscription/cancel
+Cancel current subscription.
+
+5. GET /api/subscription/history
+Return subscription timeline/history.
+
+6. Admin endpoints if needed
+Add clear admin APIs for listing subscriptions and changing plan/status.
+
+E) FRONTEND — USER DASHBOARD
+1. Add a user-facing subscription page:
+- /dashboard/subscription
+
+Show:
+- current plan
+- subscription status
+- plan price
+- renewal/end date
+- trial info
+- enabled features
+- numeric limits
+- policy/manual capabilities where applicable
+- upgrade/change-plan CTA
+
+2. Add clean Arabic RTL UI
+This page should be user-friendly and explain the subscription clearly.
+
+F) FRONTEND — ADMIN
+1. Add admin subscription management page:
+- /dashboard/admin/subscriptions
+
+Show:
+- account/user
+- current plan
+- status
+- period dates
+- auto renew
+- actions:
+  - assign plan
+  - change plan
+  - cancel subscription
+  - view history
+
+2. Keep UI practical and operational, not decorative.
+
+G) PRICING / PLAN RESOLUTION
+1. Ensure public pricing page still works with public plans
+2. Ensure subscription page resolves features/limits/policies from the real current plan
+3. Keep system ready for future payment gateway integration
+
+H) VALIDATION / TESTS
+Implement and report exact results for:
+1. Assign a plan manually to an account
+2. Current subscription endpoint returns correct plan/status/features/limits/policies
+3. Change plan updates current subscription correctly
+4. Subscription history records assign/change/cancel events
+5. Cancel subscription updates status and dates correctly
+6. Expired or inactive subscription remains historically visible
+7. User dashboard subscription page renders correctly
+8. Admin subscription management page renders and works correctly
+9. Public pricing page remains intact
+10. Plan capability mapping from the uploaded Excel source is preserved correctly for the implemented plans
+
+DELIVERABLES
+Report clearly:
+- DB/entity changes
+- migration names
+- new services
+- plan capability model used
+- how uploaded Excel values were mapped
+- endpoints added
+- admin pages added
+- user pages added
+- files changed
+- exact tested flows
+
+IMPORTANT RULES
+- Do not break existing plans UI
+- Do not implement payment gateway yet
+- Do not implement enforcement logic yet
+- Keep everything ready for Phase 3B where plan limits/features/policies will be enforced in real operations

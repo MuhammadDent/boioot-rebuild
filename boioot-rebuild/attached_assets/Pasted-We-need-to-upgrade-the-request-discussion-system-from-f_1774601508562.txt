@@ -1,0 +1,132 @@
+We need to upgrade the request discussion system from flat comments to a threaded (nested) comment system.
+
+CURRENT PROBLEM
+- All comments are displayed in one flat list
+- There is no ability to reply to a specific comment
+- No parent-child relationship between comments
+
+GOAL
+Implement a nested comment (threaded discussion) system for requests.
+
+REQUIRED FEATURES
+
+1) Data Model Update
+Each comment must support parent-child structure:
+
+Add fields:
+- Id
+- RequestId
+- UserId
+- Content
+- ParentCommentId (nullable)
+- CreatedAt
+
+Rules:
+- If ParentCommentId = null → top-level comment
+- If ParentCommentId != null → reply to another comment
+
+2) UI Behavior
+
+For each comment:
+- Show a "رد" (Reply) button under every comment
+- When clicked:
+  - Open a reply input directly under that comment
+  - Not at the bottom of the page
+
+3) Nested Display
+
+Display comments like:
+
+Comment A
+  ↳ Reply A1
+  ↳ Reply A2
+      ↳ Reply A2-1
+
+Requirements:
+- Indent replies visually (margin/padding)
+- Use a vertical line or subtle UI hint to show thread hierarchy
+- Limit nesting depth to 2 or 3 levels MAX to avoid UI complexity
+
+4) API / Backend Logic
+
+- CreateComment(requestId, content)
+  → creates top-level comment
+
+- ReplyToComment(parentCommentId, content)
+  → creates reply with ParentCommentId set
+
+- When fetching comments:
+  - Return structured tree OR flat list with ParentCommentId and build tree in frontend
+
+5) Rendering Logic (Frontend)
+
+- Group comments by ParentCommentId
+- Build tree structure
+- Render recursively OR using nested mapping
+
+6) Notifications (IMPORTANT)
+
+Update notification logic:
+
+- If user replies to a specific comment:
+  → Notify the parent comment owner: "تم الرد على تعليقك"
+
+- If new top-level comment:
+  → Notify request owner: "تم التعليق على طلبك"
+
+- If activity in discussion:
+  → Notify other participants: "يوجد نشاط جديد على طلب شاركت فيه"
+
+- Never notify the actor himself
+
+7) UX Improvements
+
+- Add "عرض الردود" (Show replies) if replies > 2
+- Collapse/expand replies
+- Highlight new replies
+
+8) Performance
+
+- Avoid N+1 queries when loading comments
+- Use efficient query to fetch all comments for a request
+
+9) Edge Cases
+
+- Prevent infinite nesting
+- Prevent replying to deleted comments
+- Handle deleted users/comments gracefully
+
+10) Testing
+
+Test scenarios:
+
+CASE 1:
+- User A writes comment
+- User B replies to A
+Expected:
+- Reply appears nested under A
+
+CASE 2:
+- User C replies to B
+Expected:
+- Nested structure preserved
+
+CASE 3:
+- Multiple comments and replies
+Expected:
+- Correct hierarchy without duplication
+
+CASE 4:
+- Notifications triggered correctly
+
+DELIVERABLES
+
+1) Updated database model (ParentCommentId)
+2) Updated backend endpoints/services
+3) Updated UI with nested replies
+4) Working reply button under each comment
+5) Proper notification integration
+6) Clean UX (indentation + hierarchy)
+7) Short report:
+   - what changed
+   - how nesting is implemented

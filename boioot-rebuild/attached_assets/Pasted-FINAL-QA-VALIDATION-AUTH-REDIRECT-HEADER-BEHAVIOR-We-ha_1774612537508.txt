@@ -1,0 +1,156 @@
+FINAL QA VALIDATION — AUTH REDIRECT & HEADER BEHAVIOR
+
+We have implemented a centralized redirect system (authRedirect.ts).
+
+Now we MUST verify the behavior end-to-end in the actual UI.
+
+Do NOT explain the code.
+Do NOT restate implementation.
+
+I want REAL TEST RESULTS based on actual behavior.
+
+========================================
+TEST SUITE (MANDATORY)
+========================================
+
+Run these tests manually and confirm PASS / FAIL for each:
+
+----------------------------------------
+TEST 1 — Guest Header UI
+----------------------------------------
+- Open homepage as NOT logged in
+
+CHECK:
+- messaging icon → must NOT exist in DOM
+- notifications icon → must NOT exist
+- no empty placeholders
+
+RETURN:
+- PASS or FAIL
+- if FAIL → exact component still rendering it
+
+----------------------------------------
+TEST 2 — Redirect from Protected Action
+----------------------------------------
+- Open a listing page as guest
+- Click "contact" or "send request"
+
+EXPECTED:
+- redirect to /login
+- AFTER login → return to SAME listing page
+
+CHECK:
+- URL before login
+- URL after login
+
+RETURN:
+- both URLs
+- PASS or FAIL
+
+----------------------------------------
+TEST 3 — Manual Login from Navbar
+----------------------------------------
+- Open homepage
+- Click login manually
+
+EXPECTED:
+- AFTER login → stay on homepage
+- NOT redirected to /dashboard
+
+RETURN:
+- PASS or FAIL
+
+----------------------------------------
+TEST 4 — Direct /login Access
+----------------------------------------
+- Open /login directly in browser
+- Login
+
+EXPECTED:
+- go to /dashboard (fallback)
+
+RETURN:
+- PASS or FAIL
+
+----------------------------------------
+TEST 5 — Already Authenticated Visiting /login
+----------------------------------------
+- Login
+- Then manually open /login
+
+EXPECTED:
+- redirect away from login
+- IF redirect target exists → go there
+- ELSE → go to /dashboard
+
+RETURN:
+- PASS or FAIL
+
+----------------------------------------
+TEST 6 — Redirect Persistence Cleanup
+----------------------------------------
+- Trigger login from protected page
+- Login successfully
+- Then refresh page
+
+EXPECTED:
+- should NOT redirect again
+- redirect key must be cleared
+
+CHECK:
+- sessionStorage key: auth.redirectAfterLogin
+
+RETURN:
+- PASS or FAIL
+
+----------------------------------------
+TEST 7 — Mobile / Responsive Header
+----------------------------------------
+- Switch to mobile view
+- Check header / drawer menu
+
+EXPECTED:
+- NO messaging icon for guests
+- NO notifications icon
+
+RETURN:
+- PASS or FAIL
+
+========================================
+CRITICAL VALIDATION
+========================================
+
+Additionally:
+
+1) Search codebase for any remaining:
+- "/dashboard" hard redirects
+- router.push("/dashboard")
+- navigate("/dashboard")
+
+List any found.
+
+2) Confirm:
+- ONLY authRedirect.ts handles redirect logic
+- no duplicate logic exists
+
+========================================
+FINAL OUTPUT REQUIRED
+========================================
+
+Provide:
+
+1) Test results table (PASS / FAIL)
+2) URLs observed in redirect tests
+3) Any remaining issues
+4) Files that still violate rules (if any)
+5) Confirmation:
+   "Auth redirect system is fully consistent" OR NOT
+
+========================================
+
+If ANY test fails:
+- fix it
+- rerun tests
+- report again
+
+DO NOT STOP at partial success.

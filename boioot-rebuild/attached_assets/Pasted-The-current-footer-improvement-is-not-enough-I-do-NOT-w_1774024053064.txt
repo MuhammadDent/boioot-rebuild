@@ -1,0 +1,159 @@
+The current footer improvement is not enough.
+
+I do NOT want minor UI refinements.
+I want a FULL footer redesign from a product + UX + conversion perspective.
+
+Act as:
+- Senior Product Designer
+- Senior SaaS UX Architect
+- Senior Frontend Engineer
+
+==================================================
+GOAL
+==================================================
+
+Rebuild the Boioot footer as a HIGH-IMPACT section,
+not just a list of links.
+
+The footer should:
+- increase trust
+- improve navigation clarity
+- drive user actions (add listing / request)
+- feel like a premium marketplace (not a basic website)
+
+==================================================
+CRITICAL PROBLEM WITH CURRENT FOOTER
+==================================================
+
+The current footer:
+- looks cleaner but still generic
+- has no strong hierarchy
+- has weak CTA presence
+- does not feel like a real estate marketplace
+- does not guide user behavior
+
+We need to FIX that.
+
+==================================================
+NEW FOOTER STRATEGY (MANDATORY)
+==================================================
+
+The footer must be structured into 4 clear layers:
+
+--------------------------------------------------
+1) TOP CTA STRIP (VERY IMPORTANT)
+--------------------------------------------------
+
+A strong action section ABOVE the footer:
+
+Example:
+"ابدأ الآن في عرض عقارك أو طلبك"
+
+Buttons:
+- أضف إعلانك (primary - green)
+- أضف طلبك (secondary)
+
+This section must be visually strong and separated.
+
+--------------------------------------------------
+2) MAIN FOOTER GRID
+--------------------------------------------------
+
+Clean structured columns:
+
+- عن بيوت (description + trust text)
+- العقارات
+- الطلبات والخدمات
+- الدعم
+- السياسات
+
+Each column must have:
+- clear heading
+- properly spaced links
+- strong hierarchy
+
+--------------------------------------------------
+3) BRAND TRUST BLOCK
+--------------------------------------------------
+
+Add a trust section:
+
+- "منصة عقارية موثوقة"
+- simple trust points (بدون مبالغة)
+- optional small stats (if available)
+
+--------------------------------------------------
+4) BOTTOM BAR (CLEAN + PREMIUM)
+--------------------------------------------------
+
+- copyright
+- policy links
+- social icons (clean, aligned)
+- very neat spacing
+
+==================================================
+UX REQUIREMENTS
+==================================================
+
+- Strong visual hierarchy (VERY IMPORTANT)
+- CTA buttons must stand out clearly
+- Arabic RTL must be PERFECT
+- Headings ≠ links (clear difference)
+- No clutter
+- No random green overuse
+- Clean spacing system
+- Consistent alignment
+- Mobile-first design
+
+==================================================
+DESIGN STYLE
+==================================================
+
+- Premium SaaS
+- Minimal but confident
+- Real estate marketplace feel
+- Not a blog
+- Not a template
+- Not generic
+
+==================================================
+TECH REQUIREMENTS
+==================================================
+
+- Refactor existing footer (do NOT stack hacks)
+- Create reusable components
+- Use proper layout system (grid/flex properly)
+- Ensure responsiveness (mobile/tablet/desktop)
+- No hardcoded messy duplication
+- No broken links
+- Use existing routes only
+
+==================================================
+DELIVERABLES
+==================================================
+
+1. Rebuilt footer UI (not just tweaks)
+2. Clear structural improvement
+3. Better CTA visibility
+4. Better hierarchy
+5. Mobile optimized layout
+
+Also explain:
+- what was wrong before
+- what you changed structurally
+- how UX improved
+- how conversion improved
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+The new footer must feel:
+
+- more premium
+- more intentional
+- more conversion-focused
+- more organized
+- more "real product" level
+
+If it still looks like a normal footer → it is NOT acceptable.

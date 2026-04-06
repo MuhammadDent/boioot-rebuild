@@ -1,0 +1,75 @@
+The delete functionality for property ownership types is not working.
+
+Current behavior:
+- Clicking "حذف" shows error:
+  "نوع الملكية غير موجود"
+- The item clearly exists in the table
+
+This means the delete logic is broken.
+
+==================================================
+GOAL
+==================================================
+
+Fix the delete functionality so that:
+- the correct item is deleted
+- no false "not found" errors appear
+- UI updates correctly after deletion
+
+==================================================
+DEBUG REQUIRED
+==================================================
+
+Investigate the delete flow step by step:
+
+1. What ID is being passed when clicking delete?
+2. Is the correct identifier used? (id vs value vs key)
+3. Does the API or delete function search using the same field?
+4. Is there mismatch between frontend and backend data structure?
+5. Is the item stored in:
+   - local state
+   - mock data
+   - API response
+
+6. Is the delete function looking in the wrong dataset?
+
+==================================================
+FIX REQUIREMENTS
+==================================================
+
+1. Ensure each ownership type has a unique stable ID
+2. Ensure delete uses that exact ID
+3. Fix any mismatch between:
+   - id
+   - value
+   - name
+
+4. Update the state correctly after deletion:
+   - remove item from list
+   - re-render UI
+
+5. Add confirmation dialog before delete
+
+6. Handle errors properly:
+   - show real error only if truly not found
+   - not due to logic mismatch
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+- Clicking delete removes the correct item
+- No false "not found" error
+- UI updates instantly
+- No page reload needed
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT just hide the error.
+Fix the root cause of the mismatch in delete logic.
+
+After fixing, explain:
+1. what was the root cause
+2. what field is now used as the ID

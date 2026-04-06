@@ -1,0 +1,484 @@
+
+في البداية لا أنصحك ببدء Microservices حقيقية داخل Replit، لأن هذا سيزيد التعقيد جدًا.
+الأفضل أن نبدأ بـ:
+Modular Monolith
+يعني:
+•	مشروع واحد Backend
+•	مشروع واحد Frontend
+•	لكن داخل الـ Backend يكون مقسم إلى Modules واضحة
+وهذا أفضل خيار لك الآن لأنه:
+•	احترافي
+•	أسهل في البناء
+•	أسهل في الاختبار
+•	يمكن لاحقًا فصل بعض الموديولات إلى Microservices
+
+الشكل العام للمستودع
+أنصح أن يكون المشروع بهذا الشكل:
+boioot/
+├── backend/
+├── frontend/
+├── docs/
+├── scripts/
+├── docker/
+├── .env.example
+├── README.md
+
+
+شرح المجلدات الرئيسية
+backend
+هنا مشروع ASP.NET Core
+frontend
+هنا مشروع Next.js
+docs
+توثيق المشروع، مثل:
+•	ERD
+•	API notes
+•	business rules
+scripts
+سكريبتات مساعدة
+•	database seed
+•	backup
+•	migrations helpers
+docker
+ملفات Docker و Docker Compose لاحقا 
+1) Boioot.API
+هذا هو مشروع الدخول الرئيسي.
+يحتوي على:
+├── Controllers/
+├── Middleware/
+├── Filters/
+├── Extensions/
+├── Configurations/
+├── Endpoints/
+├── Program.cs
+├── appsettings.json
+├── appsettings.Development.json
+وظيفته
+•	استقبال الطلبات من الواجهة
+•	التوثيق
+•	تفويض الصلاحيات
+•	ربط الخدمات
+•	إرجاع API responses
+Controllers المقترحة
+Controllers/
+├── AuthController.cs
+├── UsersController.cs
+├── PropertiesController.cs
+├── ProjectsController.cs
+├── RequestsController.cs
+├── ForumController.cs
+├── BlogController.cs
+├── MessagesController.cs
+├── NotificationsController.cs
+├── ReviewsController.cs
+├── SubscriptionsController.cs
+├── CompaniesController.cs
+├── AgentsController.cs
+└── AdminController.cs
+
+2) Boioot.Domain
+هذا هو قلب المشروع من ناحية المفاهيم.
+يحتوي على:
+Boioot.Domain/
+├── Entities/
+├── Enums/
+├── ValueObjects/
+├── Common/
+├── Events/
+├── Constants/
+
+Entities
+هنا الكيانات الأساسية:
+Entities/
+├── User.cs
+├── Role.cs
+├── Property.cs
+├── PropertyImage.cs
+├── PropertyFeature.cs
+├── Project.cs
+├── ProjectUnit.cs
+├── PropertyRequest.cs
+├── RequestResponse.cs
+├── ForumPost.cs
+├── ForumComment.cs
+├── BlogPost.cs
+├── BlogCategory.cs
+├── Conversation.cs
+├── Message.cs
+├── Notification.cs
+├── Company.cs
+├── Agent.cs
+├── Review.cs
+├── Subscription.cs
+├── Plan.cs
+└── Favorite.cs
+Enums
+مثل:
+Enums/
+├── UserType.cs
+├── ListingType.cs
+├── PropertyStatus.cs
+├── PropertyType.cs
+├── RequestStatus.cs
+├── ReviewTargetType.cs
+├── NotificationType.cs
+├── SubscriptionStatus.cs
+└── LanguageCode.cs
+Common
+أشياء مشتركة مثل:
+Common/
+├── BaseEntity.cs
+├── AuditableEntity.cs
+├── SoftDeletableEntity.cs
+
+
+3) Boioot.Application
+هذه الطبقة تحتوي منطق الاستخدام.
+Boioot.Application/
+├── Interfaces/
+├── Services/
+├── DTOs/
+├── Features/
+├── Validators/
+├── Mappings/
+├── Responses/
+├── Exceptions/
+├── Helpers/
+
+Interfaces
+تعريف العقود:
+Interfaces/
+├── Services/
+│   ├── IAuthService.cs
+│   ├── IPropertyService.cs
+│   ├── IRequestService.cs
+│   ├── IProjectService.cs
+│   ├── IMessageService.cs
+│   ├── IReviewService.cs
+│   ├── INotificationService.cs
+│   └── ISubscriptionService.cs
+├── Repositories/
+│   ├── IUserRepository.cs
+│   ├── IPropertyRepository.cs
+│   ├── IRequestRepository.cs
+│   └── ...
+
+DTOs
+DTOs/
+├── Auth/
+
+
+├── Users/
+├── Properties/
+├── Projects/
+├── Requests/
+├── Forum/
+├── Blog/
+├── Messages/
+├── Reviews/
+├── Companies/
+├── Agents/
+└── Subscriptions/
+
+مثال داخل Properties:
+DTOs/Properties/
+├── CreatePropertyDto.cs
+├── UpdatePropertyDto.cs
+├── PropertyListItemDto.cs
+├── PropertyDetailsDto.cs
+├── PropertySearchDto.cs
+└── PropertyFilterDto.cs
+
+
+Features
+هذه أفضل طريقة لتنظيم المشروع بدل وضع كل شيء في Services فقط.
+نجعل كل Module مستقلًا نسبيًا.
+
+Features/
+├── Auth/
+│   ├── Commands/
+│   ├── Queries/
+│   └── Handlers/
+├── Properties/
+├── Projects/
+├── Requests/
+├── Forum/
+├── Blog/
+├── Messages/
+├── Reviews/
+├── Companies/
+├── Agents/
+├── Notifications/
+└── Subscriptions/
+
+Validators
+باستخدام FluentValidation مثلًا:
+Validators/
+├── Auth/
+├── Properties/
+├── Requests/
+├── Reviews/
+└── ...
+
+4) Boioot.Infrastructure
+هذه الطبقة للتعامل مع العالم الخارجي:
+Boioot.Infrastructure/
+├── Persistence/
+├── Repositories/
+├── Services/
+├── Identity/
+├── Storage/
+├── Search/
+├── Caching/
+├── Notifications/
+├── Payments/
+├── Migrations/
+├── Seed/
+└── DependencyInjection/
+
+Persistence
+Persistence/
+├── ApplicationDbContext.cs
+├── Configurations/
+└── Migrations/
+
+Configurations
+ملفات Entity Framework لكل جدول:
+Configurations/
+├── UserConfiguration.cs
+├── PropertyConfiguration.cs
+├── RequestConfiguration.cs
+├── CompanyConfiguration.cs
+├── AgentConfiguration.cs
+└── ...
+
+Repositories
+Repositories/
+├── UserRepository.cs
+├── PropertyRepository.cs
+├── RequestRepository.cs
+├── ReviewRepository.cs
+└── ...
+Storage
+لرفع الصور والملفات:
+Storage/
+├── IFileStorageService.cs
+├── LocalFileStorageService.cs
+└── CloudFileStorageService.cs
+ابدأ محليًا، ثم لاحقًا انقل إلى S3 أو R2.
+
+Search
+
+Search/
+├── IPropertySearchService.cs
+├── ElasticsearchPropertySearchService.cs
+└── SearchIndexSynchronizer.cs
+Cashing 
+
+Caching/
+├── ICacheService.cs
+├── RedisCacheService.cs
+└── MemoryCacheService.cs
+
+
+Notifications
+Notifications/
+├── Email/
+├── Push/
+└── InApp/
+5) Boioot.Shared
+هذه للأشياء المشتركة بين الطبقات:
+Results/
+├── Result.cs
+├── ResultT.cs
+└── PagedResult.cs
+
+هيكل الاختبارات
+tests/
+├── Boioot.UnitTests/
+│   ├── Services/
+│   ├── Validators/
+│   └── Helpers/
+└── Boioot.IntegrationTests/
+    ├── Controllers/
+    ├── Persistence/
+    └── EndToEnd/
+
+كيف نقسم Modules داخل النظام؟
+منصة Boioot يجب أن تُبنى على Modules واضحة:
+1. Identity & Auth
+2. Users & Profiles
+3. Companies & Agents
+4. Properties
+5. Projects
+6. Requests
+7. Forum
+8. Blog
+9. Messaging
+10. Notifications
+11. Reviews
+12. Favorites
+13. Subscriptions
+14. Admin
+15. Localization
+
+Project Structure للـ Frontend
+الواجهة باستخدام Next.js.
+أنصح بهذا الهيكل:
+frontend/
+├── public/
+├── src/
+│   ├── app/
+│   ├── components/
+│   ├── features/
+│   ├── services/
+│   ├── hooks/
+│   ├── lib/
+│   ├── store/
+│   ├── types/
+│   ├── utils/
+│   ├── constants/
+│   ├── locales/
+│   └── styles/
+├── middleware.ts
+├── next.config.js
+├── package.json
+└── tsconfig.json
+
+app
+إذا استخدمنا App Router:
+app/
+├── [locale]/
+│   ├── page.tsx
+│   ├── layout.tsx
+│   ├── properties/
+│   ├── projects/
+│   ├── requests/
+│   ├── forum/
+│   ├── blog/
+│   ├── companies/
+│   ├── agents/
+│   ├── dashboard/
+│   ├── auth/
+│   └── admin/
+
+components
+المكونات العامة:
+components/
+├── ui/
+├── layout/
+├── shared/
+├── forms/
+├── maps/
+├── cards/
+└── tables/
+
+features
+هذا من أهم الأجزاء، ويجب أن يكون مطابقًا تقريبًا لموديولات الباك اند:
+features/
+├── auth/
+├── properties/
+├── projects/
+├── requests/
+├── forum/
+├── blog/
+├── companies/
+├── agents/
+├── messaging/
+├── notifications/
+├── reviews/
+├── subscriptions/
+└── admin/
+
+و داخل  كل  features :  
+features/properties/
+├── components/
+├── api/
+├── hooks/
+├── types/
+├── utils/
+└── validations/
+
+هذا الترتيب ممتاز جدًا بدل بعثرة كل ملفات العقارات في كل مكان.
+services
+طلبات API العامة:
+services/
+├── api-client.ts
+├── auth-service.ts
+├── property-service.ts
+├── request-service.ts
+├── review-service.ts
+└── ...
+
+store
+إذا استخدمت Zustand أو Redux:
+store/
+├── auth-store.ts
+├── filters-store.ts
+├── notification-store.ts
+└── favorites-store.ts
+locales
+locales/
+├── ar/
+│   ├── common.json
+│   ├── auth.json
+│   ├── properties.json
+│   └── ...
+└── en/
+    ├── common.json
+    ├── auth.json
+    ├── properties.json
+    └── ...
+
+قواعد تنظيم مهمة جدًا
+هناك قواعد لو التزمنا بها من البداية ستحمي المشروع من الفوضى.
+1) كل Module مستقل قدر الإمكان
+مثلًا:
+•	العقارات لا تضع منطقها في Users
+•	الطلبات لا تضعها داخل Forum
+2) لا تضع business logic داخل Controllers
+الـ Controller فقط يستقبل ويرسل.
+3) لا تجعل Frontend يعتمد على شكل قاعدة البيانات
+بل على DTOs واضحة من الـ API.
+4) كل Feature لها ملفاتها الخاصة
+وهذا مهم جدًا في Next.js.
+5) لا تخلط بين Admin و Public website
+لوحة الإدارة يجب أن تكون Module واضحة.
+Naming Convention مهم جدًا
+يجب تثبيت أسلوب التسمية من البداية.
+Backend
+•	PascalCase للـ classes
+•	camelCase للمتغيرات
+•	أسماء واضحة مثل:
+o	PropertyService
+o	CreateRequestDto
+o	AgentController
+Frontend
+•	المكونات: PascalCase
+•	hooks: usePropertyFilters
+•	الخدمات: propertyService.ts
+النتيجة النهائية المقترحة
+المستوى الأعلى
+boioot/
+├── backend/
+│   ├── src/
+│   │   ├── Boioot.API/
+│   │   ├── Boioot.Application/
+│   │   ├── Boioot.Domain/
+│   │   ├── Boioot.Infrastructure/
+│   │   └── Boioot.Shared/
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── features/
+│   │   ├── services/
+│   │   ├── hooks/
+│   │   ├── store/
+│   │   ├── locales/
+│   │   └── ...
+├── docs/
+├── scripts/
+└── README.md
+

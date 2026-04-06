@@ -1,0 +1,123 @@
+We need to finalize and enforce a FULLY UNIFIED SIDEBAR SYSTEM across the entire application.
+
+CURRENT STATE:
+- We already have a partially unified sidebar
+- BUT there are still multiple sidebar implementations (DashboardSidebar, AdminSidebar)
+- Some pages still use old sidebar logic (e.g. /dashboard/projects/*)
+
+THIS IS NOT ACCEPTABLE.
+
+========================================
+GOAL
+========================================
+
+Convert the system into a TRUE single-source sidebar architecture.
+
+========================================
+CRITICAL REQUIREMENTS
+========================================
+
+1) REMOVE DUPLICATION
+
+- Eliminate:
+  DashboardSidebar
+  AdminSidebar
+
+- Replace with ONE component only:
+  <AppSidebar />
+
+----------------------------------------
+
+2) SINGLE SOURCE OF TRUTH
+
+Create ONE central config file:
+
+sidebar.config.ts
+
+It must contain ALL navigation for ALL roles.
+
+----------------------------------------
+
+3) FORCE GLOBAL USAGE
+
+- EVERY dashboard page MUST use:
+  <AppSidebar />
+
+- Replace ALL imports of:
+  DashboardSidebar
+  AdminSidebar
+
+----------------------------------------
+
+4) REMOVE LEGACY SIDEBAR USAGE
+
+Find and refactor pages still using old sidebar:
+
+Example:
+- /dashboard/projects/*
+- any other legacy layouts
+
+Replace with unified sidebar layout.
+
+----------------------------------------
+
+5) FULL ROLE-BASED CONTROL
+
+Sidebar must render based on:
+
+- role (broker, owner, office, company, admin, staff)
+- permissions (RBAC)
+
+----------------------------------------
+
+6) NO HARDCODED LINKS
+
+ALL sidebar items must come from config only.
+
+----------------------------------------
+
+7) AUTO FILTERING
+
+- Hide sections with no visible children
+- Do not render empty groups
+
+----------------------------------------
+
+8) CONSISTENCY
+
+- Same UI
+- Same behavior
+- Same interaction
+
+Across ALL dashboards
+
+----------------------------------------
+
+9) VALIDATION
+
+Add logging:
+
+console.log("Sidebar rendered for role:", role)
+
+----------------------------------------
+
+10) TEST
+
+Verify:
+
+- Broker sees only allowed items
+- Admin sees everything
+- No duplicate sidebars
+- No page uses old sidebar
+- Active section auto expands correctly
+
+========================================
+DELIVERABLE
+========================================
+
+A fully unified sidebar system with:
+
+- One component
+- One config
+- No duplication
+- Used across ALL dashboards and pages

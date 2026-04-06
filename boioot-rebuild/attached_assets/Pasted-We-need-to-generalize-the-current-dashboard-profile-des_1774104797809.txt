@@ -1,0 +1,138 @@
+We need to generalize the current /dashboard/profile design so it applies to ALL authenticated user types, not only the regular user.
+
+GOAL:
+Make the same professional profile page layout and tabs structure reusable for:
+- Regular User
+- Agent
+- Office
+- Developer / Real Estate Company
+- Admin / Staff (if they use the same dashboard profile route)
+- Any future user type
+
+IMPORTANT:
+Do NOT hardcode this page for "user" role only.
+The profile page must be role-aware but use one unified reusable design system.
+
+REQUIREMENTS
+
+1) UNIFIED PROFILE PAGE
+Use the same visual structure for all user roles:
+- top profile summary card
+- avatar / initials
+- name
+- email
+- role badge
+- last updated info
+- tabs section below
+
+Tabs should remain in the same professional layout:
+- الملف الشخصي
+- الأمان
+- الصورة الشخصية
+- الإعدادات
+
+2) ROLE-AWARE DATA MAPPING
+Currently the UI seems to work only for regular user data.
+Refactor the page so the displayed fields are populated from a unified profile view model.
+
+Create a normalized frontend model such as:
+- id
+- fullName
+- email
+- phone
+- avatarUrl
+- role
+- accountType
+- companyName
+- officeName
+- agentTitle
+- status
+- updatedAt
+
+Then map backend/user data into this model for every role.
+
+3) SUPPORT ALL ACCOUNT TYPES
+Handle these cases correctly:
+- Individual user → show personal name and personal info
+- Agent → show personal info + agency/office relation if available
+- Office account → show office/company name properly
+- Developer company → show company identity properly
+- Staff/Admin → show staff role clearly if dashboard access exists
+
+The page must not break if some fields are missing.
+Use graceful fallbacks:
+- if no avatar → initials circle
+- if no phone → empty optional field
+- if no companyName → hide company block
+- if no officeName → hide office block
+
+4) REMOVE ROLE-SPECIFIC UI BREAKAGE
+Audit the current profile page for conditions like:
+- role === "user"
+- accountType === "user"
+- checks that prevent agents/offices/developers from seeing the same design
+
+Replace these with a scalable role-aware rendering system.
+
+5) REUSABLE COMPONENT ARCHITECTURE
+Refactor into reusable components:
+- ProfileHeaderCard
+- ProfileTabs
+- ProfileBasicInfoForm
+- ProfileSecurityTab
+- ProfileAvatarTab
+- ProfileSettingsTab
+- ProfileMetaBadges
+
+Keep the UI shared.
+Only the data and a few optional fields should vary by role.
+
+6) OPTIONAL ROLE-SPECIFIC SECTIONS
+If needed, allow extra blocks per role WITHOUT changing the main design:
+- Agent: brokerage/office info
+- Office: office details
+- Developer: company details
+- Staff/Admin: staff position or permission summary
+
+These sections must be optional and appear under the same unified style.
+
+7) NO DUPLICATED PAGES
+Do NOT create separate profile pages for each role.
+There should be one main profile page and reusable logic for all roles.
+
+8) BACKEND / API COMPATIBILITY
+Check how profile data is fetched.
+If the backend returns different schemas for different user types, create a normalization layer in the frontend service or server action.
+Do not spread role-specific transformation logic everywhere in the UI.
+
+9) RTL + ARABIC UI
+Preserve proper Arabic RTL layout.
+Keep spacing, tabs, typography, and alignment consistent.
+
+10) FINAL VALIDATION
+After implementation, verify that the same profile design works correctly for:
+- regular user
+- agent
+- office
+- developer/company
+- admin/staff
+
+For each type, confirm:
+- page loads
+- header card renders
+- tabs render
+- fields populate correctly
+- missing optional fields do not break layout
+
+DELIVERABLES
+- Refactored reusable profile page
+- shared normalized profile model
+- removal of hardcoded regular-user-only logic
+- support for all current and future roles
+- clean scalable architecture
+
+Please implement this carefully and show me:
+1) what was causing the design to appear only for regular users
+2) which files were changed
+3) how the normalization layer was built
+4) what test cases were covered

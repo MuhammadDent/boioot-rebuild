@@ -1,0 +1,70 @@
+modules = ["nodejs-24", "dotnet-8.0", "postgresql-16"]
+
+[[artifacts]]
+id = "artifacts/api-server"
+
+[[artifacts]]
+id = "artifacts/mockup-sandbox"
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+run = ["sh", "-c", "dotnet /home/runner/workspace/out/Boioot.Api.dll --urls http://0.0.0.0:$PORT"]
+build = ["sh", "-c", "bash boioot/apps/backend/build-prod.sh"]
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Boioot Frontend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Boioot .NET API"
+
+[[workflows.workflow]]
+name = "Boioot Frontend"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep infinity"
+
+[[workflows.workflow]]
+name = "Boioot .NET API"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "sleep infinity"
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[nix]
+channel = "stable-25_05"
+
+[[ports]]
+localPort = 8080
+externalPort = 8080

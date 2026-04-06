@@ -1,0 +1,110 @@
+We have a broken admin navigation route.
+
+Problem:
+Clicking "النظام" (System) in the admin sidebar leads to a 404 page.
+
+This is NOT a backend issue — routing/navigation is broken.
+
+Your task is to fix this properly at the architectural level.
+
+========================================
+STEP 1 — FIND ROOT CAUSE
+========================================
+
+1. Locate the sidebar/navigation config.
+2. Find the exact href used for "النظام".
+3. Example expected:
+   /admin/system
+
+4. Then verify if this route exists in Next.js app router:
+   /app/admin/system/page.tsx
+
+========================================
+STEP 2 — VALIDATE EXISTING PAGES
+========================================
+
+Search for any existing system/settings pages:
+
+- /admin/settings
+- /dashboard/settings
+- /admin/config
+- /admin/system
+
+If a settings page already exists:
+→ DO NOT create a duplicate
+
+========================================
+STEP 3 — FIX STRATEGY (IMPORTANT)
+========================================
+
+Case A — Page EXISTS under different name:
+----------------------------------------
+Example:
+page exists → /admin/settings
+
+Fix:
+- Update sidebar link:
+  href: "/admin/settings"
+- Keep label "النظام"
+
+----------------------------------------
+
+Case B — Page DOES NOT EXIST:
+----------------------------------------
+
+Create new page:
+
+/app/admin/system/page.tsx
+
+With:
+
+- Proper admin layout
+- Page title: "إعدادات النظام"
+- Sections:
+  - General settings
+  - Plans & features (future)
+  - System config (placeholder)
+
+----------------------------------------
+
+========================================
+STEP 4 — ENSURE CONSISTENCY
+========================================
+
+- Mobile sidebar ✅
+- Desktop sidebar ✅
+- Header navigation (if exists) ✅
+
+All must point to SAME route.
+
+========================================
+STEP 5 — NEXT.JS VALIDATION
+========================================
+
+Ensure:
+
+- Correct folder naming (lowercase)
+- page.tsx exists
+- No missing layout.tsx
+- No middleware blocking route
+- No redirect loops
+
+========================================
+STEP 6 — FINAL TEST
+========================================
+
+1. Click "النظام"
+2. Page loads (no 404)
+3. Refresh page → still works
+4. URL works directly
+5. No console errors
+
+========================================
+DELIVER OUTPUT
+========================================
+
+- Root cause
+- Old route
+- New fixed route
+- Files changed
+- Whether page was created or reused

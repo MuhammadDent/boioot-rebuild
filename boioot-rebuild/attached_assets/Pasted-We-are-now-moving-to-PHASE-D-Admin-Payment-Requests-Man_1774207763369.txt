@@ -1,0 +1,135 @@
+We are now moving to PHASE D:
+
+Admin Payment Requests Management System
+
+IMPORTANT:
+- Backend already supports:
+  - approve
+  - reject
+  - activate
+  - cancel
+  - mark under review
+- DO NOT redesign backend
+- Build admin UI on top of existing APIs
+
+==================================================
+GOAL
+==================================================
+
+Create a full admin interface to manage subscription payment requests.
+
+This is a critical SaaS feature.
+
+==================================================
+STEP 1 — ADMIN PAYMENT REQUESTS PAGE
+==================================================
+
+Create a page:
+
+/dashboard/admin/payment-requests
+
+Show a table or list of all requests with:
+
+- request ID
+- user / account
+- plan name
+- amount
+- payment method
+- status
+- created date
+
+Add filters:
+
+- by status
+- by payment method
+- by date range
+
+==================================================
+STEP 2 — REQUEST DETAILS PANEL
+==================================================
+
+When admin clicks a request:
+
+Show full details:
+
+- user info
+- account/company
+- plan details
+- amount
+- payment method
+- receipt (image preview if exists)
+- timeline (created → receipt → review → decision)
+
+==================================================
+STEP 3 — ADMIN ACTIONS
+==================================================
+
+Add action buttons:
+
+- Approve
+- Reject (with reason)
+- Activate
+- Cancel
+- Mark Under Review
+
+Rules:
+- buttons should appear only if action is allowed
+- show confirmation modal before action
+- for reject → require reason input
+
+==================================================
+STEP 4 — STATUS CONTROL UX
+==================================================
+
+- show colored status badges
+- show clear transition states
+- prevent invalid transitions in UI
+
+==================================================
+STEP 5 — ADMIN NOTES & HISTORY
+==================================================
+
+- allow admin to add notes
+- show review notes
+- show who approved/rejected
+- show timestamps
+
+==================================================
+STEP 6 — KPI SUMMARY (IMPORTANT)
+==================================================
+
+At top of page, add summary cards:
+
+- total requests
+- pending
+- awaiting payment
+- under review
+- approved
+- activated
+
+==================================================
+UX REQUIREMENTS
+==================================================
+
+- clean, fast admin workflow
+- minimize clicks
+- clear decision making
+- Arabic labels (professional tone)
+
+==================================================
+IMPORTANT RULES
+==================================================
+
+- do NOT allow frontend to bypass backend rules
+- respect backend state machine
+- always rely on API responses
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+1. pages/components created
+2. admin actions wired to APIs
+3. filtering system
+4. what works now
+5. missing features for future

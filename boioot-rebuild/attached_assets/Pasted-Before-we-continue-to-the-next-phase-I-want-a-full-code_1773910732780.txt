@@ -1,0 +1,98 @@
+Before we continue to the next phase, I want a full code review and validation of the current implementation.
+
+Goal:
+Audit the current Boioot admin/backoffice codebase and verify that the recent changes are correct, consistent, secure, and production-ready.
+
+Focus especially on:
+- RBAC implementation
+- admin layout and sidebar
+- staff / roles foundation
+- blog SEO system
+- SEO preview/admin SEO UI
+- SSR vs client boundaries
+- TypeScript correctness
+- API integration consistency
+
+========================
+CODE REVIEW / VALIDATION TASK
+========================
+
+Please perform a structured review of the current implementation and check the following:
+
+1) Build / compile health
+- Verify there are no TypeScript errors
+- Verify there are no Next.js build errors
+- Verify there are no .NET backend compile/runtime errors
+- Verify imports/exports are correct
+- Verify no broken routes or missing files
+
+2) SSR / Hydration safety
+- Check that server components and client components are separated correctly
+- Ensure no client-only logic leaks into SSR paths
+- Ensure no hydration mismatch risks remain
+- Confirm SEO metadata generation is server-side only
+- Confirm SEO preview remains client-only where appropriate
+
+3) RBAC correctness
+- Verify permission checks are implemented consistently
+- Verify frontend visibility checks match backend authorization logic
+- Verify protected admin routes are not relying on frontend only
+- Verify RequirePermission usage is correct
+- Check for any endpoints that should be protected but are not yet protected
+
+4) Staff / Roles architecture
+- Verify separation between platform users and internal staff
+- Verify roles/pages/sidebar logic is coherent
+- Check for hardcoded assumptions that will break scalability
+- Verify current implementation is maintainable
+
+5) Blog SEO system review
+- Verify SEO mode handling is correct:
+  - Auto
+  - Template
+  - Custom
+- Verify fallback logic is safe
+- Verify template variable replacement is correct
+- Verify no duplicated resolver logic in conflicting places
+- Verify admin SEO fields save/load correctly
+
+6) Data consistency / API contracts
+- Verify frontend types match backend DTOs
+- Verify no field mismatches exist
+- Verify null/undefined handling is safe
+- Verify forms correctly load and submit all required fields
+
+7) Security / authorization
+- Identify any authorization gaps
+- Identify any sensitive admin actions not protected enough
+- Flag any places where backend security still depends on frontend assumptions
+
+8) Code quality / maintainability
+- Look for duplicated logic
+- Look for over-coupled components
+- Look for unclear naming
+- Look for places that should be refactored before we continue
+- Flag any technical debt introduced by recent changes
+
+========================
+REQUIRED OUTPUT FORMAT
+========================
+
+Return the review in 4 sections:
+
+1. What is correct and healthy
+2. What is risky or incorrect
+3. What must be fixed before continuing
+4. Recommended cleanup/refactor tasks
+
+For each issue, include:
+- severity: critical / high / medium / low
+- affected files
+- clear explanation
+- exact recommended fix
+
+Important:
+Do not just say “looks good”.
+Be strict, technical, and honest.
+If something is only partially correct, say so clearly.
+I want a real engineering review, not a summary.

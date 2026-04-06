@@ -1,0 +1,121 @@
+We need to fix the UI/layout of the Edit Subscription Plan modal.
+
+IMPORTANT:
+This is a design/layout fix only.
+Do NOT change business logic or API behavior.
+Focus only on modal structure, spacing, layering, and responsive form layout.
+
+==================================================
+PROBLEM
+==================================================
+
+The current "Edit Subscription Plan" modal is visually broken:
+- title overlaps with background content
+- form labels and inputs are stacked incorrectly
+- fields are too wide and not aligned
+- text overlaps
+- modal does not feel centered/contained
+- layout is not clean in RTL Arabic UI
+
+==================================================
+REQUIRED FIXES
+==================================================
+
+1) MODAL CONTAINER
+- Center the modal properly
+- Use a fixed overlay with proper z-index
+- Add semi-transparent dark backdrop
+- Prevent background interaction while modal is open
+- Modal should have:
+  - max-width around 720px to 820px
+  - width: 100%
+  - max-height: 90vh
+  - overflow-y: auto
+  - rounded corners
+  - clean padding
+  - subtle shadow
+
+2) RTL / ARABIC FORM LAYOUT
+- Ensure the modal content uses proper RTL layout
+- Align labels and text consistently for Arabic
+- Keep field labels above inputs
+- Do not allow labels to overlap inputs
+- Add consistent vertical spacing between fields
+
+3) FORM GRID
+- Use a clean responsive grid:
+  - 1 column on mobile
+  - 2 columns where appropriate on desktop
+- Fields that should be full-width remain full-width:
+  - plan name
+  - description
+- Smaller related fields can be side-by-side:
+  - monthly price
+  - yearly price
+  - display order
+  - rank
+  - account type
+
+4) HEADER
+- Add a clean modal header:
+  - title on the right
+  - close button on the left (RTL-friendly)
+- Header should be visually separated from body
+- No overlap with content behind modal
+
+5) FIELD STYLING
+- Inputs/selects/textareas should have:
+  - consistent height
+  - proper internal padding
+  - readable font size
+  - border radius
+  - clean focus state
+- Textarea should have a fixed minimum height
+
+6) SECTION GROUPING
+Group the form into logical sections with spacing:
+- Basic Info
+- Pricing
+- Visibility / Ordering
+- Features / Limits (if present)
+
+7) ACTIONS FOOTER
+- Sticky or clearly separated footer
+- Buttons aligned consistently for RTL
+- Primary save button
+- Secondary cancel button
+- Prevent buttons from floating over fields
+
+8) RESPONSIVENESS
+- Ensure modal looks correct on:
+  - desktop
+  - tablet
+  - mobile
+- No horizontal overflow
+- No clipped content
+
+==================================================
+IMPLEMENTATION NOTES
+==================================================
+
+Please inspect and fix:
+- modal wrapper
+- overlay
+- z-index/layering
+- width/max-width
+- spacing between labels and fields
+- form grid
+- textarea sizing
+- header/footer structure
+
+If the modal currently reuses a generic component, improve that component safely without breaking other modals.
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+Please provide:
+1. files changed
+2. what caused the broken layout
+3. what was fixed in the modal structure
+4. confirmation that RTL layout is now correct

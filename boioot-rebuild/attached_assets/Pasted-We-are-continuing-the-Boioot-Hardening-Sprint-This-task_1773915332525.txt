@@ -1,0 +1,211 @@
+We are continuing the Boioot Hardening Sprint.
+
+This task focuses on FRONTEND authorization normalization.
+
+This is NOT a redesign.
+This is NOT a UI refactor.
+This is a CONTROLLED PERMISSION-BASED HARDENING.
+
+==================================================
+GOAL
+==================================================
+
+Normalize frontend authorization so that:
+
+- UI visibility and actions are controlled by PERMISSIONS only
+- NOT by roles like "Admin", "AdminManager", etc.
+- frontend behavior matches backend authorization model
+- no inconsistencies between UI and API authorization
+
+We want a SINGLE source of truth:
+→ permission-based access
+
+==================================================
+CURRENT PROBLEM
+==================================================
+
+The frontend likely contains logic such as:
+
+- role-based checks (user.role === "Admin")
+- isAdmin flags
+- conditional UI based on role instead of permission
+- inconsistent access logic across components
+
+This leads to:
+- UI showing actions that backend denies
+- UI hiding actions that backend allows
+- architectural inconsistency
+
+==================================================
+TASKS
+==================================================
+
+1) FIND ALL ROLE-BASED CHECKS IN FRONTEND
+
+Search and list all occurrences of:
+
+- user.role
+- isAdmin / isSuperAdmin
+- role === "Admin"
+- role-based conditional rendering
+
+Scan:
+- components
+- pages
+- hooks
+- layout guards
+- navigation menus
+
+==================================================
+
+2) INTRODUCE A CENTRAL PERMISSION CHECK HELPER
+
+Create a reusable utility such as:
+
+/src/lib/permissions.ts
+
+Example:
+
+export function hasPermission(user, permission: string): boolean {
+  return user?.permissions?.includes(permission);
+}
+
+export function hasAnyPermission(user, permissions: string[]): boolean {
+  return permissions.some(p => user?.permissions?.includes(p));
+}
+
+export function hasAllPermissions(user, permissions: string[]): boolean {
+  return permissions.every(p => user?.permissions?.includes(p));
+}
+
+IMPORTANT:
+- Do NOT depend on role
+- Only use permission array from user
+
+==================================================
+
+3) REPLACE ROLE CHECKS WITH PERMISSION CHECKS
+
+Replace patterns like:
+
+❌ if (user.role === "Admin")
+❌ if (isAdmin)
+
+WITH:
+
+✅ hasPermission(user, "users.view")
+✅ hasPermission(user, "settings.manage")
+
+Examples:
+
+Before:
+if (user.role === "Admin") {
+  showUsersPage()
+}
+
+After:
+if (hasPermission(user, "users.view")) {
+  showUsersPage()
+}
+
+--------------------------------------------------
+
+Before:
+{user.role === "Admin" && <DeleteButton />}
+
+After:
+{hasPermission(user, "users.delete") && <DeleteButton />}
+
+==================================================
+
+4) NORMALIZE NAVIGATION VISIBILITY
+
+Ensure menus are permission-based:
+
+Example:
+
+Admin menu should not check role.
+It should check permissions:
+
+- users.view → show Users menu
+- settings.manage → show Settings menu
+- billing.manage → show Billing menu
+
+==================================================
+
+5) NORMALIZE PAGE GUARDS
+
+If there are route guards or layout guards:
+
+- Replace role-based guards with permission-based guards
+- Ensure unauthorized users are redirected or shown "Access Denied"
+
+==================================================
+
+6) KEEP BACKEND AS SOURCE OF TRUTH
+
+Frontend checks are ONLY for UX.
+
+Backend still enforces real authorization.
+
+Do NOT rely on frontend for security.
+
+==================================================
+
+7) DO NOT BREAK EXISTING UI
+
+- Keep UI behavior the same where correct
+- Only change the authorization logic
+- Avoid visual regressions
+
+==================================================
+
+8) VERIFY USER OBJECT STRUCTURE
+
+Ensure the frontend user object includes:
+
+user = {
+  id: string
+  role: string (can remain for display only)
+  permissions: string[]
+}
+
+If permissions are missing:
+- fix the auth context / API response mapping
+- ensure JWT permissions are exposed to frontend
+
+==================================================
+
+VALIDATION SCENARIOS
+==================================================
+
+Test and report:
+
+1) Admin:
+- sees all menus
+- can access all pages
+
+2) AdminManager:
+- sees only permitted sections
+
+3) ContentEditor:
+- cannot see Users or Billing
+- can see blog-related features only
+
+4) Unauthorized:
+- hidden UI actions
+- blocked pages
+
+==================================================
+
+EXPECTED OUTPUT
+==================================================
+
+Provide a report:
+
+A) Files changed
+B) Role checks removed
+C) Permission helper added
+D) Examples of replaced logic
+E) Navigation behavior after change
+F) Validation results

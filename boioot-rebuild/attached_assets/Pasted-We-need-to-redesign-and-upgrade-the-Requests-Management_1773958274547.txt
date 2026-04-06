@@ -1,0 +1,214 @@
+We need to redesign and upgrade the Requests Management page in the Boioot dashboard.
+
+IMPORTANT:
+- Do NOT change backend business logic
+- Do NOT break existing request fetching or filtering logic
+- This task is mainly UI/UX + frontend structure improvement
+- If some analytics data is not available yet, use derived mock/demo summaries from current request data structure
+
+==================================================
+GOAL
+==================================================
+
+Transform the Requests page from a simple basic filter page into a professional SaaS-style requests management and analytics dashboard.
+
+The current page is too basic.
+We need it to feel richer, more useful, and more production-level.
+
+==================================================
+MAIN IMPROVEMENTS REQUIRED
+==================================================
+
+1) Add a top analytics summary section
+2) Add advanced filters
+3) Add grouped request insights
+4) Improve requests list/cards/table UX
+5) Support RTL properly
+6) Keep it responsive and mobile-friendly
+
+==================================================
+TOP SUMMARY CARDS
+==================================================
+
+At the top of the page, add KPI cards such as:
+
+- إجمالي الطلبات
+- الطلبات الجديدة
+- الطلبات قيد المتابعة
+- الطلبات المغلقة
+- متوسط الميزانية
+- أكثر مدينة طلباً
+
+Use reusable cards similar to dashboard StatCard style.
+
+==================================================
+ADVANCED FILTERS
+==================================================
+
+Replace the current primitive filter block with a rich filter panel.
+
+Include filters for:
+
+- الحالة
+- المدينة
+- الحي
+- نوع العقار
+- عدد الغرف
+- الحد الأدنى للميزانية
+- الحد الأعلى للميزانية
+- المميزات المطلوبة
+- تاريخ الطلب
+- ترتيب حسب الأحدث / الأعلى ميزانية / الأقل ميزانية
+
+Use a clean responsive grid layout.
+
+Suggested layout:
+- Mobile: stacked fields
+- Tablet/Desktop: 2 to 4 columns grid
+
+Also add:
+- Search input
+- Reset filters button
+- Apply filters button
+
+==================================================
+INSIGHTS / ANALYTICS SECTION
+==================================================
+
+Below the filter area, add visual grouped analytics sections.
+
+We need sections/cards such as:
+
+1. الطلبات حسب المدينة
+- Example:
+  دمشق: 12
+  حلب: 8
+  حمص: 5
+
+2. الطلبات حسب الحي
+- Show top neighborhoods
+
+3. الطلبات حسب الميزانية
+- Less than X
+- Between X and Y
+- Above Y
+
+4. الطلبات حسب عدد الغرف
+- 1 غرفة
+- 2 غرف
+- 3 غرف
+- 4+ غرف
+
+5. الطلبات حسب المميزات المطلوبة
+- مصعد
+- موقف سيارة
+- مفروش
+- شرفة
+- حديقة
+- مسبح
+
+6. الطلبات حسب نوع العقار
+- شقة
+- فيلا
+- مكتب
+- محل
+- أرض
+
+If charts are too much for now, use beautiful insight cards / grouped summary boxes.
+If possible, add simple progress bars or horizontal distribution bars.
+
+==================================================
+REQUESTS LIST UI
+==================================================
+
+Upgrade the requests results area.
+
+Instead of a weak empty/basic block, build a professional results section:
+
+Each request card or row should show:
+- عنوان الطلب / نوعه
+- اسم العميل
+- المدينة + الحي
+- الميزانية
+- عدد الغرف
+- المميزات
+- الحالة
+- تاريخ الإنشاء
+- actions:
+  - عرض
+  - تعديل
+  - تغيير الحالة
+  - تواصل
+
+If there are no requests:
+Show a polished empty state with icon + better message.
+
+==================================================
+SECTION STRUCTURE
+==================================================
+
+Recommended page structure:
+
+1. Page header
+   - title
+   - short description
+
+2. KPI summary cards
+
+3. Advanced filter panel
+
+4. Insights / grouped analytics
+   - by city
+   - by district
+   - by budget
+   - by rooms
+   - by features
+   - by property type
+
+5. Requests results section
+
+==================================================
+DESIGN REQUIREMENTS
+==================================================
+
+- Use Tailwind only
+- Modern SaaS dashboard style
+- Clean spacing
+- Use cards with rounded-2xl, border, subtle shadow
+- RTL support is required
+- Fully responsive
+- Keep UI modular and reusable
+
+==================================================
+COMPONENT SUGGESTIONS
+==================================================
+
+You may create reusable components such as:
+
+- RequestStatCard
+- RequestFiltersPanel
+- RequestInsightCard
+- RequestDistributionList
+- RequestEmptyState
+- RequestRowCard
+
+==================================================
+IMPORTANT BEHAVIOR
+==================================================
+
+- Do not break existing requests page logic
+- If full analytics is not available from backend yet, derive frontend summaries from current request array
+- Keep code scalable for future API integration
+- Do not hardcode business logic
+- Only improve structure, UX, analytics view, and presentation
+
+==================================================
+DESIRED OUTCOME
+==================================================
+
+The Requests page should feel like a real professional real-estate CRM/SaaS dashboard, not a simple form page.
+It should help the user understand request demand patterns:
+- where demand is coming from
+- what budgets are common
+- what features are requested most
+- which cities / neighborhoods are active

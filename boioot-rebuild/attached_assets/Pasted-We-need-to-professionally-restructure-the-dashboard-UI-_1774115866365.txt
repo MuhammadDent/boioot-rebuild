@@ -1,0 +1,206 @@
+We need to professionally restructure the dashboard UI into a real SaaS dashboard layout.
+
+GOAL:
+Replace the crowded horizontal dashboard navigation with a cleaner, more scalable dashboard architecture:
+
+- Unified top header
+- Dashboard sidebar
+- Main content area
+- Profile becomes a clear item inside the sidebar
+
+This should make the dashboard feel like a proper application workspace, not a public site with extra tabs.
+
+==================================================
+1) TARGET ARCHITECTURE
+==================================================
+
+Create a professional dashboard layout with:
+
+A) Top Header
+- fixed or sticky
+- keeps Boioot branding
+- includes:
+  - logo
+  - quick actions if needed
+  - notifications
+  - messages
+  - user avatar / account menu
+  - logout
+- keep it clean and not crowded
+
+B) Dashboard Sidebar
+- visible on desktop
+- collapsible on smaller screens
+- contains dashboard navigation items with icons
+
+C) Main Content Area
+- page title
+- breadcrumb if needed
+- page content cards/forms/tables
+
+==================================================
+2) MOVE DASHBOARD NAVIGATION INTO SIDEBAR
+==================================================
+
+Remove the current crowded horizontal dashboard section links and place dashboard navigation in a proper sidebar.
+
+Sidebar should include clear items such as:
+- لوحة التحكم
+- الملف الشخصي
+- الطلبات
+- المشاريع
+- الإيجار اليومي
+- الإعدادات
+- الأمان
+- الرسائل (if available)
+- الإشعارات (if available)
+
+If some items are not implemented yet, keep structure extensible and only show active supported routes.
+
+==================================================
+3) PROFILE AS A DASHBOARD SECTION
+==================================================
+
+The profile page must clearly be part of the dashboard.
+
+On /dashboard/profile:
+- sidebar item "الملف الشخصي" must be active
+- dashboard context must be obvious
+- no detached feel
+- page title should be "الملف الشخصي"
+- breadcrumb can be:
+  لوحة التحكم / الملف الشخصي
+
+Make "لوحة التحكم" clickable and route to /dashboard.
+
+==================================================
+4) KEEP PUBLIC SITE NAVIGATION SEPARATE
+==================================================
+
+Do NOT mix public site navigation with dashboard navigation.
+
+Public site:
+- public navbar only
+
+Dashboard:
+- top dashboard header + sidebar only
+
+No duplicated navigation.
+No public-style page tabs repeated inside dashboard.
+
+==================================================
+5) DASHBOARD HOME PAGE
+==================================================
+
+Make /dashboard a real landing page.
+
+It should contain:
+- welcome section
+- summary cards / KPIs if available
+- quick links to key sections:
+  - الملف الشخصي
+  - الطلبات
+  - المشاريع
+  - الإيجار اليومي
+  - الإعدادات
+
+This makes "لوحة التحكم" a meaningful parent page.
+
+==================================================
+6) VISUAL DESIGN
+==================================================
+
+Target style:
+- premium Arabic SaaS dashboard
+- clean
+- professional
+- not cluttered
+- proper spacing
+- strong visual hierarchy
+- refined green Boioot branding
+- modern icons
+- soft borders/shadows
+- white/light surfaces
+
+Sidebar:
+- clear active item style
+- icon + label
+- hover states
+- optional grouped sections if useful
+
+Header:
+- minimal and balanced
+- same design language as the public navbar
+- but optimized for app workspace
+
+==================================================
+7) RESPONSIVE BEHAVIOR
+==================================================
+
+Desktop:
+- sidebar visible
+
+Tablet/mobile:
+- sidebar becomes drawer/sheet
+- top header includes menu toggle
+- keep actions accessible without clutter
+
+==================================================
+8) COMPONENT REFACTOR
+==================================================
+
+Refactor into reusable components such as:
+- DashboardLayout
+- DashboardHeader
+- DashboardSidebar
+- DashboardNavItem
+- DashboardBreadcrumb
+- DashboardShell
+- DashboardMobileSidebar
+
+Keep code clean and scalable.
+
+==================================================
+9) ACTIVE STATE + ROUTING
+==================================================
+
+Ensure proper active states:
+- /dashboard → "لوحة التحكم"
+- /dashboard/profile → "الملف الشخصي"
+- /dashboard/requests → "الطلبات"
+- /dashboard/projects → "المشاريع"
+- /dashboard/daily-rent or equivalent → "الإيجار اليومي"
+
+==================================================
+10) REMOVE OLD HORIZONTAL DASHBOARD TABS
+==================================================
+
+Remove or refactor the old horizontal dashboard tabs that currently sit above the page content.
+They are no longer the primary dashboard navigation.
+
+If needed, keep only page-local tabs inside specific sections, not global dashboard navigation tabs.
+
+==================================================
+11) IMPLEMENTATION SAFETY
+==================================================
+
+Do this without breaking:
+- profile editing
+- security tab
+- avatar tab
+- settings tab
+- existing dashboard routes
+
+Preserve current functionality while upgrading layout architecture.
+
+==================================================
+12) DELIVERABLES
+==================================================
+
+Please implement and report:
+1. which files/layouts/components were created or updated
+2. how dashboard layout is now structured
+3. how sidebar navigation works
+4. how public and dashboard navigation are separated
+5. which old horizontal nav pieces were removed
+6. how responsive behavior works

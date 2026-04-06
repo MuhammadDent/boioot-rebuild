@@ -1,0 +1,113 @@
+We need a final hardening and cleanup pass for the unified property creation system.
+
+IMPORTANT BUSINESS RULE (CRITICAL):
+The permission "agents.manage" is NOT intended for the Broker role.
+It was added by mistake and must be REMOVED.
+Brokers should NOT manage agents under any circumstances.
+Only roles explicitly designed for admin/staff-level management should have that permission.
+
+==================================================
+MAIN GOAL
+==================================================
+
+Finalize and stabilize the property creation flow across:
+- permissions (RBAC)
+- routes
+- UI behavior
+- backend alignment
+
+Ensure the system is clean, consistent, and production-safe.
+
+==================================================
+TASKS
+==================================================
+
+1. Remove incorrect permissions
+- Locate where Broker has:
+  "agents.manage"
+- REMOVE it completely from Broker.
+- Verify no unintended roles gained this permission.
+
+2. Validate RBAC correctness
+- Ensure the ONLY permission used for creation is:
+  "properties.create"
+
+- Confirm correct role mapping:
+  - Admin ✅ properties.create
+  - CompanyOwner ✅ properties.create
+  - Owner ✅ properties.create
+  - Broker ✅ properties.create
+  - Agent ❌
+  - User ❌
+
+- Ensure no legacy permissions exist:
+  - ads.create ❌
+  - listings.create ❌
+
+3. Route consistency
+- Ensure ONLY one create route exists:
+  /dashboard/properties/new
+
+- Verify NO usage anywhere of:
+  - /listings/create
+  - /ads/create
+  - /properties/create
+
+- All CTAs must point to:
+  /dashboard/properties/new
+
+4. UI behavior validation
+- Buttons like:
+  "Add Property", "Add Ad", "Add Listing"
+  must:
+  - show ONLY if user has properties.create
+  - be hidden otherwise
+
+- If user manually navigates to:
+  /dashboard/properties/new
+  without permission:
+  - show a proper Arabic "Unauthorized" message
+  - no redirect loops
+  - no blank screen
+
+5. Backend alignment
+- Review property creation endpoints:
+  - POST /api/properties
+  - POST /properties/post
+
+- Do NOT refactor aggressively now,
+  but clearly document:
+  - why both exist
+  - which roles use which
+  - whether future unification is recommended
+
+6. Codebase cleanup
+- Search entire codebase for any legacy or inconsistent logic:
+  - old permission names
+  - old routes
+  - mixed create logic
+
+- Remove or refactor them.
+
+7. Final validation
+Test these roles end-to-end:
+- Admin
+- CompanyOwner
+- Owner
+- Broker
+- Agent
+- User
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+Provide a clear summary:
+
+- Confirmation that agents.manage was removed from Broker
+- Final RBAC structure
+- Final create permission name (single source of truth)
+- Final create route
+- Any remaining legacy references (if any)
+- Whether current system is production-safe
+- Recommended next backend cleanup step (if needed)

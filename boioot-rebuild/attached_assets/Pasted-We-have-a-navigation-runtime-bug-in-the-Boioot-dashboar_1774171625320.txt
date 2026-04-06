@@ -1,0 +1,75 @@
+We have a navigation + runtime bug in the Boioot dashboard that must be fixed professionally.
+
+CURRENT BUGS
+1) When I click "إضافة إعلان جديد" from dashboard listings, the create listing page opens briefly, then closes immediately and redirects back to /dashboard.
+2) There is also a runtime API error shown in the dashboard:
+- src/lib/api.ts line 49 in request()
+- called from src/app/dashboard/page.tsx in loadAnalytics()
+
+I want a full root-cause fix, not a temporary workaround.
+
+====================================================
+TASKS
+====================================================
+
+1) FIX THE CREATE LISTING REDIRECT BUG
+- Audit the exact navigation flow for the "إضافة إعلان جديد" button.
+- Check all related components/pages/layouts/routes for:
+  - router.push(...)
+  - router.replace(...)
+  - redirect(...)
+  - useEffect navigation side effects
+  - parent click handlers
+  - form submit behavior
+  - middleware redirects
+  - auth guards
+  - dashboard layout guards
+- Ensure clicking "إضافة إعلان جديد" navigates to the intended create listing route and STAYS there.
+- If the button is inside a form, make sure it uses type="button" and does not trigger accidental form submission.
+- Remove any unintended redirect back to /dashboard.
+
+2) VERIFY ROUTE ACCESS / GUARDS
+- Check middleware.ts and all dashboard protection logic.
+- Confirm the create listing page is allowed for authenticated users with the current account type.
+- Do not redirect the user back to /dashboard unless authentication truly fails.
+- If company/profile checks exist, handle them properly with explicit messaging instead of silent redirect loops.
+
+3) FIX DASHBOARD ANALYTICS API CRASH
+- In src/app/dashboard/page.tsx, make loadAnalytics() resilient.
+- Wrap analytics loading in try/catch.
+- If analytics API fails, the dashboard must NOT crash and must NOT redirect.
+- Show safe fallback UI/state instead.
+- Keep the rest of the dashboard working even if analytics fails.
+
+4) AUDIT THE API ENDPOINT USED BY DASHBOARD ANALYTICS
+- Identify which endpoint is being called by loadAnalytics().
+- Verify:
+  - route correctness
+  - auth token handling
+  - backend permission checks
+  - response format
+  - null/empty company data handling
+- Fix the frontend or backend mismatch if present.
+
+5) IMPROVE API ERROR HANDLING
+- In src/lib/api.ts, keep ApiError behavior, but ensure pages/components consuming request() handle failures safely.
+- Do not allow non-critical API failures (like analytics) to break page navigation.
+
+====================================================
+DELIVERABLES
+====================================================
+
+After fixing, provide:
+1) Root cause explanation
+2) Files changed
+3) Exact bug source
+4) What was causing the redirect
+5) What was causing the dashboard API error
+6) Confirmation that:
+   - create listing page now stays open
+   - dashboard no longer crashes if analytics fails
+
+IMPORTANT
+- Do not refactor unrelated parts.
+- Do not mask the issue with arbitrary timeout hacks.
+- Fix the actual root cause cleanly and professionally.

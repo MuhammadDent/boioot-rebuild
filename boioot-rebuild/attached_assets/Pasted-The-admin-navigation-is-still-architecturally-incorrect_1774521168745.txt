@@ -1,0 +1,70 @@
+The admin navigation is still architecturally incorrect.
+
+PROBLEM
+"Brokers" still appears as a separate top-level sidebar item next to "Users".
+This is wrong for our data model and still creates admin confusion.
+
+CORRECT MODEL
+- Users = all human accounts in one master people directory
+- Brokers = a user subtype / role-based filtered view inside Users
+- Companies = separate business entities page
+
+GOAL
+Remove the architectural separation between brokers and users completely.
+
+REQUIRED CHANGES
+
+1) Sidebar navigation fix
+- Remove "الوسطاء" / Brokers as a standalone top-level sidebar item
+- Keep:
+  - المستخدمون
+  - الشركات
+- Do NOT keep brokers as a parallel module in the sidebar
+
+2) Users page must become the single master page for all human accounts
+Inside /dashboard/admin/users add role tabs or quick filters for:
+- الكل
+- المستخدمون
+- الملاك
+- الوسطاء
+- الوكلاء
+- شركات التطوير
+- الإداريون
+
+3) Brokers must only exist as:
+- a tab inside Users
+OR
+- a saved filter / segmented view inside Users
+NOT as a separate navigation destination
+
+4) Routing cleanup
+- If /dashboard/admin/brokers exists, do one of the following:
+  a) remove the route entirely
+  OR
+  b) redirect it to /dashboard/admin/users?role=Broker
+- There must not be a separate independent brokers module unless it is only an alias redirect
+
+5) Admin UX clarification
+The admin must understand:
+- Users = all people
+- Companies = organizations
+- Brokers = one filtered type of users
+
+6) Preserve company separation
+- Keep Companies as a separate section because it is a business entity, not a user type
+- But make sure companies link back to owner/broker/staff users
+
+7) Consistency cleanup
+- Remove any duplicate brokers counters/cards/sidebar badges that imply brokers are separate from users
+- Make labels and navigation reflect the true data model everywhere
+
+DELIVERABLES
+- Remove Brokers from sidebar
+- Make Users the only people directory
+- Move broker access into Users tabs/filters
+- Redirect old broker route if needed
+- Confirm there is no remaining UI that treats brokers as a parallel entity to users
+
+IMPORTANT
+This is not a visual change only.
+Fix the navigation architecture and information model completely.

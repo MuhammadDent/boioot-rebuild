@@ -1,0 +1,2073 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
+import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import { adminApi } from "@/features/admin/api";
+import { normalizeError } from "@/lib/api";
+import type { AdminPlanSummary, AdminPlanDetail, AdminPlanPricingEntry, PlanLimitItem, PlanFeatureItem } from "@/types";
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function Toast({ msg, type }: { msg: string; type: "ok" | "err" }) {
+  return (
+    <div style={{
+      position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)",
+      zIndex: 9999, padding: "0.75rem 1.5rem", borderRadius: 10,
+      background: type === "ok" ? "#166534" : "#991b1b",
+      color: "#fff", fontWeight: 600, fontSize: "0.9rem",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.25)", whiteSpace: "nowrap",
+    }}>
+      {msg}
+    </div>
+  );
+}
+
+// ── Audience / Tier display helpers ───────────────────────────────────────────
+
+const AUDIENCE_AR_LABEL: Record<string, string> = {
+  seeker: "باحث", owner: "مالك", broker: "وسيط", office: "مكتب", company: "شركة",
+};
+const AUDIENCE_BG: Record<string, string> = {
+  seeker: "#1d4ed8", owner: "#15803d", broker: "#c2410c", office: "#6d28d9", company: "#b91c1c",
+};
+const TIER_AR_LABEL: Record<string, string> = {
+  free: "مجاني", basic: "أساسي", advanced: "متقدم", enterprise: "مؤسسي",
+};
+const TIER_BG: Record<string, string> = {
+  free: "#374151", basic: "#1e40af", advanced: "#4338ca", enterprise: "#5b21b6",
+};
+
+// ── Feature group labels ───────────────────────────────────────────────────────
+
+const FEATURE_GROUP_LABELS: Record<string, string> = {
+  marketing:     "📢 التسويق والظهور",
+  content:       "🏠 محتوى الإعلان",
+  business:      "📊 إدارة الأعمال",
+  communication: "💬 التواصل",
+  support:       "🛠 الدعم الفني",
+  // legacy keys kept for backward compatibility
+  analytics:     "📊 إدارة الأعمال",
+  listing:       "🏠 محتوى الإعلان",
+  media:         "🏠 محتوى الإعلان",
+  team:          "📊 إدارة الأعمال",
+  projects:      "📊 إدارة الأعمال",
+  general:       "عام",
+};
+
+function featureGroupLabel(raw?: string): string {
+  if (!raw) return "عام";
+  return FEATURE_GROUP_LABELS[raw] ?? raw;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function formatPrice(n: number, currency = "ل.س") {
+  if (n === 0) return "مجاني";
+  return n.toLocaleString("ar-SY") + " " + currency;
+}
+
+function limitLabel(value: number) {
+  if (value === -1) return "غير محدود";
+  return String(value);
+}
+
+// ── ToggleSwitch ───────────────────────────────────────────────────────────────
+
+function ToggleSwitch({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      style={{
+        width: 44, height: 24, borderRadius: 12, border: "none",
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: checked ? "var(--color-primary, #2563eb)" : "#d1d5db",
+        position: "relative", transition: "background 0.2s", flexShrink: 0,
+      }}
+    >
+      <span style={{
+        position: "absolute", top: 3, left: checked ? 23 : 3,
+        width: 18, height: 18, borderRadius: "50%", background: "#fff",
+        transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+      }} />
+    </button>
+  );
+}
+
+// ── Shared styles ──────────────────────────────────────────────────────────────
+
+const labelStyle: React.CSSProperties = {
+  display: "block", fontSize: "0.85rem", fontWeight: 600,
+  marginBottom: "0.3rem", color: "var(--color-text-secondary)",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%", padding: "0.55rem 0.75rem", borderRadius: 8,
+  border: "1.5px solid var(--color-border, #e5e7eb)", fontSize: "0.95rem",
+  background: "#ffffff", color: "var(--color-text-primary)", boxSizing: "border-box",
+};
+
+const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
+
+// ── Known catalog keys with Arabic labels ────────────────────────────────────
+
+interface KnownLimit {
+  key: string;
+  icon: string;
+  label: string;
+  /** If set, this limit is only active when the named feature is enabled */
+  dependsOnFeatureKey?: string;
+  dependsOnFeatureLabel?: string;
+}
+
+const KNOWN_LIMITS: KnownLimit[] = [
+  { key: "max_active_listings",    icon: "🏠", label: "عدد الإعلانات النشطة" },
+  { key: "max_images_per_listing", icon: "📸", label: "عدد الصور لكل إعلان" },
+  {
+    key: "max_videos_per_listing", icon: "🎬", label: "عدد الفيديوهات لكل إعلان",
+    dependsOnFeatureKey: "video_upload", dependsOnFeatureLabel: "رفع الفيديو",
+  },
+  { key: "max_requests",           icon: "📨", label: "عدد الطلبات المستقبَلة" },
+  { key: "max_messages",           icon: "💬", label: "عدد المحادثات الداخلية" },
+  { key: "max_agents",             icon: "👤", label: "عدد الوسطاء" },
+  { key: "max_projects",           icon: "🏗", label: "عدد المشاريع" },
+  { key: "max_featured_slots",     icon: "⭐", label: "عدد الإعلانات المميزة (Boost)" },
+];
+
+const KNOWN_FEATURES: { key: string; icon: string; label: string; description: string }[] = [
+  { key: "video_upload",         icon: "🎬", label: "رفع فيديو",                        description: "السماح برفع مقاطع الفيديو ضمن الإعلان" },
+  { key: "analytics_dashboard",  icon: "📊", label: "لوحة التحليلات",                   description: "إحصاءات وتقارير مفصّلة لأداء الإعلانات" },
+  { key: "priority_support",     icon: "🛠", label: "دعم فني بأولوية",                  description: "استجابة أسرع من فريق الدعم" },
+  { key: "homepage_exposure",    icon: "🏠", label: "ظهور في الصفحة الرئيسية",          description: "عرض الإعلانات ضمن أقسام الصفحة الرئيسية" },
+  { key: "verified_badge",       icon: "✅", label: "شارة موثّق",                       description: "تمييز الملف الشخصي بشارة الموثوقية" },
+  { key: "search_priority",      icon: "🔍", label: "أولوية في نتائج البحث",            description: "ظهور الإعلانات في مقدمة نتائج البحث" },
+  { key: "whatsapp_contact",     icon: "💬", label: "زر واتساب مباشر",                  description: "تمكين زر التواصل عبر واتساب في الإعلان" },
+  { key: "team_management",      icon: "👥", label: "إدارة فريق / إضافة أعضاء",         description: "إضافة وسطاء وأعضاء ضمن الحساب التجاري" },
+  { key: "lead_insights",        icon: "📈", label: "تحليلات العملاء المحتملين",          description: "بيانات مفصّلة عن الطلبات والعملاء المحتملين" },
+  { key: "featured_listings",    icon: "✨", label: "إعلانات مميزة / ظهور متقدم",       description: "رفع الإعلانات لأقسام \"مميزة\" في الموقع" },
+  { key: "project_management",   icon: "🏗", label: "إدارة المشاريع",                   description: "إنشاء مشاريع عقارية متعددة الوحدات" },
+];
+
+const KNOWN_MARKETING: { key: string; icon: string; label: string; description: string }[] = [
+  { key: "listing_priority",     icon: "📌", label: "أولوية الإعلان",         description: "درجة الأولوية في خوارزمية الترتيب (0 = بلا أولوية)" },
+  { key: "search_ranking_boost", icon: "🔍", label: "تعزيز الظهور في البحث",  description: "معامل التعزيز في نتائج البحث (0 = لا تعزيز)" },
+  { key: "homepage_slots",       icon: "🏠", label: "خانات الصفحة الرئيسية", description: "عدد الخانات المخصصة في الصفحة الرئيسية" },
+];
+
+// ── LimitRow (generic fallback) ───────────────────────────────────────────────
+
+function LimitRow({ limit, value, onValueChange }: { limit: PlanLimitItem; value: string; onValueChange: (key: string, val: string) => void }) {
+  const isDirtyField = value !== String(limit.value);
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", borderRadius: 8, background: "var(--color-bg-secondary, #f9fafb)", border: isDirtyField ? "1.5px solid #93c5fd" : "1.5px solid transparent" }}>
+      <div>
+        <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 500 }}>{limit.name}</p>
+        {limit.unit && <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{limitLabel(limit.value)} {limit.unit}</p>}
+      </div>
+      <input type="number" value={value} onChange={e => onValueChange(limit.key, e.target.value)} style={{ ...inputStyle, width: 80, textAlign: "center", padding: "0.3rem 0.5rem", margin: 0 }} />
+      {isDirtyField && <span style={{ fontSize: "0.68rem", color: "#2563eb", fontWeight: 600 }}>●</span>}
+    </div>
+  );
+}
+
+// ── TypeBadge ─────────────────────────────────────────────────────────────────
+
+function TypeBadge({ kind }: { kind: "limit" | "feature" }) {
+  const isLimit = kind === "limit";
+  return (
+    <span style={{
+      display: "inline-block", fontSize: "0.63rem", fontWeight: 700,
+      padding: "0.1rem 0.45rem", borderRadius: 99,
+      background: isLimit ? "#eff6ff" : "#f5f3ff",
+      color:      isLimit ? "#1d4ed8" : "#7c3aed",
+      border:     `1px solid ${isLimit ? "#bfdbfe" : "#ddd6fe"}`,
+      flexShrink: 0,
+    }}>
+      {isLimit ? "حد عددي" : "ميزة"}
+    </span>
+  );
+}
+
+// ── NamedLimitField ───────────────────────────────────────────────────────────
+
+function NamedLimitField({
+  icon, label, limitKey, limits, value, onValueChange,
+  dependsOnFeatureKey, dependsOnFeatureLabel, features,
+}: {
+  icon: string;
+  label: string;
+  limitKey: string;
+  limits: PlanLimitItem[];
+  value: string;
+  onValueChange: (key: string, val: string) => void;
+  dependsOnFeatureKey?: string;
+  dependsOnFeatureLabel?: string;
+  features?: PlanFeatureItem[];
+}) {
+  const item = limits.find(l => l.key === limitKey);
+  const dirty  = item ? value !== String(item.value) : false;
+
+  // Check whether a required feature is enabled for this plan
+  const dependencyFeature = dependsOnFeatureKey && features
+    ? features.find(f => f.key === dependsOnFeatureKey)
+    : undefined;
+  const dependencyDisabled = dependsOnFeatureKey
+    ? !dependencyFeature?.isEnabled   // feature disabled or not found for this plan
+    : false;
+
+  if (!item) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
+        <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
+            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
+            <TypeBadge kind="limit" />
+          </div>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>
+            لم يُعرَّف في كتالوج الحدود — أضفه أولاً من صفحة <strong>كتالوج الحدود</strong>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Limit exists but its prerequisite feature is disabled
+  if (dependencyDisabled) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#fffbeb", border: "1.5px solid #fde68a" }}>
+        <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
+            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#92400e" }}>{label}</p>
+            <TypeBadge kind="limit" />
+          </div>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#b45309" }}>
+            ⚠ يتوقف على تفعيل «{dependsOnFeatureLabel}» — فعّل الميزة أولاً لتأثير هذا الحد
+          </p>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#78716c", marginTop: "0.1rem" }}>
+            القيمة الحالية: <strong>{item.value === -1 ? "غير محدود ∞" : `${item.value}${item.unit ? ` ${item.unit}` : ""}`}</strong>
+          </p>
+        </div>
+        <input
+          type="number"
+          value={value}
+          style={{ ...inputStyle, width: 76, textAlign: "center", padding: "0.35rem 0.5rem", margin: 0, flexShrink: 0, opacity: 0.5 }}
+          disabled={true}
+          min={-1}
+          readOnly
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#ffffff", border: dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0" }}>
+      <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.1rem" }}>
+          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600 }}>{label}</p>
+          <TypeBadge kind="limit" />
+        </div>
+        <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>
+          الحالي: <strong>{item.value === -1 ? "غير محدود ∞" : `${item.value}${item.unit ? ` ${item.unit}` : ""}`}</strong>
+          {dirty && <span style={{ color: "#2563eb", marginRight: "0.4rem" }}>· ● معلَّق</span>}
+        </p>
+      </div>
+      <input
+        type="number"
+        value={value}
+        onChange={e => onValueChange(limitKey, e.target.value)}
+        style={{ ...inputStyle, width: 76, textAlign: "center", padding: "0.35rem 0.5rem", margin: 0, flexShrink: 0 }}
+        min={-1}
+      />
+      <button
+        type="button"
+        title="تعيين غير محدود (∞)"
+        style={{ padding: "0.3rem 0.55rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: value === "-1" ? "#f0fdf4" : "#f8fafc", fontSize: "0.82rem", cursor: "pointer", flexShrink: 0, color: value === "-1" ? "#166534" : "#475569", fontWeight: 700 }}
+        onClick={() => onValueChange(limitKey, "-1")}
+      >
+        ∞
+      </button>
+    </div>
+  );
+}
+
+// ── NamedFeatureToggle ────────────────────────────────────────────────────────
+
+function NamedFeatureToggle({
+  icon, label, description, featureKey, features, featureSaving, onToggle,
+}: {
+  icon: string;
+  label: string;
+  description: string;
+  featureKey: string;
+  features: PlanFeatureItem[];
+  featureSaving: string | null;
+  onToggle: (key: string, val: boolean) => void;
+}) {
+  const item = features.find(f => f.key === featureKey);
+
+  if (!item) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
+        <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
+            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
+            <TypeBadge kind="feature" />
+          </div>
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>
+            لم تُعرَّف في كتالوج الميزات — أضفها أولاً من صفحة <strong>كتالوج الميزات</strong>
+          </p>
+        </div>
+        <ToggleSwitch checked={false} onChange={() => {}} disabled={true} />
+      </div>
+    );
+  }
+
+  const saving = featureSaving === featureKey;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: item.isEnabled ? "#f0fdf4" : "#ffffff", border: `1.5px solid ${item.isEnabled ? "#86efac" : "#e2e8f0"}`, transition: "all 0.2s", opacity: saving ? 0.55 : 1 }}>
+      <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon || item.icon || "○"}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.1rem" }}>
+          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: item.isEnabled ? 600 : 400, color: item.isEnabled ? "#166534" : "#334155" }}>
+            {label}
+          </p>
+          <TypeBadge kind="feature" />
+        </div>
+        {description && (
+          <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>{description}</p>
+        )}
+      </div>
+      <span style={{ fontSize: "0.78rem", color: item.isEnabled ? "#16a34a" : "#94a3b8", fontWeight: 700, flexShrink: 0, minWidth: 44, textAlign: "center" }}>
+        {item.isEnabled ? "مفعّل" : "معطّل"}
+      </span>
+      <ToggleSwitch
+        checked={item.isEnabled}
+        onChange={(v) => onToggle(featureKey, v)}
+        disabled={saving}
+      />
+    </div>
+  );
+}
+
+// ── PricingPanel ───────────────────────────────────────────────────────────────
+
+interface PricingRowProps {
+  entry: AdminPlanPricingEntry;
+  planId: string;
+  onUpdated: (entry: AdminPlanPricingEntry) => void;
+  onDeleted: (id: string) => void;
+}
+
+function PricingRow({ entry, planId, onUpdated, onDeleted }: PricingRowProps) {
+  const [editing, setEditing]     = useState(false);
+  const [price, setPrice]         = useState(String(entry.priceAmount));
+  const [currency, setCurrency]   = useState(entry.currencyCode);
+  const [cycle, setCycle]         = useState(entry.billingCycle);
+  const [isActive, setIsActive]   = useState(entry.isActive);
+  const [isPublic, setIsPublic]   = useState(entry.isPublic);
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState("");
+  const [deleting, setDeleting]   = useState(false);
+
+  async function handleSave() {
+    setSaving(true); setError("");
+    try {
+      const updated = await adminApi.updatePlanPricing(planId, entry.id, {
+        billingCycle:  cycle,
+        priceAmount:   parseFloat(price) || 0,
+        currencyCode:  currency,
+        isActive,
+        isPublic,
+      });
+      onUpdated(updated);
+      setEditing(false);
+    } catch (e) { setError(normalizeError(e)); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDelete() {
+    if (!confirm("حذف هذا السعر نهائياً؟")) return;
+    setDeleting(true); setError("");
+    try {
+      await adminApi.deletePlanPricing(planId, entry.id);
+      onDeleted(entry.id);
+    } catch (e) { setError(normalizeError(e)); }
+    finally { setDeleting(false); }
+  }
+
+  const CYCLE_LABELS: Record<string, string> = { Monthly: "شهري", Yearly: "سنوي", OneTime: "مرة واحدة" };
+  const cycleLabel = CYCLE_LABELS[entry.billingCycle] ?? entry.billingCycle;
+
+  if (!editing) {
+    return (
+      <div style={{ padding: "0.75rem 1rem", borderRadius: 8, background: "var(--color-bg-secondary, #f9fafb)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{formatPrice(entry.priceAmount, entry.currencyCode)}</span>
+          <span className="badge badge-gray">{cycleLabel}</span>
+          {entry.isActive ? <span className="badge badge-green">نشط</span> : <span className="badge badge-red">معطل</span>}
+          {entry.isPublic ? <span className="badge badge-blue">عام</span> : <span className="badge badge-gray">خاص</span>}
+        </div>
+        <div style={{ display: "flex", gap: "0.4rem" }}>
+          <button className="btn" style={{ padding: "0.25rem 0.7rem", fontSize: "0.8rem" }} onClick={() => setEditing(true)}>تعديل</button>
+          <button className="btn" style={{ padding: "0.25rem 0.7rem", fontSize: "0.8rem", color: "var(--color-error)", borderColor: "var(--color-error)" }} onClick={handleDelete} disabled={deleting}>{deleting ? "..." : "حذف"}</button>
+        </div>
+        {error && <p style={{ color: "var(--color-error)", fontSize: "0.82rem", width: "100%", margin: 0 }}>{error}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "1rem", borderRadius: 8, border: "1.5px solid var(--color-primary)", background: "var(--color-bg-secondary, #f9fafb)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
+        <div>
+          <label style={labelStyle}>دورة الفوترة</label>
+          <select value={cycle} onChange={e => setCycle(e.target.value)} style={selectStyle}>
+            <option value="Monthly">شهري</option>
+            <option value="Yearly">سنوي</option>
+            <option value="OneTime">مرة واحدة</option>
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>السعر</label>
+          <input type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>العملة</label>
+          <input value={currency} onChange={e => setCurrency(e.target.value)} style={inputStyle} placeholder="SYP" />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>نشط</label>
+          <ToggleSwitch checked={isActive} onChange={setIsActive} disabled={saving} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>مرئي للعموم</label>
+          <ToggleSwitch checked={isPublic} onChange={setIsPublic} disabled={saving} />
+        </div>
+      </div>
+      {error && <p style={{ color: "var(--color-error)", fontSize: "0.82rem", marginBottom: "0.5rem" }}>{error}</p>}
+      <div style={{ display: "flex", gap: "0.5rem" }}>
+        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ"}</button>
+        <button className="btn" style={{ flex: 1 }} onClick={() => { setEditing(false); setError(""); }} disabled={saving}>إلغاء</button>
+      </div>
+    </div>
+  );
+}
+
+interface AddPricingFormProps {
+  planId: string;
+  onCreated: (entry: AdminPlanPricingEntry) => void;
+  onCancel: () => void;
+}
+
+function AddPricingForm({ planId, onCreated, onCancel }: AddPricingFormProps) {
+  const [cycle, setCycle]         = useState("Monthly");
+  const [price, setPrice]         = useState("0");
+  const [currency, setCurrency]   = useState("SYP");
+  const [isActive, setIsActive]   = useState(true);
+  const [isPublic, setIsPublic]   = useState(true);
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState("");
+
+  async function handleSave() {
+    setSaving(true); setError("");
+    try {
+      const entry = await adminApi.createPlanPricing(planId, {
+        billingCycle:  cycle,
+        priceAmount:   parseFloat(price) || 0,
+        currencyCode:  currency,
+        isActive,
+        isPublic,
+      });
+      onCreated(entry);
+    } catch (e) { setError(normalizeError(e)); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div style={{ padding: "1rem", borderRadius: 8, border: "1.5px dashed var(--color-primary)", background: "var(--color-bg-secondary, #f9fafb)" }}>
+      <p style={{ margin: "0 0 0.75rem", fontWeight: 600, fontSize: "0.9rem" }}>إضافة سعر جديد</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
+        <div>
+          <label style={labelStyle}>دورة الفوترة</label>
+          <select value={cycle} onChange={e => setCycle(e.target.value)} style={selectStyle}>
+            <option value="Monthly">شهري</option>
+            <option value="Yearly">سنوي</option>
+            <option value="OneTime">مرة واحدة</option>
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>السعر</label>
+          <input type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>العملة</label>
+          <input value={currency} onChange={e => setCurrency(e.target.value)} style={inputStyle} placeholder="SYP" />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>نشط</label>
+          <ToggleSwitch checked={isActive} onChange={setIsActive} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>مرئي للعموم</label>
+          <ToggleSwitch checked={isPublic} onChange={setIsPublic} />
+        </div>
+      </div>
+      {error && <p style={{ color: "var(--color-error)", fontSize: "0.82rem", marginBottom: "0.5rem" }}>{error}</p>}
+      <div style={{ display: "flex", gap: "0.5rem" }}>
+        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={saving}>{saving ? "جاري الإضافة..." : "إضافة"}</button>
+        <button className="btn" style={{ flex: 1 }} onClick={onCancel} disabled={saving}>إلغاء</button>
+      </div>
+    </div>
+  );
+}
+
+// ── CollapsibleSection ─────────────────────────────────────────────────────────
+
+function CollapsibleSection({
+  title,
+  icon,
+  count,
+  accent,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  icon: string;
+  count?: number;
+  accent?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 10, marginBottom: "0.75rem", overflow: "hidden" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0.75rem 1rem",
+          background: open ? "#f0f7ff" : "#f8fafc",
+          border: "none",
+          borderBottom: open ? "1px solid var(--color-border, #e5e7eb)" : "none",
+          cursor: "pointer",
+          fontSize: "0.82rem",
+          fontWeight: 700,
+          color: "var(--color-text-primary)",
+          transition: "background 0.15s",
+        }}
+      >
+        <span style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          {open ? "▲" : "▼"}
+          {count !== undefined && (
+            <span style={{ background: accent ?? "var(--color-primary, #2563eb)", color: "#fff", borderRadius: 20, padding: "0 0.45rem", fontSize: "0.68rem", fontWeight: 700, lineHeight: "1.5" }}>
+              {count}
+            </span>
+          )}
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+          <span>{title}</span>
+          <span style={{ fontSize: "1rem" }}>{icon}</span>
+        </span>
+      </button>
+      {open && (
+        <div style={{ padding: "1rem" }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── getPlanVisibleName ────────────────────────────────────────────────────────
+//
+// Single source of truth for user-facing plan name.
+// Always prefer displayNameAr in Arabic UI, with displayNameEn as fallback,
+// and internal `name` as last resort. NEVER expose internal name directly.
+
+function getPlanVisibleName(
+  displayNameAr: string,
+  displayNameEn: string,
+  internalName: string,
+  locale: "ar" | "en" = "ar",
+): string {
+  if (locale === "ar") {
+    return displayNameAr.trim() || displayNameEn.trim() || internalName.trim() || "";
+  }
+  return displayNameEn.trim() || displayNameAr.trim() || internalName.trim() || "";
+}
+
+// ── PlanPreviewCard ─────────────────────────────────────────────────────────────
+
+function PlanPreviewCard({
+  displayNameAr,
+  displayNameEn,
+  internalName,
+  badgeText,
+  planColor,
+  isRecommended,
+  planCategory,
+  basePriceMonthly,
+  enabledFeatures,
+  limits,
+}: {
+  displayNameAr: string;
+  displayNameEn: string;
+  internalName: string;
+  badgeText: string;
+  planColor: string;
+  isRecommended: boolean;
+  planCategory: string;
+  basePriceMonthly: string;
+  enabledFeatures: PlanFeatureItem[];
+  limits?: PlanLimitItem[];
+}) {
+  const visibleName = getPlanVisibleName(displayNameAr, displayNameEn, internalName);
+  const accent = planColor.trim() || "#2e7d32";
+  const price  = parseFloat(basePriceMonthly);
+
+  // Limit helpers
+  const lv = (key: string) => limits?.find(l => l.key === key)?.value ?? 0;
+  const lbl = (val: number, unit: string) => val === 0 ? null : val === -1 ? `∞ ${unit}` : `${val} ${unit}`;
+
+  const listingChip  = lbl(lv("max_active_listings"),     "إعلان");
+  const imagesChip   = lbl(lv("max_images_per_listing"),  "صورة");
+  const featuredChip = lbl(lv("max_featured_slots"),       "مميز");
+  const agentsChip   = lbl(lv("max_agents"),               "وسيط");
+  const limitsChips  = [listingChip, imagesChip, agentsChip, featuredChip].filter(Boolean) as string[];
+
+  // Show ALL features with ✔ / ✗
+  const allFeatures = enabledFeatures.slice(0, 8);
+
+  return (
+    <div style={{ border: `2px solid ${accent}`, borderRadius: 14, padding: "1.25rem", background: "#fff", maxWidth: 270, margin: "0 auto", position: "relative", fontFamily: "inherit" }}>
+      {isRecommended && (
+        <div style={{ position: "absolute", top: -14, right: 16, background: accent, color: "#fff", padding: "0.2rem 0.8rem", borderRadius: 20, fontSize: "0.72rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+          ⭐ موصى بها
+        </div>
+      )}
+      {badgeText.trim() && (
+        <div style={{ background: accent + "22", color: accent, padding: "0.2rem 0.65rem", borderRadius: 20, fontSize: "0.72rem", fontWeight: 700, display: "inline-block", marginBottom: "0.5rem" }}>
+          {badgeText}
+        </div>
+      )}
+      <h3 style={{ margin: "0 0 0.2rem", fontSize: "1.1rem", fontWeight: 800 }}>{visibleName || "اسم الباقة"}</h3>
+      {planCategory && (
+        <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", color: "#888" }}>
+          {planCategory === "Individual" ? "للأفراد" : planCategory === "Business" ? "للأعمال" : planCategory}
+        </p>
+      )}
+      <p style={{ margin: "0 0 0.6rem", fontSize: "1.25rem", fontWeight: 800, color: accent }}>
+        {price === 0 ? "مجاني" : `${price.toLocaleString("ar-SY")} ل.س / شهر`}
+      </p>
+
+      {/* ── Limit chips ── */}
+      {limitsChips.length > 0 && (
+        <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+          {limitsChips.map(chip => (
+            <span key={chip} style={{ background: accent + "18", color: accent, borderRadius: 20, padding: "0.15rem 0.6rem", fontSize: "0.72rem", fontWeight: 700 }}>
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* ── Features with ✔ / ✗ ── */}
+      {allFeatures.length > 0 ? (
+        <ul style={{ margin: "0 0 0.8rem", padding: 0, listStyle: "none" }}>
+          {allFeatures.map(f => (
+            <li key={f.key} style={{ fontSize: "0.8rem", padding: "0.2rem 0", display: "flex", gap: "0.45rem", alignItems: "center", color: f.isEnabled ? "#1e293b" : "#94a3b8" }}>
+              <span style={{ fontWeight: 700, fontSize: "0.75rem", flexShrink: 0, color: f.isEnabled ? "#059669" : "#cbd5e1" }}>
+                {f.isEnabled ? "✔" : "✗"}
+              </span>
+              <span style={{ textDecoration: f.isEnabled ? "none" : "none" }}>{f.icon ? `${f.icon} ` : ""}{f.name}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p style={{ fontSize: "0.8rem", color: "#bbb", marginBottom: "0.8rem" }}>لا توجد ميزات مضافة بعد</p>
+      )}
+
+      <div style={{ background: accent, color: "#fff", borderRadius: 8, padding: "0.5rem", textAlign: "center", fontSize: "0.82rem", fontWeight: 600 }}>
+        اشترك الآن
+      </div>
+    </div>
+  );
+}
+
+// ── PlanComparisonTable ─────────────────────────────────────────────────────────
+
+function limitCell(val: number) {
+  if (val === 0) return { text: "✗", color: "#cbd5e1", weight: 400 };
+  if (val === -1) return { text: "∞", color: "#059669", weight: 700 };
+  return { text: String(val), color: "#1e293b", weight: 600 };
+}
+
+function boolCell(v: boolean) {
+  return v
+    ? { text: "✔", color: "#059669", weight: 700 }
+    : { text: "✗", color: "#cbd5e1", weight: 400 };
+}
+
+function PlanComparisonTable({ plans }: { plans: AdminPlanSummary[] }) {
+  const active = plans.filter(p => p.isActive && p.isPublic).sort((a, b) => a.displayOrder - b.displayOrder);
+  if (active.length === 0) return null;
+
+  type Row = { label: string; icon: string; cell: (p: AdminPlanSummary) => { text: string; color: string; weight: number } };
+  const ROWS: Row[] = [
+    { label: "الإعلانات النشطة",     icon: "🏠", cell: p => limitCell(p.listingsLimit) },
+    { label: "صور لكل إعلان",        icon: "📸", cell: p => limitCell(p.imagesPerListing) },
+    { label: "الوسطاء",               icon: "👤", cell: p => limitCell(p.agentsLimit) },
+    { label: "المشاريع",              icon: "🏗", cell: p => limitCell(p.projectsLimit) },
+    { label: "إعلانات مميزة (Boost)", icon: "⭐", cell: p => limitCell(p.featuredSlots) },
+    { label: "لوحة التحليلات",        icon: "📊", cell: p => boolCell(p.hasAnalytics) },
+    { label: "الإعلانات المميزة",     icon: "✨", cell: p => boolCell(p.hasFeaturedListings) },
+    { label: "إدارة المشاريع",        icon: "🏗", cell: p => boolCell(p.hasProjectMgmt) },
+    { label: "تواصل واتساب",         icon: "💬", cell: p => boolCell(p.hasWhatsApp) },
+    { label: "شارة موثق",            icon: "✅", cell: p => boolCell(p.hasVerifiedBadge) },
+    { label: "دعم فني أولوية",       icon: "🛠", cell: p => boolCell(p.hasPrioritySupport) },
+  ];
+
+  const thBase: React.CSSProperties = { padding: "0.55rem 0.85rem", fontWeight: 700, fontSize: "0.78rem", color: "#475569", borderBottom: "2px solid #e2e8f0", textAlign: "center", whiteSpace: "nowrap" };
+  const tdLabel: React.CSSProperties = { padding: "0.5rem 0.85rem", fontSize: "0.82rem", color: "#334155", borderBottom: "1px solid #f1f5f9", textAlign: "right", whiteSpace: "nowrap" };
+  const tdCell: React.CSSProperties = { padding: "0.5rem 0.85rem", textAlign: "center", borderBottom: "1px solid #f1f5f9" };
+
+  return (
+    <div style={{ backgroundColor: "#fff", border: "1px solid #e8ecf0", borderRadius: 14, overflow: "hidden", marginTop: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      <div style={{ padding: "0.9rem 1.1rem", borderBottom: "1px solid #e8ecf0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#1e293b" }}>مقارنة الخطط</span>
+          <span style={{ fontSize: "0.75rem", color: "#94a3b8", marginRight: "0.6rem" }}>الخطط العامة النشطة فقط</span>
+        </div>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
+          <thead>
+            <tr style={{ backgroundColor: "#f8fafc" }}>
+              <th style={{ ...thBase, textAlign: "right", minWidth: 160 }}>المزايا والحدود</th>
+              {active.map(p => (
+                <th key={p.id} style={{ ...thBase, minWidth: 110 }}>
+                  {p.planColor && <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: p.planColor, marginLeft: "0.3rem", verticalAlign: "middle" }} />}
+                  {p.name}
+                  {p.isRecommended && <div style={{ fontSize: "0.62rem", color: "#d97706", fontWeight: 700 }}>⭐ موصى بها</div>}
+                  <div style={{ fontSize: "0.7rem", color: p.planColor || "#2563eb", fontWeight: 700, marginTop: "0.1rem" }}>
+                    {p.basePriceMonthly === 0 ? "مجاني" : `${p.basePriceMonthly.toLocaleString("ar-SY")} ل.س`}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {ROWS.map((row, i) => (
+              <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#ffffff" : "#fafafa" }}>
+                <td style={tdLabel}>
+                  <span style={{ marginLeft: "0.35rem" }}>{row.icon}</span>{row.label}
+                </td>
+                {active.map(p => {
+                  const c = row.cell(p);
+                  return (
+                    <td key={p.id} style={tdCell}>
+                      <span style={{ fontWeight: c.weight, color: c.color, fontSize: c.text === "✔" || c.text === "✗" ? "1rem" : "0.88rem" }}>
+                        {c.text}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── EditPlanModal ──────────────────────────────────────────────────────────────
+
+interface EditModalProps {
+  plan: AdminPlanDetail | null;
+  onClose: () => void;
+  onSaved: (updated: AdminPlanDetail) => void;
+}
+
+function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
+  const isNew = plan === null;
+
+  const [name, setName]                           = useState(plan?.name ?? "");
+  const [description, setDescription]             = useState(plan?.description ?? "");
+  const [applicableAccountType, setApplicableAccountType] = useState(plan?.applicableAccountType ?? "");
+  const [priceMonthly, setPriceMonthly]           = useState(String(plan?.basePriceMonthly ?? 0));
+  const [priceYearly, setPriceYearly]             = useState(String(plan?.basePriceYearly ?? 0));
+  const [isActive, setIsActive]                   = useState(plan?.isActive ?? true);
+  const [isPublic, setIsPublic]                   = useState(plan?.isPublic ?? true);
+  const [isRecommended, setIsRecommended]         = useState(plan?.isRecommended ?? false);
+  const [displayOrder, setDisplayOrder]           = useState(String(plan?.displayOrder ?? 0));
+  const [billingMode, setBillingMode]             = useState(plan?.billingMode ?? "InternalOnly");
+  const [planBillingType, setPlanBillingType]     = useState(plan?.planBillingType ?? "recurring");
+  const [recurringCycle, setRecurringCycle]       = useState(plan?.recurringCycle ?? "monthly");
+  const [durationDays, setDurationDays]           = useState(String(plan?.durationDays ?? ""));
+  const [consumptionPolicy, setConsumptionPolicy] = useState(plan?.consumptionPolicy ?? "none");
+  const [expiryRule, setExpiryRule]               = useState(plan?.expiryRule ?? "expire_by_date");
+  const [downgradePlanCode, setDowngradePlanCode] = useState(plan?.downgradePlanCode ?? "");
+  const [planCategory, setPlanCategory]           = useState(plan?.planCategory ?? "");
+  const [displayNameAr, setDisplayNameAr]         = useState(plan?.displayNameAr ?? "");
+  const [displayNameEn, setDisplayNameEn]         = useState(plan?.displayNameEn ?? "");
+  const [audienceType, setAudienceType]           = useState(plan?.audienceType ?? "");
+  const [tier, setTier]                           = useState(plan?.tier ?? "");
+  const [badgeText, setBadgeText]                 = useState(plan?.badgeText ?? "");
+  const [planColor, setPlanColor]                 = useState(plan?.planColor ?? "");
+
+  const [limits, setLimits]     = useState<PlanLimitItem[]>(plan?.limits ?? []);
+  const [features, setFeatures] = useState<PlanFeatureItem[]>(plan?.features ?? []);
+
+  // ── Trial ──────────────────────────────────────────────────────────────────
+  const [hasTrial, setHasTrial]                           = useState(plan?.hasTrial ?? false);
+  const [trialDays, setTrialDays]                         = useState(String(plan?.trialDays ?? 0));
+  const [requiresPaymentForTrial, setRequiresPaymentForTrial] = useState(plan?.requiresPaymentForTrial ?? false);
+
+  // ── Business Rules ─────────────────────────────────────────────────────────
+  const [isDefaultForNewUsers, setIsDefaultForNewUsers]   = useState(plan?.isDefaultForNewUsers ?? false);
+  const [availableForSelfSignup, setAvailableForSelfSignup] = useState(plan?.availableForSelfSignup ?? true);
+  const [requiresAdminApproval, setRequiresAdminApproval] = useState(plan?.requiresAdminApproval ?? false);
+  const [allowAddOns, setAllowAddOns]                     = useState(plan?.allowAddOns ?? false);
+  const [allowUpgrade, setAllowUpgrade]                   = useState(plan?.allowUpgrade ?? true);
+  const [allowDowngrade, setAllowDowngrade]               = useState(plan?.allowDowngrade ?? true);
+  const [autoDowngradeOnExpiry, setAutoDowngradeOnExpiry] = useState(plan?.autoDowngradeOnExpiry ?? true);
+  const [allowRepurchaseOnConsumption, setAllowRepurchaseOnConsumption]     = useState(plan?.allowRepurchaseOnConsumption ?? false);
+  const [allowEarlyRenewalOnConsumption, setAllowEarlyRenewalOnConsumption] = useState(plan?.allowEarlyRenewalOnConsumption ?? false);
+
+  const [pricing, setPricing]               = useState<AdminPlanPricingEntry[]>([]);
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [showAddPricing, setShowAddPricing] = useState(false);
+
+  const [saving, setSaving]               = useState(false);
+  const [error, setError]                 = useState("");
+  const [featureSaving, setFeatureSaving] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus]       = useState<"idle" | "dirty" | "saving" | "saved">("idle");
+  const [limitValues, setLimitValues]     = useState<Record<string, string>>(
+    () => Object.fromEntries((plan?.limits ?? []).map(l => [l.key, String(l.value)]))
+  );
+
+  const initialSnapshot = useRef<string>("");
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const formSnapshot = JSON.stringify({
+    name, description, applicableAccountType, priceMonthly, priceYearly,
+    isActive, isPublic, isRecommended, displayOrder, billingMode, planBillingType,
+    recurringCycle, durationDays, consumptionPolicy, expiryRule, downgradePlanCode,
+    planCategory, displayNameAr, displayNameEn, audienceType, tier, badgeText, planColor,
+    hasTrial, trialDays, requiresPaymentForTrial, isDefaultForNewUsers,
+    availableForSelfSignup, requiresAdminApproval, allowAddOns, allowUpgrade,
+    allowDowngrade, autoDowngradeOnExpiry, allowRepurchaseOnConsumption,
+    allowEarlyRenewalOnConsumption,
+    limitValues,
+  });
+
+  const isDirty = formSnapshot !== initialSnapshot.current;
+
+  useEffect(() => {
+    if (!isNew && plan?.id) {
+      setPricingLoading(true);
+      adminApi.getPlanPricing(plan.id)
+        .then(setPricing)
+        .catch(() => {})
+        .finally(() => setPricingLoading(false));
+    }
+    initialSnapshot.current = formSnapshot;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const doSaveRef = useRef<(() => Promise<void>) | null>(null);
+
+  async function doSave() {
+    if (!plan?.id || saving) return;
+    setSaving(true); setSaveStatus("saving"); setError("");
+    try {
+      const result = await adminApi.updatePlan(plan.id, {
+        name:                   name.trim(),
+        description:            description.trim() || undefined,
+        basePriceMonthly:       parseFloat(priceMonthly) || 0,
+        basePriceYearly:        parseFloat(priceYearly)  || 0,
+        isActive,
+        applicableAccountType:  applicableAccountType || undefined,
+        displayOrder:           parseInt(displayOrder) || 0,
+        isPublic,
+        isRecommended,
+        planCategory:           planCategory || undefined,
+        displayNameAr:          displayNameAr.trim() || undefined,
+        displayNameEn:          displayNameEn.trim() || undefined,
+        audienceType:           audienceType || undefined,
+        tier:                   tier || undefined,
+        billingMode,
+        planBillingType,
+        recurringCycle:         planBillingType === "recurring" ? (recurringCycle || undefined) : undefined,
+        durationDays:           planBillingType === "one_time_fixed_term" ? (parseInt(durationDays) || undefined) : undefined,
+        consumptionPolicy:      planBillingType === "one_time_fixed_term" ? consumptionPolicy : "none",
+        expiryRule:             planBillingType === "one_time_fixed_term" ? expiryRule : "expire_by_date",
+        downgradePlanCode:      downgradePlanCode.trim() || undefined,
+        badgeText:              badgeText.trim() || undefined,
+        planColor:              planColor.trim() || undefined,
+        hasTrial,
+        trialDays:               hasTrial ? (parseInt(trialDays) || 0) : 0,
+        requiresPaymentForTrial: hasTrial ? requiresPaymentForTrial : false,
+        isDefaultForNewUsers,
+        availableForSelfSignup,
+        requiresAdminApproval,
+        allowAddOns,
+        allowUpgrade,
+        allowDowngrade,
+        autoDowngradeOnExpiry,
+        allowRepurchaseOnConsumption,
+        allowEarlyRenewalOnConsumption,
+      });
+      const updatedLimits = [...result.limits];
+
+      const changedLimits = Object.entries(limitValues).filter(([key, val]) => {
+        const original = result.limits.find(l => l.key === key);
+        return original && val !== String(original.value) && !isNaN(parseInt(val, 10));
+      });
+
+      if (changedLimits.length > 0) {
+        await Promise.all(changedLimits.map(async ([key, rawVal]) => {
+          const val = parseInt(rawVal, 10);
+          const updated = await adminApi.setPlanLimit(plan!.id, key, val);
+          const idx = updatedLimits.findIndex(l => l.key === key);
+          if (idx >= 0) updatedLimits[idx] = updated;
+        }));
+      }
+
+      setLimits(updatedLimits);
+      setLimitValues(Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)])));
+      setFeatures(result.features);
+      onSaved({ ...result, limits: updatedLimits });
+      initialSnapshot.current = formSnapshot;
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2500);
+    } catch (e) {
+      setError(normalizeError(e));
+      setSaveStatus("dirty");
+    } finally {
+      setSaving(false);
+    }
+  }
+  doSaveRef.current = doSave;
+
+  function handleCloseModal() {
+    if (isDirty) {
+      if (!window.confirm("لديك تغييرات غير محفوظة، هل تريد الخروج؟")) return;
+    }
+    onClose();
+  }
+
+  useEffect(() => {
+    if (isNew || !isDirty) return;
+    setSaveStatus("dirty");
+    const timer = setTimeout(() => {
+      void doSaveRef.current?.();
+    }, 1200);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formSnapshot]);
+
+  async function handleSavePlan(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isNew) { void doSave(); return; }
+    setSaving(true); setSaveStatus("saving"); setError("");
+    try {
+      const result = await adminApi.createPlan({
+        name:                   name.trim(),
+        displayNameAr:          displayNameAr.trim() || undefined,
+        displayNameEn:          displayNameEn.trim() || undefined,
+        audienceType:           audienceType || undefined,
+        tier:                   tier || undefined,
+        description:            description.trim() || undefined,
+        basePriceMonthly:       parseFloat(priceMonthly) || 0,
+        basePriceYearly:        parseFloat(priceYearly)  || 0,
+        applicableAccountType:  applicableAccountType || undefined,
+        planCategory:           planCategory || undefined,
+        displayOrder:           parseInt(displayOrder) || 0,
+        billingMode,
+        planBillingType,
+        recurringCycle:         planBillingType === "recurring" ? (recurringCycle || undefined) : undefined,
+        durationDays:           planBillingType === "one_time_fixed_term" ? (parseInt(durationDays) || undefined) : undefined,
+        consumptionPolicy:      planBillingType === "one_time_fixed_term" ? consumptionPolicy : "none",
+        expiryRule:             planBillingType === "one_time_fixed_term" ? expiryRule : "expire_by_date",
+        downgradePlanCode:      downgradePlanCode.trim() || undefined,
+        badgeText:              badgeText.trim() || undefined,
+        planColor:              planColor.trim() || undefined,
+        hasTrial,
+        trialDays:              hasTrial ? (parseInt(trialDays) || 0) : 0,
+        requiresPaymentForTrial: hasTrial ? requiresPaymentForTrial : false,
+        isDefaultForNewUsers,
+        availableForSelfSignup,
+        requiresAdminApproval,
+        allowAddOns,
+        allowUpgrade,
+        allowDowngrade,
+        autoDowngradeOnExpiry,
+        allowRepurchaseOnConsumption,
+        allowEarlyRenewalOnConsumption,
+      });
+      setLimits(result.limits);
+      setFeatures(result.features);
+      onSaved(result);
+      onClose();
+    } catch (e) {
+      setError(normalizeError(e));
+      setSaveStatus("dirty");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleLimitChange(key: string, rawVal: string) {
+    setLimitValues(prev => ({ ...prev, [key]: rawVal }));
+  }
+
+  async function handleFeatureToggle(key: string, newVal: boolean) {
+    const planId = plan?.id;
+    if (!planId) return;
+    setFeatureSaving(key); setError("");
+    try {
+      const updated = await adminApi.setPlanFeature(planId, key, newVal);
+      setFeatures(prev => prev.map(f => f.key === key ? updated : f));
+    } catch (e) { setError(normalizeError(e)); }
+    finally { setFeatureSaving(null); }
+  }
+
+  const featureGroups = features.reduce<Record<string, PlanFeatureItem[]>>((acc, feat) => {
+    const grp = featureGroupLabel(feat.featureGroup);
+    if (!acc[grp]) acc[grp] = [];
+    acc[grp].push(feat);
+    return acc;
+  }, {});
+
+  const enabledCount = features.filter(f => f.isEnabled).length;
+
+  const modalContent = (
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 3000, backgroundColor: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+      onClick={(e) => e.target === e.currentTarget && handleCloseModal()}
+    >
+      <div style={{ backgroundColor: "#ffffff", borderRadius: 14, width: "100%", maxWidth: 780, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "hidden" }}>
+
+        {/* ── Sticky Header ── */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.5rem", borderBottom: "1px solid var(--color-border, #e5e7eb)", flexShrink: 0, backgroundColor: "#ffffff" }}>
+          <button
+            onClick={handleCloseModal}
+            style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1, color: "var(--color-text-secondary)", padding: "0.15rem 0.5rem", borderRadius: 6 }}
+          >
+            ×
+          </button>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.2rem" }}>
+            <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700 }}>
+              {isNew ? "✦ إنشاء خطة جديدة" : `تعديل: ${getPlanVisibleName(displayNameAr, displayNameEn, plan!.name)}`}
+            </h2>
+            {!isNew && isDirty && (
+              <span style={{ fontSize: "0.72rem", color: "#b45309", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#b45309", display: "inline-block" }} />
+                لديك تغييرات غير محفوظة
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* ── Scrollable Body ── */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "1.25rem 1.5rem" }}>
+
+          {error && (
+            <div style={{ background: "#fef2f2", color: "var(--color-error)", padding: "0.75rem 1rem", borderRadius: 8, marginBottom: "1rem", fontSize: "0.88rem" }}>
+              {error}
+            </div>
+          )}
+
+          <form ref={formRef} onSubmit={handleSavePlan}>
+
+            {/* ── Section 1: Basic Info ── */}
+            <CollapsibleSection title="المعلومات الأساسية" icon="📋" defaultOpen={true}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>اسم الخطة *</label>
+                  <input
+                    required
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    style={inputStyle}
+                    placeholder="مثال: AgentPro"
+                  />
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>الوصف</label>
+                  <textarea
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    style={{ ...inputStyle, minHeight: 72, resize: "vertical" }}
+                    placeholder="وصف مختصر للخطة..."
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>نوع الحساب المستهدف</label>
+                  <select
+                    value={applicableAccountType}
+                    onChange={e => setApplicableAccountType(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">— للجميع —</option>
+                    <option value="Individual">فرد (Individual)</option>
+                    <option value="Office">مكتب (Office)</option>
+                    <option value="Company">شركة (Company)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>فئة الخطة</label>
+                  <select
+                    value={planCategory}
+                    onChange={e => setPlanCategory(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">— بدون فئة —</option>
+                    <option value="Individual">أفراد (Individual)</option>
+                    <option value="Business">أعمال (Business)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>الاسم العربي للعرض (DisplayNameAr)</label>
+                  <input
+                    value={displayNameAr}
+                    onChange={e => setDisplayNameAr(e.target.value)}
+                    style={inputStyle}
+                    placeholder="مثال: الباقة المتقدمة لملاك العقارات"
+                    maxLength={120}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>الاسم الإنجليزي للعرض (DisplayNameEn)</label>
+                  <input
+                    value={displayNameEn}
+                    onChange={e => setDisplayNameEn(e.target.value)}
+                    style={inputStyle}
+                    placeholder="e.g. Advanced Owner Plan"
+                    maxLength={120}
+                    dir="ltr"
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>جمهور الخطة (Audience)</label>
+                  <select
+                    value={audienceType}
+                    onChange={e => setAudienceType(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">— بدون تحديد —</option>
+                    <option value="seeker">باحث (seeker)</option>
+                    <option value="owner">مالك (owner)</option>
+                    <option value="broker">وسيط (broker)</option>
+                    <option value="office">مكتب (office)</option>
+                    <option value="company">شركة (company)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>مستوى الخطة (Tier)</label>
+                  <select
+                    value={tier}
+                    onChange={e => setTier(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="">— بدون تحديد —</option>
+                    <option value="free">مجاني (free)</option>
+                    <option value="basic">أساسي (basic)</option>
+                    <option value="advanced">متقدم (advanced)</option>
+                    <option value="enterprise">مؤسسي (enterprise)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>نص الشارة (Badge)</label>
+                  <input
+                    value={badgeText}
+                    onChange={e => setBadgeText(e.target.value)}
+                    style={inputStyle}
+                    placeholder="مثال: الأكثر مبيعاً"
+                    maxLength={80}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>لون الخطة</label>
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                    <input
+                      type="color"
+                      value={planColor || "#2e7d32"}
+                      onChange={e => setPlanColor(e.target.value)}
+                      style={{ width: 44, height: 36, borderRadius: 6, border: "1.5px solid var(--color-border, #e5e7eb)", cursor: "pointer", padding: 2, flexShrink: 0 }}
+                    />
+                    <input
+                      value={planColor}
+                      onChange={e => setPlanColor(e.target.value)}
+                      style={{ ...inputStyle, flex: 1 }}
+                      placeholder="#2e7d32"
+                      maxLength={20}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>ترتيب العرض</label>
+                  <input
+                    type="number"
+                    value={displayOrder}
+                    onChange={e => setDisplayOrder(e.target.value)}
+                    style={inputStyle}
+                    min={0}
+                  />
+                </div>
+              </div>
+            </CollapsibleSection>
+
+            {/* ── Section 2: Pricing ── */}
+            <CollapsibleSection title="التسعير الأساسي" icon="💰" defaultOpen={true}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
+                <div>
+                  <label style={labelStyle}>السعر الشهري (ل.س)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceMonthly}
+                    onChange={e => setPriceMonthly(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>السعر السنوي (ل.س)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceYearly}
+                    onChange={e => setPriceYearly(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+              <p style={{ margin: "0.6rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                أسعار الاشتراك المفصّلة (بعملات متعددة) تُضاف في قسم &quot;أسعار الاشتراك&quot; بعد الحفظ.
+              </p>
+            </CollapsibleSection>
+
+            {/* ── Section 3: Status & Visibility (existing plans only) ── */}
+            {!isNew && (
+              <CollapsibleSection title="الحالة والظهور" icon="👁" defaultOpen={true}>
+                <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>نشطة</label>
+                    <ToggleSwitch checked={isActive} onChange={setIsActive} disabled={saving} />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>مرئية للعموم</label>
+                    <ToggleSwitch checked={isPublic} onChange={setIsPublic} disabled={saving} />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>موصى بها ⭐</label>
+                    <ToggleSwitch checked={isRecommended} onChange={setIsRecommended} disabled={saving} />
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>وضع الفوترة</label>
+                  <select
+                    value={billingMode}
+                    onChange={e => setBillingMode(e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="InternalOnly">داخلي فقط (تحويل بنكي)</option>
+                    <option value="StripeOnly">Stripe فقط</option>
+                    <option value="Hybrid">هجين (داخلي + Stripe)</option>
+                  </select>
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* ── Section 3b: Billing Lifecycle ── */}
+            <CollapsibleSection title="دورة حياة الخطة (نمط الفوترة)" icon="♻️" defaultOpen={planBillingType !== "recurring"}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                {/* PlanBillingType */}
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>نمط الفوترة</label>
+                  <select
+                    value={planBillingType}
+                    onChange={e => setPlanBillingType(e.target.value)}
+                    style={selectStyle}
+                    disabled={saving}
+                  >
+                    <option value="free_default">مجاني دائم (free_default)</option>
+                    <option value="recurring">اشتراك متكرر شهري/سنوي (recurring)</option>
+                    <option value="one_time_fixed_term">شراء مرة واحدة – محدود المدة (one_time_fixed_term)</option>
+                  </select>
+                </div>
+
+                {/* RecurringCycle — only for recurring */}
+                {planBillingType === "recurring" && (
+                  <div>
+                    <label style={labelStyle}>دورة التجديد</label>
+                    <select
+                      value={recurringCycle}
+                      onChange={e => setRecurringCycle(e.target.value)}
+                      style={selectStyle}
+                      disabled={saving}
+                    >
+                      <option value="monthly">شهري</option>
+                      <option value="yearly">سنوي</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* DurationDays — only for one_time_fixed_term */}
+                {planBillingType === "one_time_fixed_term" && (
+                  <div>
+                    <label style={labelStyle}>مدة الصلاحية (أيام)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={durationDays}
+                      onChange={e => setDurationDays(e.target.value)}
+                      style={inputStyle}
+                      placeholder="مثال: 90"
+                      disabled={saving}
+                    />
+                  </div>
+                )}
+
+                {/* ConsumptionPolicy — only for one_time_fixed_term */}
+                {planBillingType === "one_time_fixed_term" && (
+                  <div>
+                    <label style={labelStyle}>سياسة الاستهلاك</label>
+                    <select
+                      value={consumptionPolicy}
+                      onChange={e => setConsumptionPolicy(e.target.value)}
+                      style={selectStyle}
+                      disabled={saving}
+                    >
+                      <option value="none">لا يوجد (none)</option>
+                      <option value="listing_quota">حصة إعلانات (listing_quota)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* ExpiryRule — only for one_time_fixed_term */}
+                {planBillingType === "one_time_fixed_term" && (
+                  <div>
+                    <label style={labelStyle}>قاعدة الانتهاء</label>
+                    <select
+                      value={expiryRule}
+                      onChange={e => setExpiryRule(e.target.value)}
+                      style={selectStyle}
+                      disabled={saving}
+                    >
+                      <option value="expire_by_date">بالتاريخ فقط (expire_by_date)</option>
+                      <option value="expire_by_consumption">بالاستهلاك فقط (expire_by_consumption)</option>
+                      <option value="expire_by_whichever_comes_first">الأسبق — تاريخ أو استهلاك (expire_by_whichever_comes_first)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* DowngradePlanCode */}
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={labelStyle}>كود خطة التخفيض التلقائي عند الانتهاء</label>
+                  <input
+                    type="text"
+                    value={downgradePlanCode}
+                    onChange={e => setDowngradePlanCode(e.target.value)}
+                    style={inputStyle}
+                    placeholder='مثال: seeker_free — اتركه فارغاً إذا لا تريد تخفيضاً تلقائياً'
+                    disabled={saving}
+                  />
+                  <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                    عند تفعيل &quot;تخفيض تلقائي عند الانتهاء&quot; (في القواعد التجارية)، سيتم الانتقال لهذه الخطة.
+                  </p>
+                </div>
+              </div>
+            </CollapsibleSection>
+
+            {/* ── Section 4: Trial Settings ── */}
+            <CollapsibleSection title="إعدادات الفترة التجريبية" icon="🎁" defaultOpen={false}>
+              <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>يوفّر فترة تجريبية</label>
+                  <ToggleSwitch checked={hasTrial} onChange={setHasTrial} disabled={saving} />
+                </div>
+                {hasTrial && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>يتطلب طريقة دفع للتجربة</label>
+                    <ToggleSwitch checked={requiresPaymentForTrial} onChange={setRequiresPaymentForTrial} disabled={saving} />
+                  </div>
+                )}
+              </div>
+              {hasTrial && (
+                <div style={{ maxWidth: 220 }}>
+                  <label style={labelStyle}>عدد أيام التجربة المجانية</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={trialDays}
+                    onChange={e => setTrialDays(e.target.value)}
+                    style={inputStyle}
+                    placeholder="مثال: 14"
+                  />
+                </div>
+              )}
+              {!hasTrial && (
+                <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>
+                  فعّل هذا الخيار لمنح المشتركين الجدد فترة تجريبية مجانية قبل الدفع.
+                </p>
+              )}
+            </CollapsibleSection>
+
+            {/* ── Section 5: Business Rules ── */}
+            <CollapsibleSection title="قواعد الاشتراك التجاري" icon="⚙️" defaultOpen={false}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 2.5rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>الخطة الافتراضية للمستخدمين الجدد</label>
+                  <ToggleSwitch checked={isDefaultForNewUsers} onChange={setIsDefaultForNewUsers} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>متاحة للتسجيل الذاتي</label>
+                  <ToggleSwitch checked={availableForSelfSignup} onChange={setAvailableForSelfSignup} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تتطلب موافقة الإدارة</label>
+                  <ToggleSwitch checked={requiresAdminApproval} onChange={setRequiresAdminApproval} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تسمح بالإضافات (Add-ons)</label>
+                  <ToggleSwitch checked={allowAddOns} onChange={setAllowAddOns} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تسمح بالترقية</label>
+                  <ToggleSwitch checked={allowUpgrade} onChange={setAllowUpgrade} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تسمح بالتخفيض</label>
+                  <ToggleSwitch checked={allowDowngrade} onChange={setAllowDowngrade} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تخفيض تلقائي عند الانتهاء</label>
+                  <ToggleSwitch checked={autoDowngradeOnExpiry} onChange={setAutoDowngradeOnExpiry} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>إعادة الشراء عند استنزاف الحصة</label>
+                  <ToggleSwitch checked={allowRepurchaseOnConsumption} onChange={setAllowRepurchaseOnConsumption} disabled={saving} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>تجديد مبكر عند استنزاف الحصة</label>
+                  <ToggleSwitch checked={allowEarlyRenewalOnConsumption} onChange={setAllowEarlyRenewalOnConsumption} disabled={saving} />
+                </div>
+              </div>
+              <p style={{ margin: "0.75rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                هذه الإعدادات تحدد كيف تتصرف المنصة مع مشتركي هذه الخطة تجارياً.
+              </p>
+            </CollapsibleSection>
+
+          </form>
+
+          {/* ── Section 4: Pricing Entries (existing plans only) ── */}
+          {!isNew && (
+            <CollapsibleSection
+              title="أسعار الاشتراك"
+              icon="🏷"
+              count={pricing.length}
+              defaultOpen={false}
+            >
+              {!showAddPricing && (
+                <div style={{ marginBottom: "0.75rem" }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ padding: "0.3rem 0.85rem", fontSize: "0.82rem" }}
+                    onClick={() => setShowAddPricing(true)}
+                  >
+                    + إضافة سعر
+                  </button>
+                </div>
+              )}
+              {pricingLoading && <p style={{ color: "var(--color-text-secondary)", fontSize: "0.88rem" }}>جاري التحميل...</p>}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {pricing.map(entry => (
+                  <PricingRow
+                    key={entry.id}
+                    entry={entry}
+                    planId={plan!.id}
+                    onUpdated={updated => setPricing(prev => prev.map(p => p.id === updated.id ? updated : p))}
+                    onDeleted={id => setPricing(prev => prev.filter(p => p.id !== id))}
+                  />
+                ))}
+                {!pricingLoading && pricing.length === 0 && !showAddPricing && (
+                  <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem", textAlign: "center", padding: "0.75rem 0" }}>لا توجد أسعار بعد.</p>
+                )}
+                {showAddPricing && (
+                  <AddPricingForm
+                    planId={plan!.id}
+                    onCreated={entry => { setPricing(prev => [...prev, entry]); setShowAddPricing(false); }}
+                    onCancel={() => setShowAddPricing(false)}
+                  />
+                )}
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {/* ── Section 5: حدود الباقة ── */}
+          {!isNew && (
+            <CollapsibleSection
+              title="حدود الباقة"
+              icon="📦"
+              count={limits.length}
+              defaultOpen={true}
+            >
+              {/* Type legend */}
+              <div style={{ display: "flex", gap: "1rem", marginBottom: "0.75rem", padding: "0.5rem 0.75rem", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700 }}>شرح الشارات:</span>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", color: "#1d4ed8" }}>
+                  <TypeBadge kind="limit" /> = حد عددي قابل للتعديل (−1 = غير محدود)
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", color: "#7c3aed" }}>
+                  <TypeBadge kind="feature" /> = ميزة تشغيل/إيقاف (في قسم المميزات)
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "#b45309", marginRight: "auto" }}>⚠ الحقول الصفراء تتوقف على تفعيل ميزة أخرى أولاً</span>
+              </div>
+              {/* Quick-fill preset row */}
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem", padding: "0.55rem 0.75rem", background: "#f8fafc", borderRadius: 8, alignItems: "center", border: "1px solid #e2e8f0" }}>
+                <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 700, flexShrink: 0 }}>⚡ تعبئة سريعة:</span>
+                {(([
+                  { label: "Starter", vals: { max_active_listings: 2,  max_images_per_listing: 5,  max_featured_slots: 0,  max_agents: 1, max_projects: 0 } },
+                  { label: "Pro",     vals: { max_active_listings: 20, max_images_per_listing: 20, max_featured_slots: 3,  max_agents: 5, max_projects: 3 } },
+                  { label: "Premium", vals: { max_active_listings: -1, max_images_per_listing: 50, max_featured_slots: -1, max_agents: -1, max_projects: -1 } },
+                ]) as { label: string; vals: Record<string, number> }[]).map(preset => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    style={{ padding: "0.25rem 0.7rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: "#ffffff", fontSize: "0.76rem", fontWeight: 600, cursor: "pointer", color: "#1e293b" }}
+                    onClick={() => { Object.entries(preset.vals).forEach(([k, v]) => handleLimitChange(k, String(v))); }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+                <span style={{ fontSize: "0.7rem", color: "#94a3b8", marginRight: "auto" }}>القيمة ‑1 = غير محدود ∞</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+                {KNOWN_LIMITS.map(kl => (
+                  <NamedLimitField
+                    key={kl.key}
+                    icon={kl.icon}
+                    label={kl.label}
+                    limitKey={kl.key}
+                    limits={limits}
+                    value={limitValues[kl.key] ?? String(limits.find(l => l.key === kl.key)?.value ?? 0)}
+                    onValueChange={handleLimitChange}
+                    dependsOnFeatureKey={kl.dependsOnFeatureKey}
+                    dependsOnFeatureLabel={kl.dependsOnFeatureLabel}
+                    features={features}
+                  />
+                ))}
+                {/* Any limits not in KNOWN_LIMITS (fallback) */}
+                {limits.filter(l => !KNOWN_LIMITS.some(k => k.key === l.key)).map(lim => (
+                  <LimitRow
+                    key={lim.key}
+                    limit={lim}
+                    value={limitValues[lim.key] ?? String(lim.value)}
+                    onValueChange={handleLimitChange}
+                  />
+                ))}
+              </div>
+              {limits.length === 0 && (
+                <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "1rem 0" }}>
+                  لم تُحدَّد حدود بعد — تأكد من تعريف الحدود في كتالوج الحدود أولاً.
+                </p>
+              )}
+            </CollapsibleSection>
+          )}
+
+          {/* ── Section 6: مميزات الباقة ── */}
+          {!isNew && (
+            <CollapsibleSection
+              title="مميزات الباقة"
+              icon="✨"
+              count={enabledCount}
+              defaultOpen={true}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+                {KNOWN_FEATURES.map(kf => (
+                  <NamedFeatureToggle
+                    key={kf.key}
+                    icon={kf.icon}
+                    label={kf.label}
+                    description={kf.description}
+                    featureKey={kf.key}
+                    features={features}
+                    featureSaving={featureSaving}
+                    onToggle={handleFeatureToggle}
+                  />
+                ))}
+                {/* Any features not in KNOWN_FEATURES (fallback) */}
+                {features.filter(f => !KNOWN_FEATURES.some(k => k.key === f.key)).map(feat => (
+                  <div
+                    key={feat.key}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.75rem", borderRadius: 8, background: feat.isEnabled ? "#f0fdf4" : "#f9fafb", border: feat.isEnabled ? "1px solid #bbf7d0" : "1px solid #e2e8f0", opacity: featureSaving === feat.key ? 0.55 : 1, transition: "all 0.18s" }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
+                      {feat.icon && <span style={{ fontSize: "1rem", flexShrink: 0 }}>{feat.icon}</span>}
+                      <div>
+                        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: feat.isEnabled ? 600 : 400 }}>{feat.name}</p>
+                        {feat.description && <p style={{ margin: 0, fontSize: "0.73rem", color: "#64748b" }}>{feat.description}</p>}
+                      </div>
+                    </div>
+                    <ToggleSwitch
+                      checked={feat.isEnabled}
+                      onChange={(val) => handleFeatureToggle(feat.key, val)}
+                      disabled={featureSaving === feat.key}
+                    />
+                  </div>
+                ))}
+              </div>
+              {features.length === 0 && (
+                <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "1rem 0" }}>
+                  لم تُحدَّد ميزات بعد — تأكد من تعريف الميزات في كتالوج الميزات أولاً.
+                </p>
+              )}
+            </CollapsibleSection>
+          )}
+
+          {/* ── Section 7: القيمة التسويقية للباقة ── */}
+          {!isNew && (
+            <CollapsibleSection
+              title="القيمة التسويقية للباقة"
+              icon="📈"
+              defaultOpen={true}
+            >
+              <p style={{ margin: "0 0 0.75rem", fontSize: "0.8rem", color: "#64748b", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 6, padding: "0.5rem 0.75rem" }}>
+                هذه الحقول تتطلب تعريف مسبق في <strong>كتالوج الحدود</strong> بنفس المفاتيح المذكورة. الحقول الرمادية غير معرَّفة في الكتالوج بعد.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+                {KNOWN_MARKETING.map(km => (
+                  <NamedLimitField
+                    key={km.key}
+                    icon={km.icon}
+                    label={km.label}
+                    limitKey={km.key}
+                    limits={limits}
+                    value={limitValues[km.key] ?? String(limits.find(l => l.key === km.key)?.value ?? 0)}
+                    onValueChange={handleLimitChange}
+                  />
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {/* ── Section 7: Live Plan Preview (existing plans only) ── */}
+          {!isNew && (
+            <CollapsibleSection title="معاينة الخطة" icon="🔍" defaultOpen={false}>
+              <p style={{ margin: "0 0 0.9rem", fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
+                معاينة مباشرة لكيفية ظهور الخطة في صفحة التسعير.
+              </p>
+              <PlanPreviewCard
+                displayNameAr={displayNameAr}
+                displayNameEn={displayNameEn}
+                internalName={name}
+                badgeText={badgeText}
+                planColor={planColor}
+                isRecommended={isRecommended}
+                planCategory={planCategory}
+                basePriceMonthly={priceMonthly}
+                enabledFeatures={features}
+                limits={limits}
+              />
+            </CollapsibleSection>
+          )}
+
+        </div>
+
+        {/* ── Sticky Save Footer ── */}
+        <div style={{
+          flexShrink: 0,
+          borderTop: "1px solid var(--color-border, #e5e7eb)",
+          backgroundColor: "#ffffff",
+          padding: "0.85rem 1.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "0.75rem",
+        }}>
+          {/* Save status text */}
+          <div style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", minWidth: 140 }}>
+            {saveStatus === "saving" && (
+              <span style={{ color: "#2563eb", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #2563eb", borderTop: "2px solid transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                جارٍ الحفظ...
+              </span>
+            )}
+            {saveStatus === "saved" && (
+              <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ تم الحفظ</span>
+            )}
+            {saveStatus === "dirty" && (
+              <span style={{ color: "#b45309" }}>لم يتم الحفظ بعد</span>
+            )}
+          </div>
+
+          {/* Buttons */}
+          <div style={{ display: "flex", gap: "0.65rem", alignItems: "center" }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={handleCloseModal}
+              disabled={saving}
+              style={{ minWidth: 80 }}
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => { if (isNew) { formRef.current?.requestSubmit(); } else void doSave(); }}
+              disabled={saving || (!isNew && !isDirty)}
+              style={{ minWidth: 130 }}
+            >
+              {saving ? "جارٍ الحفظ..." : isNew ? "إنشاء الخطة" : "حفظ التغييرات"}
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+
+  return createPortal(modalContent, document.body);
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────────────
+
+export default function AdminPlansPage() {
+  const { user, isLoading } = useProtectedRoute({ requiredPermission: "settings.manage" });
+
+  const [plans, setPlans]         = useState<AdminPlanSummary[]>([]);
+  const [fetching, setFetching]   = useState(true);
+  const [fetchError, setFetchError] = useState("");
+
+  const [activeFilter, setActiveFilter] = useState<"active" | "archived" | "all">("active");
+
+  const [toastMsg,  setToastMsg]  = useState("");
+  const [toastType, setToastType] = useState<"ok" | "err">("ok");
+  const [toastKey,  setToastKey]  = useState(0);
+
+  const showToast = useCallback((msg: string, type: "ok" | "err" = "ok") => {
+    setToastMsg(msg);
+    setToastType(type);
+    setToastKey(k => k + 1);
+    setTimeout(() => setToastMsg(""), 3500);
+  }, []);
+
+  const [editTarget, setEditTarget]     = useState<AdminPlanDetail | null | undefined>(undefined);
+  const [modalOpen, setModalOpen]       = useState(false);
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
+
+  const [deleteId, setDeleteId]         = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError]   = useState("");
+
+  const [duplicating, setDuplicating]   = useState<string | null>(null);
+
+  const [actionError, setActionError] = useState("");
+
+  const load = useCallback(async () => {
+    setFetching(true); setFetchError("");
+    try {
+      const data = await adminApi.getPlans();
+      setPlans(data);
+    } catch (e) { setFetchError(normalizeError(e)); }
+    finally { setFetching(false); }
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading && user) load();
+  }, [isLoading, user, load]);
+
+  if (isLoading || !user) return null;
+
+  async function handleOpenEdit(id: string) {
+    setDetailLoading(id); setActionError("");
+    try {
+      const detail = await adminApi.getPlanDetail(id);
+      setEditTarget(detail);
+      setModalOpen(true);
+    } catch (e) { setActionError(normalizeError(e)); }
+    finally { setDetailLoading(null); }
+  }
+
+  function handleOpenCreate() { setEditTarget(null); setModalOpen(true); }
+  function handleModalClose() { setModalOpen(false); setEditTarget(undefined as any); }
+
+  function handleSaved(updated: AdminPlanDetail) {
+    setPlans(prev => {
+      const exists = prev.find(p => p.id === updated.id);
+      if (exists) return prev.map(p => p.id === updated.id ? updated : p);
+      return [...prev, updated];
+    });
+  }
+
+  async function handleDelete(id: string) {
+    setDeleteLoading(true); setDeleteError("");
+    try {
+      await adminApi.deletePlan(id);
+      setPlans(prev => prev.map(p => p.id === id ? { ...p, isActive: false } : p));
+      setDeleteId(null);
+      showToast("تمت أرشفة الخطة بنجاح");
+    } catch (e) { setDeleteError(normalizeError(e)); }
+    finally { setDeleteLoading(false); }
+  }
+
+  async function handleDuplicate(id: string) {
+    setDuplicating(id); setActionError("");
+    try {
+      const copy = await adminApi.duplicatePlan(id);
+      setPlans(prev => [...prev, copy]);
+    } catch (e) { setActionError(normalizeError(e)); }
+    finally { setDuplicating(null); }
+  }
+
+  const sorted   = [...plans].sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
+  const filtered = sorted.filter(p =>
+    activeFilter === "all"      ? true :
+    activeFilter === "active"   ? p.isActive :
+    /* archived */                !p.isActive
+  );
+  const activeCount   = plans.filter(p =>  p.isActive).length;
+  const archivedCount = plans.filter(p => !p.isActive).length;
+
+  return (
+    <div style={{ minHeight: "100vh", backgroundColor: "var(--color-background, #f9f9f9)", padding: "2rem 1rem" }}>
+      <div style={{ maxWidth: 860, margin: "0 auto" }}>
+
+        {/* ── Header ── */}
+        <div style={{ marginBottom: "1.75rem" }}>
+          <DashboardBackLink href="/dashboard" label="← لوحة التحكم" />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
+            <div>
+              <h1 style={{ fontSize: "1.4rem", fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>إدارة خطط الاشتراك</h1>
+              <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+                {activeFilter === "active"   ? `${activeCount} خطة نشطة` :
+                 activeFilter === "archived" ? `${archivedCount} خطة مؤرشفة` :
+                 `${plans.length} خطة (${activeCount} نشطة · ${archivedCount} مؤرشفة)`}
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "0.6rem", flexShrink: 0 }}>
+              <a
+                href="/dashboard/admin/plan-matrix"
+                style={{ display: "inline-flex", alignItems: "center", padding: "0.4rem 1rem", borderRadius: 8, fontSize: "0.85rem", border: "1.5px solid rgba(167,139,250,0.4)", color: "#a78bfa", textDecoration: "none", background: "rgba(167,139,250,0.07)", gap: "0.3rem" }}>
+                📊 مصفوفة الخطط
+              </a>
+              <a
+                href="/dashboard/admin/plan-catalog"
+                style={{ display: "inline-flex", alignItems: "center", padding: "0.4rem 1rem", borderRadius: 8, fontSize: "0.85rem", border: "1.5px solid var(--color-border, #e5e7eb)", color: "var(--color-text-secondary)", textDecoration: "none", background: "#ffffff" }}>
+                كتالوج الميزات والحدود
+              </a>
+              <button
+                className="btn btn-primary"
+                onClick={handleOpenCreate}
+                style={{ flexShrink: 0 }}>
+                + خطة جديدة
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {(fetchError || actionError) && <InlineBanner message={fetchError || actionError} />}
+
+        {/* ── Filter Tabs ── */}
+        {!fetching && (
+          <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1rem", borderBottom: "2px solid var(--color-border, #e5e7eb)", paddingBottom: "0" }}>
+            {(["active", "archived", "all"] as const).map(tab => {
+              const label = tab === "active" ? `النشطة (${activeCount})` : tab === "archived" ? `المؤرشفة (${archivedCount})` : `الكل (${plans.length})`;
+              const isSelected = activeFilter === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveFilter(tab)}
+                  style={{
+                    padding: "0.45rem 1.1rem", fontSize: "0.85rem", fontWeight: isSelected ? 700 : 500,
+                    border: "none", background: "none", cursor: "pointer",
+                    borderBottom: isSelected ? "2.5px solid var(--color-primary, #2563eb)" : "2.5px solid transparent",
+                    color: isSelected ? "var(--color-primary, #2563eb)" : "var(--color-text-secondary)",
+                    marginBottom: "-2px", transition: "color 0.15s",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {fetching && <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>جاري التحميل...</div>}
+
+        {!fetching && filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>
+            {activeFilter === "archived" ? "لا توجد خطط مؤرشفة." : activeFilter === "active" ? "لا توجد خطط نشطة. أنشئ أول خطة!" : "لا توجد خطط بعد. أنشئ أول خطة!"}
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {filtered.map(plan => {
+            const isLoadingThis = detailLoading === plan.id;
+            const monthlyPrice  = plan.basePriceMonthly === 0 ? "مجاني" : `${plan.basePriceMonthly.toLocaleString("ar-SY")} ل.س/شهر`;
+            const yearlyPrice   = plan.basePriceYearly  === 0 ? null     : `${plan.basePriceYearly.toLocaleString("ar-SY")} ل.س/سنة`;
+            return (
+            <div key={plan.id} className="form-card" style={{ padding: "1.25rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.35rem" }}>
+                  {plan.planColor && (
+                    <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: "50%", background: plan.planColor, flexShrink: 0 }} />
+                  )}
+                  <span style={{ fontWeight: 700, fontSize: "1rem" }}>{plan.displayNameAr}</span>
+                  {plan.code && <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontFamily: "monospace" }}>{plan.code}</span>}
+                  <span className={plan.isActive ? "badge badge-green" : "badge badge-red"}>{plan.isActive ? "نشطة" : "معطلة"}</span>
+                  <span className={plan.isPublic ? "badge badge-blue" : "badge badge-gray"}>{plan.isPublic ? "عامة" : "مخفية"}</span>
+                  {plan.isRecommended && <span className="badge badge-yellow">⭐ موصى بها</span>}
+                  {plan.hasTrial && <span className="badge badge-green">🎁 تجريبية {plan.trialDays}ي</span>}
+                  {plan.audienceType && <span className="badge" style={{ background: AUDIENCE_BG[plan.audienceType], color: "#fff" }}>{AUDIENCE_AR_LABEL[plan.audienceType] ?? plan.audienceType}</span>}
+                  {plan.tier && <span className="badge" style={{ background: TIER_BG[plan.tier], color: "#fff" }}>{TIER_AR_LABEL[plan.tier] ?? plan.tier}</span>}
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", marginBottom: "0.25rem" }}>
+                  <span style={{ fontWeight: 700, fontSize: "0.95rem", color: plan.planColor || "var(--color-primary, #2563eb)" }}>{monthlyPrice}</span>
+                  {yearlyPrice && <span style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>{yearlyPrice}</span>}
+                </div>
+                {plan.description && <p style={{ margin: "0 0 0.4rem", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>{plan.description}</p>}
+                <p style={{ margin: "0 0 0.35rem", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                  ترتيب: {plan.displayOrder}
+                  &nbsp;·&nbsp;رتبة: {plan.rank}
+                  &nbsp;·&nbsp;{plan.billingMode === "InternalOnly" ? "داخلي" : plan.billingMode === "StripeOnly" ? "Stripe" : "هجين"}
+                </p>
+                {/* ── Key Commercial Data ── */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", alignItems: "center" }}>
+                  {plan.listingsLimit !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      🏠 {plan.listingsLimit === -1 ? "∞" : plan.listingsLimit} إعلان
+                    </span>
+                  )}
+                  {plan.agentsLimit !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      👤 {plan.agentsLimit === -1 ? "∞" : plan.agentsLimit} وكيل
+                    </span>
+                  )}
+                  {plan.projectsLimit !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      🏗 {plan.projectsLimit === -1 ? "∞" : plan.projectsLimit} مشروع
+                    </span>
+                  )}
+                  {plan.imagesPerListing !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      📸 {plan.imagesPerListing === -1 ? "∞" : plan.imagesPerListing} صورة
+                    </span>
+                  )}
+                  {plan.featuredSlots !== 0 && (
+                    <span style={{ fontSize: "0.72rem", background: "var(--color-bg-secondary, #f3f4f6)", border: "1px solid var(--color-border, #e5e7eb)", borderRadius: 4, padding: "0.1rem 0.45rem", color: "var(--color-text-secondary)" }}>
+                      ⭐ {plan.featuredSlots === -1 ? "∞" : plan.featuredSlots} مميز
+                    </span>
+                  )}
+                  {plan.hasAnalytics        && <span style={{ fontSize: "0.72rem", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#1d4ed8" }}>📊 تحليلات</span>}
+                  {plan.hasFeaturedListings && <span style={{ fontSize: "0.72rem", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#1d4ed8" }}>⭐ إعلانات مميزة</span>}
+                  {plan.hasProjectMgmt      && <span style={{ fontSize: "0.72rem", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#1d4ed8" }}>🏗 إدارة مشاريع</span>}
+                  {plan.hasWhatsApp         && <span style={{ fontSize: "0.72rem", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#15803d" }}>💬 واتساب</span>}
+                  {plan.hasVerifiedBadge    && <span style={{ fontSize: "0.72rem", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#15803d" }}>✅ شارة موثق</span>}
+                  {plan.hasPrioritySupport  && <span style={{ fontSize: "0.72rem", background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 4, padding: "0.1rem 0.45rem", color: "#7e22ce" }}>🛠 دعم أولوية</span>}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                <button
+                  className="btn"
+                  style={{ padding: "0.4rem 1rem", fontSize: "0.85rem" }}
+                  disabled={isLoadingThis || !!detailLoading}
+                  onClick={() => handleOpenEdit(plan.id)}
+                >
+                  {isLoadingThis ? "..." : "تعديل"}
+                </button>
+                <button
+                  className="btn"
+                  style={{ padding: "0.4rem 1rem", fontSize: "0.85rem", opacity: duplicating === plan.id ? 0.5 : 1 }}
+                  disabled={duplicating === plan.id}
+                  onClick={() => handleDuplicate(plan.id)}
+                >
+                  {duplicating === plan.id ? "..." : "نسخ"}
+                </button>
+                <button
+                  className="btn"
+                  style={{ padding: "0.4rem 1rem", fontSize: "0.85rem", border: "1.5px solid var(--color-error)", color: "var(--color-error)", backgroundColor: "transparent" }}
+                  onClick={() => { setDeleteId(plan.id); setDeleteError(""); }}
+                >
+                  أرشفة
+                </button>
+              </div>
+            </div>
+            );
+          })}
+        </div>
+
+        {/* ── Plan Comparison Table ── */}
+        {!fetching && plans.length > 0 && (
+          <PlanComparisonTable plans={plans} />
+        )}
+
+      </div>
+
+      {/* ── Archive Confirmation ── */}
+      {deleteId && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 2000, backgroundColor: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "#ffffff", borderRadius: 12, padding: "2rem", maxWidth: 440, width: "100%", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }}>
+            <h3 style={{ margin: "0 0 0.75rem" }}>تأكيد الأرشفة</h3>
+            <p style={{ color: "var(--color-text-secondary)", marginBottom: "1rem" }}>سيتم إخفاء هذه الخطة وتعطيلها. لا يمكن أرشفة خطة لها مشتركون نشطون. يمكن إعادة تفعيلها لاحقاً من خلال التعديل.</p>
+            {deleteError && <p style={{ color: "var(--color-error)", fontSize: "0.9rem", marginBottom: "1rem" }}>{deleteError}</p>}
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1, background: "var(--color-error, #dc2626)", borderColor: "var(--color-error, #dc2626)" }}
+                disabled={deleteLoading}
+                onClick={() => handleDelete(deleteId)}
+              >
+                {deleteLoading ? "جاري الأرشفة..." : "تأكيد الأرشفة"}
+              </button>
+              <button
+                className="btn"
+                style={{ flex: 1 }}
+                disabled={deleteLoading}
+                onClick={() => { setDeleteId(null); setDeleteError(""); }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit / Create Modal ── */}
+      {modalOpen && (
+        <EditPlanModal
+          plan={editTarget ?? null}
+          onClose={handleModalClose}
+          onSaved={(updated) => handleSaved(updated)}
+        />
+      )}
+
+      {/* ── Toast ── */}
+      {toastMsg && <Toast msg={toastMsg} type={toastType} key={toastKey} />}
+    </div>
+  );
+}

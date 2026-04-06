@@ -1,0 +1,147 @@
+The properties (listings) page is currently just displaying items.
+It is NOT usable as a real management system.
+
+We need to transform it into a full Listings Management Module.
+
+IMPORTANT:
+- Do NOT redesign everything randomly
+- Build on top of the existing page
+- Keep current UI style
+- Focus on functionality and usability
+
+==================================================
+CURRENT PROBLEMS
+==================================================
+
+1. Clicking a property does nothing
+2. No property details view
+3. No edit functionality
+4. No delete/archive functionality
+5. No advanced filtering
+6. No sorting
+7. No real actions per item
+
+This makes the page non-operational.
+
+==================================================
+GOAL
+==================================================
+
+Turn this page into a professional real-estate listings management system.
+
+==================================================
+PHASE 1 — INTERACTIONS & ACTIONS
+==================================================
+
+1. Make each property card clickable
+   - clicking opens details view
+
+2. Add actions to each property card:
+   - View details
+   - Edit
+   - Delete / Archive
+
+3. Implement "View Details":
+   - open modal OR navigate to:
+     /dashboard/admin/properties/[id]
+
+   Show:
+   - full property info
+   - price
+   - location (city + district)
+   - type
+   - rooms
+   - description
+   - features
+   - views count
+   - status
+
+4. Implement "Edit":
+   - open edit form (modal or page)
+   - pre-filled data
+
+5. Implement "Delete / Archive":
+   - confirmation dialog
+   - safe action
+
+==================================================
+PHASE 2 — ADVANCED FILTERS
+==================================================
+
+Add a full filter panel above the list.
+
+Required filters:
+
+- search (title / location)
+- city
+- district / neighborhood
+- property type
+- rooms
+- min price
+- max price
+- views count (optional range)
+- status (active / sold / rented)
+
+Sorting:
+
+- newest
+- oldest
+- highest price
+- lowest price
+- most viewed
+
+Also include:
+- Apply button
+- Reset button
+- Active filter chips
+
+==================================================
+PHASE 3 — UX IMPROVEMENTS
+==================================================
+
+- Show hover effect on cards (indicate clickable)
+- Show action buttons clearly
+- Improve empty state
+- Keep mobile responsive
+
+==================================================
+DATA REQUIREMENTS
+==================================================
+
+Ensure property object includes:
+
+- id
+- title
+- city
+- district
+- type
+- rooms
+- price
+- views
+- status
+- createdAt
+
+If mock data is missing fields, update it.
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT just add buttons visually.
+
+Implement:
+- real click behavior
+- real navigation or modal
+- real filtering logic
+- real sorting
+
+==================================================
+OUTPUT
+==================================================
+
+After implementation, report:
+
+1. What actions are now available
+2. How details view works (modal or route)
+3. Which filters are functional
+4. Which components were created

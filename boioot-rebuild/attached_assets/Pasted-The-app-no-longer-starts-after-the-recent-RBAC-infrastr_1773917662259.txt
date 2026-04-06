@@ -1,0 +1,105 @@
+The app no longer starts after the recent RBAC infrastructure changes.
+
+STOP all further feature or migration work.
+
+We are now in EMERGENCY STABILIZATION mode.
+
+==================================================
+GOAL
+==================================================
+
+Diagnose exactly why the project no longer runs when pressing Run,
+then fix the startup/build/runtime issue with the smallest safe change.
+
+Do NOT continue RBAC migration work.
+Do NOT add new features.
+Do NOT refactor unrelated code.
+
+We need the app to boot successfully again first.
+
+==================================================
+TASKS
+==================================================
+
+1) IDENTIFY THE FAILURE POINT
+Run the project and capture the exact failure:
+
+- frontend build failure?
+- backend build failure?
+- backend startup exception?
+- database initialization failure?
+- migration/seeding failure?
+- TypeScript compile error?
+- .NET compile/runtime error?
+
+Do not guess.
+Show the actual error output.
+
+2) TRACE THE FAILURE TO THE RECENT CHANGES
+Audit the recent RBAC Phase 1 changes, especially:
+
+- Boioot.Api/Program.cs
+- any SQL CREATE TABLE blocks
+- DataSeeder / SeedRbacAsync
+- BoiootDbContext changes
+- new entities:
+  - RbacRole
+  - RbacPermission
+  - RbacRolePermission
+  - RbacUserRole
+- EF Core configurations
+- repository registration / DI if any
+
+3) FIX ONLY THE RUN-BLOCKING ISSUE
+Apply the minimum safe fix necessary to restore app startup.
+
+Examples:
+- syntax error
+- SQL syntax issue
+- wrong table/column reference
+- invalid foreign key reference
+- startup ordering bug
+- null failure in seeding
+- duplicate insert crash
+- incorrect DbSet/config registration
+- TypeScript import/export issue
+
+4) DO NOT HIDE THE PROBLEM
+Do NOT just disable major RBAC code blindly unless absolutely necessary.
+Prefer fixing the actual cause.
+
+If a temporary rollback is required, explain exactly:
+- what was rolled back
+- why it was necessary
+- what remains intact
+
+5) VERIFY APP STARTS
+After the fix:
+- confirm backend starts
+- confirm frontend starts
+- confirm preview loads
+- confirm no new startup error remains
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+Provide a short structured report:
+
+A) ROOT CAUSE
+What exactly prevented the app from running?
+
+B) FILES CHANGED
+Which files were modified to fix startup?
+
+C) FIX APPLIED
+What exact fix was made?
+
+D) VERIFIED RESULT
+Confirm:
+- app boots successfully
+- preview works
+- no immediate startup/build errors remain
+
+E) RBAC STATUS
+State clearly whether the new RBAC Phase 1 infrastructure is still present or if any part was temporarily rolled back.

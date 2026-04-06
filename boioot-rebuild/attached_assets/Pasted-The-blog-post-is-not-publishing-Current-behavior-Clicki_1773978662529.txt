@@ -1,0 +1,73 @@
+The blog post is not publishing.
+
+Current behavior:
+- Clicking "نشر المقال" results in:
+  "حدث خطأ داخلي في الخادم"
+
+This means the publish action is reaching the backend, but the server is failing.
+
+We need to debug the real root cause and fix it properly.
+
+==================================================
+DEBUG TASK
+==================================================
+
+Please inspect the full publish flow step by step:
+
+1. Check what payload is sent when clicking "نشر المقال"
+2. Check the exact API endpoint used for publish
+3. Check the server response and error logs
+4. Check whether the post must be created first before publishing
+5. Check required fields and server-side validation
+6. Check database constraints:
+   - required fields
+   - unique slug
+   - category relationship
+   - nullability issues
+
+==================================================
+VERIFY THESE FIELDS
+==================================================
+
+Confirm whether publish requires:
+- title
+- slug
+- excerpt
+- full content/body
+- category
+- featured image
+- seo fields
+- author
+- status
+
+If any required field is missing, show a proper validation error in UI instead of generic server error.
+
+==================================================
+FIX REQUIREMENTS
+==================================================
+
+1. Identify the exact root cause
+2. Fix the publish flow
+3. Improve error handling:
+   - do not show only "internal server error"
+   - show meaningful validation error if possible
+4. If the article must be saved first, make "publish" handle that flow correctly
+5. Verify article publishes successfully after fix
+
+==================================================
+IMPORTANT
+==================================================
+
+Do not just hide the error.
+Do not just add try/catch without diagnosis.
+Inspect logs and fix the real backend/frontend mismatch.
+
+After fixing, report clearly:
+1. root cause
+2. which file had the issue
+3. whether it was:
+   - validation
+   - payload mismatch
+   - database error
+   - API route issue
+   - missing save-before-publish logic

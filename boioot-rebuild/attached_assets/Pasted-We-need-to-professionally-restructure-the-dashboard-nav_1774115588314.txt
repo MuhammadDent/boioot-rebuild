@@ -1,0 +1,160 @@
+We need to professionally restructure the dashboard navigation and profile page hierarchy.
+
+CURRENT PROBLEMS:
+1) "لوحة التحكم" is not clearly visible/clickable as a proper navigation destination.
+2) The profile page feels detached instead of being part of the dashboard.
+3) There is no clear dashboard entry item/icon labeled "لوحة التحكم".
+4) The current information architecture is confusing.
+
+GOAL:
+Make "الملف الشخصي" a clear subsection inside "لوحة التحكم", and make dashboard navigation more professional, explicit, and usable.
+
+==================================================
+1) INFORMATION ARCHITECTURE FIX
+==================================================
+
+We want this structure:
+
+- لوحة التحكم
+  - الرئيسية
+  - الملف الشخصي
+  - الطلبات
+  - المشاريع
+  - الإيجار اليومي
+  - الإعدادات
+  - الأمان
+  - الرسائل (if exists)
+  - الإشعارات (if exists)
+
+The profile page must be treated as a section inside the dashboard, not as a detached standalone page.
+
+==================================================
+2) ADD CLEAR DASHBOARD ENTRY
+==================================================
+
+Add a clear, visible, clickable dashboard navigation item labeled:
+- لوحة التحكم
+
+It must have:
+- a professional icon
+- active state
+- hover state
+- proper RTL alignment
+
+This item should route to:
+- /dashboard
+
+Do NOT leave dashboard access only as breadcrumb text.
+
+==================================================
+3) PROFILE PAGE HIERARCHY
+==================================================
+
+On /dashboard/profile:
+- "الملف الشخصي" must appear as a child section of dashboard
+- breadcrumb should be:
+  لوحة التحكم / الملف الشخصي
+
+But also:
+- "لوحة التحكم" in breadcrumb must be clickable
+- the dashboard nav must already visibly indicate the user is inside dashboard
+- the profile tab should appear as one dashboard section, not a disconnected page
+
+==================================================
+4) DASHBOARD NAVIGATION REDESIGN
+==================================================
+
+Redesign dashboard navigation professionally.
+
+Preferred approach:
+A) Top dashboard sub-navigation OR
+B) Sidebar navigation for dashboard
+
+Choose whichever best fits current architecture, but it must feel like a real SaaS dashboard.
+
+Requirements:
+- include "لوحة التحكم" as the parent destination
+- include "الملف الشخصي" clearly
+- use icons consistently
+- active section must be visually obvious
+- improve spacing, grouping, and clarity
+- Arabic RTL layout must remain correct
+
+==================================================
+5) DASHBOARD HOME PAGE
+==================================================
+
+If /dashboard does not yet have a proper landing page, create/improve it.
+
+The dashboard home should act as the parent page and contain:
+- welcome header
+- summary cards / KPIs if available
+- shortcuts to:
+  - الملف الشخصي
+  - الطلبات
+  - المشاريع
+  - الإيجار اليومي
+  - الإعدادات
+
+This makes "لوحة التحكم" a real clickable destination.
+
+==================================================
+6) IMPROVE PROFILE PAGE HEADER
+==================================================
+
+On the profile page, update the page header to make the hierarchy obvious:
+- main context: لوحة التحكم
+- current section: الملف الشخصي
+
+Possible structure:
+- page title: الملف الشخصي
+- subtitle or breadcrumb: ضمن لوحة التحكم
+
+Or:
+- breadcrumb: لوحة التحكم / الملف الشخصي
+
+Make it visually polished and professional.
+
+==================================================
+7) REMOVE CONFUSING DUPLICATION
+==================================================
+
+Audit current navigation and remove confusing duplicated tabs/links if they make the hierarchy unclear.
+
+The user should instantly understand:
+- they are inside dashboard
+- profile is one section of dashboard
+- dashboard itself is clickable and visible
+
+==================================================
+8) UX IMPROVEMENTS
+==================================================
+
+Make the dashboard navigation feel more premium:
+- proper icons for dashboard sections
+- consistent active indicator
+- better spacing
+- cleaner typography
+- no ambiguous breadcrumb-only navigation
+- no hidden dashboard identity
+
+==================================================
+9) ROUTING AND ACTIVE STATES
+==================================================
+
+Ensure:
+- /dashboard → active "لوحة التحكم"
+- /dashboard/profile → active "الملف الشخصي" and dashboard context visible
+- /dashboard/requests → active "الطلبات"
+- /dashboard/projects → active "المشاريع"
+
+==================================================
+10) DELIVERABLES
+==================================================
+
+Please implement and report:
+1. what navigation structure was chosen (top nav or sidebar)
+2. where "لوحة التحكم" was added
+3. how "الملف الشخصي" was made a subsection of dashboard
+4. which files/components were changed
+5. how active states and breadcrumb behavior now work

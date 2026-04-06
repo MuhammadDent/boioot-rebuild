@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "soK78i7NANTO6Q1hVciV5"
+uri = "file://boioot/docs/technical-overview.md"
+type = "text"
+title = "الوثيقة التقنية الشاملة — منصة بيوت"

@@ -1,0 +1,144 @@
+We are now moving to Phase 3B — Feature Enforcement Engine.
+
+The subscription system is now fully ready with:
+- features
+- limits
+- policies
+- status handling
+- expiry logic
+
+Now we must START USING IT across the system.
+
+IMPORTANT:
+Do NOT modify subscription logic.
+Do NOT change database structure.
+We will ONLY integrate enforcement into business logic.
+
+---
+
+GOAL:
+
+Enforce plan capabilities across the platform:
+- features (boolean)
+- limits (numeric)
+- policies (access rules)
+
+---
+
+1) Create centralized access helper
+
+Create a service:
+
+ICurrentUserCapabilities
+
+Methods:
+
+- hasFeature(key)
+- getLimit(key)
+- canUseFeature(key)
+- assertFeature(key)
+- assertLimit(key, currentUsage)
+
+---
+
+2) Listing system enforcement
+
+Apply rules:
+
+- listing_publish → must be true
+- max_active_listings → limit check
+- image_gallery_enabled → allow images
+- video_upload → allow video
+- 360_view_enabled → allow 360
+
+If violated:
+- return proper error message
+- do NOT allow operation
+
+---
+
+3) CRM / messaging enforcement
+
+- max_conversations
+- lead_tracking
+- lead_assignment
+
+Block or limit usage accordingly
+
+---
+
+4) Analytics enforcement
+
+- analytics_dashboard
+- advanced_reports
+
+Hide or block endpoints if not allowed
+
+---
+
+5) Policy enforcement
+
+VERY IMPORTANT:
+
+Use policies:
+
+- if policy = admin_only → block user action
+- if policy = self_service → allow UI
+- if policy = open → always allow
+
+---
+
+6) UI integration (light)
+
+Frontend should:
+
+- hide unavailable features
+- disable buttons when limit reached
+- show upgrade prompts
+
+---
+
+7) Error handling
+
+Standardize errors:
+
+- "Feature not available in your plan"
+- "Limit reached: upgrade required"
+- "This feature requires admin activation"
+
+---
+
+8) Logging (important)
+
+Log:
+
+- feature blocked
+- limit exceeded
+- policy denied
+
+---
+
+9) Test scenarios
+
+1. Free user tries to publish listing → blocked
+2. Basic user exceeds max listings → blocked
+3. Pro user uploads video → allowed
+4. Feature with admin_only policy → blocked
+5. Limit usage tracked correctly
+
+---
+
+DELIVERABLE:
+
+- enforcement service
+- updated listing logic
+- updated messaging logic
+- updated API guards
+- sample error responses
+- test results
+
+IMPORTANT:
+
+This is the most critical phase.
+
+After this, the system becomes a real SaaS product.

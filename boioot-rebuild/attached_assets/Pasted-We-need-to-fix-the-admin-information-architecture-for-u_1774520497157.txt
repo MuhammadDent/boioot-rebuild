@@ -1,0 +1,102 @@
+We need to fix the admin information architecture for users, brokers, and companies.
+
+CURRENT PROBLEM
+The admin UI has separated Users, Brokers, and Companies in a confusing way.
+This creates the wrong impression that brokers and companies are parallel to users,
+while in fact brokers are users with a specific role, and companies are business entities linked to users.
+
+GOAL
+Refactor the admin structure so that:
+- Users remain the master people directory
+- Brokers are treated as a filtered user view, not a completely separate entity
+- Companies remain a separate business entity page, but clearly linked to users
+
+TARGET MODEL
+
+1) Users
+Users are the master entity for all human accounts:
+- Admin
+- Seeker
+- Owner
+- Broker
+- CompanyOwner
+- Staff
+
+2) Brokers
+Brokers must NOT be treated as a separate core entity page unless there is a specific business reason.
+They should be represented as:
+- a tab inside Users
+or
+- a saved filter/view where role = Broker
+
+3) Companies
+Companies are separate business entities, not just user roles.
+A company page is valid, but it must be clearly linked to:
+- company owner user
+- broker/agent users
+- staff users
+- listings/projects/subscription
+
+REQUIRED CHANGES
+
+1. Admin navigation cleanup
+- Keep "Users" as the primary people management page
+- Remove or downgrade "Brokers" as a standalone top-level section
+- If needed, convert "Brokers" into:
+  - a tab under Users
+  OR
+  - a quick filter / saved segment inside Users
+
+2. Users page improvement
+- Add tabs or quick filters for:
+  - All Users
+  - Seekers
+  - Owners
+  - Brokers
+  - Company Owners
+  - Admin/Staff
+- All of these must come from the same user source
+- Do not create separate disconnected data models for brokers
+
+3. Companies page improvement
+- Keep Companies as a separate section
+- Each company details page should show:
+  - company owner
+  - linked brokers/agents
+  - linked staff
+  - subscription
+  - listings count
+  - projects count
+  - verification status
+
+4. Relationship clarity
+- Add clear relational links:
+  - user belongs to company (optional)
+  - company has owner user
+  - company has broker/staff members
+- In user detail page, show:
+  - role
+  - linked company (if any)
+- In company detail page, show linked users
+
+5. Data model rules
+- Broker is a user role, not an independent entity
+- Company is a business entity, not a replacement for users
+- Do not duplicate records or create parallel admin logic unnecessarily
+
+6. UX goal
+The admin should understand the structure instantly:
+- Users = people/accounts
+- Companies = organizations
+- Brokers = filtered user type
+
+DELIVERABLES
+- Refactor the admin navigation
+- Refactor the users page tabs/filters
+- Keep companies page but make relationships explicit
+- Explain what was changed in the data model and UI structure
+
+IMPORTANT
+Do not break existing data.
+Do not create duplicate tables unless strictly necessary.
+Prefer filtered views over unnecessary separate modules.

@@ -1,0 +1,220 @@
+نعم، أريد تنفيذ المرحلة الأولى الآن فقط، بشكل Production-safe وبدون فتح مراحل أخرى قبل إنهائها.
+
+========================================
+PHASE 1 ONLY
+Plan Limits + Lead Unlock + Upsell Modal
+========================================
+
+الهدف:
+تنفيذ أول طبقة ربح وتشغيل حقيقي مرتبطة بالباقات الحالية، بدون تنفيذ Featured Listings أو Boost الآن.
+
+نفّذ فقط هذه العناصر:
+
+1) PLAN LIMIT ENFORCEMENT
+طبّق limits الباقات الحالية على حسابات المكتب فقط في هذه المرحلة:
+
+المفاتيح المطلوبة:
+- listing_limit
+- agents_limit
+- conversation_limit
+- monthly_lead_unlocks
+
+القيم الحالية:
+- office_free:
+  - listing_limit = 3
+  - agents_limit = 1
+  - conversation_limit = 10
+  - monthly_lead_unlocks = 0
+
+- office_basic:
+  - listing_limit = 20
+  - agents_limit = 5
+  - conversation_limit = 50
+  - monthly_lead_unlocks = 10
+
+- office_advanced:
+  - listing_limit = unlimited
+  - agents_limit = 20
+  - conversation_limit = unlimited
+  - monthly_lead_unlocks = unlimited
+
+مهم:
+- unlimited لا تمثلها بـ 9999 إذا كان بالإمكان استخدام null أو -1 بشكل أنظف
+- طبّق التحقق في backend أولًا ثم frontend
+
+========================================
+2) ENFORCE LIMITS IN REAL FLOWS
+========================================
+
+طبّق التحقق الفعلي في هذه السيناريوهات فقط:
+
+A) عند محاولة إضافة إعلان جديد
+إذا تجاوز المستخدم listing_limit:
+- أرجع HTTP 422
+- code = PLAN_LIMIT_EXCEEDED
+- limitKey = listing_limit
+- currentValue
+- planLimit
+- suggestedPlanCode
+- message عربي واضح
+
+B) عند محاولة إضافة وكيل جديد
+إذا تجاوز agents_limit:
+- نفس صيغة 422
+
+C) عند محاولة بدء/إنشاء محادثة داخلية جديدة
+إذا تجاوز conversation_limit:
+- نفس صيغة 422
+
+D) عند محاولة كشف بيانات التواصل
+إذا تجاوز monthly_lead_unlocks:
+- نفس صيغة 422
+
+========================================
+3) LEAD UNLOCK - PHASE 1
+========================================
+
+نفّذ Lead Unlock بشكل أساسي وعملي فقط:
+
+السلوك المطلوب:
+- بيانات التواصل تكون مخفية افتراضيًا حسب منطق المنتج
+- عند محاولة المستخدم كشف بيانات التواصل:
+  - إذا كانت الباقة تسمح وكان لديه رصيد unlock متاح لهذا الشهر:
+    - يتم الخصم
+    - يتم تسجيل العملية
+    - تظهر البيانات
+  - إذا لا يوجد رصيد:
+    - أرجع 422 مع suggestedPlanCode مناسب
+
+المطلوب في قاعدة البيانات:
+أنشئ جدولًا واضحًا لتسجيل عمليات فتح بيانات التواصل، مثل:
+- Id
+- UnlockerAccountId
+- PropertyId
+- UnlockType
+- UnlockedAt
+- ExpiresAt nullable
+- PricePaid optional
+- CreatedAt
+
+لا تبالغ في التعقيد الآن.
+نريد تنفيذًا بسيطًا وقابلًا للتوسع.
+
+========================================
+4) UPSELL MODAL
+========================================
+
+طبّق Upsell Modal في الواجهة عندما يرجع backend خطأ:
+HTTP 422 + code = PLAN_LIMIT_EXCEEDED
+
+السلوك المطلوب:
+- frontend يلتقط الاستجابة
+- يفتح Upsell Modal
+- يعرض:
+  - الحد الذي تم الوصول إليه
+  - الباقة الحالية
+  - الباقة المقترحة suggestedPlanCode
+  - مقارنة مختصرة وواضحة بين الباقتين
+  - CTA واضح: "ترقية الآن"
+
+عند الضغط على "ترقية الآن":
+- الانتقال إلى:
+  /dashboard/subscription/plans
+- مع preselect للخطة المقترحة إن أمكن
+
+========================================
+5) MONTHLY USAGE TRACKING
+========================================
+
+أريد طريقة واضحة لحساب الاستهلاك الشهري لـ:
+- monthly_lead_unlocks
+
+يمكنك تنفيذها بأحد الخيارين:
+- usage table
+- أو query محسوبة من سجل العمليات
+لكن اختر الطريقة الأنظف والأبسط للصيانة
+
+مهم:
+- الحساب يكون شهريًا
+- reset تلقائي حسب الشهر
+- لا تعتمد على عداد static غير موثوق
+
+========================================
+6) BACKEND RESPONSE CONTRACT
+========================================
+
+اعتمد هذا الشكل المعياري تقريبًا عند تجاوز الحد:
+
+HTTP 422
+{
+  "code": "PLAN_LIMIT_EXCEEDED",
+  "limitKey": "listing_limit",
+  "currentValue": 3,
+  "planLimit": 3,
+  "suggestedPlanCode": "office_basic",
+  "message": "وصلت إلى الحد الأقصى لإعلاناتك في هذه الباقة"
+}
+
+طبّق نفس الهيكل على:
+- listing_limit
+- agents_limit
+- conversation_limit
+- monthly_lead_unlocks
+
+========================================
+7) FRONTEND INTEGRATION
+========================================
+
+طبّق التكامل في الأماكن الفعلية التالية فقط إن كانت موجودة:
+- إضافة إعلان
+- إضافة وكيل
+- إنشاء محادثة
+- كشف بيانات التواصل
+
+ولا تبدأ أي تحسينات تجميلية كبيرة الآن.
+الأولوية للمنطق الصحيح.
+
+========================================
+8) OUT OF SCOPE FOR THIS PHASE
+========================================
+
+لا تنفّذ الآن:
+- Featured Listings
+- Boost
+- Wallet
+- Credits system
+- Advanced monetization bundles
+- Public pricing redesign
+- Admin monetization dashboards
+
+هذه خارج المرحلة الحالية.
+
+========================================
+9) IMPORTANT IMPLEMENTATION RULES
+========================================
+
+- لا تكسر نظام الاشتراكات الحالي
+- لا تغيّر role-plan isolation
+- لا تفتح منطق الباقات لغير office في هذه المرحلة
+- اجعل التنفيذ متوافقًا مع البنية الحالية
+- إذا احتجت migration جديدة، اجعلها نظيفة
+- إذا كان هناك مخطط موجود مثل LimitDefinitions / FeatureDefinitions فاستفد منه بدل التكرار
+- أصلح backend أولًا ثم frontend
+- لا تعمل mock فقط، أريد تنفيذًا فعليًا end-to-end
+
+========================================
+10) DELIVERABLES
+========================================
+
+بعد التنفيذ أريد منك أن ترجع لي:
+
+1. ما الملفات التي تم تعديلها
+2. ما الجداول أو migrations التي أضيفت
+3. أين تم فرض كل limit
+4. كيف تم حساب monthly usage
+5. كيف يعمل Upsell Modal
+6. ما السيناريوهات التي تم اختبارها
+7. هل المرحلة الأولى أصبحت مكتملة بالكامل أم بقيت نقاط معلقة
+
+ابدأ الآن بتنفيذ PHASE 1 ONLY.
+لا تنتقل إلى Featured أو Boost قبل إنهاء هذه المرحلة.

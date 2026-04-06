@@ -1,0 +1,356 @@
+الهيكل الكامل للمشروع
+
+أفضل طريقة لتنظيم المشروع هي أن يكون لدينا مستودع واحد يحتوي على:
+
+boioot/
+│
+├── backend/
+├── frontend/
+├── docs/
+├── scripts/
+├── docker/
+│
+├── .env.example
+└── README.md
+شرح المجلدات
+
+backend
+
+هنا مشروع ASP.NET Core API
+
+frontend
+
+هنا مشروع Next.js
+
+docs
+
+لتوثيق المشروع مثل:
+
+architecture
+
+database schema
+
+API docs
+
+scripts
+
+سكريبتات مساعدة مثل:
+
+seed database
+
+backup
+
+docker
+
+إذا أردت تشغيل النظام لاحقًا باستخدام Docker.
+
+ثانيًا: Project Structure للـ Backend
+
+نستخدم Clean Architecture + Modular Monolith
+
+backend/
+│
+├── src/
+│
+│   ├── Boioot.API
+│   ├── Boioot.Application
+│   ├── Boioot.Domain
+│   ├── Boioot.Infrastructure
+│   └── Boioot.Shared
+│
+└── tests/
+1️⃣ Boioot.API
+
+هذا هو مشروع Web API.
+
+Boioot.API/
+│
+├── Controllers/
+├── Middleware/
+├── Filters/
+├── Extensions/
+├── Configurations/
+│
+├── Program.cs
+├── appsettings.json
+└── appsettings.Development.json
+Controllers المقترحة
+Controllers/
+│
+├── AuthController.cs
+├── UsersController.cs
+├── PropertiesController.cs
+├── ProjectsController.cs
+├── RequestsController.cs
+├── AgentsController.cs
+├── CompaniesController.cs
+├── ReviewsController.cs
+├── FavoritesController.cs
+├── MessagesController.cs
+├── BlogController.cs
+└── AdminController.cs
+2️⃣ Boioot.Domain
+
+هذه الطبقة تحتوي الكيانات الأساسية للنظام.
+
+Boioot.Domain/
+│
+├── Entities/
+├── Enums/
+├── ValueObjects/
+├── Common/
+└── Events/
+Entities
+Entities/
+│
+├── User.cs
+├── Role.cs
+├── Company.cs
+├── Agent.cs
+├── Property.cs
+├── PropertyImage.cs
+├── PropertyFeature.cs
+├── Project.cs
+├── ProjectUnit.cs
+├── PropertyRequest.cs
+├── RequestResponse.cs
+├── Review.cs
+├── Favorite.cs
+├── Conversation.cs
+├── Message.cs
+├── BlogPost.cs
+├── BlogCategory.cs
+└── Notification.cs
+3️⃣ Boioot.Application
+
+هنا يوجد منطق التطبيق الحقيقي.
+
+Boioot.Application/
+│
+├── Interfaces/
+├── Services/
+├── DTOs/
+├── Validators/
+├── Mappings/
+├── Responses/
+├── Helpers/
+└── Exceptions/
+Interfaces
+Interfaces/
+│
+├── IAuthService.cs
+├── IUserService.cs
+├── IPropertyService.cs
+├── IProjectService.cs
+├── IRequestService.cs
+├── IAgentService.cs
+├── ICompanyService.cs
+├── IReviewService.cs
+├── IMessageService.cs
+├── IBlogService.cs
+└── INotificationService.cs
+Services
+Services/
+│
+├── AuthService.cs
+├── UserService.cs
+├── PropertyService.cs
+├── ProjectService.cs
+├── RequestService.cs
+├── CompanyService.cs
+├── AgentService.cs
+├── ReviewService.cs
+├── MessageService.cs
+├── BlogService.cs
+└── NotificationService.cs
+DTOs
+DTOs/
+│
+├── Auth/
+├── Users/
+├── Properties/
+├── Projects/
+├── Requests/
+├── Agents/
+├── Companies/
+├── Reviews/
+├── Favorites/
+├── Messages/
+└── Blog/
+
+مثال:
+
+DTOs/Properties/
+│
+├── CreatePropertyDto.cs
+├── UpdatePropertyDto.cs
+├── PropertyDetailsDto.cs
+├── PropertyListItemDto.cs
+└── PropertyFilterDto.cs
+4️⃣ Boioot.Infrastructure
+
+هذه الطبقة مسؤولة عن التعامل مع:
+
+قاعدة البيانات
+
+التخزين
+
+البحث
+
+الخدمات الخارجية
+
+Boioot.Infrastructure/
+│
+├── Persistence/
+├── Repositories/
+├── Storage/
+├── Search/
+├── Caching/
+├── Notifications/
+└── DependencyInjection/
+Persistence
+Persistence/
+│
+├── ApplicationDbContext.cs
+└── Configurations/
+Configurations
+Configurations/
+│
+├── UserConfiguration.cs
+├── CompanyConfiguration.cs
+├── AgentConfiguration.cs
+├── PropertyConfiguration.cs
+├── ProjectConfiguration.cs
+├── RequestConfiguration.cs
+├── ReviewConfiguration.cs
+└── MessageConfiguration.cs
+5️⃣ Boioot.Shared
+
+هذه للأشياء المشتركة.
+
+Boioot.Shared/
+│
+├── Constants/
+├── Models/
+├── Results/
+└── Extensions/
+
+مثال:
+
+Results/
+├── Result.cs
+├── ResultT.cs
+└── PagedResult.cs
+ثالثًا: Project Structure للـ Frontend
+
+نستخدم Next.js + App Router.
+
+frontend/
+│
+├── public/
+├── src/
+│
+│   ├── app/
+│   ├── components/
+│   ├── features/
+│   ├── services/
+│   ├── hooks/
+│   ├── store/
+│   ├── types/
+│   ├── utils/
+│   ├── constants/
+│   ├── locales/
+│   └── styles/
+هيكل الصفحات
+app/
+└── [locale]/
+│
+├── page.tsx
+├── layout.tsx
+│
+├── properties/
+├── projects/
+├── requests/
+├── companies/
+├── agents/
+├── blog/
+│
+├── auth/
+│
+├── profile/
+├── favorites/
+├── messages/
+│
+├── dashboard/
+│
+└── admin/
+تقسيم features
+features/
+│
+├── auth/
+├── properties/
+├── projects/
+├── requests/
+├── companies/
+├── agents/
+├── reviews/
+├── favorites/
+├── messaging/
+├── blog/
+├── dashboard/
+└── admin/
+مثال Feature
+features/properties/
+│
+├── components/
+├── api/
+├── hooks/
+├── types/
+├── utils/
+└── validations/
+رابعًا: لماذا هذا الهيكل مهم؟
+
+لأنه يمنع:
+
+❌ فوضى الكود
+❌ صعوبة إضافة ميزات
+❌ تضخم الملفات
+
+ويجعل المشروع:
+
+✔ قابل للتوسع
+✔ منظم
+✔ سهل الصيانة
+✔ مناسب لفريق كبير لاحقًا
+
+خلاصة Project Structure
+Backend
+API
+Application
+Domain
+Infrastructure
+Shared
+Frontend
+app
+components
+features
+services
+hooks
+store
+أهم قاعدة
+
+كل Feature في المشروع لها:
+
+Entities
+
+DTOs
+
+Services
+
+Controllers
+
+Frontend components
+
+مثال:
+
+Property Module

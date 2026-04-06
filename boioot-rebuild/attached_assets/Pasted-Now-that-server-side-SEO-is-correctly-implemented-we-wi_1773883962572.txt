@@ -1,0 +1,98 @@
+Now that server-side SEO is correctly implemented, we will build the full Advanced SEO System.
+
+This is a core SaaS feature, so implement it with clean architecture.
+
+Goal:
+Create a dynamic SEO system with per-post control, global templates, and variable resolution.
+
+========================
+PHASE: SEO SYSTEM CORE
+========================
+
+1) Extend blog post model:
+
+Add fields:
+- seoMode (Auto | Template | Custom)
+- customMetaTitle
+- customMetaDescription
+- customOgTitle
+- customOgDescription
+
+2) Global SEO settings:
+
+Create a global settings structure (DB or config):
+- defaultTitleTemplate
+- defaultMetaDescriptionTemplate
+- defaultOgTitleTemplate
+- defaultOgDescriptionTemplate
+- siteName
+
+Example template:
+"{PostTitle} | {SiteName}"
+
+3) Create SEO Resolver Service (IMPORTANT):
+
+This service must:
+- Accept a blog post + global settings
+- Return final SEO values
+
+Modes:
+
+AUTO:
+- title = post.title + siteName
+- description = excerpt or fallback
+
+TEMPLATE:
+- Use global templates
+- Replace variables dynamically
+
+CUSTOM:
+- Use custom fields from post
+- Fallback to AUTO if missing values
+
+4) Variable system:
+
+Support:
+- {PostTitle}
+- {Excerpt}
+- {Category}
+- {SiteName}
+- {AuthorName}
+- {PublishDate}
+
+Implement a clean variable parser function.
+
+5) Fallback rules:
+
+- Never return empty title or description
+- Always fallback to safe defaults
+
+6) Integrate with Next.js metadata:
+
+- Replace current basic metadata logic
+- Use SEO Resolver output instead
+- Keep everything server-side
+
+7) Architecture rules:
+
+- No duplication of SEO logic in frontend
+- Resolver must be reusable later for:
+  - Admin preview
+  - Other pages (projects, properties)
+
+8) Do NOT build full admin UI yet
+
+Only:
+- Backend logic
+- Model updates
+- Metadata integration
+
+Deliver:
+- Updated models
+- SEO resolver service
+- Variable parser
+- Updated metadata logic
+- Summary of implementation
+
+Important:
+Keep code clean, modular, and production-grade.

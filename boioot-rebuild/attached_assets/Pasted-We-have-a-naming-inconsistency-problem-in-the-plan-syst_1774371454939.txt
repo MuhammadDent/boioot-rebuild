@@ -1,0 +1,180 @@
+We have a naming inconsistency problem in the plan system.
+
+The current plan names shown in UI/database do NOT match the official business plan structure requested.
+
+We need to normalize the plan naming model across database, admin UI, pricing UI, and future billing logic.
+
+========================================
+GOAL
+========================================
+
+Unify all plan names using a proper SaaS naming structure.
+
+Do NOT keep random names like:
+- Silver
+- BrokerPremium
+- broker_premium
+unless they are mapped properly as internal codes only.
+
+========================================
+OFFICIAL PLAN STRUCTURE
+========================================
+
+Public/business plans should be:
+
+1) Seeker (General User)
+- seeker_free → مجاني (للباحث)
+- seeker_advanced → متقدم (للباحث)
+
+2) Owner
+- owner_free → مالك - مجاني
+- owner_basic → مالك - أساسي
+- owner_advanced → مالك - متقدم
+
+3) Broker
+- broker_free → وسيط - مجاني
+- broker_basic → وسيط - أساسي
+- broker_advanced → وسيط - متقدم
+
+4) Office
+- office_free → مكتب عقاري - مجاني
+- office_basic → مكتب عقاري - أساسي
+- office_advanced → مكتب عقاري - متقدم
+
+5) Company
+- company_enterprise → شركة - مؤسسي
+
+========================================
+NAMING RULES
+========================================
+
+- code → English (stable, used in backend, billing, logic)
+- displayNameAr → Arabic (PRIMARY, used in UI)
+- displayNameEn → English (secondary, for future localization)
+
+Arabic is the main user-facing language.
+
+========================================
+REQUIRED CHANGES
+========================================
+
+1) Separate internal code from display name
+
+Each plan must support:
+
+- code (string, unique, immutable)
+- displayNameAr (string, primary UI label)
+- displayNameEn (string, optional)
+- audienceType (seeker / owner / broker / office / company)
+- tier (free / basic / advanced / enterprise)
+- sortOrder (int)
+- isPublic (boolean)
+
+----------------------------------------
+
+2) Database cleanup / migration
+
+- Review all existing plans
+- Map old plans into the new official structure
+
+Examples:
+- broker_premium → broker_advanced
+- silver → either deprecated or mapped if clearly equivalent
+
+Rules:
+- Do NOT lose existing feature/limit relations
+- Preserve plan IDs if possible
+- If not possible → create a safe migration mapping
+
+----------------------------------------
+
+3) Admin UI
+
+- Show displayNameAr as the main visible name
+- Show code as a small secondary technical label
+- NEVER show raw code (like broker_basic) as the main title
+
+Add:
+- audience badge (مالك / وسيط / مكتب / شركة / باحث)
+- tier badge (مجاني / أساسي / متقدم / مؤسسي)
+
+----------------------------------------
+
+4) Pricing UI (Public)
+
+- Must display ONLY displayNameAr
+- Group plans by audienceType
+- Highlight higher tiers (advanced / enterprise)
+
+----------------------------------------
+
+5) Matrix / Feature Mapping
+
+- Ensure ALL feature + limit relations remain correctly linked after renaming/migration
+- No data loss
+- No broken references
+
+----------------------------------------
+
+6) Validation Rules
+
+Prevent future inconsistency:
+
+- Admin must NOT create random plan names
+- Plan creation must follow:
+  - predefined audienceType
+  - predefined tier
+
+Allowed tiers:
+- free
+- basic
+- advanced
+- enterprise
+
+----------------------------------------
+
+7) Sorting Logic
+
+Plans must be ordered like:
+
+Seeker:
+- free → advanced
+
+Owner / Broker / Office:
+- free → basic → advanced
+
+Company:
+- enterprise only
+
+----------------------------------------
+
+EXPECTED RESULT
+========================================
+
+- Clean, business-ready SaaS plan naming
+- Arabic-first UI with proper display names
+- Stable internal English codes
+- Fully consistent naming across:
+  - Database
+  - Admin UI
+  - Pricing pages
+  - Future billing system
+
+========================================
+IMPORTANT
+========================================
+
+This is NOT a cosmetic rename.
+
+This is a structural SaaS normalization task.
+
+You must:
+- review backend models
+- update DTOs
+- adjust admin UI
+- update seed data
+
+DO NOT break:
+- feature matrix
+- plan relations
+- existing limits

@@ -1,0 +1,105 @@
+We need to redesign the two main CTA buttons in the header:
+
+- أضف إعلانك
+- أضف طلب
+
+==================================================
+GOAL
+==================================================
+
+Make both buttons look more premium, modern, and professional.
+Also add a clear "+" icon to both buttons.
+
+The current design is too basic and does not feel like a polished marketplace/SaaS product.
+
+==================================================
+DESIGN DIRECTION
+==================================================
+
+Create a more refined CTA style with:
+
+- rounded modern pill / semi-pill shape
+- better spacing and padding
+- visible + icon at the start of the label
+- stronger visual hierarchy
+- elegant hover and active states
+- subtle shadow or depth
+- more premium typography treatment
+- balanced RTL alignment
+
+These buttons should feel like important primary actions in a real estate marketplace.
+
+==================================================
+BUTTONS
+==================================================
+
+1. Add Listing button
+Label:
++ أضف إعلانك
+
+2. Add Request button
+Label:
++ أضف طلب
+
+==================================================
+VISUAL REQUIREMENTS
+==================================================
+
+- Keep Arabic RTL support
+- The "+" should appear visually integrated, not like plain text only
+- Prefer using an icon container or styled plus mark
+- Make the two buttons consistent as a pair, but visually distinguish them slightly
+
+Recommended:
+- "أضف إعلانك" = stronger primary green emphasis
+- "أضف طلب" = secondary but still premium action
+
+==================================================
+STYLE DETAILS
+==================================================
+
+Please improve:
+- height
+- horizontal padding
+- border radius
+- icon/text gap
+- hover transitions
+- focus state
+- shadow
+- background treatment
+
+Possible premium patterns:
+- soft gradient or layered green for primary
+- outlined / tinted style for secondary
+- icon bubble/circle inside the button
+- subtle lift on hover
+
+==================================================
+INTERACTION
+==================================================
+
+Keep existing behavior unchanged:
+- protected action logic
+- auth modal behavior
+- click handlers
+- routing
+
+Only improve visual design and add the + icon.
+
+==================================================
+IMPLEMENTATION REQUIREMENTS
+==================================================
+
+- Refactor both buttons into a reusable CTA style if appropriate
+- Do not break the current JSX structure
+- Keep the buttons responsive
+- Ensure they still look good in the header on desktop and mobile
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+1. updated JSX for the two buttons
+2. updated shared styles/classes
+3. brief note on the visual design choices

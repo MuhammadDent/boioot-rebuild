@@ -1,0 +1,109 @@
+We need to upgrade the Profile page UI in the dashboard.
+
+IMPORTANT:
+- This is a UI/Frontend enhancement ONLY
+- Do NOT modify business logic or backend
+- Use mock/static data for now (we will connect APIs later)
+
+==================================================
+GOAL
+==================================================
+
+Transform the profile page into a SaaS-style performance dashboard.
+
+The profile should display key metrics about the user/business.
+
+==================================================
+REQUIRED METRICS
+==================================================
+
+1) Business Metrics:
+- Number of deals (عدد الصفقات)
+- Number of managed properties (عدد العقارات)
+- Number of published listings (عدد الإعلانات)
+- Remaining listings quota (الإعلانات المتبقية حسب الباقة)
+
+2) Activity Metrics:
+- Number of received requests (عدد الطلبات)
+- Number of chat messages (عدد الرسائل)
+- Conversations archive count (أرشيف المحادثات)
+
+3) Team & Reputation:
+- Number of agents (عدد الوكلاء)
+- User rating (average rating + number of reviews)
+
+==================================================
+UI REQUIREMENTS
+==================================================
+
+- Use clean card-based design
+- Use responsive grid layout
+- Support RTL (Arabic)
+- Use icons for each metric (lucide-react)
+- Each metric should be inside a card:
+  - Title
+  - Value (big number)
+  - Optional subtitle
+
+- Use sections:
+  1) Business Metrics
+  2) Activity Metrics
+  3) Team & Rating
+
+- Make it look like a professional SaaS dashboard
+
+==================================================
+DESIGN DETAILS
+==================================================
+
+- Grid:
+  grid-cols-2 (mobile)
+  sm:grid-cols-3
+  lg:grid-cols-4
+
+- Card style:
+  rounded-2xl
+  shadow-sm
+  border
+  p-4 or p-5
+
+- Numbers:
+  large font (text-2xl or text-3xl)
+  bold
+
+- Colors:
+  use subtle color accents (green / blue / purple)
+  but keep it minimal and professional
+
+==================================================
+COMPONENT STRUCTURE
+==================================================
+
+Create reusable component:
+
+components/dashboard/StatCard.tsx
+
+Props:
+- title
+- value
+- icon
+- subtitle (optional)
+
+==================================================
+INTEGRATION
+==================================================
+
+- Place the new sections BELOW profile header
+- Do NOT remove existing profile info card
+- Keep everything clean and modular
+
+==================================================
+IMPORTANT
+==================================================
+
+- No backend changes
+- No API calls yet
+- Use mock data
+- Focus on UI quality and scalability
+
+This should look like a modern SaaS admin dashboard (similar to Stripe / Notion / HubSpot style).

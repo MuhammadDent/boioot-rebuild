@@ -1,0 +1,122 @@
+The location filters are still broken after multiple attempts.
+
+Current problems:
+1. The governorate filter shows no values
+2. The neighborhood/district filter is NOT dependent on the selected city
+3. The filtering logic is still not working as required
+
+IMPORTANT:
+Do NOT make more cosmetic UI changes.
+Do NOT just tweak select components.
+This is now a data-model + filter-logic debugging task.
+
+==================================================
+GOAL
+==================================================
+
+Fix the location filter system properly so that:
+
+- Governorate filter shows real values
+- City filter shows real values
+- Neighborhood/district filter depends on selected city
+- All options come from the correct raw dataset
+- Filtering actually works
+
+==================================================
+DEBUG TASK (MANDATORY)
+==================================================
+
+Inspect the raw property data structure first and report clearly:
+
+1. Which field contains governorate/province?
+2. Which field contains city?
+3. Which field contains district/neighborhood?
+4. Are these fields missing, null, or inconsistently named?
+5. Are some values mixed incorrectly? (for example district stored as city)
+
+Do NOT continue implementation until this is identified.
+
+==================================================
+REFACTOR REQUIREMENTS
+==================================================
+
+1. Build filter options ONLY from the full raw properties dataset
+   - not filteredProperties
+   - not visible cards
+   - not hardcoded values
+
+2. Normalize the location fields if needed:
+   - governorate
+   - city
+   - district
+
+3. Generate:
+   - governorateOptions from raw dataset
+   - cityOptions from raw dataset
+   - districtOptions from raw dataset, but filtered by selected city (and governorate if applicable)
+
+4. Dependency logic:
+   - if governorate changes -> city options update
+   - if city changes -> district options update
+   - if selected district is no longer valid -> reset it
+   - if selected city is no longer valid after governorate change -> reset it safely
+
+==================================================
+EXPECTED FILTER HIERARCHY
+==================================================
+
+At minimum:
+- المحافظة
+- المدينة
+- الحي / المنطقة
+
+Behavior:
+- محافظة selected -> only matching cities appear
+- مدينة selected -> only matching neighborhoods appear
+
+==================================================
+IMPLEMENTATION DETAILS
+==================================================
+
+Please implement this with derived memoized options, for example:
+- rawProperties
+- selectedGovernorate
+- selectedCity
+
+And derive:
+- governorateOptions
+- cityOptions
+- districtOptions
+
+Use stable normalized string comparison and remove duplicates.
+
+==================================================
+TEMPORARY DEBUG OUTPUT
+==================================================
+
+Temporarily add a debug block at the top of the page showing:
+- rawProperties count
+- governorateOptions count
+- cityOptions count
+- districtOptions count
+- selectedGovernorate
+- selectedCity
+- selectedDistrict
+
+This is temporary and should help confirm the logic is actually working.
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT say "done" unless:
+- governorate dropdown actually contains values
+- city dropdown actually updates
+- district dropdown actually depends on selected city
+- filters actually change the property results
+
+After fixing, report:
+1. the exact raw field names used
+2. whether the dataset had missing governorate data
+3. what the root cause was
+4. which file contains the final filter logic

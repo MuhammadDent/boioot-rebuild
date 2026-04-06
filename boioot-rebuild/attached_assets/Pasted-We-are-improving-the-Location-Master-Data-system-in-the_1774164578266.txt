@@ -1,0 +1,293 @@
+We are improving the Location Master Data system in the Boioot real estate SaaS platform.
+
+IMPORTANT:
+This is not a quick UI-only change.
+I want a proper production-ready implementation.
+Inspect the current codebase first, then implement cleanly without breaking existing flows.
+
+==================================================
+GOAL
+==================================================
+
+Prevent messy and duplicate city/district entries when users add new locations.
+
+Examples of duplicate problems we must prevent:
+- هفوف
+- الهفوف
+- الهَفوف
+-   الهفوف
+- حي-الروضة
+- حي الروضة
+
+We need a robust Location Master Data strategy with:
+1) Strict normalize for real duplicate prevention
+2) Soft normalize for smart suggestions
+3) Unique index in the database
+4) Always store DisplayName + NormalizedName
+
+==================================================
+REQUIRED DATA MODEL CHANGES
+==================================================
+
+For location master data entities (at minimum Cities and Districts), use this pattern:
+
+- Id
+- DisplayName
+- NormalizedName
+
+And keep proper parent relations:
+- City belongs to Governorate
+- District belongs to City
+
+If not already present, structure the entities properly:
+- Governorate
+- City
+- District
+
+Cities must belong to a Governorate.
+Districts must belong to a City.
+
+==================================================
+REQUIRED DATABASE RULES
+==================================================
+
+Add uniqueness constraints at database level:
+
+1) Cities:
+Unique by:
+(GovernorateId, NormalizedName)
+
+2) Districts:
+Unique by:
+(CityId, NormalizedName)
+
+This must be enforced in the database, not only in frontend validation.
+
+==================================================
+NORMALIZATION STRATEGY
+==================================================
+
+Create reusable normalization utilities.
+
+We need TWO normalization functions:
+
+1) Strict normalization
+Used for:
+- real duplicate prevention
+- normalized value stored in database
+- exact duplicate checks
+
+2) Soft normalization
+Used only for:
+- smart suggestions
+- detecting likely similar values before create
+
+==================================================
+STRICT NORMALIZATION RULES
+==================================================
+
+Implement a reusable function like:
+normalizeArabicLocationName()
+
+Rules:
+- trim leading and trailing spaces
+- collapse multiple spaces into one
+- remove Arabic diacritics
+- remove tatweel/kashida
+- normalize Arabic alef variants:
+  أ / إ / آ -> ا
+- normalize ى -> ي
+- convert Arabic digits to English digits
+- replace separators/punctuation like:
+  - _ / \ . , ( ) [ ] { } |
+  with spaces
+- lowercase English letters
+- keep ة unchanged
+- keep ال unchanged
+- after replacements, collapse spaces again and trim
+
+IMPORTANT:
+Strict normalization must be the source of NormalizedName.
+
+==================================================
+SOFT NORMALIZATION RULES
+==================================================
+
+Implement a second reusable function like:
+softNormalizeArabicLocationName()
+
+It should start from the strict normalized result,
+then apply extra relaxed comparison rules only for suggestions.
+
+For example:
+- optionally remove leading "ال" for suggestion matching only
+- do NOT use soft normalization for uniqueness constraints
+- do NOT save soft normalized value as the main DB normalized value
+
+Soft normalization is for:
+"Did you mean this existing location?"
+
+==================================================
+DISPLAY NAME VS NORMALIZED NAME
+==================================================
+
+Always store both:
+
+1) DisplayName
+- the user-facing visible value
+- shown in dropdowns and UI
+
+2) NormalizedName
+- generated automatically from DisplayName using strict normalization
+- used for duplicate checks and DB uniqueness
+
+Do NOT rely on DisplayName alone for duplicate prevention.
+
+==================================================
+CREATE FLOW RULES
+==================================================
+
+When a user adds a new city or district:
+
+1) Take the raw input
+2) Create DisplayName from trimmed user input
+3) Create NormalizedName using strict normalization
+4) Validate the parent exists:
+   - city requires GovernorateId
+   - district requires CityId
+5) Check exact duplicate using:
+   - City: same GovernorateId + same NormalizedName
+   - District: same CityId + same NormalizedName
+
+If exact duplicate exists:
+- do NOT create a new record
+- return the existing record
+- return a friendly message like:
+  "This location already exists"
+
+6) If no exact duplicate exists:
+- run soft normalization comparison against sibling records
+- if similar entry is found:
+  return suggestion like:
+  "Did you mean: الهفوف ؟"
+
+7) Only create a new record if:
+- no strict duplicate exists
+- and no suggestion is selected instead
+
+==================================================
+UI / UX REQUIREMENTS
+==================================================
+
+In forms where user selects location (such as listing form or dashboard profile):
+
+1) Use dependent dropdowns:
+- Governorate
+- City
+- District
+
+2) If user cannot find a city:
+show option:
++ Add new city
+
+3) If user cannot find a district:
+show option:
++ Add new district
+
+4) Use a modal/dialog for adding a new city or district
+
+5) Behavior:
+- cannot add city unless governorate is selected
+- cannot add district unless city is selected
+- after successful creation:
+  - refresh dropdown options
+  - auto-select the newly created item
+- if duplicate exists:
+  - auto-select existing item instead of creating duplicate
+- if similar suggestion exists:
+  - show it clearly and let user choose it
+
+6) Reset logic:
+- when governorate changes, reset city and district
+- when city changes, reset district
+
+==================================================
+BACKEND IMPLEMENTATION REQUIREMENTS
+==================================================
+
+Implement the normalization and duplicate logic in backend/service layer.
+Do not rely only on frontend validation.
+
+Need clean reusable backend logic for:
+- create city
+- create district
+- duplicate check
+- suggestion check
+
+Return structured results, for example:
+- created
+- exists
+- similar
+
+So frontend can react correctly.
+
+==================================================
+FRONTEND REQUIREMENTS
+==================================================
+
+Frontend should:
+- show meaningful error/success messages
+- handle existing-result case gracefully
+- handle similar-suggestion case gracefully
+- not create duplicate entries blindly
+- keep RTL support
+- follow current design system
+- reuse components where possible
+
+==================================================
+IMPORTANT ENGINEERING RULES
+==================================================
+
+- Do not hardcode sloppy logic in multiple places
+- Create reusable normalization utility
+- Create reusable service methods for duplicate and suggestion checks
+- Keep architecture clean and scalable
+- Do not break current profile/listing flows
+- Inspect existing location-related code before changing anything
+- Refactor only where necessary
+- Preserve existing data where possible through safe migration
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+After implementation:
+
+1) Every city/district has:
+- DisplayName
+- NormalizedName
+
+2) Duplicate prevention is robust:
+- strict normalization prevents real duplicates
+
+3) Similar-value assistance is smart:
+- soft normalization suggests likely intended values
+
+4) Database enforces uniqueness:
+- Cities: unique (GovernorateId, NormalizedName)
+- Districts: unique (CityId, NormalizedName)
+
+5) UI lets users add missing locations safely
+without polluting Location Master Data.
+
+==================================================
+DELIVERY INSTRUCTIONS
+==================================================
+
+Before coding:
+1) Inspect current location entities, forms, and APIs
+2) Show the implementation plan
+3) Then implement step by step
+4) If there are existing location tables/fields, adapt cleanly instead of rewriting blindly
+
+Focus on correctness, maintainability, and production-readiness.

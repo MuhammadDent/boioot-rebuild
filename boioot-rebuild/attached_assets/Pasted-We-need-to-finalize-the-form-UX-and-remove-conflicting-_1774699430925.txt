@@ -1,0 +1,122 @@
+We need to finalize the form UX and remove conflicting save behaviors.
+
+========================================
+CRITICAL UX ISSUES
+========================================
+
+1) Multiple "Save" buttons inside each field (limits)
+2) Sticky footer save button exists
+3) Auto-save is implemented
+
+This creates confusion and bad UX.
+
+========================================
+GOAL
+========================================
+
+Unify saving logic into ONE consistent system:
+
+- Auto-save (primary)
+- Sticky footer save (manual fallback)
+- NO inline save buttons
+
+========================================
+REQUIRED FIX
+========================================
+
+1) REMOVE inline save buttons
+
+Remove ALL buttons like:
+- "حفظ" next to limits (inputs)
+
+These are no longer needed.
+
+Inputs should be direct-edit only.
+
+========================================
+2) Single Source of Truth for Saving
+
+Use ONLY:
+- Auto-save (debounced)
+- Sticky footer button
+
+NO other save triggers
+
+========================================
+3) Improve Sticky Footer Design
+
+Footer must contain:
+
+[ إلغاء ]     [ Save Status ]     [ حفظ التغييرات ]
+
+========================================
+4) Save Status Indicator (IMPORTANT)
+
+Add clear state:
+
+- dirty → "لم يتم الحفظ"
+- saving → "جارٍ الحفظ..."
+- saved → "تم الحفظ ✓"
+
+Auto update based on state
+
+========================================
+5) Fix Save Button State
+
+Save button must behave as:
+
+- disabled when NO changes
+- enabled when form is dirty
+
+Example:
+
+disabled={!isDirty}
+
+Visual:
+- disabled → grey
+- enabled → primary color
+
+========================================
+6) Improve Input UX
+
+When user edits a value:
+
+- remove need to click "save"
+- auto-save handles persistence
+
+Optional:
+- show small inline indicator:
+  "✓ تم التحديث"
+
+========================================
+7) Prevent Double Save Logic
+
+Ensure:
+
+- clicking save does NOT duplicate auto-save
+- no double API calls
+
+========================================
+8) Improve Feedback Timing
+
+After save:
+- show "تم الحفظ ✓" for 2 seconds
+- then fade
+
+========================================
+EXPECTED RESULT
+========================================
+
+- Clean form (no clutter)
+- One saving system
+- Clear feedback
+- Professional SaaS UX
+
+========================================
+DELIVERABLE
+========================================
+
+- Inline save buttons removed
+- Sticky footer fully functional
+- Save state indicator working
+- Save button enabled/disabled correctly

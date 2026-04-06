@@ -1,0 +1,129 @@
+We need to upgrade the Feature Definition system to be production-grade.
+
+Current problem:
+The Feature Catalog UI only allows editing basic fields (name, description, active state),
+but does NOT expose the full technical definition of a feature.
+
+This is not sufficient for a real SaaS system.
+
+GOAL:
+Turn Feature Definitions into fully structured, explicit, and safe entities.
+
+==================================================
+REQUIRED IMPROVEMENTS
+==================================================
+
+1. Extend FeatureDefinition model (if not already)
+Ensure it contains:
+
+- Id
+- Key (string, unique, REQUIRED)
+- Name (display name)
+- Description
+- Type (enum):
+  - boolean
+  - limit
+  - text
+  - json
+- Scope (enum):
+  - listing
+  - user
+  - system
+  - messaging
+  - analytics
+- Category / Group
+- Icon
+- IsActive
+- IsSystem (true if seeded/system feature)
+- SortOrder
+
+==================================================
+2. Improve Feature Catalog UI
+==================================================
+
+Add a proper "Edit Feature Definition" form that includes:
+
+Editable:
+- Name
+- Description
+- Icon
+- Category
+- Active/Archived
+- SortOrder
+
+Visible but restricted:
+- Key (read-only after creation)
+- Type (locked after first use)
+- Scope (locked after creation or usage)
+
+==================================================
+3. Add Feature Creation Form
+==================================================
+
+When creating a new feature:
+
+Require:
+- Key (unique)
+- Type
+- Scope
+- Name
+
+Optional:
+- Description
+- Icon
+- Category
+
+Validate:
+- Key uniqueness
+- No empty values
+- Type must be selected
+
+==================================================
+4. Add Visual Indicators
+==================================================
+
+In the catalog list:
+
+Show:
+- Key
+- Type (badge: Boolean / Limit)
+- Scope
+- IsSystem badge
+
+==================================================
+5. Protect system integrity
+==================================================
+
+If feature is already used in:
+- PlanFeatures
+- PlanLimits
+- Runtime enforcement
+
+Then:
+- Prevent editing Key
+- Prevent changing Type
+- Prevent unsafe deletion
+
+==================================================
+6. Explain to admin
+==================================================
+
+If a field is locked, show message:
+
+"This field is locked because the feature is already used in plans and system logic."
+
+==================================================
+7. Verification
+==================================================
+
+After implementation:
+
+- I can see Key, Type, Scope in UI
+- I can create new feature with proper structure
+- I can edit safe fields
+- I cannot break system accidentally
+- Plans still work correctly
+
+IMPORTANT:
+This is not just a UI improvement.
+This is a structural upgrade for SaaS scalability.

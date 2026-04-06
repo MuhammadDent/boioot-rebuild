@@ -1,0 +1,173 @@
+This review is very useful. We now clearly have structural issues in the subscription plans module.
+
+We need to FIX THE FOUNDATION before improving UI.
+
+==================================================
+CORE ISSUES IDENTIFIED
+==================================================
+
+1) Frontend is using AdminPlanDetail incorrectly for list view
+   while backend returns AdminPlanSummary
+
+2) Missing fields in CreatePlan:
+   - planCategory is not persisted
+   - billingMode is not exposed in UI or request
+
+3) Type inconsistencies:
+   - limits using decimal instead of integer
+   - boolean/string mismatches (e.g. detailLoading)
+
+4) Plan list lacks commercial data because summary is too shallow
+
+==================================================
+TASK 1 — FIX DTO & API CONTRACT (CRITICAL)
+==================================================
+
+We must clearly define:
+
+A) AdminPlanSummary (used for list page)
+B) AdminPlanDetail (used for create/edit)
+
+--------------------------------------------------
+
+1) Update AdminPlanSummary to include:
+
+- id
+- name
+- description
+- planCategory
+- targetAccountType
+- status
+- isPublic
+- isDefault
+- monthlyPrice
+- yearlyPrice
+
+PLUS key commercial fields:
+
+- listingsLimit
+- teamMembersLimit
+- projectsLimit
+- requestsLimit
+
+PLUS feature indicators:
+
+- hasAnalytics
+- hasTeamManagement
+- hasProjects
+- hasFeaturedListings
+- hasWhatsappIntegration
+
+--------------------------------------------------
+
+2) Ensure AdminPlanDetail returns FULL data:
+
+- all limits
+- all features
+- all business rules
+- pricing
+- trial fields
+- billingMode
+- planCategory
+
+--------------------------------------------------
+
+3) Fix frontend typing:
+
+- Remove any incorrect casting:
+  data as AdminPlanDetail[]
+
+- Use:
+  AdminPlanSummary for list
+  AdminPlanDetail for edit
+
+==================================================
+TASK 2 — FIX CREATE / UPDATE PLAN
+==================================================
+
+1) Ensure CreatePlanRequest includes:
+
+- planCategory
+- billingMode
+- pricing fields
+- limits
+- features
+- business rules
+
+2) Ensure backend correctly maps and saves ALL fields
+
+3) Fix api.ts and handleSavePlan so no fields are dropped
+
+4) Ensure updatePlan works exactly like createPlan (full mapping)
+
+==================================================
+TASK 3 — FIX EDIT FLOW
+==================================================
+
+When clicking "Edit":
+
+- Call GET /plans/{id}
+- Load AdminPlanDetail
+- Populate ALL fields:
+  - limits
+  - features
+  - pricing
+  - business rules
+  - billingMode
+  - planCategory
+
+Ensure no silent resets or missing fields
+
+==================================================
+TASK 4 — FIX TYPE CONSISTENCY
+==================================================
+
+1) Limits must be integers (not decimal)
+
+2) Prices can remain decimal
+
+3) Boolean fields must stay boolean (not string)
+
+Fix:
+- DTO
+- frontend types
+- API mapping
+
+==================================================
+TASK 5 — VERIFY DATA IN UI
+==================================================
+
+After fixing contract:
+
+- plans list must show:
+  - price
+  - key limits
+  - feature indicators
+
+- edit form must load full plan correctly
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT redesign UI yet.
+
+First ensure:
+- data correctness
+- full field mapping
+- proper typing
+
+UI improvements will come AFTER this.
+
+==================================================
+DELIVERABLE
+==================================================
+
+After implementation, provide:
+
+1) Updated AdminPlanSummary structure
+2) Updated AdminPlanDetail structure
+3) CreatePlanRequest structure
+4) What fields are now correctly saved
+5) Confirmation that edit loads full data
+6) Confirmation that list now shows real commercial data

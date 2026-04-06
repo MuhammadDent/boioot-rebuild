@@ -1,0 +1,155 @@
+We are now entering a hardening sprint for the Boioot platform.
+
+This is NOT a feature-building task.
+This is a system consistency + security hardening task.
+
+Project context:
+- Product: Boioot
+- Type: multi-tenant SaaS real estate platform
+- Frontend: Next.js App Router
+- Backend: .NET API
+- Auth model: JWT-based
+- Authorization model: permission-based RBAC
+- Backend already supports:
+  - RequirePermissionAttribute
+  - PermissionAuthorizationHandler
+  - PermissionPolicyProvider
+  - permissions included in JWT
+- Frontend currently has inconsistent protection patterns:
+  - some pages still use allowedRoles
+  - some UI logic still uses static role checks
+  - some pages use hasPermission inconsistently
+
+==================================================
+GOAL
+==================================================
+
+Unify authorization behavior across frontend and backend.
+
+We want ONE authorization model only:
+- roles are grouping constructs only
+- permissions are the source of truth
+- frontend visibility and access must be permission-driven
+- backend enforcement remains permission-driven
+
+Do NOT add new features.
+Do NOT redesign unrelated UI.
+Do NOT introduce DB-driven RBAC yet.
+Do NOT break existing working backend permission enforcement.
+
+==================================================
+TASKS
+==================================================
+
+1) AUDIT FRONTEND AUTHORIZATION
+Find all places in the frontend that use:
+- allowedRoles
+- role === "Admin"
+- role-based visibility logic
+- static hasPermission(role, permission) usage from local maps
+- any protection logic that is not based on the authenticated user’s actual permission claims
+
+Search especially in:
+- src/app/dashboard/admin/**
+- src/hooks/**
+- src/lib/**
+- admin layout/pages/components
+- protected route utilities
+- navigation/sidebar logic
+- dashboard landing cards / quick actions
+
+2) REPLACE ROLE-BASED FRONTEND PROTECTION
+Refactor frontend route/page protection so that:
+- it no longer relies on allowedRoles as the primary protection mechanism
+- it uses current authenticated permission claims from auth state/session
+- it uses a unified permission-check helper sourced from useAuth() or equivalent current auth context
+
+Important:
+- If a route currently accepts allowedRoles, migrate it to permission-based access checks
+- If some pages are admin-only in a practical sense, define required permissions explicitly instead of using raw roles
+- Avoid hidden implicit role assumptions
+
+3) REMOVE STATIC AUTHORIZATION MISMATCH
+If frontend currently imports something like:
+- hasPermission from "@/lib/rbac"
+- static role-permission maps
+replace that usage where it affects runtime authorization decisions.
+
+Runtime authorization decisions must come from actual authenticated permissions, not static frontend assumptions.
+
+Static permission metadata may remain only for:
+- labels
+- UI documentation
+- non-security presentation mapping
+but NOT for actual access decisions.
+
+4) NORMALIZE ADMIN ACCESS MODEL
+For the admin area:
+- define page-level required permissions explicitly where needed
+- ensure sidebar items, cards, and page entry points use the same permission model
+- prevent cases where:
+  - a page link is visible but access fails unexpectedly
+  - access is allowed in UI but backend denies action
+  - layout admits only Admin role while permissions would allow staff access
+
+5) KEEP BACKEND AS SOURCE OF ENFORCEMENT
+Do NOT weaken backend.
+Backend permission attributes must remain the real enforcement boundary.
+Frontend is for:
+- navigation gating
+- UX consistency
+- reducing confusion
+not as the final security layer.
+
+6) PROVIDE A CLEAR OUTPUT REPORT
+After making changes, provide:
+
+A) FILES CHANGED
+List all modified files.
+
+B) AUTHORIZATION DECISIONS
+Explain what was changed in:
+- route protection
+- layout protection
+- sidebar/nav visibility
+- dashboard cards / quick actions
+- any hooks/utilities
+
+C) REMOVED ANTI-PATTERNS
+Explicitly list all removed patterns, such as:
+- allowedRoles-based protection
+- static role checks
+- frontend static RBAC used for runtime auth
+
+D) REMAINING GAPS
+If there are places that still cannot be fully migrated without broader refactoring, list them clearly.
+
+E) VALIDATION CHECKLIST
+Manually verify and report:
+- a user without required permission cannot access protected admin pages
+- a user with permission can see the correct nav items
+- a user without permission does not see protected actions
+- frontend behavior is consistent with backend permission enforcement
+
+==================================================
+IMPORTANT IMPLEMENTATION RULES
+==================================================
+
+- Prefer minimal, safe refactoring over massive rewrites
+- Do not change JWT structure unless absolutely necessary
+- Do not invent fake permissions
+- Reuse existing permission keys already defined by backend
+- If frontend lacks a current-auth permission accessor, create one in the cleanest possible way
+- Keep code production-grade and maintainable
+- Avoid dead code and duplicated permission logic
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+This task is successful only if:
+- frontend authorization is permission-driven
+- allowedRoles is no longer the real guard model
+- runtime access decisions use actual user permissions
+- admin UI behavior becomes consistent with backend enforcement
+- no unrelated regressions are introduced

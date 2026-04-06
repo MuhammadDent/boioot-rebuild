@@ -1,0 +1,91 @@
+The onboarding backend is already implemented (City, District, Address, Latitude, Longitude exist in the API).
+
+However, the frontend onboarding UI is missing the location fields completely.
+
+We need to FIX this properly.
+
+==================================================
+GOAL
+==================================================
+
+Add full business location support to the onboarding UI.
+
+==================================================
+TASKS
+==================================================
+
+1) Update onboarding page UI (app/onboarding/page.tsx)
+
+Add the following fields:
+
+- City (required)
+- District / neighborhood (required)
+- Address (text, required)
+
+2) Add Map Location Picker (IMPORTANT)
+
+- Integrate Google Maps OR a simple map library (Leaflet is acceptable)
+- Allow user to:
+  - click on map
+  - or drag marker
+
+- When user selects location:
+  → capture:
+    latitude
+    longitude
+
+3) Add hidden state fields:
+
+- latitude
+- longitude
+
+4) UX behavior:
+
+- Show selected location visually on the map
+- Show coordinates (optional small text)
+- Validation:
+  - Do NOT allow submit without selecting location
+
+5) API integration:
+
+Update updateBusinessProfile() call to include:
+
+{
+  city,
+  district,
+  address,
+  latitude,
+  longitude,
+  phoneNumber,
+  whatsapp
+}
+
+6) UI layout:
+
+Create a clean section:
+
+=== Location Information ===
+[ City ]
+[ District ]
+[ Address ]
+[ Map here ]
+
+7) Important:
+
+- Do NOT break existing onboarding logic
+- Reuse existing form structure
+- Follow current design system (same inputs, same styling)
+- Keep RTL support (Arabic)
+
+==================================================
+EXTRA (optional but recommended)
+==================================================
+
+- Add button: "Use my current location"
+  → uses browser geolocation
+
+==================================================
+
+Before coding:
+- Inspect current onboarding form
+- Then extend it (do NOT rewrite everything)

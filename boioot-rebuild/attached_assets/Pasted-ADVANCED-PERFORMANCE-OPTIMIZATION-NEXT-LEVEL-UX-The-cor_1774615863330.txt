@@ -1,0 +1,99 @@
+ADVANCED PERFORMANCE OPTIMIZATION — NEXT LEVEL UX
+
+The core performance is now good.
+
+Now we want to reach premium UX level similar to:
+Airbnb / PropertyFinder / Bayut
+
+========================================
+GOAL
+========================================
+
+Improve perceived performance and smoothness.
+
+========================================
+PHASE 1 — SKELETON UI (REPLACE SPINNERS)
+========================================
+
+Replace all spinners with skeleton loaders:
+
+- property cards → card skeletons
+- filters → placeholder skeletons
+- dashboard → skeleton widgets
+
+Rules:
+- never show blank screen + spinner
+- always show structure immediately
+
+========================================
+PHASE 2 — IMAGE OPTIMIZATION
+========================================
+
+1) Use thumbnails in listings (NOT full images)
+2) Lazy load images below fold
+3) Use width/height to prevent layout shift
+4) Add blur placeholder
+
+========================================
+PHASE 3 — PREFETCHING
+========================================
+
+When user hovers or scrolls near:
+
+- property card → prefetch details
+- next page → prefetch next page data
+
+Example:
+- prefetch property detail on hover
+- prefetch next pagination page
+
+========================================
+PHASE 4 — PARALLEL UI LOADING
+========================================
+
+Do not block entire page.
+
+Split:
+- main content loads first
+- secondary widgets load after
+
+========================================
+PHASE 5 — OPTIMISTIC UI
+========================================
+
+For actions like:
+- add request
+- favorite
+- message
+
+Apply:
+- instant UI update
+- rollback on failure
+
+========================================
+PHASE 6 — REDUCE LAYOUT RE-RENDER
+========================================
+
+Audit:
+- unnecessary re-renders
+- shared layout re-fetching
+
+Use:
+- memoization
+- stable props
+- avoid global rerenders
+
+========================================
+DELIVERABLE
+========================================
+
+1) Replace all spinners with skeletons
+2) Optimize images
+3) Add prefetching
+4) Improve perceived speed
+5) Reduce UI jitter
+
+========================================
+
+Do NOT degrade existing performance.
+Only enhance UX smoothness.

@@ -1,0 +1,606 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { adminApi } from "@/features/admin/api";
+import { normalizeError } from "@/lib/api";
+import { rbacApi, type RbacRole } from "@/features/admin/rbac/api";
+import {
+  STAFF_ROLES,
+  STAFF_ROLE_LABELS,
+  STAFF_ROLE_BADGE_COLOR,
+  STAFF_ROLE_BADGE_BG,
+  isStaffRole,
+  type StaffRole,
+} from "@/lib/rbac";
+import type { AdminUserResponse } from "@/types";
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function Avatar({ name }: { name: string }) {
+  return (
+    <div style={{
+      width: 36, height: 36, borderRadius: "50%",
+      backgroundColor: "#2e7d32",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      color: "#fff", fontSize: "0.85rem", fontWeight: 700, flexShrink: 0,
+    }}>
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function RoleBadge({ role }: { role: string }) {
+  const label = isStaffRole(role) ? STAFF_ROLE_LABELS[role] : role;
+  const color = isStaffRole(role) ? STAFF_ROLE_BADGE_COLOR[role] : "#6b7280";
+  const bg    = isStaffRole(role) ? STAFF_ROLE_BADGE_BG[role]    : "#f9fafb";
+  return (
+    <span style={{
+      backgroundColor: bg, color, fontSize: "0.72rem", fontWeight: 700,
+      padding: "0.2rem 0.65rem", borderRadius: 20,
+    }}>
+      {label}
+    </span>
+  );
+}
+
+function StatusBadge({ active }: { active: boolean }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: "0.3rem",
+      fontSize: "0.72rem", fontWeight: 600,
+      color: active ? "#166534" : "#991b1b",
+      backgroundColor: active ? "#f0fdf4" : "#fef2f2",
+      padding: "0.2rem 0.6rem", borderRadius: 20,
+    }}>
+      <span style={{
+        width: 6, height: 6, borderRadius: "50%",
+        backgroundColor: active ? "#22c55e" : "#dc2626",
+        display: "inline-block",
+      }} />
+      {active ? "نشط" : "معطّل"}
+    </span>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+export default function AdminStaffPage() {
+  const { isLoading } = useProtectedRoute({ requiredPermission: "staff.view" });
+
+  const [allUsers, setAllUsers]         = useState<AdminUserResponse[]>([]);
+  const [rbacRoles, setRbacRoles]       = useState<RbacRole[]>([]);
+  const [fetching, setFetching]         = useState(true);
+  const [fetchError, setFetchError]     = useState("");
+  const [search, setSearch]             = useState("");
+  const [filterRole, setFilterRole]     = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("");
+
+  // ── Create staff panel state ────────────────────────────────────────────────
+  const [showCreate, setShowCreate]         = useState(false);
+  const [createFullName, setCreateFullName] = useState("");
+  const [createEmail, setCreateEmail]       = useState("");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createPhone, setCreatePhone]       = useState("");
+  const [createRbacRoleId, setCreateRbacRoleId] = useState("");
+  const [createLoading, setCreateLoading]   = useState(false);
+  const [createError, setCreateError]       = useState("");
+  const [createNotice, setCreateNotice]     = useState("");
+
+  const loadStaff = useCallback(async () => {
+    setFetching(true);
+    setFetchError("");
+    try {
+      const result = await adminApi.getUsers(1, 200, {});
+      const staff = result.items.filter((u) => isStaffRole(u.role));
+      setAllUsers(staff);
+    } catch (err) {
+      setFetchError(normalizeError(err));
+    } finally {
+      setFetching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      loadStaff();
+      rbacApi.getRoles().then(setRbacRoles).catch(() => {});
+    }
+  }, [isLoading, loadStaff]);
+
+  if (isLoading) return null;
+
+  // Client-side filter
+  const filtered = allUsers.filter((u) => {
+    const q = search.trim().toLowerCase();
+    const matchSearch = !q
+      || u.fullName.toLowerCase().includes(q)
+      || u.email.toLowerCase().includes(q);
+    const matchRole = !filterRole || u.role === filterRole;
+    const matchStatus =
+      filterStatus === "" ? true
+      : filterStatus === "active" ? u.isActive
+      : !u.isActive;
+    return matchSearch && matchRole && matchStatus;
+  });
+
+  function handleToggleCreate() {
+    setShowCreate(v => !v);
+    setCreateFullName("");
+    setCreateEmail("");
+    setCreatePassword("");
+    setCreatePhone("");
+    setCreateRbacRoleId("");
+    setCreateError("");
+  }
+
+  async function handleCreateStaff(e: React.FormEvent) {
+    e.preventDefault();
+    if (createLoading) return;
+    setCreateLoading(true);
+    setCreateError("");
+    try {
+      const created = await adminApi.createUser({
+        fullName: createFullName.trim(),
+        email: createEmail.trim(),
+        password: createPassword,
+        phone: createPhone.trim() || undefined,
+        role: "Admin",
+      });
+
+      if (createRbacRoleId) {
+        await rbacApi.assignUserRole(created.id.toString(), createRbacRoleId);
+        const rbacRole = rbacRoles.find(r => r.id === createRbacRoleId);
+        if (rbacRole) {
+          created.role = rbacRole.name;
+        }
+      }
+
+      setAllUsers(prev => [created, ...prev]);
+      setShowCreate(false);
+      setCreateFullName("");
+      setCreateEmail("");
+      setCreatePassword("");
+      setCreatePhone("");
+      setCreateRbacRoleId("");
+      setCreateNotice(`تم إنشاء الموظف "${created.fullName}" بنجاح`);
+      setTimeout(() => setCreateNotice(""), 5000);
+    } catch (e) {
+      setCreateError(normalizeError(e));
+    } finally {
+      setCreateLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: "1.75rem 1.5rem 3rem", direction: "rtl" }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
+        <div>
+          <h1 style={{ margin: "0 0 0.3rem", fontSize: "1.3rem", fontWeight: 700, color: "#1e293b" }}>
+            إدارة الفريق الداخلي
+          </h1>
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b" }}>
+            موظفو النظام الداخليون المصنّفون بأدوار الإدارة — منفصلون عن مستخدمي المنصة
+          </p>
+        </div>
+
+        <button
+          onClick={handleToggleCreate}
+          style={{
+            padding: "0.6rem 1.25rem",
+            backgroundColor: showCreate ? "#1d4ed8" : "#2563eb",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontFamily: "inherit",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {showCreate ? "✕ إلغاء" : "+ إضافة موظف جديد"}
+        </button>
+      </div>
+
+      {/* ── Create Staff Panel ─────────────────────────────────────────────────── */}
+      {showCreate && (
+        <div style={{
+          backgroundColor: "#fff",
+          border: "1px solid #e2e8f0",
+          borderRadius: 12,
+          padding: "1.5rem",
+          marginBottom: "1.5rem",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: "0 0 1.25rem", color: "#1e293b" }}>
+            إضافة موظف جديد للفريق الداخلي
+          </h2>
+
+          {/* Info note */}
+          <div style={{
+            backgroundColor: "#f0f9ff",
+            border: "1px solid #bae6fd",
+            borderRadius: 8,
+            padding: "0.65rem 1rem",
+            marginBottom: "1.25rem",
+            fontSize: "0.8rem",
+            color: "#0369a1",
+          }}>
+            سيُنشأ الموظف بدور <strong>Admin</strong> في النظام. الصلاحيات التفصيلية تُحدَّد من خلال "دور RBAC" أدناه.
+          </div>
+
+          {createError && (
+            <div style={{
+              backgroundColor: "#fef2f2", border: "1px solid #fecaca",
+              borderRadius: 8, padding: "0.65rem 1rem",
+              marginBottom: "1rem", fontSize: "0.83rem", color: "#b91c1c",
+            }}>
+              {createError}
+            </div>
+          )}
+
+          <form onSubmit={handleCreateStaff}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
+              gap: "1rem",
+              marginBottom: "1.25rem",
+            }}>
+              {/* Full Name */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  الاسم الكامل *
+                </label>
+                <input
+                  type="text"
+                  placeholder="مثال: سارة أحمد"
+                  value={createFullName}
+                  onChange={e => setCreateFullName(e.target.value)}
+                  required
+                  disabled={createLoading}
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Email */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  البريد الإلكتروني *
+                </label>
+                <input
+                  type="email"
+                  placeholder="staff@boioot.sy"
+                  value={createEmail}
+                  onChange={e => setCreateEmail(e.target.value)}
+                  required
+                  disabled={createLoading}
+                  style={{ ...inputStyle, direction: "ltr", textAlign: "right" }}
+                />
+              </div>
+
+              {/* Password */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  كلمة المرور *
+                </label>
+                <input
+                  type="password"
+                  placeholder="8 أحرف على الأقل"
+                  value={createPassword}
+                  onChange={e => setCreatePassword(e.target.value)}
+                  required
+                  minLength={8}
+                  disabled={createLoading}
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Phone */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  رقم الهاتف
+                </label>
+                <input
+                  type="tel"
+                  placeholder="+963..."
+                  value={createPhone}
+                  onChange={e => setCreatePhone(e.target.value)}
+                  disabled={createLoading}
+                  style={{ ...inputStyle, direction: "ltr", textAlign: "right" }}
+                />
+              </div>
+
+              {/* RBAC Role */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", gridColumn: "span 2" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151" }}>
+                  دور RBAC (الصلاحيات)
+                </label>
+                <select
+                  value={createRbacRoleId}
+                  onChange={e => setCreateRbacRoleId(e.target.value)}
+                  disabled={createLoading}
+                  style={inputStyle}
+                >
+                  <option value="">— بدون دور محدد (بدون صلاحيات) —</option>
+                  {rbacRoles.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+                {createRbacRoleId && (() => {
+                  const role = rbacRoles.find(r => r.id === createRbacRoleId);
+                  if (!role) return null;
+                  return (
+                    <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b" }}>
+                      {role.permissionCount} صلاحية مُخصَّصة لهذا الدور
+                    </p>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              <button
+                type="submit"
+                disabled={createLoading}
+                style={{
+                  padding: "0.6rem 1.5rem",
+                  backgroundColor: createLoading ? "#93c5fd" : "#2563eb",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  fontFamily: "inherit",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  cursor: createLoading ? "not-allowed" : "pointer",
+                }}
+              >
+                {createLoading ? "جارٍ الإنشاء..." : "إنشاء الموظف"}
+              </button>
+              <button
+                type="button"
+                disabled={createLoading}
+                onClick={handleToggleCreate}
+                style={{
+                  padding: "0.6rem 1.25rem",
+                  backgroundColor: "transparent",
+                  color: "#64748b",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 8,
+                  fontFamily: "inherit",
+                  fontSize: "0.875rem",
+                  cursor: "pointer",
+                }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Success notice */}
+      {createNotice && (
+        <div style={{
+          backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0",
+          borderRadius: 8, padding: "0.65rem 1rem",
+          marginBottom: "1rem", fontSize: "0.83rem", color: "#15803d", fontWeight: 600,
+        }}>
+          ✓ {createNotice}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div style={{
+        display: "flex", flexWrap: "wrap", gap: "0.75rem",
+        marginBottom: "1.25rem", alignItems: "center",
+      }}>
+        <input
+          type="search"
+          placeholder="بحث بالاسم أو البريد..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            flex: "1 1 220px",
+            padding: "0.55rem 0.85rem",
+            borderRadius: 8,
+            border: "1px solid #d1d5db",
+            fontSize: "0.875rem",
+            backgroundColor: "#fff",
+            fontFamily: "inherit",
+            outline: "none",
+          }}
+        />
+        <select
+          value={filterRole}
+          onChange={(e) => setFilterRole(e.target.value)}
+          style={{
+            padding: "0.55rem 0.85rem",
+            borderRadius: 8,
+            border: "1px solid #d1d5db",
+            fontSize: "0.875rem",
+            backgroundColor: "#fff",
+            fontFamily: "inherit",
+            cursor: "pointer",
+          }}
+        >
+          <option value="">جميع الأدوار</option>
+          {STAFF_ROLES.map((r) => (
+            <option key={r} value={r}>{STAFF_ROLE_LABELS[r]}</option>
+          ))}
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          style={{
+            padding: "0.55rem 0.85rem",
+            borderRadius: 8,
+            border: "1px solid #d1d5db",
+            fontSize: "0.875rem",
+            backgroundColor: "#fff",
+            fontFamily: "inherit",
+            cursor: "pointer",
+          }}
+        >
+          <option value="">جميع الحالات</option>
+          <option value="active">نشط</option>
+          <option value="inactive">معطّل</option>
+        </select>
+        <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginRight: "auto" }}>
+          {filtered.length} موظف
+        </div>
+      </div>
+
+      {/* Error */}
+      {fetchError && (
+        <div style={{
+          backgroundColor: "#fef2f2", border: "1px solid #fecaca",
+          borderRadius: 8, padding: "0.75rem 1rem",
+          marginBottom: "1rem", fontSize: "0.85rem", color: "#dc2626",
+        }}>
+          {fetchError}
+        </div>
+      )}
+
+      {/* Table card */}
+      <div style={{
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        border: "1px solid #e8ecf0",
+        overflow: "hidden",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+      }}>
+        {fetching ? (
+          <div style={{ padding: "3rem", textAlign: "center", color: "#94a3b8" }}>
+            جاري التحميل…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: "3rem", textAlign: "center", color: "#94a3b8", fontSize: "0.9rem" }}>
+            {allUsers.length === 0
+              ? "لا يوجد أعضاء فريق داخلي حتى الآن."
+              : "لا توجد نتائج مطابقة للبحث"}
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+              <thead>
+                <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e8ecf0" }}>
+                  <th style={thStyle}>الموظف</th>
+                  <th style={thStyle}>البريد الإلكتروني</th>
+                  <th style={thStyle}>الدور</th>
+                  <th style={thStyle}>الحالة</th>
+                  <th style={thStyle}>تاريخ الانضمام</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((u, idx) => (
+                  <tr
+                    key={u.id}
+                    style={{
+                      borderBottom: idx < filtered.length - 1 ? "1px solid #f1f5f9" : "none",
+                    }}
+                  >
+                    <td style={tdStyle}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
+                        <Avatar name={u.fullName} />
+                        <div>
+                          <div style={{ fontWeight: 600, color: "#1e293b" }}>{u.fullName}</div>
+                          {u.phone && (
+                            <div style={{ fontSize: "0.72rem", color: "#94a3b8", direction: "ltr" }}>
+                              {u.phone}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ ...tdStyle, direction: "ltr", color: "#475569", fontSize: "0.82rem" }}>
+                      {u.email}
+                    </td>
+                    <td style={tdStyle}>
+                      <RoleBadge role={u.role} />
+                    </td>
+                    <td style={tdStyle}>
+                      <StatusBadge active={u.isActive} />
+                    </td>
+                    <td style={{ ...tdStyle, color: "#94a3b8", fontSize: "0.8rem" }}>
+                      {new Date(u.createdAt).toLocaleDateString("ar-SY", {
+                        year: "numeric", month: "short", day: "numeric",
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Roles reference */}
+      <div style={{ marginTop: "2rem" }}>
+        <h2 style={{ fontSize: "0.8rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 1rem" }}>
+          أدوار الفريق المتاحة
+        </h2>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: "0.6rem",
+        }}>
+          {STAFF_ROLES.map((role: StaffRole) => (
+            <div
+              key={role}
+              style={{
+                padding: "0.75rem 1rem",
+                backgroundColor: "#fff",
+                border: "1px solid #e8ecf0",
+                borderRadius: 10,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.6rem",
+              }}
+            >
+              <span style={{
+                width: 10, height: 10, borderRadius: "50%",
+                backgroundColor: STAFF_ROLE_BADGE_COLOR[role],
+                flexShrink: 0,
+              }} />
+              <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#374151" }}>
+                {STAFF_ROLE_LABELS[role]}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  padding: "0.5rem 0.75rem",
+  borderRadius: 8,
+  border: "1px solid #d1d5db",
+  fontSize: "0.875rem",
+  fontFamily: "inherit",
+  backgroundColor: "#fff",
+  width: "100%",
+  boxSizing: "border-box",
+  outline: "none",
+};
+
+const thStyle: React.CSSProperties = {
+  padding: "0.75rem 1rem",
+  textAlign: "right",
+  fontSize: "0.75rem",
+  fontWeight: 700,
+  color: "#64748b",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  whiteSpace: "nowrap",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "0.85rem 1rem",
+  verticalAlign: "middle",
+};

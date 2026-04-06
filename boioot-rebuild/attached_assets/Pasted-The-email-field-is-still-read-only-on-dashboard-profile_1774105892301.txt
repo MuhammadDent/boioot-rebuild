@@ -1,0 +1,91 @@
+The email field is still read-only on /dashboard/profile.
+
+We now need to support SECURE email editing, not just visual editing.
+
+GOAL:
+Allow the user to change their email address safely through a proper backend-driven flow.
+
+IMPORTANT:
+Do NOT simply make the email input editable and save directly without verification.
+Changing email is a sensitive account action and must use a secure flow.
+
+REQUIREMENTS
+
+1) EMAIL FIELD BEHAVIOR
+- The current email can be shown in the profile form
+- Add an explicit action such as:
+  - "تغيير البريد الإلكتروني"
+- When clicked, open a dedicated email change flow
+- Do not treat email like a normal profile field such as name or phone
+
+2) SECURE EMAIL CHANGE FLOW
+Implement a proper secure email change process:
+
+Preferred flow:
+- user enters new email
+- validate format
+- check if email is already used
+- require password confirmation if password auth is used
+- send verification code/link to the new email
+- only update the account email after verification succeeds
+
+If the system does not yet support verification:
+- build the backend structure cleanly
+- at minimum require password confirmation + uniqueness check
+- but design the flow to be extensible for email verification next
+
+3) BACKEND/API
+Inspect current auth/account system and add or wire the necessary endpoint(s), for example:
+- POST /auth/change-email/request
+- POST /auth/change-email/confirm
+or a clean equivalent in the existing architecture
+
+Requirements:
+- authenticated user only
+- uniqueness check
+- validation
+- secure update in database
+- proper error responses
+
+4) FRONTEND UX
+In the profile page:
+- keep normal profile editing for standard fields
+- add a separate email change modal or inline secure section
+- include:
+  - new email input
+  - confirm new email input
+  - password input if needed
+  - verification code input if needed
+  - submit / cancel buttons
+  - loading, success, and error states
+
+5) VALIDATION
+Add validation for:
+- valid email format
+- emails match (if confirm field exists)
+- email already in use
+- same as current email should be rejected
+- missing password if required
+- invalid verification code if applicable
+
+6) SECURITY RULES
+- role cannot be changed
+- account type cannot be changed
+- internal user ID remains read-only
+- email update must be audited as a sensitive action
+- if session/token needs refresh after email change, handle that properly
+
+7) DATA CONSISTENCY
+After successful email change:
+- database must be updated
+- profile UI must refresh and show new email
+- auth/session identity must remain consistent
+- if needed, re-issue session or ask user to re-login
+
+8) REPORT BACK
+Please implement and show:
+1. why the email remained read-only
+2. what secure email-change flow was added
+3. what backend endpoints/files were changed
+4. whether verification was implemented or deferred
+5. how uniqueness and security were handled

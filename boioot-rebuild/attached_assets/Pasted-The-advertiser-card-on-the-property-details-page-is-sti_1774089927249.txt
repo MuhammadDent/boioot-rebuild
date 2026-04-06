@@ -1,0 +1,137 @@
+The advertiser card on the property details page is still incomplete.
+
+Current problems:
+1. The advertiser profile image does NOT appear, even though it was uploaded from the advertiser dashboard/profile.
+2. The WhatsApp and internal chat/contact buttons are NOT visible in the advertiser card UI.
+
+We need to fix this properly in the property details page.
+
+==================================================
+GOAL
+==================================================
+
+Make the advertiser card fully functional and production-ready.
+
+It must show:
+- advertiser profile image
+- advertiser name
+- WhatsApp contact button
+- internal site chat button
+
+==================================================
+PROBLEM 1: ADVERTISER IMAGE NOT SHOWING
+==================================================
+
+Investigate why the advertiser avatar/profile image is missing.
+
+Check all of the following:
+- Is the property details API returning advertiser/company image fields?
+- Is the frontend reading the correct field name?
+- Is the image path/url normalized correctly?
+- Is there a mismatch between:
+  - avatar
+  - profileImage
+  - imageUrl
+  - companyLogo
+  - logo
+  - photo
+  - user.profileImage
+  - company.profileImage
+- Is a fallback icon being rendered even when a real image exists?
+
+Fix the data mapping so that if the advertiser has an uploaded image, it is displayed in the advertiser card.
+
+If no image exists, only then show the fallback placeholder/avatar icon.
+
+==================================================
+EXPECTED IMAGE SOURCE PRIORITY
+==================================================
+
+Please support a safe fallback priority such as:
+
+1. advertiser user avatar
+2. company profile/logo image
+3. placeholder avatar icon
+
+Use whichever source best matches the current data model.
+
+==================================================
+PROBLEM 2: CONTACT BUTTONS NOT RENDERING
+==================================================
+
+The WhatsApp and internal chat buttons must be actually rendered in the advertiser/contact card.
+
+Add these visible CTA buttons:
+- تواصل عبر واتساب
+- مراسلة داخل الموقع
+
+Place them directly under advertiser info in the same card.
+
+==================================================
+WHATSAPP BUTTON
+==================================================
+
+- Show only if advertiser phone exists
+- Build a valid WhatsApp link
+- Include a prefilled Arabic message using the property title
+- Open in new tab
+- Style clearly as WhatsApp / green action
+
+Example message:
+"مرحبًا، أنا مهتم بهذا الإعلان: [عنوان العقار]"
+
+==================================================
+INTERNAL CHAT BUTTON
+==================================================
+
+- Show a visible button in the card
+- If logged in:
+  - open or create a conversation with advertiser
+  - attach property context
+- If guest:
+  - trigger the existing auth modal
+  - after login/register resume chat action
+
+==================================================
+UI REQUIREMENTS
+==================================================
+
+Update the advertiser card so it clearly contains:
+
+- advertiser title / label
+- advertiser image
+- advertiser name
+- WhatsApp button
+- internal chat button
+- favorite button only if still needed
+
+The contact buttons must not be hidden behind conditions that always evaluate false.
+
+==================================================
+DEBUGGING REQUIREMENTS
+==================================================
+
+Please inspect and fix:
+- property details page JSX
+- advertiser card component
+- API response mapping
+- conditional rendering logic
+- image URL construction
+- CSS/layout that may hide the buttons
+
+==================================================
+IMPORTANT
+==================================================
+
+Do not only describe the intended structure.
+Actually implement the UI and data binding so the image and buttons appear on the page.
+
+==================================================
+OUTPUT
+==================================================
+
+Return:
+1. which advertiser image field was actually used
+2. what was wrong in the previous binding
+3. the final JSX block for the advertiser card
+4. the rendering conditions for WhatsApp and internal chat buttons

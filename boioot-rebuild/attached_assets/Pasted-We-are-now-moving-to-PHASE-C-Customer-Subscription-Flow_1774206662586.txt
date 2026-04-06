@@ -1,0 +1,174 @@
+We are now moving to PHASE C:
+
+Customer Subscription Flow UI
+
+IMPORTANT:
+- Backend payment request architecture is ready
+- Critical fixes are already applied
+- Do NOT redesign backend
+- Build frontend on top of the existing APIs
+
+==================================================
+PHASE C GOAL
+==================================================
+
+Create the customer-facing subscription flow so users can:
+
+1. view plans
+2. choose a plan
+3. choose payment method
+4. create payment request
+5. upload receipt if needed
+6. track request/payment/subscription status
+
+==================================================
+STEP 1 — SUBSCRIPTION PLANS PAGE
+==================================================
+
+Create a clean subscription plans page for users.
+
+Requirements:
+- display all active plans
+- group or filter plans based on account type if needed
+- show:
+  - plan name
+  - price
+  - main benefits
+  - listing/agent/project limits if available
+- highlight recommended plan where appropriate
+- each plan has CTA:
+  "Choose Plan" / "Subscribe"
+
+==================================================
+STEP 2 — PLAN CHECKOUT FLOW
+==================================================
+
+When the user clicks a plan:
+
+Open a modal or dedicated page that includes:
+
+- selected plan summary
+- billing cycle selection (monthly/yearly if supported)
+- payment method selection
+
+Supported methods should reflect the backend architecture, e.g.:
+- cash_to_sales_rep
+- bank_transfer
+- receipt_upload
+- other_manual
+- future online method placeholder if useful
+
+==================================================
+STEP 3 — CREATE PAYMENT REQUEST
+==================================================
+
+Integrate with existing backend:
+
+POST /api/payment-requests
+
+After request creation:
+
+- if selected method requires receipt:
+  move user to receipt upload step
+- otherwise:
+  show confirmation message:
+  "Your request was created and is awaiting review"
+
+==================================================
+STEP 4 — RECEIPT UPLOAD UI
+==================================================
+
+Create a receipt upload step/page:
+
+- upload image/file
+- preview selected receipt if possible
+- submit receipt
+- clear guidance text
+
+Integrate with:
+POST /api/payment-requests/{id}/receipt
+
+Also support:
+- skip for methods that do not require immediate receipt
+- upload later if backend supports that flow
+
+==================================================
+STEP 5 — MY SUBSCRIPTION REQUESTS PAGE
+==================================================
+
+Create a page such as:
+"My Subscription Requests"
+
+Show for each request:
+- plan name
+- amount
+- payment method
+- created date
+- current status:
+  - pending
+  - awaiting payment
+  - receipt uploaded
+  - under review
+  - approved
+  - rejected
+  - activated
+  - cancelled
+
+If rejected:
+- show rejection reason clearly
+
+If approved:
+- show what the user should expect next
+
+If activated:
+- show link/button to current subscription/dashboard
+
+==================================================
+STEP 6 — SUBSCRIPTION STATUS CARD
+==================================================
+
+In dashboard, add a subscription status card showing:
+- current plan
+- subscription status
+- renewal type if available
+- payment request status if there is a pending request
+- CTA:
+  - upload receipt
+  - continue payment request
+  - view requests
+  - upgrade plan
+
+==================================================
+UX REQUIREMENTS
+==================================================
+
+- Keep wording clear and practical for a Syrian market context
+- Do not assume online payment only
+- Make manual payment flow feel first-class
+- Use clear Arabic labels/messages
+- Show trust-building text for manual review and activation
+
+Examples:
+- "بعد دفع قيمة الاشتراك يمكنك رفع الإيصال ليتم مراجعته"
+- "سيقوم فريق المبيعات أو خدمة العملاء بمراجعة الطلب وتفعيل الباقة"
+- "يمكنك متابعة حالة طلبك من صفحة طلبات الاشتراك"
+
+==================================================
+IMPORTANT RULES
+==================================================
+
+- frontend must NOT activate subscriptions directly
+- frontend must rely on backend statuses
+- do NOT fake plan activation
+- use existing APIs and current state machine
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+When done, provide:
+1. pages/components created
+2. APIs integrated
+3. user flow summary
+4. what works now
+5. what still needs improvement later

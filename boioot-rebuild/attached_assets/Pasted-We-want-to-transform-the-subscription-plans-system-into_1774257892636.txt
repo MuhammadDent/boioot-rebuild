@@ -1,0 +1,80 @@
+We want to transform the subscription plans system into a professional SaaS pricing experience.
+
+==================================================
+GOAL
+==================================================
+
+Improve plan display, clarity, and conversion (make users upgrade).
+
+==================================================
+TASK 1 — IMPROVE PLAN CARD UI
+==================================================
+
+Update plan cards to include:
+
+1. Plan Name (large, bold)
+2. Pricing:
+   - Monthly price
+   - Yearly price (if exists)
+   - Show discount if yearly is cheaper
+
+3. Badge:
+   - "الأكثر شيوعاً" if isRecommended = true
+
+4. Limits (converted to user-friendly text):
+   - listingsLimit → "📢 عدد الإعلانات"
+   - imagesPerListing → "🖼 عدد الصور لكل إعلان"
+   - agentsLimit → "👤 عدد الوسطاء"
+   - projectsLimit → "🏗 عدد المشاريع"
+
+5. Features (icons + labels):
+   - hasFeaturedListings → "⭐ ظهور مميز"
+   - hasAnalytics → "📊 تحليلات"
+   - hasWhatsApp → "📱 دعم واتساب"
+   - hasVerifiedBadge → "✅ حساب موثّق"
+   - hasPrioritySupport → "⚡ دعم سريع"
+
+6. CTA button:
+   - "ابدأ مجاناً" for free
+   - "ترقية" for current user
+   - "اشترك الآن" for others
+
+==================================================
+TASK 2 — VISUAL HIERARCHY
+==================================================
+
+- Highlight recommended plan with:
+  - border color
+  - slight scale (transform: scale(1.03))
+  - badge at top
+
+==================================================
+TASK 3 — PLAN GROUPING
+==================================================
+
+Group plans by account type:
+- أفراد
+- مكاتب
+- شركات تطوير
+
+==================================================
+TASK 4 — EMPTY STATES
+==================================================
+
+If no plans:
+- show message: "لا توجد خطط متاحة حالياً"
+
+==================================================
+TASK 5 — UX IMPROVEMENTS
+==================================================
+
+- When user reaches limit:
+  show upgrade message instead of error
+
+- Add tooltip for features
+
+==================================================
+RESULT
+==================================================
+
+A clean, modern SaaS pricing UI that encourages upgrades

@@ -1,0 +1,106 @@
+We have a critical issue in subscription activation flow.
+
+PROBLEM:
+When admin approves a subscription request, the request status becomes "approved"
+BUT the user's actual subscription is NOT updated.
+The user remains on the old (free) plan.
+
+This is a backend logic failure.
+
+========================================
+GOAL
+========================================
+
+Implement a COMPLETE activation flow when request is approved.
+
+========================================
+REQUIRED FIX
+========================================
+
+1) When admin clicks "Approve":
+
+DO NOT just update request.status
+
+Instead:
+
+CALL a service:
+SubscriptionService.activateFromRequest(requestId)
+
+----------------------------------------
+
+2) Implement activateFromRequest:
+
+- Load request
+- Validate request.status == "pending"
+- Get planId, userId
+
+----------------------------------------
+
+3) Activate subscription:
+
+IF user has active subscription:
+    UPDATE it:
+        planId = request.planId
+        status = "active"
+        startDate = now
+        endDate = based on billing cycle
+
+ELSE:
+    CREATE new subscription:
+        userId
+        planId
+        status = active
+        startDate
+        endDate
+
+----------------------------------------
+
+4) Update request:
+
+request.status = "approved"
+request.reviewedAt = now
+
+----------------------------------------
+
+5) OPTIONAL BUT IMPORTANT:
+
+- Update user role if plan affects permissions
+- Clear cache/session if needed
+
+----------------------------------------
+
+6) UI FIX:
+
+After approval:
+- Force refresh subscription data
+- Do NOT rely on stale cached data
+
+----------------------------------------
+
+7) Add logging:
+
+console/log:
+"Subscription activated for user X with plan Y"
+
+----------------------------------------
+
+8) Add safety:
+
+Prevent duplicate activation:
+IF request.status != "pending" → block
+
+========================================
+TEST CASES
+========================================
+
+1) Approve request → subscription changes immediately
+2) Plan name updates in UI
+3) Old plan replaced
+4) No duplicate subscriptions created
+
+========================================
+IMPORTANT
+========================================
+
+Approval MUST trigger business logic
+NOT just database status change

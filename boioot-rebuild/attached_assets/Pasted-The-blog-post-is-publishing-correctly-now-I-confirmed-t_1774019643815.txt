@@ -1,0 +1,66 @@
+The blog post is publishing correctly now.
+
+I confirmed this because when I click the category tab "نصائح وإرشادات", the article appears.
+
+So the publish/save flow is working.
+
+The remaining bug is only in the "All" tab filtering logic.
+
+==================================================
+PROBLEM
+==================================================
+
+- Category tab shows the post correctly
+- But "All" does not behave correctly
+- This means the issue is in the public blog filtering logic, not in publishing
+
+==================================================
+GOAL
+==================================================
+
+Fix the "All" tab so it always shows all published blog posts.
+
+==================================================
+DEBUG TASK
+==================================================
+
+Please inspect the blog list filtering logic and check:
+
+1. How the selected category is read
+   - from query param?
+   - from state?
+   - from tab slug?
+
+2. What happens when "All" is selected
+   - does it clear the category filter correctly?
+   - or does it keep the previous category in the URL/state?
+
+3. Whether "All" maps to:
+   - null
+   - undefined
+   - empty string
+   - "all"
+
+4. Whether the backend query or frontend filter still applies a category condition even when "All" is selected
+
+==================================================
+EXPECTED BEHAVIOR
+==================================================
+
+- "All" tab → show all published blog posts
+- category tab → show only posts in that category
+- counts remain correct
+- clicking "All" must reset category filtering properly
+
+==================================================
+IMPORTANT
+==================================================
+
+Do not modify publishing logic.
+Do not redesign UI.
+Fix only the blog filtering behavior for the "All" tab.
+
+After fixing, report:
+1. what was wrong in the filtering logic
+2. whether the issue was in URL query param, frontend state, or filter condition
+3. which file was changed

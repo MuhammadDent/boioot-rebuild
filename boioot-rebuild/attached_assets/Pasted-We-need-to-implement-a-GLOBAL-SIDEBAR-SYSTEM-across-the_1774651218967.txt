@@ -1,0 +1,111 @@
+We need to implement a GLOBAL SIDEBAR SYSTEM across the entire application.
+
+IMPORTANT:
+This is NOT just a UI change for one page.
+This must apply to ALL dashboards and ALL user roles.
+
+========================================
+GOAL
+========================================
+
+Create a unified, reusable, nested sidebar system used across:
+
+- Broker dashboard
+- Owner dashboard
+- Office dashboard
+- Company dashboard
+- Admin dashboard
+
+========================================
+CORE REQUIREMENT
+========================================
+
+DO NOT create separate sidebars per role.
+
+Instead:
+Create ONE sidebar component that renders dynamically based on user role.
+
+========================================
+SIDEBAR ARCHITECTURE
+========================================
+
+Use a centralized configuration:
+
+const sidebarConfig = {
+  common: [...],
+  broker: [...],
+  owner: [...],
+  office: [...],
+  company: [...],
+  admin: [...]
+}
+
+Each section contains:
+
+{
+  key: "account",
+  label: "الحساب",
+  icon: ...,
+  children: [
+    { label: "الملف الشخصي", href: "/dashboard/profile" },
+    ...
+  ]
+}
+
+========================================
+RENDER LOGIC
+========================================
+
+function getSidebarItems(role) {
+  return [
+    ...sidebarConfig.common,
+    ...sidebarConfig[role]
+  ]
+}
+
+========================================
+FEATURES REQUIRED
+========================================
+
+1. Nested collapsible sidebar
+2. Auto expand active section
+3. Highlight active child + parent
+4. Role-based filtering
+5. Hide empty sections
+6. RTL support كامل
+7. Mobile drawer support
+8. Smooth animations
+9. Maximum 2 levels only (no deep nesting)
+
+========================================
+CONSISTENCY
+========================================
+
+- SAME sidebar design everywhere
+- SAME UX across all dashboards
+- NO duplication of code
+- NO separate sidebar implementations
+
+========================================
+SAFETY
+========================================
+
+- Do NOT break routing
+- Do NOT break permissions
+- Do NOT remove existing pages
+- Only reorganize navigation UI
+
+========================================
+BONUS (IMPORTANT)
+========================================
+
+- Allow future sections to be added easily
+- Ensure scalability for SaaS system
+- Ensure admin sees all sections
+- Ensure lower roles see only allowed items
+
+========================================
+DELIVERABLE
+========================================
+
+A unified, dynamic, nested sidebar system that works across ALL dashboards and ALL user roles.

@@ -1,0 +1,131 @@
+Fix incorrect project module visibility and access for Office accounts.
+
+Current bug:
+The Office account can see:
+- "المشاريع" in the dashboard sidebar
+- projects page
+- "إضافة مشروع" button
+- project management UI
+
+This is incorrect.
+Projects should NOT be available for Office accounts.
+
+========================================
+GOAL
+========================================
+
+Restrict the Projects module so it is accessible only to the correct account type(s), and completely hidden from Office accounts.
+
+========================================
+EXPECTED ACCESS RULES
+========================================
+
+Only the proper project-owning business account type should be allowed to access Projects.
+For this fix:
+
+Allowed:
+- Company / Developer Company only
+
+Not allowed:
+- Office
+- Broker
+- Owner
+- Seeker
+
+If your current model distinguishes:
+- AccountType.Company
+- AccountType.Office
+make sure only Company gets project access.
+
+========================================
+REQUIRED FIXES
+========================================
+
+1) Sidebar visibility fix
+Remove/hide the following from Office accounts:
+- "المشاريع" sidebar item
+- any related project quick links
+- any project dashboard cards/buttons
+
+2) Page access protection
+Protect project routes such as:
+- /dashboard/projects
+- /dashboard/projects/new
+- /dashboard/projects/{id}
+- edit/manage project routes
+
+If Office user tries to open them directly:
+- return 403
+or
+- redirect to dashboard with proper Arabic message
+
+3) Button/action protection
+Hide or disable for Office accounts:
+- "إضافة مشروع"
+- "تعديل مشروع"
+- "حذف مشروع"
+- any project-related CTA
+
+4) Backend authorization
+Do not rely only on frontend hiding.
+Backend/API must reject Office access to project endpoints.
+
+Protect:
+- create project
+- update project
+- delete project
+- list my projects
+- project management endpoints
+
+5) Centralize authorization
+Create/use a single shared authorization source such as:
+- canAccessProjects(accountType)
+- canManageProjects(accountType)
+
+Do not scatter role checks across many files.
+
+6) Audit all project-related UI
+Search and fix all places where projects may appear:
+- sidebar
+- dashboard cards
+- empty states
+- header shortcuts
+- profile/business pages
+- onboarding
+- mobile navigation
+
+7) Correct account type mapping
+Audit whether Office accounts are mistakenly classified as Company in any place.
+Check:
+- auth/session payload
+- accountType resolver
+- role mapping
+- backend DTOs
+- frontend current user state
+
+8) UX fallback
+If unauthorized user reaches projects route directly:
+- show proper Arabic message like:
+  "هذه الصفحة غير متاحة لنوع حسابك"
+- then redirect safely to dashboard
+
+========================================
+STRICT REQUIREMENTS
+========================================
+
+- Fix both UI and backend authorization
+- Do not only hide the sidebar item
+- Do not break Company access to projects
+- Keep logic consistent with account type isolation already implemented
+- Return root cause, changed files, and tested account types
+
+========================================
+DELIVERABLES
+========================================
+
+Return:
+1) why Office was seeing Projects
+2) which files were changed
+3) what route/API protections were added
+4) which account types can now access Projects
+5) verification results for Office vs Company

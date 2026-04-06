@@ -1,0 +1,105 @@
+The Edit Plan modal is STILL broken.
+
+IMPORTANT:
+Do NOT just tweak spacing again.
+This requires a structural modal fix.
+
+==================================================
+REAL PROBLEM
+==================================================
+
+The modal is visually leaking the page content behind it.
+
+From the current UI:
+- the modal body appears transparent or not isolated
+- underlying plan cards are visible through the form area
+- form fields are rendered on top of background content
+- the modal likely suffers from stacking context / container rendering issues
+- the modal is probably rendered inside the page layout instead of a true portal
+
+This is NOT only a spacing issue.
+It is a modal architecture issue.
+
+==================================================
+REQUIRED FIX
+==================================================
+
+1) RENDER MODAL THROUGH PORTAL
+- Render the modal using React portal into document.body
+- Do NOT render it inside the admin page card/grid container
+- This avoids parent overflow/transform/z-index issues
+
+2) TRUE FULLSCREEN OVERLAY
+Use:
+- position: fixed
+- inset: 0
+- z-index high enough (e.g. 2000+)
+- dark semi-transparent backdrop
+- backdrop must block interaction with the page behind
+
+3) SOLID MODAL PANEL
+The modal panel itself must be fully opaque:
+- background: white
+- opacity: 1
+- NO transparency
+- NO inherited backdrop effect
+- NO glass effect
+
+4) PANEL STRUCTURE
+Use this exact structure:
+
+- ModalOverlay (fixed fullscreen)
+  - ModalPanel (solid white box)
+    - ModalHeader
+    - ModalBody (scrollable)
+    - ModalFooter
+
+5) BODY LAYOUT
+- Body must have solid white background
+- Use padding and spacing
+- No content behind should be visible through it
+- max-height: 90vh
+- overflow-y: auto
+
+6) REMOVE CONTAINER SIDE EFFECTS
+Inspect parent/admin layout for:
+- overflow hidden
+- transform
+- filter
+- opacity
+- position stacking context
+- backdrop-filter
+
+Make sure none of these affect the modal.
+
+7) INPUTS
+- inputs must sit inside the modal panel only
+- width: 100%
+- labels above inputs
+- fields in clean grid
+- no overlap with underlying page
+
+8) RTL
+- keep full RTL support
+- title aligned correctly
+- close button placed appropriately
+- labels aligned properly
+
+==================================================
+DEBUG TASK
+==================================================
+
+Please explicitly inspect:
+- whether the modal is mounted inside the page tree instead of a portal
+- whether the modal panel/background is transparent
+- whether parent layout creates a stacking context issue
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+1. confirm whether a portal was added
+2. confirm modal panel background is solid white
+3. explain root cause of why page content was visible through the modal
+4. list changed files
+5. confirm the modal is now visually isolated from the page behind

@@ -1,0 +1,122 @@
+We still have a UI leakage issue inside Plan Cards.
+
+========================================
+PROBLEM
+========================================
+
+In the Plan Card UI, we are showing:
+
+- agents count (عدد الوكلاء)
+- projects count (عدد المشاريع)
+
+These are currently visible for ALL users including:
+- owner
+- broker
+
+This is WRONG.
+
+These limits should ONLY be visible for:
+- office
+- company
+
+========================================
+GOAL
+========================================
+
+Filter Plan Features (limits) based on user type.
+
+========================================
+REQUIRED FIX
+========================================
+
+1) Identify Plan Features Rendering
+
+Inside PlanCard component:
+There is a section rendering limits like:
+
+- listings
+- images
+- agents
+- projects
+
+========================================
+2) Add Feature Key Mapping
+
+Example:
+
+const PlanFeatureKeys = {
+  listings: 'listings',
+  images: 'images',
+  agents: 'agents',
+  projects: 'projects'
+};
+
+========================================
+3) Apply Filtering using canAccessFeature
+
+Before rendering each feature:
+
+Example:
+
+if (canAccessFeature(user, 'agents')) {
+  show agents limit
+}
+
+if (canAccessFeature(user, 'projects')) {
+  show projects limit
+}
+
+========================================
+4) Clean UI for Owner & Broker
+
+For:
+- owner
+- broker
+
+DO NOT render:
+- agents
+- projects
+
+They should not even see the label.
+
+========================================
+5) Optional (Better UX)
+
+Group features:
+
+Basic Features:
+- listings
+- images
+
+Advanced (Office Only):
+- agents
+- projects
+
+========================================
+6) IMPORTANT
+
+Do NOT rely on plan.features only.
+
+Use BOTH:
+- user.type (role)
+- feature access control
+
+========================================
+EXPECTED RESULT
+========================================
+
+Owner / Broker Plan Card:
+- listings ✔
+- images ✔
+- ❌ no agents
+- ❌ no projects
+
+Office / Company Plan Card:
+- listings ✔
+- images ✔
+- agents ✔
+- projects ✔
+
+Clean and correct SaaS UI
+No confusion
+No feature leakage

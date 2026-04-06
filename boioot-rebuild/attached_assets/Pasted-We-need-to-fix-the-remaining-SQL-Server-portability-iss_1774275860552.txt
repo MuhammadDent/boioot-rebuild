@@ -1,0 +1,135 @@
+We need to fix the remaining SQL Server portability issue completely and professionally.
+
+CURRENT SITUATION
+- The application code is portable.
+- SQLite runtime is healthy.
+- SQL Server support was added successfully.
+- Provider switching by config works.
+- Auth, login, JWT, seeding, and RBAC are working.
+- The remaining blocker is the old InitialSchema migration.
+
+PROBLEM
+The migration file InitialSchema.cs was generated while SQLite was the active provider.
+Because of that, many table.Column<T>(type: "...") calls contain SQLite-specific type strings such as:
+- TEXT
+- INTEGER
+- REAL
+
+When SQL Server uses this migration, those type hints are embedded into SQL Server DDL.
+This causes string columns to become SQL Server TEXT, which is deprecated and breaks equality filters and normal EF Core queries.
+
+GOAL
+Fix this root problem properly so the project becomes truly portable across:
+- SQLite
+- SQL Server
+
+I do NOT want a workaround only.
+I want the migration layer corrected professionally.
+
+TASKS
+
+1) AUDIT THE MIGRATION LAYER
+Inspect:
+- InitialSchema.cs
+- InitialCreate.cs
+- any later migrations
+- ModelSnapshot
+Find all provider-specific type hints and migration code that may generate wrong SQL on SQL Server.
+
+2) FIX InitialSchema.cs PROPERLY
+Remove SQLite-specific type strings from every migration column definition where provider defaults should be used.
+Examples:
+- remove type: "TEXT"
+- remove type: "INTEGER"
+- remove type: "REAL"
+Only keep explicit type declarations where they are intentionally provider-safe and required, such as properly configured decimal precision if needed.
+
+Important:
+- Do not do a careless blind replace.
+- Preserve nullability, maxLength, precision, defaults, keys, indexes, and relationships.
+- Keep the migration semantically correct.
+
+3) VALIDATE MODEL CONFIGURATION
+Check whether any EF configuration still forces SQLite-oriented column types.
+Move type intent to proper EF configuration only where truly needed and where it is compatible across providers.
+Examples:
+- decimal precision should use HasPrecision / provider-safe configuration
+- avoid hardcoded provider-specific store types unless absolutely necessary
+
+4) REVIEW SPECIAL CASES
+Inspect the known non-critical decimal/text decisions:
+- Invoice.Amount
+- PlanPricing.PriceAmount
+- Property.CommissionValue
+
+If these are intentionally stored as strings, make them provider-safe.
+Do NOT let SQL Server map them to deprecated TEXT.
+Use a correct bounded string type strategy or provider-safe mapping.
+Explain exactly what you changed.
+
+5) VERIFY SQL SERVER GENERATION
+After the fix:
+- regenerate the SQL Server migration script
+- analyze the generated SQL
+- confirm that string columns become proper SQL Server string types such as nvarchar(...) or nvarchar(max), not TEXT
+- confirm bool/int/guid/decimal mappings are correct
+
+6) PRESERVE SQLITE SUPPORT
+SQLite must continue to work exactly as before.
+Do not break existing SQLite runtime or migrations pipeline.
+
+7) DECIDE THE CORRECT FINAL ACTION
+Choose the most correct professional path:
+- either safely edit the existing migration files if appropriate for this stage
+- or regenerate the migration chain cleanly if that is the safer and more correct solution
+
+Do NOT choose the easier option only.
+Choose the option that gives the cleanest long-term architecture.
+
+8) TEST AFTER FIX
+Verify:
+- SQLite still starts cleanly
+- SQL Server migration script is valid
+- login/auth flow still works
+- seeding still works
+- no runtime portability regressions
+
+DELIVERABLES
+After implementation, provide a precise report with these sections:
+
+1. Root cause
+- what exactly was wrong
+- why it breaks SQL Server
+
+2. Files changed
+- exact files modified
+- what was changed in each
+
+3. Fix strategy chosen
+- whether you edited migrations or regenerated them
+- why this was the correct professional choice
+
+4. SQL Server verification
+- what SQL types are now generated for:
+  - string
+  - bool
+  - int
+  - Guid
+  - decimal
+- confirm that deprecated SQL Server TEXT is gone
+
+5. SQLite verification
+- confirm SQLite still works
+
+6. Final verdict
+Choose one:
+- Fully portable and production-safe
+- Portable but needs one final cleanup
+- Still not safe
+
+IMPORTANT RULES
+- Do real code changes, not only analysis
+- Fix the root cause, not just the symptom
+- Do not break the current SQLite environment
+- Keep the solution maintainable and SaaS-ready
+- If migration regeneration is the right answer, do it cleanly and explain exactly how you preserved data safety for the current stage

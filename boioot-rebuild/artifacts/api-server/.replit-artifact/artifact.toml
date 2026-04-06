@@ -1,0 +1,20 @@
+kind = "api"
+previewPath = "/workspace-api"
+title = "API Server"
+version = "1.0.0"
+id = "3B4_FFSkEVBkAeYMFRJ2e"
+
+[[services]]
+localPort = 8080
+name = "API Server"
+paths = ["/workspace-api"]
+
+[services.development]
+run = "bash /home/runner/workspace/boioot/apps/backend/run-api.sh"
+
+[services.production]
+build = "bash boioot/apps/backend/build-prod.sh"
+run = "dotnet /home/runner/workspace/out/Boioot.Api.dll --urls http://0.0.0.0:$PORT"
+
+[services.production.health.startup]
+path = "/health"

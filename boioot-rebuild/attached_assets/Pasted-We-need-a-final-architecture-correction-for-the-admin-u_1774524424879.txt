@@ -1,0 +1,107 @@
+We need a final architecture correction for the admin users page.
+
+IMPORTANT BUSINESS RULE
+
+The "Users" page is a CUSTOMER DIRECTORY only.
+It must NOT include internal admin/staff accounts.
+
+System Manager / Admin / internal staff already have their own dedicated sections:
+- Team Management
+- Roles & Permissions
+
+So including them inside Users causes duplication and wrong analytics.
+
+GOAL
+
+Make the Users page contain ONLY customer-facing accounts.
+
+CUSTOMER ROLES ONLY
+The users page should include only:
+- User
+- Owner
+- Broker
+- Office
+- Agent
+- CompanyOwner
+
+INTERNAL ROLES TO EXCLUDE
+The users page must exclude:
+- Admin
+- System Manager
+- Staff
+- any internal/backoffice roles
+
+REQUIRED CHANGES
+
+1) Remove internal roles from Users page completely
+- Do not show Admin/System Manager in users table
+- Do not show Admin/System Manager in role filter
+- Do not show Admin/System Manager in tabs
+- Do not show Admin/System Manager in analytics/cards/counts
+
+2) Remove the "إداريون" tab from Users page
+- Delete the admin/internal tab entirely
+- Users page must not have any separate internal-users subsection
+
+3) Update analytics
+All KPIs on Users page must count CUSTOMER roles only:
+- total users
+- active users
+- new this month
+- new this week
+- role distribution
+- saved segments
+- exports
+
+4) Update filters
+Role dropdown on Users page must only contain:
+- الكل
+- مستخدم
+- مالك عقار
+- وسيط عقاري
+- مكتب عقاري
+- وكيل عقاري
+- شركة تطوير
+
+No internal/admin roles allowed here.
+
+5) Update tabs
+Tabs on Users page must only include customer roles:
+- الكل
+- مستخدم
+- مالك عقار
+- وسطاء عقاريون
+- مكاتب عقارية
+- وكلاء عقاريون
+- شركات تطوير
+
+No "إداريون" tab.
+
+6) Data source logic
+Keep one users table in DB if needed,
+but Users page query must explicitly exclude internal role categories.
+
+7) Internal accounts remain manageable only in:
+- إدارة الفريق
+- الأدوار والصلاحيات
+
+8) Consistency cleanup
+- Remove any admin counts from customer analytics
+- Remove any internal badge/category from users page
+- Make sure exports from users page export customers only
+
+DELIVERABLES
+- Show updated query/filter logic
+- Show updated role classification used by users page
+- Confirm admin/system manager is excluded from:
+  - users table
+  - filters
+  - tabs
+  - analytics
+- Confirm internal accounts remain available only in team/permissions sections
+
+IMPORTANT
+This is not a visual tweak.
+This is a business data separation rule:
+Users page = customers only.
+Internal admins/staff must not appear there at all.

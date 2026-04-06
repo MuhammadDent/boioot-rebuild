@@ -1,0 +1,78 @@
+Now run a full regression verification for the location handling fix in the request creation flow.
+
+Goal:
+Confirm that the runtime crash is fully resolved and that the fix is robust across all relevant location workflows.
+
+Scope:
+- src/app/dashboard/my-requests/new/page.tsx
+- any shared location selectors/components/hooks/services used by:
+  - request creation
+  - listing creation
+  - profile/location forms
+  - office account flows
+  - broker/owner/company flows if shared
+
+Required verification steps:
+
+1) Office account test
+- Login as office account
+- Open /dashboard/my-requests/new
+- Add a new city
+- Confirm:
+  - no runtime crash
+  - city is inserted correctly
+  - city appears in dropdown/list
+  - city can be selected
+  - request form remains functional
+
+2) Neighborhood test
+- After selecting a city, add a new neighborhood
+- Confirm:
+  - no runtime crash
+  - neighborhood appears correctly
+  - neighborhood can be selected
+  - no undefined/null sorting issues
+
+3) Duplicate prevention test
+- Try adding the same city again with minor formatting variations:
+  - extra spaces
+  - Arabic variants if applicable
+  - uppercase/lowercase differences
+- Confirm duplicates are prevented or merged correctly
+
+4) API malformed data resilience
+- Verify the UI does not crash if API returns:
+  - missing name
+  - null name
+  - missing id
+  - partial location object
+- Invalid records should be ignored safely
+
+5) Sort safety audit
+- Search the codebase for unsafe patterns such as:
+  - .localeCompare(
+  - .sort((a, b) =>
+  - direct access to item.name without fallback in location arrays
+- Replace unsafe usages in related location flows with safe helpers where needed
+
+6) Cross-page audit
+Verify the same location handling is safe in:
+- create listing page
+- edit listing page
+- any admin location forms
+- any shared add-city / add-neighborhood modal
+
+7) Type safety
+- Ensure TypeScript types reflect nullable/optional API payloads if needed
+- Avoid unsafe assumptions in UI state
+
+8) Final report
+Return:
+- what files were checked
+- what additional unsafe code was found
+- what was fixed
+- whether the issue is fully resolved or partially resolved
+
+Important:
+Do not just say “tested successfully”.
+Actually inspect shared code and harden any remaining unsafe location handling paths.

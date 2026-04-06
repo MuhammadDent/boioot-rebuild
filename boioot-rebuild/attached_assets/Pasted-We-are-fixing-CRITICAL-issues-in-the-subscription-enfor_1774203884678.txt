@@ -1,0 +1,91 @@
+We are fixing CRITICAL issues in the subscription enforcement system.
+
+Act as a senior SaaS backend engineer.
+
+IMPORTANT:
+- Do NOT add new features
+- Do NOT refactor everything
+- ONLY fix the listed critical issues
+
+==================================================
+CRITICAL ISSUES TO FIX
+==================================================
+
+1) AGENT LIMIT NOT WORKING
+
+Problem:
+Agent count is calculated using AccountUsers, but agents are not linked properly.
+
+Fix:
+- Ensure that every created Agent is linked to AccountUsers OR
+- Change logic to count agents directly from Agents table using AccountId
+
+Requirement:
+- max_agents must be enforced correctly
+- No bypass allowed
+
+==================================================
+
+2) PROJECT LIMIT BYPASS
+
+Problem:
+If (!companyIds.Any()) return true
+
+Fix:
+- REMOVE this bypass
+- Always enforce limits based on subscription
+
+Requirement:
+- Even first project must respect plan
+- No unlimited access
+
+==================================================
+
+3) ERROR STANDARDIZATION
+
+Problem:
+Mixed usage of BoiootException and PlanLimitException
+
+Fix:
+- Use ONLY PlanLimitException for all limit-related errors
+- Ensure consistent response:
+{
+  code,
+  message,
+  limit,
+  upgradeRequired
+}
+
+==================================================
+
+4) REMOVE SILENT FAILURES
+
+Problem:
+catch (Exception) { return false; }
+
+Fix:
+- NEVER swallow exceptions
+- Log error
+- Throw proper exception
+
+==================================================
+
+5) EXPIRED SUBSCRIPTION HANDLING
+
+Fix:
+- If subscription expired:
+  return error code: SUBSCRIPTION_EXPIRED
+- Differentiate between:
+  - limit reached
+  - subscription expired
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+1. Show EXACT code changes (diff or snippets)
+2. List affected files
+3. Explain each fix briefly
+
+IMPORTANT:
+This is production-critical. Be precise.

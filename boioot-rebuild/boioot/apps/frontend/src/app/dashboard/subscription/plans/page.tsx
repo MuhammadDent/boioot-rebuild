@@ -1,0 +1,1210 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
+import { pricingApi } from "@/features/pricing/api";
+import { paymentRequestsApi } from "@/features/subscriptionPayments/api";
+import { subscriptionApi } from "@/features/subscription/api";
+import {
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_METHOD_DESC,
+  PAYMENT_METHOD_ICON,
+  AVAILABLE_METHODS,
+  MANUAL_METHODS,
+  RECEIPT_METHODS,
+  CYCLE_LABELS,
+} from "@/features/subscriptionPayments/constants";
+import {
+  formatLimitValue,
+  BILLING_CYCLE_LABELS,
+} from "@/features/pricing/labels";
+import { api, normalizeError } from "@/lib/api";
+import type { PublicPricingItem, PublicPricingEntry } from "@/features/pricing/types";
+import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
+import {
+  getAudienceTypeForUser,
+  filterPlansForAudience,
+  AUDIENCE_TYPE_LABEL,
+} from "@/features/pricing/planCompatibility";
+import {
+  canAccessFeature,
+  type FeatureAccessKey,
+} from "@/features/access/featureAccess";
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function formatAmount(amount: number, currency: string) {
+  if (amount === 0) return "مجاني";
+  return `${amount.toLocaleString("ar-SY")} ${currency}`;
+}
+
+const LIMIT_KEYS = ["max_active_listings", "max_agents", "max_projects"];
+const LIMIT_ICONS: Record<string, string> = {
+  max_active_listings: "📋",
+  max_agents:          "👥",
+  max_projects:        "🏗️",
+};
+const LIMIT_LABELS: Record<string, string> = {
+  max_active_listings: "إعلان نشط",
+  max_agents:          "وكيل",
+  max_projects:        "مشروع",
+};
+
+// Maps each limit key to the featureAccess gate required to display it.
+// null = always visible regardless of role.
+const LIMIT_VISIBILITY: Record<string, FeatureAccessKey | null> = {
+  max_active_listings: null,
+  max_agents:          "agents",
+  max_projects:        "projects",
+};
+
+// ── PlanCard ─────────────────────────────────────────────────────────────────
+
+function PlanCard({
+  plan,
+  cycle,
+  currentPlanId,
+  onChoose,
+  onActivateFree,
+  freeActivatingId,
+  user,
+}: {
+  plan: PublicPricingItem;
+  cycle: "Monthly" | "Yearly";
+  currentPlanId: string | null;
+  onChoose: (plan: PublicPricingItem, pricing: PublicPricingEntry) => void;
+  onActivateFree: (planId: string) => void;
+  freeActivatingId: string | null;
+  user: { role?: string | null; accountType?: string | null } | null;
+}) {
+  const pricing = plan.pricing.find(p => p.billingCycle === cycle)
+    ?? (plan.pricing.length > 0 ? plan.pricing[0] : undefined);
+
+  // TODO(stabilization): plan.pricing may be empty for misconfigured plans — guard below
+  const isFree = pricing ? pricing.priceAmount === 0 : plan.pricing.every(p => p.priceAmount === 0);
+  const isCurrent = plan.planId === currentPlanId;
+  const isRecommended = plan.isRecommended;
+  const isActivatingFree = freeActivatingId === plan.planId;
+
+  // Filter limits by: (a) known display keys, (b) role-based visibility gate.
+  // max_agents → CompanyOwner + Admin only
+  // max_projects → Company CompanyOwner + Admin only
+  const keyLimits = plan.limits.filter(l => {
+    if (!LIMIT_KEYS.includes(l.key)) return false;
+    const gate = LIMIT_VISIBILITY[l.key];
+    if (gate === null) return true;
+    return canAccessFeature(user, gate);
+  });
+
+  return (
+    <div style={{
+      backgroundColor: "#fff",
+      borderRadius: 16,
+      padding: "1.5rem",
+      boxShadow: isRecommended
+        ? "0 4px 24px rgba(5,150,105,0.18)"
+        : "0 1px 4px rgba(0,0,0,0.06)",
+      border: isRecommended
+        ? "2px solid #059669"
+        : isCurrent
+          ? "2px solid #2563eb"
+          : "1.5px solid #e2e8f0",
+      display: "flex",
+      flexDirection: "column",
+      gap: "0.85rem",
+      position: "relative",
+    }}>
+
+      {/* Recommended badge */}
+      {isRecommended && (
+        <div style={{
+          position: "absolute",
+          top: -12,
+          right: "50%",
+          transform: "translateX(50%)",
+          backgroundColor: "#059669",
+          color: "#fff",
+          fontSize: "0.72rem",
+          fontWeight: 700,
+          padding: "0.2rem 0.85rem",
+          borderRadius: 20,
+          whiteSpace: "nowrap",
+        }}>
+          ⭐ الأكثر شعبية
+        </div>
+      )}
+
+      {isCurrent && !isRecommended && (
+        <div style={{
+          position: "absolute",
+          top: -12,
+          right: "50%",
+          transform: "translateX(50%)",
+          backgroundColor: "#2563eb",
+          color: "#fff",
+          fontSize: "0.72rem",
+          fontWeight: 700,
+          padding: "0.2rem 0.85rem",
+          borderRadius: 20,
+          whiteSpace: "nowrap",
+        }}>
+          ✓ باقتك الحالية
+        </div>
+      )}
+
+      {/* Plan name + category */}
+      <div>
+        <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8", fontWeight: 500 }}>
+          {plan.planCategory ?? plan.applicableAccountType ?? ""}
+        </p>
+        <h3 style={{ margin: "0.2rem 0 0", fontSize: "1.15rem", fontWeight: 800, color: "#1a2e1a" }}>
+          {plan.displayNameAr}
+        </h3>
+        {plan.description && (
+          <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5 }}>
+            {plan.description}
+          </p>
+        )}
+      </div>
+
+      {/* Price */}
+      {pricing && (
+        <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "0.85rem" }}>
+          <p style={{ margin: 0, fontSize: "1.6rem", fontWeight: 900, color: "#059669", lineHeight: 1 }}>
+            {formatAmount(pricing.priceAmount, pricing.currencyCode)}
+          </p>
+          <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
+            / {BILLING_CYCLE_LABELS[cycle] ?? cycle}
+          </p>
+        </div>
+      )}
+
+      {/* Key limits */}
+      {keyLimits.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+          {keyLimits.map(l => (
+            <div
+              key={l.key}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}
+            >
+              <span>{LIMIT_ICONS[l.key] ?? "•"}</span>
+              <span style={{ color: "#374151", fontWeight: 600 }}>
+                {formatLimitValue(l.value, null)}
+              </span>
+              <span style={{ color: "#64748b" }}>
+                {LIMIT_LABELS[l.key] ?? l.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* CTA */}
+      <button
+        onClick={() => {
+          if (isCurrent || isActivatingFree) return;
+          if (isFree) {
+            onActivateFree(plan.planId);
+          } else if (pricing) {
+            onChoose(plan, pricing);
+          }
+        }}
+        disabled={isCurrent || isActivatingFree}
+        type="button"
+        style={{
+          marginTop: "auto",
+          width: "100%",
+          padding: "0.7rem",
+          borderRadius: 10,
+          border: "none",
+          backgroundColor: isCurrent || isActivatingFree
+            ? "#e2e8f0"
+            : isRecommended
+              ? "#059669"
+              : "#1a2e1a",
+          color: isCurrent || isActivatingFree ? "#94a3b8" : "#fff",
+          fontSize: "0.9rem",
+          fontWeight: 700,
+          cursor: isCurrent || isActivatingFree ? "default" : "pointer",
+        }}
+      >
+        {isCurrent
+          ? "باقتك الحالية"
+          : isActivatingFree
+            ? "جارٍ التفعيل..."
+            : isFree
+              ? "تفعيل مجاني"
+              : "اختر الباقة"}
+      </button>
+    </div>
+  );
+}
+
+// ── CheckoutModal ─────────────────────────────────────────────────────────────
+
+function CheckoutModal({
+  plan,
+  initialPricing,
+  onClose,
+  onSuccess,
+}: {
+  plan: PublicPricingItem;
+  initialPricing: PublicPricingEntry;
+  onClose: () => void;
+  onSuccess: (id: string, method: string) => void;
+}) {
+  const [selectedPricing, setSelectedPricing] = useState<PublicPricingEntry>(initialPricing);
+  const [paymentMethod, setPaymentMethod]     = useState(AVAILABLE_METHODS[0]);
+  const [customerNote, setCustomerNote]       = useState("");
+  const [salesRep, setSalesRep]               = useState("");
+  const [proofFile, setProofFile]             = useState<File | null>(null);
+  const [submitting, setSubmitting]           = useState(false);
+  const [submitPhase, setSubmitPhase]         = useState<"idle" | "creating" | "uploading" | "attaching">("idle");
+  const [error, setError]                     = useState<string | null>(null);
+  const fileInputRef                          = useRef<HTMLInputElement>(null);
+
+  const isReceiptRequired = RECEIPT_METHODS.has(paymentMethod);
+  const isManualMethod    = MANUAL_METHODS.has(paymentMethod);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null;
+    if (!f) { setProofFile(null); return; }
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(f.type)) {
+      setError("نوع الملف غير مدعوم. يُقبل JPG أو PNG أو PDF فقط.");
+      e.target.value = "";
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      setError("حجم الملف يتجاوز 5MB.");
+      e.target.value = "";
+      return;
+    }
+    setError(null);
+    setProofFile(f);
+  }
+
+  async function handleSubmit() {
+    // Validate required proof for bank transfer / receipt_upload
+    if (isReceiptRequired && !proofFile) {
+      setError("يرجى رفع صورة الإيصال أو ملف الإثبات قبل الإرسال.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      // Phase 1: create the payment request
+      setSubmitPhase("creating");
+      const result = await paymentRequestsApi.create({
+        planId:       plan.planId,
+        pricingId:    selectedPricing.pricingId,
+        billingCycle: selectedPricing.billingCycle,
+        paymentMethod,
+        customerNote: customerNote.trim() || undefined,
+        salesRepresentativeName:
+          paymentMethod === "cash_to_sales_rep" && salesRep.trim()
+            ? salesRep.trim()
+            : undefined,
+      });
+
+      // Phase 2 & 3: upload proof file and attach receipt if file was selected
+      if (proofFile) {
+        setSubmitPhase("uploading");
+        const form = new FormData();
+        form.append("file", proofFile);
+        const { url } = await api.postForm<{ url: string; fileName: string }>("/upload/proof", form);
+
+        setSubmitPhase("attaching");
+        await paymentRequestsApi.uploadReceipt(result.id, { receiptImageUrl: url });
+      }
+
+      onSuccess(result.id, paymentMethod);
+    } catch (err) {
+      setError(normalizeError(err));
+    } finally {
+      setSubmitting(false);
+      setSubmitPhase("idle");
+    }
+  }
+
+  function getSubmitLabel() {
+    if (!submitting) return "إرسال طلب الاشتراك";
+    if (submitPhase === "creating")   return "جارٍ إنشاء الطلب...";
+    if (submitPhase === "uploading")  return "جارٍ رفع ملف الإثبات...";
+    if (submitPhase === "attaching")  return "جارٍ إرفاق الإيصال...";
+    return "جارٍ الإرسال...";
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "1rem",
+    }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        backgroundColor: "#fff",
+        borderRadius: 18,
+        width: "100%",
+        maxWidth: 520,
+        maxHeight: "90vh",
+        overflowY: "auto",
+        padding: "1.75rem",
+      }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+          <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#1a2e1a" }}>
+            إتمام الاشتراك
+          </h2>
+          <button
+            onClick={onClose}
+            type="button"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: "1.3rem", lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Plan summary */}
+        <div style={{
+          backgroundColor: "#f0fdf4",
+          border: "1.5px solid #bbf7d0",
+          borderRadius: 12,
+          padding: "1rem",
+          marginBottom: "1.25rem",
+        }}>
+          <p style={{ margin: 0, fontSize: "0.78rem", color: "#166534", fontWeight: 600 }}>
+            الباقة المختارة
+          </p>
+          <p style={{ margin: "0.25rem 0 0", fontSize: "1.05rem", fontWeight: 800, color: "#1a2e1a" }}>
+            {plan.displayNameAr}
+          </p>
+          <p style={{ margin: "0.4rem 0 0", fontSize: "1.2rem", fontWeight: 900, color: "#059669" }}>
+            {formatAmount(selectedPricing.priceAmount, selectedPricing.currencyCode)}
+            <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "#64748b", marginRight: "0.35rem" }}>
+              / {BILLING_CYCLE_LABELS[selectedPricing.billingCycle] ?? selectedPricing.billingCycle}
+            </span>
+          </p>
+        </div>
+
+        {/* Billing cycle selector (if multiple options) */}
+        {plan.pricing.length > 1 && (
+          <div style={{ marginBottom: "1.25rem" }}>
+            <p style={{ margin: "0 0 0.6rem", fontSize: "0.85rem", fontWeight: 700, color: "#374151" }}>
+              دورة الفوترة
+            </p>
+            <div style={{ display: "flex", gap: "0.6rem" }}>
+              {plan.pricing.map(p => (
+                <button
+                  key={p.pricingId}
+                  onClick={() => setSelectedPricing(p)}
+                  type="button"
+                  style={{
+                    flex: 1,
+                    padding: "0.65rem",
+                    borderRadius: 10,
+                    border: selectedPricing.pricingId === p.pricingId
+                      ? "2px solid #059669"
+                      : "1.5px solid #e2e8f0",
+                    backgroundColor: selectedPricing.pricingId === p.pricingId ? "#f0fdf4" : "#f8fafc",
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  <p style={{ margin: 0, fontSize: "0.8rem", fontWeight: 700, color: "#1e293b" }}>
+                    {BILLING_CYCLE_LABELS[p.billingCycle] ?? p.billingCycle}
+                  </p>
+                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.82rem", fontWeight: 800, color: "#059669" }}>
+                    {formatAmount(p.priceAmount, p.currencyCode)}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Payment method */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <p style={{ margin: "0 0 0.6rem", fontSize: "0.85rem", fontWeight: 700, color: "#374151" }}>
+            طريقة الدفع
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {AVAILABLE_METHODS.map(method => (
+              <label
+                key={method}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "0.75rem",
+                  padding: "0.85rem",
+                  borderRadius: 10,
+                  border: paymentMethod === method ? "2px solid #1a2e1a" : "1.5px solid #e2e8f0",
+                  backgroundColor: paymentMethod === method ? "#f8fafc" : "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value={method}
+                  checked={paymentMethod === method}
+                  onChange={() => setPaymentMethod(method)}
+                  style={{ marginTop: 3, flexShrink: 0 }}
+                />
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#1e293b" }}>
+                    {PAYMENT_METHOD_ICON[method]} {PAYMENT_METHOD_LABELS[method]}
+                  </p>
+                  <p style={{ margin: "0.2rem 0 0", fontSize: "0.76rem", color: "#64748b" }}>
+                    {PAYMENT_METHOD_DESC[method]}
+                  </p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Sales rep name — only for cash_to_sales_rep */}
+        {paymentMethod === "cash_to_sales_rep" && (
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "#374151", marginBottom: "0.4rem" }}>
+              اسم مندوب المبيعات (اختياري)
+            </label>
+            <input
+              type="text"
+              value={salesRep}
+              onChange={e => setSalesRep(e.target.value)}
+              placeholder="أدخل اسم المندوب الذي دفعت له"
+              style={{
+                width: "100%",
+                padding: "0.65rem 0.85rem",
+                borderRadius: 9,
+                border: "1.5px solid #e2e8f0",
+                fontSize: "0.88rem",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+        )}
+
+        {/* Proof / receipt file upload — all manual methods */}
+        {isManualMethod && (
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{
+              display: "block",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              color: "#374151",
+              marginBottom: "0.4rem",
+            }}>
+              {isReceiptRequired ? "إيصال الدفع (مطلوب)" : "ملف الإثبات (اختياري)"}
+              <span style={{ fontSize: "0.74rem", fontWeight: 400, color: "#94a3b8", marginRight: "0.4rem" }}>
+                JPG · PNG · PDF · حد أقصى 5MB
+              </span>
+            </label>
+
+            {/* Drop / click zone */}
+            <div
+              onClick={() => !submitting && fileInputRef.current?.click()}
+              style={{
+                border: `2px dashed ${proofFile ? "#059669" : isReceiptRequired ? "#f59e0b" : "#cbd5e1"}`,
+                borderRadius: 10,
+                padding: "1rem",
+                textAlign: "center",
+                cursor: submitting ? "default" : "pointer",
+                backgroundColor: proofFile ? "#f0fdf4" : "#fafafa",
+                transition: "border-color 0.15s",
+              }}
+            >
+              {proofFile ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem" }}>
+                  <span style={{ fontSize: "1.4rem" }}>
+                    {proofFile.type === "application/pdf" ? "📄" : "🖼️"}
+                  </span>
+                  <span style={{ fontSize: "0.85rem", color: "#166534", fontWeight: 600 }}>
+                    {proofFile.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); setProofFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                    disabled={submitting}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      color: "#dc2626", fontSize: "1rem", lineHeight: 1, padding: 0,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <span style={{ fontSize: "1.6rem", display: "block", marginBottom: "0.35rem" }}>📎</span>
+                  <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
+                    انقر لاختيار ملف الإيصال أو الإثبات
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+          </div>
+        )}
+
+        {/* Customer note */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "#374151", marginBottom: "0.4rem" }}>
+            ملاحظة (اختياري)
+          </label>
+          <textarea
+            value={customerNote}
+            onChange={e => setCustomerNote(e.target.value)}
+            placeholder="أي معلومات إضافية تريد إرفاقها بالطلب..."
+            rows={2}
+            style={{
+              width: "100%",
+              padding: "0.65rem 0.85rem",
+              borderRadius: 9,
+              border: "1.5px solid #e2e8f0",
+              fontSize: "0.88rem",
+              resize: "vertical",
+              boxSizing: "border-box",
+              fontFamily: "inherit",
+            }}
+          />
+        </div>
+
+        {/* Trust note */}
+        <div style={{
+          backgroundColor: "#fafafa",
+          border: "1px solid #e2e8f0",
+          borderRadius: 10,
+          padding: "0.85rem",
+          marginBottom: "1.25rem",
+          fontSize: "0.78rem",
+          color: "#64748b",
+          lineHeight: 1.6,
+        }}>
+          🔒 بعد إرسال الطلب، سيقوم فريق المبيعات بمراجعة الدفع وتفعيل الباقة.
+          يمكنك متابعة حالة طلبك من <strong>صفحة طلبات الاشتراك</strong>.
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            backgroundColor: "#fee2e2",
+            border: "1px solid #fca5a5",
+            borderRadius: 9,
+            padding: "0.75rem",
+            marginBottom: "1rem",
+            fontSize: "0.85rem",
+            color: "#b91c1c",
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: "flex", gap: "0.65rem" }}>
+          <button
+            onClick={onClose}
+            type="button"
+            disabled={submitting}
+            style={{
+              flex: 1,
+              padding: "0.75rem",
+              borderRadius: 10,
+              border: "1.5px solid #e2e8f0",
+              backgroundColor: "#f8fafc",
+              color: "#475569",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            إلغاء
+          </button>
+          <button
+            onClick={handleSubmit}
+            type="button"
+            disabled={submitting}
+            style={{
+              flex: 2,
+              padding: "0.75rem",
+              borderRadius: 10,
+              border: "none",
+              backgroundColor: submitting ? "#94a3b8" : "#059669",
+              color: "#fff",
+              fontSize: "0.9rem",
+              fontWeight: 700,
+              cursor: submitting ? "default" : "pointer",
+            }}
+          >
+            {getSubmitLabel()}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SuccessModal ──────────────────────────────────────────────────────────────
+
+function SuccessModal({
+  paymentMethod,
+  onViewRequests,
+  onClose,
+}: {
+  paymentMethod: string;
+  onViewRequests: () => void;
+  onClose: () => void;
+}) {
+  const needsReceipt = ["bank_transfer", "receipt_upload"].includes(paymentMethod);
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "1rem",
+    }}>
+      <div style={{
+        backgroundColor: "#fff",
+        borderRadius: 18,
+        width: "100%",
+        maxWidth: 440,
+        padding: "2rem",
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>✅</div>
+        <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.2rem", fontWeight: 800, color: "#1a2e1a" }}>
+          تم إرسال طلبك بنجاح!
+        </h2>
+        <p style={{ margin: "0 0 1.25rem", fontSize: "0.88rem", color: "#475569", lineHeight: 1.7 }}>
+          {needsReceipt
+            ? "يمكنك رفع إيصال الدفع من صفحة طلباتي لتسريع عملية المراجعة."
+            : paymentMethod === "cash_to_sales_rep"
+              ? "سيتواصل معك مندوب المبيعات للتأكيد. يمكنك متابعة الحالة من صفحة طلباتي."
+              : "سيراجع فريقنا طلبك ويتواصل معك قريباً. يمكنك متابعة الحالة من صفحة طلباتي."}
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+          <button
+            onClick={onViewRequests}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.8rem",
+              borderRadius: 10,
+              border: "none",
+              backgroundColor: "#1a2e1a",
+              color: "#fff",
+              fontSize: "0.9rem",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            متابعة حالة الطلب
+          </button>
+          <button
+            onClick={onClose}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.7rem",
+              borderRadius: 10,
+              border: "1.5px solid #e2e8f0",
+              backgroundColor: "transparent",
+              color: "#64748b",
+              fontSize: "0.88rem",
+              cursor: "pointer",
+            }}
+          >
+            العودة للباقات
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── FreeSuccessModal ──────────────────────────────────────────────────────────
+
+function FreeSuccessModal({
+  planName,
+  onGoToDashboard,
+  onClose,
+}: {
+  planName: string;
+  onGoToDashboard: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "1rem",
+    }}>
+      <div style={{
+        backgroundColor: "#fff",
+        borderRadius: 18,
+        width: "100%",
+        maxWidth: 420,
+        padding: "2rem",
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🎉</div>
+        <h2 style={{ margin: "0 0 0.5rem", fontSize: "1.2rem", fontWeight: 800, color: "#1a2e1a" }}>
+          تم تفعيل الباقة المجانية!
+        </h2>
+        <p style={{ margin: "0 0 0.35rem", fontSize: "1rem", fontWeight: 700, color: "#059669" }}>
+          {planName}
+        </p>
+        <p style={{ margin: "0 0 1.5rem", fontSize: "0.88rem", color: "#475569", lineHeight: 1.7 }}>
+          تم تفعيل اشتراكك المجاني فوراً. يمكنك الآن الاستفادة من جميع مزايا الباقة.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+          <button
+            onClick={onGoToDashboard}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.8rem",
+              borderRadius: 10,
+              border: "none",
+              backgroundColor: "#059669",
+              color: "#fff",
+              fontSize: "0.9rem",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            الانتقال للوحة التحكم
+          </button>
+          <button
+            onClick={onClose}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.7rem",
+              borderRadius: 10,
+              border: "1.5px solid #e2e8f0",
+              backgroundColor: "transparent",
+              color: "#64748b",
+              fontSize: "0.88rem",
+              cursor: "pointer",
+            }}
+          >
+            العودة للباقات
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+// Audience tab options shown to User role (seeker excluded — they're already on free tier)
+const USER_AUDIENCE_TABS: Array<{ key: string; label: string; icon: string }> = [
+  { key: "owner",   label: "مالك عقار",           icon: "🏠" },
+  { key: "broker",  label: "وسيط عقاري",          icon: "🤝" },
+  { key: "office",  label: "مكتب عقاري",           icon: "🏢" },
+  { key: "company", label: "شركة تطوير عقاري",    icon: "🏗️" },
+];
+
+export default function PlansPage() {
+  const { user, isLoading } = useProtectedRoute();
+  const router = useRouter();
+
+  const [plans, setPlans]             = useState<PublicPricingItem[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError]   = useState<string | null>(null);
+  const [cycle, setCycle]             = useState<"Monthly" | "Yearly">("Monthly");
+  const [currentSub, setCurrentSub]   = useState<CurrentSubscriptionResponse | null>(null);
+
+  const [subLoading, setSubLoading]           = useState(true);
+
+  const [checkoutPlan, setCheckoutPlan]       = useState<PublicPricingItem | null>(null);
+  const [checkoutPricing, setCheckoutPricing] = useState<PublicPricingEntry | null>(null);
+  const [successMethod, setSuccessMethod]     = useState<string | null>(null);
+
+  const [freeActivatingId, setFreeActivatingId]   = useState<string | null>(null);
+  const [freeSuccessPlan, setFreeSuccessPlan]     = useState<string | null>(null);
+
+  // Audience tab for User role — initialized from ?audience= query param (client-side), defaults to "owner"
+  const [userAudienceTab, setUserAudienceTab] = useState<string>("owner");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const aud = params.get("audience") ?? "owner";
+    if (USER_AUDIENCE_TABS.some(t => t.key === aud)) {
+      setUserAudienceTab(aud);
+    }
+  }, []);
+
+  const loadPlans = useCallback(async () => {
+    setPlansLoading(true);
+    setPlansError(null);
+    try {
+      const data = await pricingApi.getPublicPricing();
+      setPlans(data);
+    } catch {
+      setPlansError("تعذّر تحميل الباقات. يرجى المحاولة لاحقاً.");
+    } finally {
+      setPlansLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPlans();
+  }, [loadPlans]);
+
+  useEffect(() => {
+    if (!user) return;
+    subscriptionApi.getCurrent()
+      .then(sub => setCurrentSub(sub))
+      .catch(() => setCurrentSub(null))
+      .finally(() => setSubLoading(false));
+  }, [user]);
+
+  async function handleActivateFree(planId: string) {
+    setFreeActivatingId(planId);
+    try {
+      const result = await paymentRequestsApi.activateFree(planId);
+      setFreeSuccessPlan(result.planName);
+      // Refresh current subscription banner
+      subscriptionApi.getCurrent()
+        .then(sub => setCurrentSub(sub))
+        .catch(() => {});
+    } catch (err) {
+      setError(normalizeError(err));
+    } finally {
+      setFreeActivatingId(null);
+    }
+  }
+
+  if (isLoading || !user) return null;
+
+  // For User role, derive audience type from the tab selector (not the default seeker filter)
+  const isRegularUser  = user.role === "User";
+  const audienceType   = isRegularUser
+    ? userAudienceTab
+    : getAudienceTypeForUser(user.role, currentSub?.audienceType);
+
+  const visiblePlans = filterPlansForAudience(plans, audienceType)
+    .slice()
+    .sort((a, b) => (a.displayOrder ?? a.rank) - (b.displayOrder ?? b.rank));
+
+  const hasBothCycles = visiblePlans.some(p =>
+    p.pricing.some(pr => pr.billingCycle === "Yearly")
+  );
+
+  return (
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 0 3rem" }}>
+
+      {/* Page header */}
+      <div style={{ marginBottom: "1.75rem" }}>
+        <h1 style={{ margin: 0, fontSize: "1.65rem", fontWeight: 800, color: "#1a2e1a" }}>
+          باقات الاشتراك
+        </h1>
+        <p style={{ margin: "0.3rem 0 0", fontSize: "0.875rem", color: "#64748b" }}>
+          اختر الباقة المناسبة لنشاطك العقاري وابدأ الاشتراك الآن
+        </p>
+      </div>
+
+      {/* Audience type tabs — shown only for User role */}
+      {isRegularUser && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <p style={{
+            margin: "0 0 0.65rem",
+            fontSize: "0.78rem",
+            color: "#94a3b8",
+            fontWeight: 600,
+            letterSpacing: "0.03em",
+          }}>
+            اختر نوع الباقة التي تريد الاشتراك بها
+          </p>
+          <div style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+          }}>
+            {USER_AUDIENCE_TABS.map(tab => {
+              const isActive = userAudienceTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setUserAudienceTab(tab.key)}
+                  type="button"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0.5rem 1rem",
+                    borderRadius: 10,
+                    border: isActive ? "1.5px solid #1a2e1a" : "1.5px solid #e2e8f0",
+                    backgroundColor: isActive ? "#1a2e1a" : "#fff",
+                    color: isActive ? "#fff" : "#475569",
+                    fontSize: "0.85rem",
+                    fontWeight: isActive ? 700 : 500,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{
+            marginTop: "0.75rem",
+            padding: "0.65rem 0.9rem",
+            backgroundColor: "#fffbeb",
+            border: "1.5px solid #fcd34d",
+            borderRadius: 9,
+            fontSize: "0.8rem",
+            color: "#92400e",
+          }}>
+            💡 بعد إتمام الدفع وتأكيده من فريق بويوت، سيتم ترقية نوع حسابك تلقائياً خلال 24 ساعة.
+          </div>
+        </div>
+      )}
+
+      {/* Current subscription banner */}
+      {currentSub && (
+        <div style={{
+          backgroundColor: "#f0fdf4",
+          border: "1.5px solid #bbf7d0",
+          borderRadius: 12,
+          padding: "1rem 1.25rem",
+          marginBottom: "1.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+        }}>
+          <div>
+            <p style={{ margin: 0, fontSize: "0.78rem", color: "#166534", fontWeight: 600 }}>اشتراكك الحالي</p>
+            <p style={{ margin: "0.2rem 0 0", fontSize: "1rem", fontWeight: 800, color: "#1a2e1a" }}>
+              {currentSub.planName}
+            </p>
+            <p style={{ margin: "0.15rem 0 0", fontSize: "0.8rem", color: "#64748b" }}>
+              {currentSub.status === "Active" ? "✓ نشط" : currentSub.status}
+              {" · "}
+              {currentSub.billingCycle === "Monthly" ? "شهري" : "سنوي"}
+            </p>
+          </div>
+          <button
+            onClick={() => router.push("/dashboard/subscription/requests")}
+            type="button"
+            style={{
+              padding: "0.55rem 1.1rem",
+              borderRadius: 8,
+              border: "1.5px solid #059669",
+              backgroundColor: "transparent",
+              color: "#059669",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            طلباتي
+          </button>
+        </div>
+      )}
+
+      {/* Billing cycle toggle */}
+      {hasBothCycles && (
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: "1.75rem",
+        }}>
+          <div style={{
+            display: "flex",
+            backgroundColor: "#f1f5f9",
+            borderRadius: 12,
+            padding: 4,
+          }}>
+            {(["Monthly", "Yearly"] as const).map(c => (
+              <button
+                key={c}
+                onClick={() => setCycle(c)}
+                type="button"
+                style={{
+                  padding: "0.55rem 1.5rem",
+                  borderRadius: 9,
+                  border: "none",
+                  backgroundColor: cycle === c ? "#fff" : "transparent",
+                  color: cycle === c ? "#1a2e1a" : "#64748b",
+                  fontWeight: cycle === c ? 700 : 500,
+                  fontSize: "0.88rem",
+                  cursor: "pointer",
+                  boxShadow: cycle === c ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                  transition: "all 0.15s",
+                }}
+              >
+                {CYCLE_LABELS[c] ?? c}
+                {c === "Yearly" && (
+                  <span style={{ marginRight: "0.4rem", fontSize: "0.7rem", color: "#059669", fontWeight: 700 }}>
+                    وفّر أكثر
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {(plansLoading || subLoading) && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem" }}>
+          {[0, 1, 2].map(i => (
+            <div
+              key={i}
+              style={{
+                height: 320,
+                borderRadius: 16,
+                background: "linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%)",
+                backgroundSize: "200% 100%",
+                animation: "shimmer 1.4s infinite",
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Error */}
+      {plansError && (
+        <div style={{
+          backgroundColor: "#fee2e2",
+          border: "1px solid #fca5a5",
+          borderRadius: 12,
+          padding: "1rem",
+          color: "#b91c1c",
+          fontSize: "0.88rem",
+          textAlign: "center",
+        }}>
+          {plansError}
+          <button
+            onClick={loadPlans}
+            type="button"
+            style={{ marginRight: "0.75rem", color: "#b91c1c", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", fontSize: "0.88rem" }}
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+
+      {/* Empty state — no compatible plans found */}
+      {!plansLoading && !subLoading && !plansError && visiblePlans.length === 0 && (
+        <div style={{
+          textAlign: "center",
+          padding: "4rem 1.5rem",
+          backgroundColor: "#f8fafc",
+          borderRadius: 16,
+          border: "1.5px dashed #e2e8f0",
+        }}>
+          <p style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>📭</p>
+          <p style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#1a2e1a" }}>
+            لا توجد باقات متاحة لنوع حسابك حالياً
+          </p>
+          <p style={{ margin: "0.4rem 0 0", fontSize: "0.85rem", color: "#64748b" }}>
+            {audienceType
+              ? `نوع حسابك: ${AUDIENCE_TYPE_LABEL[audienceType] ?? audienceType}`
+              : "تواصل مع الدعم لمعرفة الباقات المتاحة"}
+          </p>
+        </div>
+      )}
+
+      {/* Plans grid — filtered to current user's audience type only */}
+      {!plansLoading && !subLoading && !plansError && visiblePlans.length > 0 && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+          gap: "1rem",
+        }}>
+          {visiblePlans.map(plan => (
+            <PlanCard
+              key={plan.planId}
+              plan={plan}
+              cycle={cycle}
+              currentPlanId={currentSub?.planId ?? null}
+              onChoose={(p, pricing) => {
+                setCheckoutPlan(p);
+                setCheckoutPricing(pricing);
+                setSuccessMethod(null);
+              }}
+              onActivateFree={handleActivateFree}
+              freeActivatingId={freeActivatingId}
+              user={user}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Info footer */}
+      {!plansLoading && !plansError && (
+        <div style={{
+          marginTop: "1rem",
+          backgroundColor: "#fff",
+          borderRadius: 12,
+          padding: "1.25rem",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          fontSize: "0.82rem",
+          color: "#64748b",
+          lineHeight: 1.7,
+          textAlign: "center",
+        }}>
+          🔒 جميع المدفوعات تتم يدوياً ويراجعها فريق المبيعات قبل تفعيل الباقة.
+          {" "}
+          للاستفسار تواصل معنا عبر الدعم.
+        </div>
+      )}
+
+      {/* Checkout modal — keyed on planId+pricingId to force clean remount on plan change */}
+      {checkoutPlan && checkoutPricing && !successMethod && (
+        <CheckoutModal
+          key={`${checkoutPlan.planId}-${checkoutPricing.pricingId}`}
+          plan={checkoutPlan}
+          initialPricing={checkoutPricing}
+          onClose={() => { setCheckoutPlan(null); setCheckoutPricing(null); }}
+          onSuccess={(_id, method) => {
+            setSuccessMethod(method);
+            setCheckoutPlan(null);
+            setCheckoutPricing(null);
+          }}
+        />
+      )}
+
+      {/* After success: we need to capture the method before closing modal */}
+      {successMethod && (
+        <SuccessModal
+          paymentMethod={successMethod}
+          onViewRequests={() => router.push("/dashboard/subscription/requests")}
+          onClose={() => setSuccessMethod(null)}
+        />
+      )}
+
+      {/* Free plan success modal */}
+      {freeSuccessPlan && (
+        <FreeSuccessModal
+          planName={freeSuccessPlan}
+          onGoToDashboard={() => router.push("/dashboard")}
+          onClose={() => setFreeSuccessPlan(null)}
+        />
+      )}
+
+    </div>
+  );
+}

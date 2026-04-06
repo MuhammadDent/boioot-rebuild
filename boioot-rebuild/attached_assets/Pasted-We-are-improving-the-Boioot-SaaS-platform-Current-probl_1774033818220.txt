@@ -1,0 +1,132 @@
+We are improving the Boioot SaaS platform.
+
+Current problem:
+When a new user signs up as a real estate developer / development company user, and then tries to create a property listing, the system rejects the listing because no company is linked to the account yet.
+
+This is bad UX.
+The company should be created automatically during signup, so the user can immediately add properties and publish listings without manual company creation.
+
+We also need property features/amenities support in the property creation flow.
+
+==================================================
+GOALS
+==================================================
+
+1. Automatic company creation on signup
+2. Automatically link the created company to the new user account
+3. Use the company name entered during signup as the created company name
+4. Make the new account ready to add properties immediately
+5. Add support for property features/amenities in the add-property form and backend
+
+==================================================
+REQUIRED IMPLEMENTATION
+==================================================
+
+A) AUTO-CREATE COMPANY DURING SIGNUP
+
+When a new account is created for a business/developer/company-type user:
+
+- Automatically create a Company record in the database
+- Automatically link that company to the created user
+- The company name should be the same name entered in signup
+- If the signup form already has fields like:
+  - company name
+  - business name
+  - office name
+  then use that value directly
+- If only one general "name" field exists, use it as initial company name
+
+Important:
+- This must happen in the backend transactionally
+- User creation + company creation + user-company link must succeed together
+- If any step fails, rollback everything
+- Do not rely on frontend-only logic for this
+
+B) SET DEFAULT COMPANY CONTEXT
+
+After signup:
+- the user should already have a valid companyId / company context
+- property creation endpoints should work immediately
+- dashboard "add property" page must not block the user with:
+  "No company linked to your account"
+
+C) PROPERTY FEATURES / AMENITIES SUPPORT
+
+Add full support for property features / amenities.
+
+Examples:
+- Balcony
+- Parking
+- Elevator
+- Maid room
+- Storage
+- Central AC
+- Furnished
+- Security
+- Garden
+- Pool
+- Gym
+- Driver room
+- Smart home
+- Sea view
+- Corner unit
+- Private entrance
+- Basement
+- Roof
+- Duplex
+- Near mosque
+- Near school
+
+Implementation requirements:
+- Add a proper property features model/schema in backend
+- Relationship should be scalable and SaaS-ready
+- Prefer normalized design, not hardcoded comma-separated text
+- Support selecting multiple features per property
+- Features should be manageable and extensible later
+
+D) ADD FEATURES TO PROPERTY FORM
+
+In the add-property page:
+- add a dedicated section for features/amenities
+- allow multi-select selection
+- UI should be clean and modern
+- Arabic-friendly and RTL-friendly
+- group features nicely if needed
+- saving the property should persist selected features to DB
+
+E) EDIT FLOW SUPPORT
+
+When editing an existing property:
+- currently selected features must load correctly
+- user can add/remove features
+- updates must persist correctly
+
+==================================================
+ARCHITECTURE RULES
+==================================================
+
+- Backend is the source of truth
+- No fake frontend bypass
+- No hardcoded assumptions in UI
+- Keep solution SaaS-ready and scalable
+- Do not break existing auth flow
+- Do not break existing property creation flow
+- Reuse existing patterns where possible
+
+==================================================
+DELIVERABLES
+==================================================
+
+Please implement this carefully and then return:
+
+1. What backend files were changed
+2. What frontend files were changed
+3. What DB/schema changes were added
+4. How auto-company creation works now
+5. How property features are stored now
+6. Any migration/seed needed
+7. Any edge cases handled
+
+Important:
+Do not implement a quick workaround.
+Implement the correct production-ready solution.

@@ -1,0 +1,150 @@
+We have a CRITICAL inconsistency in role handling between backend and frontend.
+
+PROBLEM
+
+The "Office" role was added in backend and seeded correctly,
+but it is NOT visible in the UI:
+
+- Not appearing in role filter dropdown
+- Not appearing in user tabs
+- Not included in analytics breakdown
+- Not shown in customer segmentation
+
+This means frontend is NOT aligned with backend roles.
+
+GOAL
+
+Fix the system so "Office" is treated as a FIRST-CLASS customer role everywhere.
+
+REQUIRED FIXES
+
+1) VERIFY BACKEND
+
+- Confirm "Office" exists in:
+  - UserRole enum
+  - Roles table
+  - RolePermissions
+- Confirm at least one user exists with role = Office
+
+If no users exist → seed 1 test Office user
+
+--------------------------------------------------
+
+2) FIX FRONTEND ROLE REGISTRATION
+
+In constants.ts:
+
+- Ensure "Office" is included in:
+  PLATFORM_ROLE_NAMES
+
+- Ensure "Office" is included in:
+  DIRECT_CUSTOMER_ROLES
+
+This is CRITICAL.
+
+--------------------------------------------------
+
+3) FIX ROLE CATEGORY LOGIC
+
+In getRoleCategory():
+
+Ensure:
+
+- Office → returns "customer"
+- Broker → returns "customer"
+- Agent → returns "member"
+- Admin → returns "admin"
+
+NO ambiguity allowed.
+
+--------------------------------------------------
+
+4) FIX ROLE FILTER DROPDOWN
+
+In admin/users/page.tsx:
+
+- Ensure roles are fetched dynamically from API
+- DO NOT hardcode role lists
+
+- Ensure Office appears in dropdown:
+  "مكتب عقاري"
+
+--------------------------------------------------
+
+5) FIX USER TABS (VERY IMPORTANT)
+
+In the tabs system:
+
+You MUST include Office as a tab:
+
+Tabs should be:
+
+- الكل
+- مستخدم
+- مالك عقار
+- وسيط عقاري
+- مكتب عقاري   ← MUST APPEAR
+- شركة تطوير
+- وكلاء
+- إداريون
+
+Each tab filters by role correctly.
+
+--------------------------------------------------
+
+6) FIX ANALYTICS PANEL
+
+In analytics breakdown:
+
+Include Office in:
+
+- user distribution
+- KPI cards
+- role badges
+
+--------------------------------------------------
+
+7) DEBUG LOGGING
+
+Add console logs:
+
+- roles fetched from API
+- roles used in filter
+- roles used in tabs
+
+So we confirm Office is present in runtime.
+
+--------------------------------------------------
+
+EXPECTED RESULT
+
+After fix:
+
+- "مكتب عقاري" appears in:
+  ✓ role dropdown
+  ✓ tabs
+  ✓ analytics
+  ✓ user filtering
+
+- Office behaves exactly like:
+  Broker / Owner / Company
+
+--------------------------------------------------
+
+IMPORTANT
+
+Do NOT assume Office is same as Broker.
+
+They are DIFFERENT roles:
+
+- Broker = individual business user
+- Office = organization that can create agents
+
+--------------------------------------------------
+
+DELIVER
+
+- Show updated constants.ts
+- Show updated role filtering logic
+- Show tabs rendering code
+- Confirm Office users exist in DB

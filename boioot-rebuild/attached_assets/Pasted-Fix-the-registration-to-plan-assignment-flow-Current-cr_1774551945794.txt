@@ -1,0 +1,173 @@
+Fix the registration-to-plan assignment flow.
+
+Current critical bug:
+When a user registers as "Office" (real estate office), the system does NOT ask them to choose a plan after selecting account type.
+After registration, the system incorrectly assigns the default plan:
+seeker_free / مجاني للباحث
+instead of an Office-compatible plan.
+
+This is a business logic bug and must be fixed at the root level.
+
+========================================
+GOAL
+========================================
+
+Make plan selection mandatory and role-aware during registration and onboarding.
+
+Correct behavior should be:
+
+1) User selects account type
+2) System shows only plans compatible with that account type
+3) User must select a plan before account creation is finalized
+4) The created subscription must match the selected account type and selected plan
+5) No account type should ever receive an incompatible default plan
+
+========================================
+OFFICIAL ROLE → PLAN MAPPING
+========================================
+
+Use this plan model consistently:
+
+Seeker:
+- seeker_free
+
+Owner:
+- owner_free
+- owner_basic
+- owner_pro
+
+Broker:
+- broker_free
+- broker_basic
+- broker_pro
+
+Office:
+- office_free
+- office_basic
+- office_pro
+
+Company:
+- company_enterprise
+
+========================================
+REQUIRED FIXES
+========================================
+
+1) Audit registration flow
+Find all code paths involved in:
+- register page
+- multi-step signup
+- account type selection
+- user/profile creation
+- subscription creation
+- post-registration redirect
+- onboarding
+- default plan assignment
+
+2) Remove invalid generic fallback
+If there is any logic like:
+- default plan = seeker_free
+- fallback to seeker
+- fallback to first available plan
+remove it.
+
+Never assign seeker_free to:
+- owner
+- broker
+- office
+- company
+
+3) Make plan selection required
+After choosing account type, the user must be shown compatible plans.
+Do not allow registration completion without selecting a valid plan.
+
+Examples:
+- Office user can only choose:
+  office_free / office_basic / office_pro
+- Broker user can only choose:
+  broker_free / broker_basic / broker_pro
+- Owner user can only choose:
+  owner_free / owner_basic / owner_pro
+- Company user can only choose:
+  company_enterprise
+- Seeker user can only choose:
+  seeker_free
+
+4) Validate on both frontend and backend
+Do NOT rely only on UI.
+Backend/API must reject invalid combinations such as:
+- role=office with plan=seeker_free
+- role=broker with plan=office_basic
+- role=company with plan=owner_pro
+
+5) Persist correct subscription data
+Ensure created subscription stores:
+- selected public plan code
+- selected role/account type
+- status
+- start date
+- billing metadata if applicable
+
+6) Fix dashboard subscription page
+The subscription page must display the correct current plan based on the user’s actual selected role plan.
+An office account must never show:
+- مجاني للباحث
+- seeker_free
+
+7) Protect against legacy bad data
+If old users already have mismatched role/plan combinations, add a safe correction strategy:
+- detect invalid role-plan mapping
+- repair it using the correct free/default plan for that role
+Examples:
+- office + seeker_free => office_free
+- broker + seeker_free => broker_free
+- owner + seeker_free => owner_free
+- company + seeker_free => company_enterprise (or a controlled onboarding state if required)
+
+8) Update onboarding UX
+Registration flow should be:
+
+Step 1: Choose account type
+Step 2: Enter account details
+Step 3: Choose compatible plan
+Step 4: Create account / continue to dashboard
+
+Or equivalent logic, but plan choice must be explicit and role-aware.
+
+9) Centralize mapping
+Create a single source of truth for role-to-plan compatibility.
+Example:
+- getAllowedPlansForAccountType(accountType)
+- isPlanAllowedForAccountType(accountType, planCode)
+- getDefaultPlanForAccountType(accountType)
+
+Do not duplicate this mapping in multiple scattered files.
+
+10) Test all roles
+Verify:
+- seeker gets seeker_free only
+- owner gets owner_free/basic/pro only
+- broker gets broker_free/basic/pro only
+- office gets office_free/basic/pro only
+- company gets company_enterprise only
+
+========================================
+STRICT REQUIREMENTS
+========================================
+
+- Fix root cause, not just UI text
+- Do not hardcode seeker_free anywhere as universal default
+- Do not break existing subscription system
+- Keep official SaaS plan codes consistent everywhere
+- Keep database, API, admin UI, registration UI, and dashboard in sync
+
+========================================
+DELIVERABLES
+========================================
+
+Return:
+1) Root cause found
+2) Files changed
+3) Exact logic updated
+4) How invalid legacy subscriptions were handled
+5) Verified test scenarios for seeker / owner / broker / office / company

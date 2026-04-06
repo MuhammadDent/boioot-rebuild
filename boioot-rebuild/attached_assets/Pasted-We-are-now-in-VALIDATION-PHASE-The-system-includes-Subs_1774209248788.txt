@@ -1,0 +1,117 @@
+We are now in VALIDATION PHASE.
+
+The system includes:
+
+- Subscription plans UI
+- Payment request flow (customer side)
+- Receipt upload
+- My subscription requests page
+- Admin payment requests management
+- Full backend state machine
+
+Your task is to perform a FULL SYSTEM VALIDATION.
+
+==================================================
+GOAL
+==================================================
+
+Identify:
+- bugs
+- edge cases
+- logical issues
+- security risks
+- UX problems
+- data integrity issues
+
+==================================================
+CHECK 1 — STATE MACHINE VALIDATION
+==================================================
+
+Validate all transitions:
+
+- Pending → AwaitingPayment → ReceiptUploaded → UnderReview → Approved → Activated
+- Rejected / Cancelled flows
+
+Check:
+- invalid transitions blocked?
+- double activation prevented?
+- race conditions handled?
+
+==================================================
+CHECK 2 — API VALIDATION
+==================================================
+
+Check all endpoints:
+
+- create payment request
+- upload receipt
+- cancel
+- admin approve/reject/activate
+
+Verify:
+- proper status codes
+- no 500 errors on user input
+- validation errors handled cleanly
+
+==================================================
+CHECK 3 — DATA INTEGRITY
+==================================================
+
+- can duplicate requests happen?
+- can zero amount be created?
+- is plan pricing consistent?
+- is snapshot needed?
+
+==================================================
+CHECK 4 — SECURITY
+==================================================
+
+- can user access another user's request?
+- are admin endpoints protected?
+- is ownership validation correct?
+
+==================================================
+CHECK 5 — UX / FLOW
+==================================================
+
+- can user get stuck in any step?
+- is payment flow clear?
+- are error messages understandable?
+- are statuses clear?
+
+==================================================
+CHECK 6 — ADMIN FLOW
+==================================================
+
+- can admin accidentally break flow?
+- are invalid actions blocked?
+- is rejection reason enforced?
+- is activation safe?
+
+==================================================
+CHECK 7 — EDGE CASES
+==================================================
+
+Test:
+
+- upload receipt twice
+- cancel after receipt
+- approve then reject
+- activate twice
+- invalid status filter input
+
+==================================================
+OUTPUT FORMAT
+==================================================
+
+Return:
+
+1. Critical Issues (must fix)
+2. Medium Issues
+3. Minor Improvements
+4. Security Risks
+5. UX Improvements
+6. Final System Verdict:
+   - Not Ready
+   - Beta Ready
+   - Production Ready

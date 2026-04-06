@@ -1,0 +1,148 @@
+We need a full technical analysis of migrating the current database from SQLite to PostgreSQL.
+
+IMPORTANT:
+- This is ANALYSIS ONLY (no implementation yet)
+- Do NOT modify any code
+- Do NOT attempt migration
+- We only want a safe, detailed assessment
+
+==================================================
+CURRENT SETUP
+==================================================
+
+- Database: SQLite (.db file)
+- ORM: Entity Framework Core
+- Schema management: SchemaEvolutionService using TryAlter()/TryExec()
+- No standard EF Core migrations currently used
+
+==================================================
+GOAL
+==================================================
+
+Evaluate if we can safely migrate this system to PostgreSQL WITHOUT breaking the application.
+
+==================================================
+ANALYSIS REQUIRED
+==================================================
+
+1) DATABASE USAGE AUDIT
+
+- List all DbContext entities
+- Identify all tables and relationships
+- Detect:
+  - raw SQL usage
+  - SQLite-specific queries or syntax
+  - any direct SQL strings inside services
+  - usage of TryAlter()/TryExec()
+
+--------------------------------------------------
+
+2) SQLITE DEPENDENCIES
+
+Check if the system depends on SQLite-specific behavior:
+- data types (TEXT, INTEGER vs PostgreSQL types)
+- auto-increment behavior
+- date/time handling
+- boolean handling
+- JSON usage (if any)
+- case sensitivity
+
+--------------------------------------------------
+
+3) SCHEMA EVOLUTION RISK
+
+Analyze SchemaEvolutionService:
+- how schema is created/modified
+- what SQL commands are used
+- whether they are SQLite-specific
+- risks when running same logic on PostgreSQL
+
+--------------------------------------------------
+
+4) EF CORE COMPATIBILITY
+
+- Check if current EF models are compatible with PostgreSQL provider
+- Identify any model annotations or configurations that may break
+
+--------------------------------------------------
+
+5) MIGRATION STRATEGY OPTIONS
+
+Propose safe strategies:
+
+Option A:
+- Introduce EF Core Migrations gradually
+
+Option B:
+- Replace SchemaEvolutionService with proper migrations
+
+Option C:
+- Hybrid approach (temporary support for both)
+
+Explain pros/cons of each.
+
+--------------------------------------------------
+
+6) DATA MIGRATION PLAN
+
+Explain how we would migrate existing data:
+- export SQLite data
+- transform if needed
+- import into PostgreSQL
+
+Mention potential issues:
+- type mismatch
+- nullability
+- constraints
+
+--------------------------------------------------
+
+7) RISK ASSESSMENT
+
+Classify risks:
+- low
+- medium
+- high
+
+For:
+- schema
+- queries
+- runtime behavior
+- deployment
+
+--------------------------------------------------
+
+8) STEP-BY-STEP MIGRATION ROADMAP
+
+Provide a SAFE migration roadmap:
+
+Phase 1: preparation
+Phase 2: compatibility fixes
+Phase 3: PostgreSQL integration
+Phase 4: testing
+Phase 5: production rollout
+
+Each phase must be clearly defined.
+
+--------------------------------------------------
+
+9) NON-BREAKING GUARANTEE STRATEGY
+
+Explain how we can ensure:
+- current system keeps working
+- no downtime
+- rollback possible
+
+--------------------------------------------------
+
+EXPECTED OUTPUT
+==================================================
+
+- Clear analysis
+- Identified risks
+- Concrete migration plan
+- No code changes yet
+
+IMPORTANT:
+We are NOT executing migration now.
+We are preparing a safe path to PostgreSQL.

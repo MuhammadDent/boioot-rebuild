@@ -1,0 +1,108 @@
+We still have a failure in loading listings on:
+
+/dashboard/listings
+
+The UI is now correct (non-blocking stats), but the listings API itself is failing.
+
+==================================================
+GOAL
+==================================================
+
+Identify and fix the root cause of the listings API failure.
+
+==================================================
+REQUIRED ACTIONS
+==================================================
+
+1. IDENTIFY THE FAILING ENDPOINT
+
+- Find which endpoint is used for listings:
+  likely:
+  GET /api/listings
+  or /api/dashboard/listings
+
+- Log:
+  - status code
+  - error message
+  - payload
+
+2. DEBUG BACKEND FAILURE
+
+Check:
+
+A) Company Context
+- Does the user have CompanyId?
+- Is it correctly passed to query?
+
+B) RBAC
+- Does the current user role have access?
+- Is there any permission check blocking?
+
+C) Query Issues
+- Any null navigation property?
+- Any invalid Include or Join?
+- Any exception thrown?
+
+D) Empty Data Handling
+- If no listings exist:
+  return empty array []
+  NOT an error
+
+3. FIX BEHAVIOR
+
+Expected:
+
+- If no listings:
+  return 200 with []
+
+- If user has no company:
+  return safe empty result OR clear controlled message
+
+- NEVER throw server exception for normal empty state
+
+4. IMPROVE ERROR RESPONSE
+
+Ensure backend returns:
+
+{
+  success: false,
+  message: "clear error message"
+}
+
+instead of generic failure
+
+5. VERIFY FRONTEND CONTRACT
+
+Ensure frontend expects:
+
+{
+  data: Listing[]
+}
+
+and not mismatched structure
+
+6. TEST CASES
+
+Confirm:
+
+- new user with no listings → works (empty state)
+- user with listings → works
+- user without company → handled safely
+
+==================================================
+DELIVERABLE
+==================================================
+
+Return:
+
+1. Which endpoint failed
+2. What was the root cause:
+   - missing companyId?
+   - permission?
+   - query crash?
+3. What was fixed in backend
+4. What response is returned now
+5. Confirmation that:
+   - listings load correctly
+   - empty state works
+   - no crash

@@ -1,0 +1,564 @@
+
+سنحوّل الآن Boioot V1 من فكرة عامة إلى Module Breakdown واضح، بحيث نحدد لكل Module:
+•	الهدف
+•	الصفحات
+•	الجداول
+•	أهم الـ APIs
+•	من يستخدمه
+•	الأولوية
+هذا مهم جدًا لأنه سيكون المرجع الذي سنبني عليه Project Structure ثم Prompts Replit.
+________________________________________
+Modules المعتمدة في Boioot V1
+سنقسم المنصة إلى 12 Module رئيسية:
+1.	Auth & Identity
+2.	Users & Profiles
+3.	Companies & Offices
+4.	Agents
+5.	Properties
+6.	Projects
+7.	Requests
+8.	Reviews
+9.	Favorites
+10.	Messages
+11.	Blog
+12.	Admin Panel
+وسأضيف أيضًا Module دعم مهم:
+13.	Localization
+________________________________________
+1) Auth & Identity
+الهدف
+إدارة:
+•	التسجيل
+•	تسجيل الدخول
+•	تسجيل الخروج
+•	استرجاع كلمة المرور
+•	الصلاحيات الأساسية
+من يستخدمه
+•	كل المستخدمين
+•	الإدارة
+الصفحات
+•	تسجيل الدخول
+•	إنشاء حساب
+•	نسيت كلمة المرور
+•	إعادة تعيين كلمة المرور
+الجداول
+•	Users
+•	Roles
+•	UserSessions أو RefreshTokens لاحقًا
+أهم APIs
+•	POST /api/auth/register
+•	POST /api/auth/login
+•	POST /api/auth/logout
+•	POST /api/auth/forgot-password
+•	POST /api/auth/reset-password
+•	GET /api/auth/me
+ملاحظات
+يجب أن يدعم أنواع المستخدمين:
+•	User
+•	PropertyOwner
+•	Office
+•	Developer
+•	Agent
+•	Admin
+الأولوية
+حرج جدًا
+________________________________________
+2) Users & Profiles
+الهدف
+إدارة الملف الشخصي للمستخدم.
+من يستخدمه
+•	كل المستخدمين
+الصفحات
+•	الملف الشخصي
+•	تعديل الملف الشخصي
+•	إعدادات الحساب
+الجداول
+•	Users
+•	UserAddresses
+•	ربما UserPreferences لاحقًا
+أهم APIs
+•	GET /api/users/profile
+•	PUT /api/users/profile
+•	PUT /api/users/avatar
+•	GET /api/users/{id}
+البيانات الأساسية
+•	الاسم
+•	البريد
+•	الهاتف
+•	الصورة
+•	اللغة المفضلة
+•	المدينة
+الأولوية
+عالية
+________________________________________
+3) Companies & Offices
+الهدف
+إدارة المكاتب العقارية والشركات المطورة.
+من يستخدمه
+•	المكاتب
+•	الشركات
+•	الإدارة
+•	الزوار لعرض الصفحات العامة
+الصفحات
+•	صفحة قائمة المكاتب
+•	صفحة تفاصيل المكتب
+•	إنشاء مكتب
+•	تعديل المكتب
+•	لوحة المكتب
+الجداول
+•	Companies
+•	CompanyBranches لاحقًا
+•	CompanySocialLinks لاحقًا
+أهم APIs
+•	POST /api/companies
+•	PUT /api/companies/{id}
+•	GET /api/companies
+•	GET /api/companies/{id}
+•	GET /api/companies/{id}/properties
+•	GET /api/companies/{id}/agents
+الحقول الأساسية
+•	الاسم
+•	الشعار
+•	الوصف
+•	نوع الشركة
+•	المدينة
+•	العنوان
+•	أرقام التواصل
+•	حالة التوثيق
+الأولوية
+عالية جدًا
+________________________________________
+4) Agents
+الهدف
+السماح للمكاتب والشركات بإنشاء وإدارة وكلاء.
+من يستخدمه
+•	المكتب
+•	الشركة
+•	الإدارة
+•	المستخدمون لعرض صفحات الوكلاء
+الصفحات
+•	قائمة الوكلاء
+•	صفحة الوكيل
+•	إنشاء وكيل
+•	تعديل وكيل
+•	لوحة الوكلاء داخل المكتب
+الجداول
+•	Agents
+•	AgentAssignments لاحقًا إذا أردنا تعيينات خاصة
+•	أو الاكتفاء بربط Agent مع Company وUser
+أهم APIs
+•	POST /api/agents
+•	PUT /api/agents/{id}
+•	GET /api/agents
+•	GET /api/agents/{id}
+•	GET /api/agents/{id}/properties
+•	GET /api/agents/{id}/reviews
+الحقول الأساسية
+•	الاسم
+•	الصورة
+•	البريد
+•	الهاتف
+•	المكتب
+•	المدينة
+•	نبذة تعريفية
+•	التقييم
+•	الحالة
+الأولوية
+عالية
+________________________________________
+5) Properties
+الهدف
+هذا هو قلب المنصة.
+من يستخدمه
+•	المالك
+•	المكتب
+•	الوكيل
+•	المستخدم الباحث
+•	الإدارة
+الصفحات
+•	قائمة العقارات
+•	تفاصيل العقار
+•	إضافة عقار
+•	تعديل عقار
+•	صفحة عقارات المكتب
+•	صفحة عقارات الوكيل
+•	صفحة عقاراتي
+الجداول
+•	Properties
+•	PropertyImages
+•	PropertyFeatures
+•	PropertyFeatureValues
+•	PropertyViews
+•	PropertyStatusHistory لاحقًا
+أهم APIs
+•	POST /api/properties
+•	PUT /api/properties/{id}
+•	DELETE /api/properties/{id}
+•	GET /api/properties
+•	GET /api/properties/{id}
+•	GET /api/properties/search
+•	GET /api/properties/my
+•	POST /api/properties/{id}/publish
+•	POST /api/properties/{id}/unpublish
+الفلاتر الأساسية
+•	المدينة
+•	الحي
+•	السعر
+•	المساحة
+•	عدد الغرف
+•	نوع العقار
+•	بيع / إيجار / يومي
+•	مفروش أو لا
+•	الأحدث
+الحقول الأساسية
+•	العنوان
+•	الوصف
+•	السعر
+•	الموقع
+•	الصور
+•	النوع
+•	حالة النشر
+•	المالك أو المكتب
+•	الوكيل المسؤول
+•	المميزات
+الأولوية
+الأعلى على الإطلاق
+________________________________________
+6) Projects
+الهدف
+عرض المشاريع العقارية للمطورين والشركات.
+من يستخدمه
+•	الشركات المطورة
+•	الباحثون عن المشاريع
+•	الإدارة
+الصفحات
+•	قائمة المشاريع
+•	صفحة المشروع
+•	إضافة مشروع
+•	تعديل مشروع
+•	إدارة وحدات المشروع
+الجداول
+•	Projects
+•	ProjectUnits
+•	ProjectImages
+•	ProjectFeatures لاحقًا
+أهم APIs
+•	POST /api/projects
+•	PUT /api/projects/{id}
+•	GET /api/projects
+•	GET /api/projects/{id}
+•	POST /api/projects/{id}/units
+•	GET /api/projects/{id}/units
+الحقول الأساسية
+•	اسم المشروع
+•	الوصف
+•	المدينة
+•	الحي
+•	المطور
+•	تاريخ البدء
+•	تاريخ التسليم
+•	الحالة
+•	الصور
+•	الوحدات
+الأولوية
+متوسطة إلى عالية
+لأنك طلبت إدخالها في V1.
+________________________________________
+7) Requests
+الهدف
+قسم الطلبات: المستخدم ينشر احتياجه العقاري وتأتيه الردود.
+من يستخدمه
+•	الباحث عن عقار
+•	المكاتب
+•	الشركات
+•	الوكلاء
+•	الإدارة
+الصفحات
+•	Feed الطلبات
+•	تفاصيل الطلب
+•	إنشاء طلب
+•	تعديل الطلب
+•	طلباتي
+•	الرد على الطلب
+الجداول
+•	Requests
+•	RequestResponses
+•	RequestComments أو اعتبار الردود تعليقات
+•	RequestLikes
+•	RequestMatches لاحقًا
+أهم APIs
+•	POST /api/requests
+•	PUT /api/requests/{id}
+•	GET /api/requests
+•	GET /api/requests/{id}
+•	POST /api/requests/{id}/responses
+•	GET /api/requests/my
+•	POST /api/requests/{id}/like
+الحقول الأساسية
+•	عنوان الطلب
+•	الوصف
+•	المدينة
+•	الحي
+•	نوع الطلب
+•	السعر الأدنى / الأعلى
+•	المساحة
+•	عدد الغرف
+•	الحالة
+•	صاحب الطلب
+الأولوية
+عالية جدًا
+لأنها من الميزات الفارقة في Boioot.
+________________________________________
+8) Reviews
+الهدف
+تقييم:
+•	الوكلاء
+•	المكاتب
+من يستخدمه
+•	المستخدمون
+•	الإدارة
+•	من يطالع صفحات الوكلاء والمكاتب
+الصفحات
+•	قائمة تقييمات الوكيل
+•	قائمة تقييمات المكتب
+•	نموذج إضافة تقييم
+الجداول
+•	Reviews
+أهم APIs
+•	POST /api/reviews
+•	GET /api/reviews/agent/{agentId}
+•	GET /api/reviews/company/{companyId}
+•	DELETE /api/reviews/{id} للإدارة أو صاحب التقييم ضمن ضوابط
+الحقول الأساسية
+•	المقيّم
+•	الهدف
+•	عدد النجوم
+•	التعليق
+•	تاريخ التقييم
+قواعد مهمة
+•	لا يسمح بتقييمات عشوائية غير مرتبطة بتفاعل
+•	لاحقًا يمكن ربط التقييم بمحادثة أو طلب
+الأولوية
+عالية
+________________________________________
+9) Favorites
+الهدف
+تمكين المستخدم من حفظ:
+•	العقارات
+•	ربما المشاريع لاحقًا
+من يستخدمه
+•	المستخدمون المسجلون
+الصفحات
+•	المفضلة
+•	أزرار الحفظ داخل البطاقات والتفاصيل
+الجداول
+•	Favorites
+أهم APIs
+•	POST /api/favorites/properties/{propertyId}
+•	DELETE /api/favorites/properties/{propertyId}
+•	GET /api/favorites/properties
+الأولوية
+متوسطة إلى عالية
+________________________________________
+10) Messages
+الهدف
+التواصل بين:
+•	المستخدم والوكيل
+•	المستخدم والمكتب
+•	صاحب الطلب والمهتمين
+من يستخدمه
+•	جميع المستخدمين المسجلين
+•	المكاتب
+•	الوكلاء
+الصفحات
+•	قائمة المحادثات
+•	شاشة المحادثة
+•	بدء محادثة من صفحة العقار
+•	بدء محادثة من صفحة الوكيل
+الجداول
+•	Conversations
+•	Messages
+أهم APIs
+•	POST /api/messages/conversations
+•	GET /api/messages/conversations
+•	GET /api/messages/conversations/{id}
+•	POST /api/messages/conversations/{id}/messages
+الحقول الأساسية
+•	المشاركون
+•	نص الرسالة
+•	وقت الإرسال
+•	حالة القراءة
+ملاحظات
+في V1 نجعلها:
+•	رسائل أساسية
+•	ليست Realtime معقدة جدًا
+•	يمكن Polling أو تحديث بسيط
+الأولوية
+متوسطة إلى عالية
+________________________________________
+11) Blog
+الهدف
+بناء محتوى عقاري يدعم:
+•	SEO
+•	الموثوقية
+•	التسويق
+من يستخدمه
+•	الزوار
+•	الإدارة
+•	المحررون لاحقًا
+الصفحات
+•	قائمة المقالات
+•	تفاصيل المقال
+•	إدارة المقالات
+•	إنشاء مقال
+•	تعديل مقال
+الجداول
+•	BlogPosts
+•	BlogCategories
+أهم APIs
+•	POST /api/blog/posts
+•	PUT /api/blog/posts/{id}
+•	GET /api/blog/posts
+•	GET /api/blog/posts/{slug}
+•	GET /api/blog/categories
+الحقول الأساسية
+•	العنوان
+•	المحتوى
+•	الصورة
+•	التصنيف
+•	الكاتب
+•	slug
+•	حالة النشر
+الأولوية
+متوسطة
+لكن معتمدة ضمن V1 لأنها ضمن نطاقك.
+________________________________________
+12) Admin Panel
+الهدف
+الإدارة الأساسية للمنصة.
+من يستخدمه
+•	Admin فقط
+الصفحات
+•	لوحة إحصائية
+•	إدارة المستخدمين
+•	إدارة المكاتب
+•	إدارة الوكلاء
+•	إدارة العقارات
+•	إدارة المشاريع
+•	إدارة الطلبات
+•	إدارة المقالات
+•	إدارة التقييمات
+•	إعدادات عامة أساسية
+الجداول
+لا تحتاج جداول جديدة دائمًا، بل تعتمد على كل الجداول الحالية، مع:
+•	AuditLogs لاحقًا
+•	AdminActions لاحقًا
+أهم APIs
+•	GET /api/admin/dashboard
+•	GET /api/admin/users
+•	GET /api/admin/properties
+•	GET /api/admin/requests
+•	PUT /api/admin/properties/{id}/approve
+•	PUT /api/admin/companies/{id}/verify
+•	DELETE /api/admin/blog/posts/{id}
+الأولوية
+عالية
+لأن المنصة بدون إدارة ستصبح صعبة التشغيل.
+________________________________________
+13) Localization
+الهدف
+دعم:
+•	العربية
+•	الإنجليزية
+من يستخدمه
+•	كل المستخدمين
+الصفحات
+كل المنصة
+الجداول
+ليس ضروريًا وجود جدول في البداية، يكفي:
+•	ملفات ترجمة في الواجهة
+•	وربما حقول ثنائية لبعض المحتوى لاحقًا
+أهم متطلبات التنفيذ
+•	مسارات ar و en
+•	دعم RTL للعربية
+•	حفظ اللغة المفضلة
+•	ترجمة عناصر الواجهة
+•	المحتوى الديناميكي لاحقًا يمكن أن يكون:
+o	عنوان عربي
+o	عنوان إنجليزي
+الأولوية
+عالية
+لأنك اعتمدتها من البداية.
+________________________________________
+ترتيب الأولوية التنفيذية داخل V1
+حتى مع اعتماد كل هذه Modules، لا نبرمجها عشوائيًا.
+هذا هو الترتيب الصحيح:
+Tier 1
+•	Auth & Identity
+•	Users & Profiles
+•	Localization
+•	Admin Basics
+•	Properties
+Tier 2
+•	Companies & Offices
+•	Agents
+•	Favorites
+•	Reviews
+Tier 3
+•	Requests
+•	Messages
+Tier 4
+•	Projects
+•	Blog
+هذا الترتيب يجعل الأساس يعمل أولًا ثم نبني فوقه.
+________________________________________
+العلاقات بين الـ Modules
+العقارات ترتبط بـ
+•	Users
+•	Companies
+•	Agents
+•	Favorites
+•	Reviews بشكل غير مباشر
+الطلبات ترتبط بـ
+•	Users
+•	Messages لاحقًا
+•	Agents / Companies عبر الردود
+الوكلاء يرتبطون بـ
+•	Company
+•	User
+•	Properties
+•	Reviews
+المشاريع ترتبط بـ
+•	Companies
+المدونة ترتبط بـ
+•	Admin أو Author user
+________________________________________
+النسخة التنفيذية المختصرة لـ Boioot V1
+Public Side
+•	Home
+•	Properties
+•	Property Details
+•	Projects
+•	Project Details
+•	Requests Feed
+•	Request Details
+•	Companies
+•	Agents
+•	Blog
+•	Article Details
+Authenticated User Side
+•	Register/Login
+•	Profile
+•	Favorites
+•	My Requests
+•	Messages
+Company/Agent Dashboard
+•	Manage Properties
+•	Manage Agents
+•	Manage Projects
+•	View Reviews
+•	View Messages
+Admin Side
+•	Dashboard
+•	Manage All Main Content
+________________________________________

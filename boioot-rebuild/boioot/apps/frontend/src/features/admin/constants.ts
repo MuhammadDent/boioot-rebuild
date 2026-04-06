@@ -1,0 +1,199 @@
+export const ADMIN_PAGE_SIZE = 20;
+
+/**
+ * Names that map to the backend UserRole enum — the only values accepted
+ * by GET /api/admin/users?role=... and POST /api/admin/users (primary role).
+ * Everything outside this set is a staff/RBAC-overlay role.
+ */
+export const PLATFORM_ROLE_NAMES = new Set([
+  "Admin",
+  "CompanyOwner",
+  "Broker",
+  "Office",
+  "Agent",
+  "Owner",
+  "User",
+]);
+
+/**
+ * Primary / direct customer roles — independent accounts that subscribe
+ * and pay for the platform directly.
+ * - Broker  (وسيط عقاري)  : individual broker, no sub-agents
+ * - Office  (مكتب عقاري)  : real-estate office, can create agents
+ * - CompanyOwner (شركة تطوير): development company, can create agents
+ */
+export const DIRECT_CUSTOMER_ROLES = new Set([
+  "User",
+  "Owner",
+  "Broker",
+  "Office",
+  "CompanyOwner",
+]);
+
+/**
+ * Subordinate / child roles — created under a parent business account.
+ * NOT independent monetizable customers.
+ */
+export const SUBORDINATE_ROLES = new Set([
+  "Agent",
+]);
+
+/**
+ * Derive a display category for a role name.
+ * "admin"       = Admin
+ * "customer"    = direct-paying customer (User, Owner, Broker, Office, CompanyOwner)
+ * "subordinate" = child account under a business (Agent)
+ * "staff"       = internal staff RBAC roles
+ */
+export function getRoleCategory(
+  name: string,
+): "admin" | "customer" | "subordinate" | "staff" {
+  if (name === "Admin") return "admin";
+  if (DIRECT_CUSTOMER_ROLES.has(name)) return "customer";
+  if (SUBORDINATE_ROLES.has(name)) return "subordinate";
+  return "staff";
+}
+
+export const ROLE_LABELS: Record<string, string> = {
+  // Platform roles
+  Admin:            "مدير النظام",
+  CompanyOwner:     "شركة تطوير",
+  Broker:           "وسيط عقاري",
+  Office:           "مكتب عقاري",
+  Agent:            "وكيل عقاري",
+  Owner:            "مالك عقار",
+  User:             "مستخدم",
+  // Internal staff roles
+  AdminManager:     "مدير العمليات",
+  CustomerSupport:  "دعم العملاء",
+  TechnicalSupport: "الدعم التقني",
+  ContentEditor:    "محرر المحتوى",
+  SeoSpecialist:    "متخصص SEO",
+  MarketingStaff:   "موظف تسويق",
+};
+
+export const ROLE_BADGE: Record<string, string> = {
+  // Platform roles
+  Admin:            "badge badge-red",
+  CompanyOwner:     "badge badge-blue",
+  Office:           "badge badge-light-blue",
+  Broker:           "badge badge-violet",
+  Agent:            "badge badge-yellow",
+  Owner:            "badge badge-green",
+  User:             "badge badge-gray",
+  // Internal staff roles
+  AdminManager:     "badge badge-violet",
+  CustomerSupport:  "badge badge-blue",
+  TechnicalSupport: "badge badge-blue",
+  ContentEditor:    "badge badge-green",
+  SeoSpecialist:    "badge badge-yellow",
+  MarketingStaff:   "badge badge-gray",
+};
+
+/**
+ * Full badge class (including base "badge") for PropertyStatus enum values.
+ * Defined here because features/properties/constants does not include badge classes.
+ */
+export const PROPERTY_STATUS_BADGE: Record<string, string> = {
+  Available: "badge badge-green",
+  Sold:      "badge badge-blue",
+  Rented:    "badge badge-yellow",
+  Inactive:  "badge badge-gray",
+};
+
+/**
+ * Full badge class for ProjectStatus enum values.
+ * features/projects/constants exports PROJECT_STATUS_BADGE without the "badge " prefix,
+ * so we define the full class here for use in admin pages.
+ */
+export const ADMIN_PROJECT_STATUS_BADGE: Record<string, string> = {
+  Upcoming:          "badge badge-yellow",
+  UnderConstruction: "badge badge-blue",
+  Completed:         "badge badge-green",
+};
+
+// ── Blog ──────────────────────────────────────────────────────────────────────
+
+export const BLOG_STATUS_LABELS: Record<string, string> = {
+  Draft:     "مسودة",
+  Published: "منشور",
+  Archived:  "مؤرشف",
+};
+
+export const BLOG_STATUS_BADGE: Record<string, string> = {
+  Draft:     "badge badge-gray",
+  Published: "badge badge-green",
+  Archived:  "badge badge-yellow",
+};
+
+export const BLOG_POST_PAGE_SIZE = 20;
+
+// ── Multi-level verification ───────────────────────────────────────────────
+
+export const VERIFICATION_STATUS_LABELS: Record<string, string> = {
+  None:             "غير محدد",
+  Pending:          "قيد المراجعة",
+  PartiallyVerified:"موثق جزئياً",
+  Verified:         "موثق",
+  Rejected:         "مرفوض",
+};
+
+export const VERIFICATION_STATUS_BADGE: Record<string, string> = {
+  None:             "badge badge-gray",
+  Pending:          "badge badge-yellow",
+  PartiallyVerified:"badge badge-light-blue",
+  Verified:         "badge badge-green",
+  Rejected:         "badge badge-red",
+};
+
+export const VERIFICATION_LEVEL_LABELS: Record<number, string> = {
+  0: "لا يوجد",
+  1: "أساسي",
+  2: "هوية",
+  3: "أعمال",
+  4: "موثوق",
+};
+
+export const IDENTITY_VERIFICATION_STATUS_LABELS: Record<string, string> = {
+  None:     "لا يوجد",
+  Pending:  "قيد المراجعة",
+  Approved: "مقبول",
+  Rejected: "مرفوض",
+};
+
+export const IDENTITY_VERIFICATION_STATUS_BADGE: Record<string, string> = {
+  None:     "badge badge-gray",
+  Pending:  "badge badge-yellow",
+  Approved: "badge badge-green",
+  Rejected: "badge badge-red",
+};
+
+export const BUSINESS_VERIFICATION_STATUS_LABELS: Record<string, string> = {
+  None:     "لا يوجد",
+  Pending:  "قيد المراجعة",
+  Approved: "مقبول",
+  Rejected: "مرفوض",
+};
+
+export const BUSINESS_VERIFICATION_STATUS_BADGE: Record<string, string> = {
+  None:     "badge badge-gray",
+  Pending:  "badge badge-yellow",
+  Approved: "badge badge-green",
+  Rejected: "badge badge-red",
+};
+
+export const INVOICE_STATUS_LABELS: Record<string, string> = {
+  Pending:  "معلقة",
+  Paid:     "مدفوعة",
+  Failed:   "مرفوضة",
+  Expired:  "منتهية",
+  Cancelled:"ملغاة",
+};
+
+export const INVOICE_STATUS_BADGE: Record<string, string> = {
+  Pending:  "badge badge-yellow",
+  Paid:     "badge badge-green",
+  Failed:   "badge badge-red",
+  Expired:  "badge badge-gray",
+  Cancelled:"badge badge-gray",
+};

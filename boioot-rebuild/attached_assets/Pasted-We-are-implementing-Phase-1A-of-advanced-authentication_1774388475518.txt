@@ -1,0 +1,158 @@
+We are implementing Phase 1A of advanced authentication for the Boioot SaaS platform.
+
+GOAL:
+Upgrade the current auth system safely without breaking login, by adding:
+1) Refresh Token
+2) Remember Me
+3) Silent Refresh
+4) Safe Logout / Logout All
+5) Concurrency-safe refresh flow
+
+IMPORTANT:
+This is Phase 1A only.
+Do NOT implement HttpOnly cookie migration yet.
+Do NOT build session/device management UI yet.
+Use a transitional approach compatible with the current frontend architecture.
+
+CURRENT STATE:
+- JWT auth already exists
+- expired-token detection already exists
+- global 401 handling already exists
+- we want an incremental upgrade, not a rewrite
+
+REQUIREMENTS
+
+A) BACKEND
+1. Add refresh token persistence
+Create a table/entity like UserRefreshToken with:
+- Id
+- UserId
+- TokenHash
+- CreatedAtUtc
+- ExpiresAtUtc
+- RevokedAtUtc
+- ReplacedByTokenHash
+- CreatedByIp
+- RevokedByIp
+- UserAgent
+
+2. Login endpoint
+Enhance login to:
+- accept rememberMe
+- generate short-lived access token
+- generate refresh token
+- hash refresh token before storing
+- save refresh token record
+- return:
+  - accessToken
+  - accessTokenExpiresAt
+  - refreshToken
+  - refreshTokenExpiresAt
+  - user summary
+
+3. Refresh endpoint
+Add POST /auth/refresh
+Input:
+- refreshToken
+
+Behavior:
+- validate token by hash lookup
+- reject if expired/revoked
+- rotate token:
+  - revoke old refresh token
+  - create a new refresh token
+  - issue a new access token
+- return new access token + new refresh token + expirations
+
+4. Logout endpoint
+Add POST /auth/logout
+Input:
+- refreshToken
+Behavior:
+- revoke current refresh token
+
+5. Logout all endpoint
+Add POST /auth/logout-all
+Behavior:
+- revoke all active refresh tokens for current user
+
+6. Security rules
+- never store raw refresh token in DB
+- store hash only
+- use UTC everywhere
+- add reusable helpers/services for:
+  - token generation
+  - hashing
+  - validation
+  - revocation
+  - rotation
+
+B) FRONTEND
+1. Login form
+- add Remember Me checkbox
+- send rememberMe to backend
+
+2. Transitional token storage
+Keep compatibility with the current frontend architecture for now.
+Store:
+- accessToken
+- accessTokenExpiresAt
+- refreshToken
+- refreshTokenExpiresAt
+
+3. Silent refresh flow
+Before protected API requests:
+- if access token is expired
+- call refresh endpoint once
+- update stored tokens
+- retry original request
+
+4. Improve 401 handling
+- if request gets 401 and refresh token exists:
+  - try refresh once
+  - retry original request once
+- if refresh fails:
+  - clear session
+  - redirect to /login
+
+5. Concurrency protection
+Prevent multiple simultaneous refresh calls.
+Use one shared in-flight refresh promise so concurrent requests wait for the same refresh result.
+
+6. Logout
+- revoke current refresh token on logout if possible
+- clear local auth state
+- redirect cleanly
+
+C) REMEMBER ME POLICY
+Use config-based durations, for example:
+- Access token: 15 minutes
+- Refresh token without remember me: 1 day
+- Refresh token with remember me: 30 days
+
+D) VALIDATION / TESTS
+Implement and report exact results for:
+1. Login without remember me
+2. Login with remember me
+3. Access token expiry -> silent refresh works
+4. Expired refresh token -> logout to login page
+5. Logout -> token revoked
+6. Logout all -> all sessions revoked
+7. Refresh token reuse attempt -> safely rejected
+8. Multiple simultaneous API calls during expiry -> only one refresh request sent
+
+DELIVERABLES
+Report clearly:
+- DB changes
+- new entity/models
+- DTOs
+- endpoints added/updated
+- backend files changed
+- frontend files changed
+- exact test results
+
+IMPORTANT RULES
+- Do not break current login
+- Do not rewrite the whole auth system
+- Implement incrementally and safely
+- Structure code so Phase 1B can later move refresh token to HttpOnly cookie

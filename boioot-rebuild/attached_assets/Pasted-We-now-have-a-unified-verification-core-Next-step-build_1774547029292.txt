@@ -1,0 +1,203 @@
+We now have a unified verification core.
+
+Next step: build a proper verification request workflow.
+
+========================================
+GOAL
+====
+
+Implement a real verification request system so users can submit verification requests and admins can review them.
+
+This is the foundation for document-based KYC / trust workflows.
+
+========================================
+SCOPE OF THIS PHASE
+===================
+
+Build the request workflow and data model first.
+
+Do NOT build full final polished UX yet.
+Do NOT over-engineer file storage.
+Focus on clean architecture and working flow.
+
+========================================
+REQUIRED DATA MODEL
+===================
+
+Create a new entity/table:
+
+VerificationRequests
+
+* Id
+* UserId
+* VerificationType
+* Status
+* SubmittedAt
+* ReviewedAt
+* ReviewedBy
+* Notes
+* RejectionReason
+* CreatedAt
+* UpdatedAt
+
+Recommended enums:
+
+VerificationType:
+
+* Identity
+* Business
+* Professional
+* Office
+* Company
+
+RequestStatus:
+
+* Draft
+* Pending
+* Approved
+* Rejected
+* NeedsMoreInfo
+* Cancelled
+
+Also create a related table/entity:
+
+VerificationDocuments
+
+* Id
+* VerificationRequestId
+* DocumentType
+* FileName
+* FileUrl or FilePath
+* MimeType
+* Status
+* Notes
+* CreatedAt
+
+DocumentType examples:
+
+* NationalId
+* Passport
+* ResidencePermit
+* CommercialRegistration
+* BrokerageLicense
+* OfficeLicense
+* OwnershipProof
+* Other
+
+DocumentStatus:
+
+* Pending
+* Approved
+* Rejected
+
+========================================
+BUSINESS RULES
+==============
+
+1. A user can create a verification request
+2. A user can attach one or more documents to the request
+3. Admin can:
+
+* view request
+* review request
+* approve request
+* reject request
+* request more info
+
+4. When a request is approved:
+
+* update the user verification fields using the unified verification core
+* do NOT bypass the unified verification logic
+
+5. When rejected:
+
+* store rejection reason
+* do not mark user as verified
+
+6. Support different user types:
+
+* general user
+* owner
+* broker
+* office
+* company
+
+========================================
+BACKEND API REQUIREMENTS
+========================
+
+User-side endpoints:
+
+* POST /api/verification/requests
+* GET /api/verification/requests/my
+* GET /api/verification/requests/{id}
+
+Admin-side endpoints:
+
+* GET /api/admin/verification/requests
+* GET /api/admin/verification/requests/{id}
+* PUT /api/admin/verification/requests/{id}/review
+
+If upload handling already exists in the project, connect to it.
+If not, build a simple clean placeholder-compatible document model without breaking future file storage integration.
+
+========================================
+ADMIN REVIEW MODEL
+==================
+
+Admin review request body should support:
+
+* status
+* notes
+* rejectionReason
+* verificationStatus impact
+* verificationLevel impact
+* identity/business approval result
+
+Approving a request must call the unified verification core / unified verification service.
+
+========================================
+FRONTEND SCOPE
+==============
+
+For this phase, add only minimal working admin/user UI:
+
+User side:
+
+* simple “Submit Verification Request” entry point
+* list my requests
+* view request status
+
+Admin side:
+
+* list requests
+* filter by status/type
+* open request details
+* approve / reject / needs more info
+
+Do NOT spend too much time on fancy styling yet.
+Functionality first.
+
+========================================
+ARCHITECTURE RULES
+==================
+
+* Reuse unified verification logic
+* Do not duplicate verification state logic
+* Keep request workflow separate from final user verification summary
+* Keep code extensible for future KYC/document expansion
+* Respect current RBAC and admin permissions
+* Keep backward compatibility with existing user verification APIs
+
+========================================
+DELIVERABLE
+===========
+
+After implementation, report:
+
+1. DB tables/entities added
+2. enums introduced
+3. endpoints added
+4. how request approval updates user verification
+5. minimal UI added
+6. what is still intentionally postponed for future phases

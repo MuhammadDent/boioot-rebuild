@@ -1,0 +1,86 @@
+We will now fix critical issues in the subscription payment request system BEFORE building frontend UI.
+
+IMPORTANT:
+- Apply fixes carefully
+- Do NOT break existing working logic
+- Keep architecture clean and scalable
+
+==================================================
+CRITICAL FIXES
+==================================================
+
+1) FIX Enum.Parse crash (CRITICAL)
+Replace:
+Enum.Parse<PaymentRequestStatus>(filter.Status)
+
+With:
+Enum.TryParse<PaymentRequestStatus>(filter.Status, true, out var status)
+
+If invalid:
+- return 400 BadRequest with clear message
+- DO NOT throw exception
+
+==================================================
+
+2) PREVENT invalid status transitions
+
+Update state machine rules:
+
+- Cannot Reject if status = Approved or Activated
+- Cannot Approve if status = Rejected or Cancelled
+- Cannot Activate unless status = Approved
+- Cannot UploadReceipt unless status in (Pending, AwaitingPayment)
+
+==================================================
+
+3) ADD Admin Cancel endpoint
+
+Create:
+POST /api/admin/payment-requests/{id}/cancel
+
+Rules:
+- Allowed if NOT Activated
+- Sets status = Cancelled
+- Add optional admin note
+
+==================================================
+
+4) PREVENT duplicate active requests
+
+In CreateAsync:
+
+Check:
+If exists request for same AccountId AND
+Status IN (Pending, AwaitingPayment, ReceiptUploaded, UnderReview, Approved)
+
+Then:
+- reject creation
+- return clear message:
+"You already have an active payment request"
+
+==================================================
+
+5) VALIDATE amount
+
+- amount must be > 0
+- if PricingId exists → load price
+- if missing → return error (no silent fallback)
+
+==================================================
+
+6) FIX race condition (Activation)
+
+Ensure:
+
+- activation is idempotent
+- check if subscription already exists before creating
+- use transaction or safe guard
+
+==================================================
+
+OUTPUT REQUIRED
+==================================================
+
+1. What was fixed
+2. Any remaining risks
+3. Confirmation system is safe for production

@@ -1,0 +1,128 @@
+We are now implementing Phase 1B of advanced authentication for the Boioot SaaS platform.
+
+GOAL:
+Harden the auth system after Phase 1A by adding:
+1) HttpOnly cookie-based refresh token transport
+2) Stronger session security
+3) Session / device management UI
+4) Cleanup of transitional localStorage-based refresh token handling
+
+IMPORTANT:
+Assume Phase 1A is already completed and working:
+- refresh token persistence exists
+- remember me exists
+- silent refresh exists
+- logout / logout all exists
+- concurrency-safe refresh flow exists
+
+This phase is focused on security hardening and session visibility, not rebuilding auth from scratch.
+
+REQUIREMENTS
+
+A) BACKEND
+1. Move refresh token transport to HttpOnly cookie
+- Set refresh token in secure HttpOnly cookie
+- Use SameSite policy appropriate for current app architecture
+- Use Secure flag where environment supports it
+- Keep access token returned to frontend as needed for current architecture
+
+2. Update login endpoint
+- On successful login:
+  - generate refresh token
+  - persist hashed refresh token in DB
+  - send raw refresh token via HttpOnly cookie
+  - return access token + access token expiry + user summary
+- rememberMe should control refresh cookie expiry duration
+
+3. Update refresh endpoint
+- Read refresh token from HttpOnly cookie instead of request body
+- validate token by hash lookup
+- rotate token
+- replace cookie with the new refresh token
+- return new access token + access token expiry
+
+4. Update logout endpoint
+- revoke current refresh token
+- clear refresh cookie
+
+5. Update logout all endpoint
+- revoke all active refresh tokens for current user
+- clear refresh cookie
+
+6. Security hardening
+- ensure refresh token never needs to be readable by frontend JS
+- keep DB storing only token hash
+- preserve rotation and revocation logic
+- ensure reuse attempts are safely rejected
+
+B) FRONTEND
+1. Remove dependency on reading refresh token from localStorage
+- access token may remain in current frontend storage for now if needed
+- refresh flow should rely on backend cookie transport
+
+2. Update request/refresh logic
+- protected requests continue using access token
+- when access token expires, call refresh endpoint
+- backend uses cookie automatically
+- frontend updates access token from refresh response
+- retry original request once
+
+3. Cleanup transitional auth storage
+- remove refreshToken and refreshTokenExpiresAt from localStorage usage if Phase 1A stored them there
+- keep implementation clean and backward-safe
+
+4. Improve logout flow
+- call backend logout endpoint
+- clear local auth state
+- redirect cleanly
+
+C) SESSION / DEVICE MANAGEMENT UI
+1. Add a basic user-facing session management page/section
+Show active/recent sessions with useful metadata such as:
+- created at
+- expires at
+- revoked/active status
+- device or browser info if available
+- IP if already captured and safe to show
+- current session marker if feasible
+
+2. Add actions
+- revoke one session
+- revoke all other sessions
+- logout all sessions
+
+3. Admin and user safety
+- ensure users can only manage their own sessions
+- do not expose sensitive token material
+- show metadata only, never raw tokens
+
+D) VALIDATION / TESTS
+Implement and report exact results for:
+1. Login sets HttpOnly refresh cookie correctly
+2. Refresh works without frontend reading refresh token
+3. Silent refresh still works
+4. Logout clears cookie and revokes session
+5. Logout all revokes all sessions and clears cookie
+6. Session list shows correct active sessions
+7. Revoke single session works
+8. Revoke all other sessions works
+9. Expired or revoked refresh cookie leads to clean redirect to login
+10. No raw refresh token remains exposed in frontend JS storage
+
+DELIVERABLES
+Report clearly:
+- cookie strategy used
+- backend endpoints updated
+- DB/entity changes if any
+- session management endpoints added
+- frontend files changed
+- session UI files added
+- exact security improvements achieved
+- exact test results
+
+IMPORTANT RULES
+- Do not break Phase 1A behavior
+- Do not reintroduce raw refresh token exposure in frontend JS
+- Preserve token rotation
+- Preserve logout safety
+- Keep code structured and production-oriented

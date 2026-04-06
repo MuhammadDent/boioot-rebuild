@@ -1,0 +1,294 @@
+We need to refactor the location creation flow to become a true master-data controlled system.
+
+Current issue:
+The current implementation still allows duplicate or inconsistent city/neighborhood entries such as:
+- Arabic vs English duplicates
+- Slight spelling variations
+- Same location created multiple times under inconsistent formatting
+- UI plus button exists, but the flow does not enforce strict master data rules
+
+Examples from current behavior:
+- busaira
+- البصيرة
+- بصيرة
+
+These should not become multiple independent master records unless explicitly approved by rules.
+
+==================================================
+GOAL
+==================================================
+
+Convert province/city/neighborhood management into a strict Location Master Data workflow.
+
+The system must enforce:
+1. strict normalize for duplicate prevention
+2. soft similarity detection for suggestions
+3. DB-level uniqueness constraints
+4. hierarchical parent-child integrity:
+   - city belongs to province
+   - neighborhood belongs to city
+5. controlled creation workflow from UI/API
+6. clean display names while preserving normalized internal matching
+7. no duplicate master records for the same real-world location
+
+==================================================
+REQUIRED ARCHITECTURE
+==================================================
+
+We need 3 layers of control:
+
+A) DATABASE RULES
+B) BACKEND RULES
+C) FRONTEND UX RULES
+
+--------------------------------------------------
+A) DATABASE RULES
+--------------------------------------------------
+
+1. For location master tables, ensure fields exist:
+
+For Cities:
+- Id
+- ProvinceId
+- NameAr
+- NameEn
+- DisplayName
+- NormalizedName
+- IsActive
+- CreatedAt
+- UpdatedAt
+
+For Neighborhoods:
+- Id
+- CityId
+- NameAr
+- NameEn
+- DisplayName
+- NormalizedName
+- IsActive
+- CreatedAt
+- UpdatedAt
+
+2. Add DB unique constraints:
+- Cities: unique on (ProvinceId, NormalizedName)
+- Neighborhoods: unique on (CityId, NormalizedName)
+
+3. Remove or stop relying on old weak uniqueness logic based only on raw Name.
+
+4. Add indexes for:
+- ProvinceId + NormalizedName
+- CityId + NormalizedName
+
+5. Ensure foreign key integrity:
+- City must reference valid Province
+- Neighborhood must reference valid City
+
+--------------------------------------------------
+B) BACKEND RULES
+--------------------------------------------------
+
+Implement strict service-level logic for adding a city or neighborhood.
+
+Create a dedicated LocationMasterService and do NOT keep this logic scattered inside controllers.
+
+Required methods:
+- NormalizeArabicLocationName(input)
+- FindExactMatch(type, parentId, normalizedName)
+- FindSimilarMatches(type, parentId, normalizedName)
+- CreateCity(...)
+- CreateNeighborhood(...)
+
+### Strict Normalize
+Implement a strict Arabic normalization function used for duplicate prevention.
+
+It must at least:
+- trim spaces
+- collapse repeated spaces
+- remove tatweel
+- normalize Arabic variants:
+  - أ, إ, آ -> ا
+  - ى -> ي
+  - ة -> ه or use one consistent internal form
+  - ؤ -> و (if your rule chooses so)
+  - ئ -> ي (if your rule chooses so)
+- remove diacritics
+- normalize Arabic/English punctuation
+- lowercase English
+- normalize Arabic and English digits if needed
+- normalize common separators: -, _, /, extra whitespace
+- optionally normalize “ال” handling only if done carefully and consistently
+
+IMPORTANT:
+Use one strict rule consistently everywhere:
+- seed
+- migration backfill
+- create API
+- update API
+- import scripts
+- matching logic
+
+### Soft Similarity Layer
+In addition to strict normalize, implement soft similarity suggestion logic:
+- detect very similar entries
+- examples:
+  - الهفوف / هفوف
+  - البصيرة / بصيرة
+  - دير الزور / ديرزور
+
+If similar matches exist:
+- DO NOT auto-create immediately
+- return:
+  {
+    status: "similar",
+    suggestions: [...]
+  }
+
+If exact normalized match exists:
+- return:
+  {
+    status: "exists",
+    item: existingItem
+  }
+
+If no exact or similar match:
+- create new record and return:
+  {
+    status: "created",
+    item: createdItem
+  }
+
+Support:
+- forceCreate: true
+But only after UI confirmation.
+
+### Controllers/API
+Refactor endpoints so they do not directly insert records.
+
+Required endpoints:
+- POST /api/locations/cities
+- POST /api/locations/neighborhoods
+
+Request shape examples:
+
+Create city:
+{
+  "provinceId": 1,
+  "name": "البصيرة",
+  "forceCreate": false
+}
+
+Create neighborhood:
+{
+  "cityId": 10,
+  "name": "الحي الغربي",
+  "forceCreate": false
+}
+
+Response rules:
+- exists => return existing item
+- similar => return suggestions only, without inserting
+- created => insert and return created item
+- validation error => clear message
+
+Also add validation:
+- cannot create city without provinceId
+- cannot create neighborhood without cityId
+- cannot create empty/short names
+- reject invalid parent IDs
+- reject duplicate normalized value under same parent
+
+--------------------------------------------------
+C) FRONTEND UX RULES
+--------------------------------------------------
+
+Refactor the city/neighborhood selection component.
+
+Requirements:
+1. User must select parent first:
+   - province before city
+   - city before neighborhood
+
+2. Plus button behavior:
+   - if parent not selected, disable plus button
+   - show tooltip/message explaining why
+
+3. Adding new city/neighborhood must happen in modal/dialog, not inline blind insertion.
+
+4. Flow:
+   - user clicks plus
+   - modal opens
+   - user types new name
+   - frontend calls backend create endpoint
+   - backend returns one of:
+     - exists
+     - similar
+     - created
+
+5. UX behavior by status:
+   - exists:
+     Show message:
+     "This location already exists. It has been selected."
+     Then auto-select the existing item.
+
+   - similar:
+     Show a warning box with suggestions:
+     "A similar location already exists. Did you mean one of these?"
+     Show buttons:
+     - Use existing
+     - Create anyway
+
+   - created:
+     Add new item to dropdown and auto-select it.
+
+6. Dropdown display rules:
+   - show only clean DisplayName
+   - do not show raw duplicates
+   - do not mix Arabic and English duplicate records as different master items
+
+7. Ensure the selected list refreshes correctly after creation.
+
+--------------------------------------------------
+DATA CLEANUP / BACKFILL
+--------------------------------------------------
+
+Very important:
+Current data already contains duplicates and dirty records.
+
+We need a cleanup script that:
+1. computes NormalizedName for existing records
+2. detects duplicates grouped by parent + normalized name
+3. logs duplicate groups
+4. optionally merges or flags duplicates
+5. prevents future duplicate insertion
+
+Do not ignore existing dirty data.
+
+Provide:
+- migration/backfill script
+- duplicate detection report query
+- safe cleanup plan
+
+==================================================
+DELIVERABLES
+==================================================
+
+Please implement and return:
+
+1. updated DB schema / migration
+2. Arabic normalizer utility
+3. location master service
+4. refactored controller endpoints
+5. updated frontend modal flow
+6. disabled plus button logic when parent missing
+7. duplicate cleanup/backfill script
+8. test cases for:
+   - exact duplicate
+   - Arabic normalized duplicate
+   - similar suggestion
+   - create new city
+   - create new neighborhood
+   - wrong parent validation
+
+IMPORTANT:
+Do not give me a partial explanation only.
+I want the actual implementation changes file-by-file, with safe migration logic and no broken existing flow.

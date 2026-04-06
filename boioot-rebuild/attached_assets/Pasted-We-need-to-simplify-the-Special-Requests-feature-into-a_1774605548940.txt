@@ -1,0 +1,197 @@
+We need to simplify the “Special Requests” feature (الطلبات الخاصة) into a minimal lead capture system based on a text message instead of a complex structured form.
+
+CURRENT PROBLEM
+The previous design included many structured fields (rooms, budget, area, etc.), which makes the experience heavy and reduces conversion.
+
+GOAL
+Convert the feature into a simple, fast, high-conversion request submission flow where the user only sends a message, and the sales/support team follows up for details.
+
+==================================================
+1) PUBLIC EXPERIENCE (SIMPLIFIED)
+==================================================
+
+Create a public page/section called:
+"الطلبات الخاصة"
+
+This page should include:
+- Dynamic title (editable from admin)
+- Dynamic description (editable from admin)
+- Simple explanation text like:
+  "اكتب طلبك وسيتواصل معك فريقنا لمساعدتك في العثور على العقار المناسب"
+
+- CTA button:
+  "أضف طلبك الآن"
+
+==================================================
+2) SIMPLE REQUEST FORM
+==================================================
+
+Replace complex form with a minimal one:
+
+Fields:
+- الاسم (Full Name)
+- رقم الهاتف (Phone) → required
+- نص الطلب (Message / Request Description) → required
+
+Optional:
+- واتساب (optional)
+- البريد الإلكتروني (optional)
+
+REMOVE completely:
+- rooms
+- bathrooms
+- budget
+- property type
+- area
+- filters
+
+The message field should be large (textarea) with placeholder:
+"مثال: أبحث عن شقة للإيجار في المزة بسعر مناسب..."
+
+UX Requirements:
+- Very clean and simple UI
+- Focus on message box
+- Mobile-friendly
+- Fast submission
+
+==================================================
+3) DATA MODEL (SIMPLIFIED)
+==================================================
+
+Update/Create SpecialRequests table with simplified structure:
+
+Fields:
+- Id
+- PublicCode
+- CreatedByUserId (nullable)
+- FullName
+- Phone
+- WhatsApp (optional)
+- Email (optional)
+- Message (main field)
+- Status
+- Source
+- AssignedToUserId (nullable)
+- NotesInternal
+- CreatedAt
+- UpdatedAt
+- ClosedAt
+
+Remove unnecessary structured columns.
+
+==================================================
+4) DASHBOARD / ADMIN PANEL
+==================================================
+
+Create management page:
+"الطلبات الخاصة"
+
+List view should show:
+- request code
+- name
+- phone
+- short preview of message
+- status
+- assigned to
+- created date
+
+Clicking a request opens details:
+
+Details should show:
+- full message (very important)
+- contact info
+- internal notes
+- status history
+
+Actions:
+- change status (New / Contacted / Closed / Archived)
+- assign to team member
+- add internal notes
+- mark as contacted
+- archive
+
+==================================================
+5) SALES WORKFLOW (IMPORTANT)
+==================================================
+
+This system should act as a lead inbox.
+
+Flow:
+1) user submits message
+2) admin/team sees request
+3) team contacts user manually (phone/whatsapp)
+4) team collects full requirements outside the system
+
+So:
+DO NOT over-engineer filters inside the form
+
+==================================================
+6) HOMEPAGE DYNAMIC SECTION
+==================================================
+
+Add dynamic homepage block:
+
+Editable from admin:
+- section title
+- section description
+- CTA text
+- show/hide toggle
+
+Example:
+"هل تبحث عن عقار بمواصفات خاصة؟ أرسل طلبك الآن وسنساعدك"
+
+==================================================
+7) SUCCESS MESSAGE
+==================================================
+
+After submission show:
+
+"تم إرسال طلبك بنجاح، وسيقوم فريقنا بالتواصل معك قريبًا"
+
+==================================================
+8) NOTIFICATIONS
+==================================================
+
+When a new request is submitted:
+- notify admin/team
+
+Arabic message:
+"تم استلام طلب خاص جديد"
+
+==================================================
+9) PERMISSIONS
+==================================================
+
+- guests can submit requests
+- admin/team can manage all
+- assigned users can view assigned requests
+
+==================================================
+10) IMPORTANT UX RULES
+==================================================
+
+- Make the form extremely simple
+- No complex dropdowns
+- No heavy validation except phone + message
+- Focus on speed and ease
+- Think like WhatsApp message, not like a real estate filter system
+
+==================================================
+11) DELIVERABLES
+==================================================
+
+1) Simplified public page for الطلبات الخاصة
+2) Minimal request form (name + phone + message)
+3) Updated database model
+4) Admin dashboard page to manage requests
+5) Dynamic homepage section
+6) Notifications for new requests
+7) Clean Arabic UI
+8) Short report:
+   - what was removed
+   - what was simplified
+   - how submission flow works now
+
+IMPORTANT
+Do NOT reintroduce complex fields.
+Keep it minimal and conversion-focused.

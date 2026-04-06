@@ -1,0 +1,163 @@
+We have a plan preview display inconsistency bug.
+
+========================================
+PROBLEM
+========================================
+
+In the plan edit modal, I changed the user-facing plan name successfully.
+
+Outside the preview card, the plan now shows the correct updated Arabic display name.
+
+BUT inside the live preview / preview card in the edit modal, it still shows another old name such as:
+- Owner-Advanced
+instead of the correct user-facing display name.
+
+This creates a serious inconsistency between:
+- saved plan card
+- live preview inside edit modal
+
+========================================
+GOAL
+========================================
+
+Unify the source of truth for all displayed plan names.
+
+The preview card must always use the same display name fields that the end user sees.
+
+========================================
+REQUIRED FIX
+========================================
+
+1) Audit all plan name fields in the model
+
+Check whether the plan contains fields like:
+- name
+- code
+- slug
+- displayNameAr
+- displayNameEn
+- title
+
+Identify which field is:
+- internal/system identifier
+- user-facing Arabic name
+- user-facing English name
+
+========================================
+2) Define strict naming rules
+
+Use this rule everywhere:
+
+- code / slug / name:
+  internal only
+  never shown to end users unless explicitly intended
+
+- displayNameAr:
+  primary visible name in Arabic UI
+
+- displayNameEn:
+  visible only in English UI or fallback
+
+========================================
+3) Fix preview card source
+
+Inside the plan edit modal preview component:
+DO NOT render internal name or code.
+
+Instead use:
+
+if current UI is Arabic:
+  plan.displayNameAr
+else:
+  plan.displayNameEn
+fallback only if display name is empty
+
+Example logic:
+
+const visiblePlanName =
+  isArabic
+    ? (draft.displayNameAr || draft.displayNameEn || draft.name)
+    : (draft.displayNameEn || draft.displayNameAr || draft.name);
+
+Use this same logic in:
+- preview card inside modal
+- pricing cards
+- plan details modal
+- subscription page
+- admin listing card if intended for visual preview
+
+========================================
+4) Use draft state in live preview
+
+If the preview is inside the edit modal,
+it must render from the CURRENT FORM STATE (draft values),
+not from stale persisted plan data.
+
+Meaning:
+when I edit displayNameAr,
+the preview must update instantly before save.
+
+Example:
+- preview should use form values / watch values / local draft state
+- not the original fetched plan object
+
+========================================
+5) Fix feature labels too if needed
+
+Audit whether preview also uses wrong fields for:
+- audience label
+- category label
+- badge text
+- recommended text
+
+Ensure all visible labels come from display/UI fields, not internal keys.
+
+========================================
+6) Prevent future regressions
+
+Create a helper function like:
+
+function getPlanVisibleName(plan, locale = 'ar') {
+  if (locale === 'ar') {
+    return plan.displayNameAr || plan.displayNameEn || plan.name || '';
+  }
+  return plan.displayNameEn || plan.displayNameAr || plan.name || '';
+}
+
+Then use this helper everywhere in the UI instead of directly accessing plan.name.
+
+========================================
+7) Important distinction
+
+Do NOT rename internal identifiers automatically.
+Keep internal code stable if needed, for example:
+- owner_advanced
+
+But NEVER show that raw internal value to users in preview or public UI.
+
+========================================
+EXPECTED RESULT
+========================================
+
+After editing:
+- displayNameAr = "الباقة المتقدمة لملاك العقارات"
+
+Then ALL user-facing previews must show:
+"الباقة المتقدمة لملاك العقارات"
+
+And must NOT show:
+- Owner-Advanced
+- owner_advanced
+- old fallback name
+
+unless displayNameAr/displayNameEn are actually empty.
+
+========================================
+DELIVERABLE
+========================================
+
+Please:
+1) fix the preview component
+2) unify plan name rendering across the app
+3) ensure live preview uses current edited form state
+4) list the exact files/components updated

@@ -1,0 +1,509 @@
+using Boioot.Api.Authorization;
+using Boioot.Application.Features.Admin.DTOs;
+using Boioot.Application.Features.Admin.Interfaces;
+using Boioot.Domain.Constants;
+using Boioot.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Boioot.Api.Controllers;
+
+public record AdminUpdatePropertyStatusRequest(PropertyStatus Status);
+
+[Route("api/admin")]
+[Authorize]   // base: must be authenticated; per-method [RequirePermission] enforces RBAC
+public class AdminController : BaseController
+{
+    private readonly IAdminService _admin;
+
+    public AdminController(IAdminService admin)
+    {
+        _admin = admin;
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+
+    [HttpPost("users")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> CreateUser(
+        [FromBody] CreateAdminUserRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateUserAsync(request, ct);
+        return Created($"api/admin/users/{result.Id}", result);
+    }
+
+    [HttpGet("users")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetUsers(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] UserRole? role = null,
+        [FromQuery] bool? isActive = null,
+        [FromQuery] string? search = null,
+        [FromQuery] DateTime? createdAfter = null,
+        [FromQuery] DateTime? createdBefore = null,
+        [FromQuery] DateTime? lastLoginAfter = null,
+        [FromQuery] string? tag = null,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetUsersAsync(
+            page, pageSize, role, isActive,
+            search, createdAfter, createdBefore, lastLoginAfter, tag,
+            ct);
+        return Ok(result);
+    }
+
+    [HttpGet("users/analytics")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetUserAnalytics(CancellationToken ct = default)
+    {
+        var result = await _admin.GetUserAnalyticsAsync(ct);
+        return Ok(result);
+    }
+
+    [HttpPost("users/bulk")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> BulkUserAction(
+        [FromBody] BulkUserActionRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.BulkUserActionAsync(GetUserId(), request, ct);
+        return Ok(result);
+    }
+
+    [HttpGet("users/{userId:guid}/tags")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetUserTags(Guid userId, CancellationToken ct = default)
+    {
+        var result = await _admin.GetUserTagsAsync(userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("users/{userId:guid}/tags")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> AddUserTag(
+        Guid userId,
+        [FromBody] AddUserTagRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.AddUserTagAsync(userId, request.Tag, ct);
+        return Ok(result);
+    }
+
+    [HttpDelete("users/{userId:guid}/tags/{tag}")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> RemoveUserTag(
+        Guid userId, string tag, CancellationToken ct = default)
+    {
+        await _admin.RemoveUserTagAsync(userId, tag, ct);
+        return NoContent();
+    }
+
+    [HttpGet("users/tags")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetAllTags(CancellationToken ct = default)
+    {
+        var result = await _admin.GetAllTagsAsync(ct);
+        return Ok(result);
+    }
+
+    [HttpGet("users/{userId:guid}")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetAdminUser(Guid userId, CancellationToken ct = default)
+    {
+        var result = await _admin.GetAdminUserAsync(userId, ct);
+        return Ok(result);
+    }
+
+    [HttpGet("users/{userId:guid}/profile")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetAdminUserProfile(Guid userId, CancellationToken ct = default)
+    {
+        var result = await _admin.GetAdminUserProfileAsync(userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPut("users/{userId:guid}")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateAdminUser(
+        Guid userId,
+        [FromBody] UpdateAdminUserRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateAdminUserAsync(userId, request, ct);
+        return Ok(result);
+    }
+
+    [HttpPatch("users/{userId:guid}/status")]
+    [RequirePermission(Permissions.UsersDisable)]
+    public async Task<IActionResult> UpdateUserStatus(
+        Guid userId,
+        [FromBody] UpdateUserStatusRequest request,
+        CancellationToken ct = default)
+    {
+        if (request.IsActive is null)
+            return BadRequest(new { error = "حقل IsActive مطلوب" });
+
+        var result = await _admin.UpdateUserStatusAsync(GetUserId(), userId, request.IsActive.Value, ct);
+        return Ok(result);
+    }
+
+    [HttpPatch("users/{userId:guid}/role")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateUserRole(
+        Guid userId,
+        [FromBody] UpdateUserRoleRequest request,
+        CancellationToken ct = default)
+    {
+        if (request.Role is null)
+            return BadRequest(new { error = "حقل Role مطلوب" });
+
+        var result = await _admin.UpdateUserRoleAsync(GetUserId(), userId, request.Role.Value, ct);
+        return Ok(result);
+    }
+
+    // ── Agents (Admin) ────────────────────────────────────────────────────────
+
+    [HttpGet("agents")]
+    [RequirePermission(Permissions.AgentsView)]
+    public async Task<IActionResult> GetAdminAgents(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] Guid? companyId = null,
+        [FromQuery] bool? isActive = null,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetAdminAgentsAsync(page, pageSize, companyId, isActive, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("agents")]
+    [RequirePermission(Permissions.AgentsManage)]
+    public async Task<IActionResult> CreateAdminAgent(
+        [FromBody] CreateAdminAgentRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateAdminAgentAsync(request, ct);
+        return Created($"api/admin/agents/{result.Id}", result);
+    }
+
+    [HttpPut("agents/{userId:guid}")]
+    [RequirePermission(Permissions.AgentsManage)]
+    public async Task<IActionResult> UpdateAdminAgent(
+        Guid userId,
+        [FromBody] UpdateAdminAgentRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateAdminAgentAsync(userId, request, ct);
+        return Ok(result);
+    }
+
+    // ── Brokers (Admin) ───────────────────────────────────────────────────────
+
+    [HttpGet("brokers")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetAdminBrokers(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] bool? isActive = null,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetAdminBrokersAsync(page, pageSize, isActive, ct);
+        return Ok(result);
+    }
+
+    [HttpGet("brokers/{userId:guid}")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetAdminBroker(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetAdminBrokerAsync(userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("brokers")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> CreateAdminBroker(
+        [FromBody] CreateAdminBrokerRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateAdminBrokerAsync(request, ct);
+        return Created($"api/admin/brokers/{result.Id}", result);
+    }
+
+    [HttpPut("brokers/{userId:guid}")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateAdminBroker(
+        Guid userId,
+        [FromBody] UpdateAdminBrokerRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateAdminBrokerAsync(userId, request, ct);
+        return Ok(result);
+    }
+
+    [HttpPatch("users/{userId:guid}/profile-image")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateUserProfileImage(
+        Guid userId,
+        [FromBody] UpdateUserProfileImageRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateUserProfileImageAsync(userId, request.ProfileImageUrl, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("users/{userId:guid}/verify")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> VerifyUser(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var adminId = GetUserId();
+        var result  = await _admin.VerifyUserAsync(adminId, userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("users/{userId:guid}/unverify")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UnverifyUser(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var adminId = GetUserId();
+        var result  = await _admin.UnverifyUserAsync(adminId, userId, ct);
+        return Ok(result);
+    }
+
+    // ── Multi-level verification ──────────────────────────────────────────────
+
+    [HttpGet("users/{userId:guid}/verification")]
+    [RequirePermission(Permissions.UsersView)]
+    public async Task<IActionResult> GetUserVerification(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetUserVerificationAsync(userId, ct);
+        return Ok(result);
+    }
+
+    [HttpPut("users/{userId:guid}/verification")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateUserVerification(
+        Guid userId,
+        [FromBody] UpdateUserVerificationRequest request,
+        CancellationToken ct = default)
+    {
+        var adminId = GetUserId();
+        var result  = await _admin.UpdateUserVerificationAsync(adminId, userId, request, ct);
+        return Ok(result);
+    }
+
+    // ── Companies ─────────────────────────────────────────────────────────────
+
+    [HttpPost("companies")]
+    [RequirePermission(Permissions.CompaniesEdit)]
+    public async Task<IActionResult> CreateCompany(
+        [FromBody] CreateAdminCompanyRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateCompanyAsync(request, ct);
+        return Created($"api/admin/companies/{result.Id}", result);
+    }
+
+    [HttpPut("companies/{companyId:guid}")]
+    [RequirePermission(Permissions.CompaniesEdit)]
+    public async Task<IActionResult> UpdateCompany(
+        Guid companyId,
+        [FromBody] UpdateAdminCompanyRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateCompanyAsync(companyId, request, ct);
+        return Ok(result);
+    }
+
+    [HttpGet("companies")]
+    [RequirePermission(Permissions.CompaniesView)]
+    public async Task<IActionResult> GetCompanies(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? city = null,
+        [FromQuery] bool? isVerified = null,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetCompaniesAsync(page, pageSize, city, isVerified, ct);
+        return Ok(result);
+    }
+
+    [HttpPatch("companies/{companyId:guid}/verify")]
+    [RequirePermission(Permissions.CompaniesEdit)]
+    public async Task<IActionResult> VerifyCompany(
+        Guid companyId,
+        [FromBody] VerifyCompanyRequest request,
+        CancellationToken ct = default)
+    {
+        if (request.IsVerified is null)
+            return BadRequest(new { error = "حقل IsVerified مطلوب" });
+
+        var result = await _admin.VerifyCompanyAsync(companyId, request.IsVerified.Value, ct);
+        return Ok(result);
+    }
+
+    // ── Properties ────────────────────────────────────────────────────────────
+
+    [HttpGet("properties")]
+    [RequirePermission(Permissions.PropertiesView)]
+    public async Task<IActionResult> GetProperties(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] PropertyStatus? status = null,
+        [FromQuery] string? city = null,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetPropertiesAsync(page, pageSize, status, city, ct);
+        return Ok(result);
+    }
+
+    [HttpPatch("properties/{id:guid}/status")]
+    [RequirePermission(Permissions.PropertiesEdit)]
+    public async Task<IActionResult> UpdatePropertyStatus(
+        Guid id, [FromBody] AdminUpdatePropertyStatusRequest request, CancellationToken ct = default)
+    {
+        await _admin.UpdatePropertyStatusAsync(id, request.Status, ct);
+        return NoContent();
+    }
+
+    // ── Projects ──────────────────────────────────────────────────────────────
+
+    [HttpGet("projects")]
+    [RequirePermission(Permissions.ProjectsView)]
+    public async Task<IActionResult> GetProjects(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] ProjectStatus? status = null,
+        [FromQuery] string? city = null,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetProjectsAsync(page, pageSize, status, city, ct);
+        return Ok(result);
+    }
+
+    // ── Requests ──────────────────────────────────────────────────────────────
+
+    [HttpGet("requests")]
+    [RequirePermission(Permissions.RequestsView)]
+    public async Task<IActionResult> GetRequests(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] RequestStatus? status = null,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.GetRequestsAsync(page, pageSize, status, ct);
+        return Ok(result);
+    }
+
+    // ── Listing Types CRUD ────────────────────────────────────────────────────
+
+    [HttpGet("listing-types")]
+    [RequirePermission(Permissions.SettingsView)]
+    public async Task<IActionResult> GetListingTypes(CancellationToken ct = default)
+    {
+        var result = await _admin.GetListingTypesAsync(ct);
+        return Ok(result);
+    }
+
+    [HttpPost("listing-types")]
+    [RequirePermission(Permissions.SettingsManage)]
+    public async Task<IActionResult> CreateListingType(
+        [FromBody] UpsertListingTypeRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.CreateListingTypeAsync(request, ct);
+        return Created($"api/admin/listing-types/{result.Id}", result);
+    }
+
+    [HttpPut("listing-types/{id:guid}")]
+    [RequirePermission(Permissions.SettingsManage)]
+    public async Task<IActionResult> UpdateListingType(
+        Guid id,
+        [FromBody] UpsertListingTypeRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.UpdateListingTypeAsync(id, request, ct);
+        return Ok(result);
+    }
+
+    [HttpDelete("listing-types/{id:guid}")]
+    [RequirePermission(Permissions.SettingsManage)]
+    public async Task<IActionResult> DeleteListingType(
+        Guid id,
+        CancellationToken ct = default)
+    {
+        await _admin.DeleteListingTypeAsync(id, ct);
+        return NoContent();
+    }
+
+    // ── Property Types ────────────────────────────────────────────────────────
+
+    [HttpGet("property-types")]
+    [RequirePermission(Permissions.SettingsView)]
+    public async Task<IActionResult> GetPropertyTypes(CancellationToken ct = default)
+        => Ok(await _admin.GetPropertyTypesAsync(ct));
+
+    [HttpPost("property-types")]
+    [RequirePermission(Permissions.SettingsManage)]
+    public async Task<IActionResult> CreatePropertyType(
+        [FromBody] UpsertPropertyTypeRequest request, CancellationToken ct = default)
+    {
+        var result = await _admin.CreatePropertyTypeAsync(request, ct);
+        return Created($"api/admin/property-types/{result.Id}", result);
+    }
+
+    [HttpPut("property-types/{id:guid}")]
+    [RequirePermission(Permissions.SettingsManage)]
+    public async Task<IActionResult> UpdatePropertyType(
+        Guid id, [FromBody] UpsertPropertyTypeRequest request, CancellationToken ct = default)
+        => Ok(await _admin.UpdatePropertyTypeAsync(id, request, ct));
+
+    [HttpDelete("property-types/{id:guid}")]
+    [RequirePermission(Permissions.SettingsManage)]
+    public async Task<IActionResult> DeletePropertyType(
+        Guid id, CancellationToken ct = default)
+    {
+        await _admin.DeletePropertyTypeAsync(id, ct);
+        return NoContent();
+    }
+
+    // ── Ownership Types ───────────────────────────────────────────────────────
+
+    [HttpGet("ownership-types")]
+    [RequirePermission(Permissions.SettingsView)]
+    public async Task<IActionResult> GetOwnershipTypes(CancellationToken ct = default)
+        => Ok(await _admin.GetOwnershipTypesAsync(ct));
+
+    [HttpPost("ownership-types")]
+    [RequirePermission(Permissions.SettingsManage)]
+    public async Task<IActionResult> CreateOwnershipType(
+        [FromBody] UpsertOwnershipTypeRequest request, CancellationToken ct = default)
+    {
+        var result = await _admin.CreateOwnershipTypeAsync(request, ct);
+        return Created($"api/admin/ownership-types/{result.Id}", result);
+    }
+
+    [HttpPut("ownership-types/{id:guid}")]
+    [RequirePermission(Permissions.SettingsManage)]
+    public async Task<IActionResult> UpdateOwnershipType(
+        Guid id, [FromBody] UpsertOwnershipTypeRequest request, CancellationToken ct = default)
+        => Ok(await _admin.UpdateOwnershipTypeAsync(id, request, ct));
+
+    [HttpDelete("ownership-types/{id:guid}")]
+    [RequirePermission(Permissions.SettingsManage)]
+    public async Task<IActionResult> DeleteOwnershipType(
+        Guid id, CancellationToken ct = default)
+    {
+        await _admin.DeleteOwnershipTypeAsync(id, ct);
+        return NoContent();
+    }
+}

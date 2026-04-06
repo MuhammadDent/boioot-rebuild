@@ -1,0 +1,113 @@
+We have implemented a basic RBAC system on the frontend.
+
+Now we must upgrade it to a REAL, secure, and scalable RBAC system.
+
+==================================================
+PHASE: REAL RBAC ENFORCEMENT (CRITICAL)
+==================================================
+
+Goal:
+Transform RBAC from a UI-only feature into a full backend-enforced security system.
+
+==================================================
+1) MOVE RBAC TO BACKEND (CRITICAL)
+==================================================
+
+Implement RBAC enforcement in the .NET API.
+
+Requirements:
+- Every protected endpoint must check permissions
+- Do NOT rely on frontend checks only
+
+Example:
+- GET /users → requires users.view
+- PATCH /users → requires users.edit
+- POST /blog → requires blog.create
+
+==================================================
+2) ROLE + PERMISSION DATA MODEL
+==================================================
+
+Create proper database structure:
+
+Tables:
+- StaffUsers
+- Roles
+- Permissions
+- RolePermissions (many-to-many)
+- StaffUserRoles (many-to-many)
+
+Permissions must be stored in DB, not only hardcoded.
+
+==================================================
+3) PERMISSION SYSTEM DESIGN
+==================================================
+
+Permissions should be granular:
+
+Examples:
+- users.view
+- users.edit
+- users.disable
+- staff.manage
+- roles.manage
+- blog.create
+- blog.edit
+- blog.publish
+- blog.seo.manage
+- requests.view
+- requests.assign
+- settings.manage
+
+==================================================
+4) BACKEND AUTHORIZATION MIDDLEWARE
+==================================================
+
+Create reusable authorization logic:
+
+- Middleware / attribute like:
+  [RequirePermission("users.view")]
+
+- If user does not have permission:
+  → return 403
+
+==================================================
+5) SYNC FRONTEND WITH BACKEND
+==================================================
+
+Frontend should:
+- Receive permissions from backend (JWT or API)
+- Use them for UI visibility
+
+BUT:
+- Backend remains source of truth
+
+==================================================
+6) SECURE ADMIN ROUTES
+==================================================
+
+Protect:
+- /dashboard/admin/*
+- Ensure only staff with proper roles can access
+
+==================================================
+7) OPTIONAL (IF TIME):
+==================================================
+
+- Add "isSuperAdmin" override
+- Add caching for permissions
+- Add audit logging later
+
+==================================================
+DELIVERABLE
+==================================================
+
+- DB schema for roles & permissions
+- Backend permission enforcement
+- Middleware / attribute for checking permissions
+- Frontend updated to consume real permissions
+- Summary of changes
+
+IMPORTANT:
+This is a security-critical feature.
+Do not leave authorization in frontend only.

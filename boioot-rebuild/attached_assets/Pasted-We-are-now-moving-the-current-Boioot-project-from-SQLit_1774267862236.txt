@@ -1,0 +1,108 @@
+We are now moving the current Boioot project from "SQLite-working mode" to a more professional "database-portable architecture" without breaking the current app.
+
+PROJECT CONTEXT
+- Real estate SaaS platform
+- Current DB: SQLite
+- Future target: SQL Server
+- Current state: app works, provider config was improved, some SQLite-specific code was already isolated, but raw SQL and bootstrap schema logic still exist
+- Goal: keep SQLite working NOW, but refactor the data layer so future migration to SQL Server becomes clean and realistic
+
+IMPORTANT
+Do NOT give me only a report.
+Do the actual refactoring in the codebase.
+
+MAIN GOAL
+Refactor the current database initialization and schema logic so the project becomes migration-ready and much less coupled to SQLite.
+
+REQUIREMENTS
+
+1) REMOVE / REDUCE SQLITE-SPECIFIC RAW SQL
+Find and refactor SQLite-specific SQL patterns such as:
+- INSERT OR IGNORE
+- CREATE TABLE IF NOT EXISTS
+- CREATE INDEX IF NOT EXISTS
+- datetime('now')
+- PRAGMA-related logic that is not properly isolated
+- TEXT / INTEGER / REAL assumptions in raw DDL
+- any SQLite-only syntax inside Program.cs or services
+
+Replace them with one of these approaches:
+- EF Core entity configuration
+- EF Core Fluent API
+- EF Core migrations
+- provider-safe application logic
+- provider-gated code only when absolutely necessary
+
+2) REPLACE EnsureCreated WITH MIGRATIONS-READY FLOW
+If the project still uses EnsureCreated(), remove that approach and move toward proper EF Core migrations usage.
+Prepare the project so database schema evolution is based on migrations, not manual bootstrap SQL.
+
+3) CLEAN UP Program.cs
+Program.cs must not contain large schema/bootstrap SQL blocks.
+Move schema logic out of Program.cs into the correct places:
+- DbContext configuration
+- IEntityTypeConfiguration classes
+- EF Core migrations
+- seed services if needed
+
+4) CENTRALIZE PROVIDER CONFIGURATION
+Keep provider selection centralized and clean.
+The app should continue reading provider choice from configuration.
+Keep SQLite working now.
+Prepare the structure so SQL Server can be added later with minimal changes.
+
+5) MOVE CONSTRAINTS / INDEXES / RELATIONS TO EF CONFIGURATION
+If there are unique constraints, indexes, FK rules, decimal precision rules, enum conversions, defaults, etc., define them in EF configuration where possible instead of raw SQL.
+Use proper configuration classes.
+
+6) REVIEW ENTITY / MODEL PORTABILITY
+Keep domain entities clean and provider-agnostic.
+Do not introduce SQLite-specific behavior into domain models.
+If some properties are weakly modeled now, improve them carefully without breaking the app.
+
+7) HANDLE SEEDING PROPERLY
+If seed/bootstrap logic currently depends on raw SQL, refactor it into a safer seeding approach using EF Core and application startup services where appropriate.
+Keep the current app behavior intact.
+
+8) DO NOT BREAK THE APP
+The login flow and current app startup must continue to work after the refactor.
+Preserve existing functionality.
+
+DELIVERABLES
+After making the changes, give me a structured final report with these sections:
+
+1. Changes implemented
+- exact files changed
+- what was removed
+- what was added
+- what was moved
+
+2. SQLite-specific issues fixed
+- list each fixed SQLite-coupled pattern
+- explain how it was made more portable
+
+3. Remaining portability risks
+- list what still remains
+- explain why it still remains
+- classify each risk as high / medium / low
+
+4. Migration readiness verdict
+Classify the project after refactoring as one of:
+- Ready for future migration
+- Mostly ready
+- Partially ready
+
+5. Next recommended step
+Tell me the exact next step you recommend after this refactor.
+Prefer the next step to be one concrete technical phase, not a long roadmap.
+
+IMPLEMENTATION RULES
+- Make real code changes, not only recommendations
+- Prefer EF Core patterns over raw SQL
+- Keep code clean, maintainable, and SaaS-ready
+- Avoid unnecessary large architectural rewrites
+- Do not break current SQLite runtime
+- Only keep provider-specific code when there is a strong technical reason
+- If something cannot be safely refactored now, explain clearly why
+
+Start implementation now.

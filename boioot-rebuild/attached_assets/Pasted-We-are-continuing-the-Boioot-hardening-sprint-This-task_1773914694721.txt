@@ -1,0 +1,172 @@
+We are continuing the Boioot hardening sprint.
+
+This task is focused ONLY on removing the backend Admin bypass from authorization enforcement.
+
+This is a controlled RBAC refactor task.
+It is NOT a full RBAC rewrite.
+It is NOT the DB-driven RBAC phase yet.
+
+==================================================
+CURRENT PROBLEM
+==================================================
+
+The backend currently contains an Admin bypass pattern in permission enforcement, equivalent to:
+
+if (role == RoleNames.Admin)
+{
+    context.Succeed(requirement);
+    return;
+}
+
+This creates a second authorization path:
+- normal users/staff -> permission-based evaluation
+- Admin -> direct role bypass
+
+This is architecturally inconsistent with our current direction.
+
+We want ONE normalized authorization path:
+- all users, including Admin, should succeed authorization through permissions
+- not through a direct role shortcut in the handler
+
+==================================================
+GOAL
+==================================================
+
+Remove the backend Admin bypass safely and normalize backend authorization behavior so that:
+
+- permission checks are evaluated through permission claims / normalized permission flow
+- Admin still retains full effective access through its permission set
+- there is no direct role-based succeed shortcut in the authorization handler
+- existing working endpoints do not regress
+- the system remains stable and production-grade
+
+==================================================
+IMPORTANT CONTEXT
+==================================================
+
+Current architecture:
+- JWT-based authentication
+- permissions are already included in JWT for users/staff
+- backend uses:
+  - RequirePermissionAttribute
+  - PermissionAuthorizationHandler
+  - PermissionPolicyProvider
+
+We are NOT changing to DB-backed permissions in this task.
+We are still using the current permission-claim model.
+
+Therefore:
+- Admin must keep full access by possessing all required permission claims
+- NOT by bypassing the permission handler via role
+
+==================================================
+TASKS
+==================================================
+
+1) REMOVE DIRECT ADMIN BYPASS IN BACKEND
+Find and remove any direct backend logic such as:
+- if role == Admin => succeed
+- privileged shortcut branches in PermissionAuthorizationHandler
+- any special authorization flow that grants success without checking the normalized permission path
+
+Primary review target:
+- PermissionAuthorizationHandler
+- any related helper/service used by backend authorization evaluation
+
+2) ENSURE ADMIN AUTHORIZATION STILL WORKS THROUGH PERMISSIONS
+After removing the bypass:
+- verify how Admin receives permissions today
+- if Admin already receives the full permission set in JWT, keep that flow
+- if not, fix the claim generation path so Admin receives the complete effective permission list
+
+Important:
+Do NOT hardcode a bypass in the handler again.
+If Admin needs all permissions, Admin must have them in the claims / normalized permission source.
+
+3) VERIFY TOKEN / CLAIM GENERATION FOR ADMIN
+Audit the token generation / auth profile pipeline, especially:
+- login token creation
+- refresh/profile response if relevant
+- any AuthService or JWT generation logic
+- StaffRolePermissions or equivalent permission source
+
+Confirm that Admin gets the full effective permission set via claims, not via special handler behavior.
+
+4) KEEP REQUIREPERMISSION ATTRIBUTES AS-IS
+Do NOT weaken endpoint protection.
+Do NOT remove RequirePermission attributes.
+The goal is to strengthen consistency, not loosen security.
+
+5) VALIDATE REAL AUTHORIZATION FLOW
+After refactor, the effective backend flow should be:
+
+authenticated principal
+-> permission claims present on user
+-> PermissionAuthorizationHandler checks required permission
+-> success/failure
+
+This flow must apply to:
+- Admin
+- AdminManager
+- ContentEditor
+- SeoSpecialist
+- all staff roles
+with no special "Admin shortcut" in the handler
+
+6) DOCUMENT ANY TEMPORARY LIMITATIONS
+If there is any edge case that cannot be fully solved without the later DB-driven RBAC phase, document it explicitly.
+But do NOT keep the current bypass.
+
+==================================================
+IMPLEMENTATION RULES
+==================================================
+
+- Do not introduce DB role/permission tables yet
+- Do not redesign unrelated auth code
+- Do not break current JWT contract unless necessary
+- Prefer minimal, safe refactoring
+- Preserve current endpoint behavior where valid
+- Remove architectural inconsistency, not just hide it
+- No fake permissions
+- No silent fallback bypasses
+
+==================================================
+EXPECTED OUTPUT
+==================================================
+
+After implementation, provide a structured report with:
+
+A) FILES CHANGED
+List all modified files.
+
+B) BYPASS REMOVAL
+Show exactly where the Admin bypass existed and how it was removed.
+
+C) ADMIN EFFECTIVE ACCESS MODEL
+Explain clearly how Admin now gains full access.
+This must be through normalized permission claims, not direct role-based success.
+
+D) CLAIM GENERATION REVIEW
+State whether Admin already had all permissions in JWT or whether claim generation had to be fixed.
+
+E) AUTHORIZATION FLOW AFTER CHANGE
+Describe the final backend authorization path in plain terms.
+
+F) VALIDATION SCENARIOS
+Manually verify and report:
+- Admin can still access endpoints requiring arbitrary permissions
+- AdminManager can access only endpoints matching its permission set
+- ContentEditor is denied endpoints outside its permissions
+- users without permission receive 403
+- no direct role-based backend bypass remains
+
+==================================================
+SUCCESS CRITERIA
+==================================================
+
+This task is successful only if:
+- backend Admin bypass is removed
+- Admin access still works
+- authorization succeeds through permission claims only
+- PermissionAuthorizationHandler has one normalized decision path
+- no endpoint security regression is introduced

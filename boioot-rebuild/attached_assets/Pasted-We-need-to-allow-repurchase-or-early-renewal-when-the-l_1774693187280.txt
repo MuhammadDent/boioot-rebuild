@@ -1,0 +1,66 @@
+We need to allow repurchase or early renewal when the listing quota of a plan is fully consumed.
+
+GOAL:
+If the user consumes all available listings in the current plan, they should be allowed to:
+- repurchase the plan if it is a one-time fixed-term plan
+- or renew early if it is a monthly/yearly recurring plan
+
+========================================
+BUSINESS RULE
+========================================
+
+When:
+ListingQuotaUsed >= ListingLimit
+
+The system must unlock a new purchase action depending on billing type.
+
+========================================
+REQUIRED LOGIC
+========================================
+
+1) Add clear plan/runtime behavior flags:
+
+- allowRepurchaseOnConsumption: boolean
+- allowEarlyRenewalOnConsumption: boolean
+
+2) For one_time_fixed_term plans:
+If listing quota is fully consumed:
+- mark subscription as consumed if expiryRule or business logic requires that
+- allow repurchase immediately
+- do not force the user to wait until durationDays ends
+
+3) For recurring monthly/yearly plans:
+If listing quota is fully consumed:
+- allow early renewal immediately
+- user should not be forced to wait until month/year ends
+- renewing early should reset or reinitialize the listing quota for the new billing cycle
+
+4) UI behavior:
+If one-time plan quota is consumed:
+- show button: "إعادة شراء الباقة"
+
+If recurring plan quota is consumed:
+- show button: "تجديد الآن"
+
+5) Backend validation:
+- block repurchase/renewal only when quota is not yet fully consumed, unless other rules allow it
+- allow repurchase/renewal once quota is fully consumed
+
+6) Keep duration logic intact:
+- consumption unlocks repurchase/renewal
+- date expiration still works independently
+- support both date-based and consumption-based behavior
+
+7) Optional but recommended:
+Track ending / trigger reason:
+- date
+- consumption
+- early_renewal
+
+========================================
+EXPECTED RESULT
+========================================
+
+- One-time plans can be purchased again immediately after listing quota is consumed
+- Monthly/yearly plans can be renewed early immediately after listing quota is consumed
+- Users do not need to wait for the calendar term to end if their quota is already exhausted

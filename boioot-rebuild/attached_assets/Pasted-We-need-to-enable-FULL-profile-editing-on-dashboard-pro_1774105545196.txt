@@ -1,0 +1,137 @@
+We need to enable FULL profile editing on /dashboard/profile instead of read-only display.
+
+GOAL:
+Allow authenticated users to edit and save their profile information from the profile page.
+
+CURRENT ISSUE:
+The profile fields appear as display-only or partially locked.
+We want a proper editable profile form with save flow, validation, loading states, and backend integration.
+
+REQUIREMENTS
+
+1) EDITABLE PROFILE FORM
+Enable editing for the appropriate fields:
+- full name
+- phone number
+- profile image/avatar
+- optional bio/about if exists
+- optional company/office name if the account type supports it
+- optional public display name if needed
+
+Email can remain read-only unless backend supports secure email change flow.
+Account ID / system code remains read-only.
+
+2) FORM UX
+Add:
+- "تعديل" button if needed
+- or make fields directly editable
+- "حفظ التغييرات" primary button
+- "إلغاء" secondary button
+- dirty state detection
+- disabled save button when nothing changed
+- loading state during save
+- success toast/message after save
+- error toast/message on failure
+
+3) VALIDATION
+Add proper frontend validation:
+- full name required
+- phone format validation
+- trim whitespace
+- prevent empty invalid submissions
+- optional role-specific validation for office/company fields if shown
+
+4) BACKEND INTEGRATION
+Connect the profile form to the actual update profile API / backend endpoint.
+
+Tasks:
+- inspect current profile fetch logic
+- identify existing update endpoint if available
+- if update endpoint does not exist, create one cleanly
+- persist changes to database
+- return updated normalized profile response
+
+Do NOT fake the update only on frontend state.
+
+5) NORMALIZED PROFILE MODEL
+Keep using a normalized profile model for all user types, but now support update mapping too.
+
+Suggested editable model:
+- fullName
+- phone
+- avatarUrl
+- bio
+- companyName
+- officeName
+- displayName
+
+Support all account types gracefully:
+- user
+- owner
+- agent
+- broker/office
+- companyOwner/developer
+- admin/staff if profile page is shared
+
+6) ROLE-AWARE EDITING
+Show only fields relevant to the account type:
+- normal user: personal info
+- agent: personal info + agency/office related info if allowed
+- office: office name / company info if applicable
+- developer/company: company identity fields if supported
+- admin/staff: basic profile info only unless special fields exist
+
+7) AVATAR / PROFILE IMAGE
+Enable:
+- upload new profile image
+- preview image before save
+- remove/reset image if supported
+- graceful fallback to initials avatar if no image
+
+8) SECURITY
+Do NOT allow editing of sensitive protected fields directly unless there is a dedicated secure flow:
+- email
+- role
+- account type
+- status
+- internal ID
+
+9) FORM ARCHITECTURE
+Refactor profile tab into reusable logic:
+- ProfileBasicInfoForm
+- useProfileForm hook
+- profile mapper/normalizer for read + update payloads
+
+10) SAVE FLOW
+Expected flow:
+- user edits fields
+- clicks save
+- API request sent
+- backend updates profile
+- UI refreshes with latest saved data
+- success feedback shown
+
+11) ERROR HANDLING
+Handle:
+- validation errors
+- API failures
+- network issues
+- backend permission errors
+
+12) FINAL VALIDATION
+Test these cases:
+- edit full name
+- edit phone
+- save with no changes
+- invalid phone
+- successful save persists after refresh
+- role-specific fields work correctly
+- avatar upload works if implemented
+
+DELIVERABLES
+Please implement and report:
+1) which fields are editable
+2) which fields remain read-only
+3) which files were changed
+4) what backend/API endpoint is used or created
+5) how data persistence was verified

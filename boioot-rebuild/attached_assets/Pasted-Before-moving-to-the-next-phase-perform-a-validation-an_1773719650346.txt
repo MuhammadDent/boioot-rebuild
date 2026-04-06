@@ -1,0 +1,70 @@
+Before moving to the next phase, perform a validation and code review of the current subscription enforcement implementation.
+
+Scope:
+- PlanEntitlementService
+- Subscriptions.IsActive addition
+- Property active-count checks
+- AccountUsers active-count checks
+- All related queries used by:
+  - HasFeatureAsync
+  - GetLimitAsync
+  - CanCreatePropertyAsync
+  - CanAddAgentAsync
+
+Validation goals:
+
+1. Verify correctness of active subscription filtering:
+   - Uses AccountId correctly
+   - Uses IsActive == true
+   - Uses valid Status filtering
+   - Uses EndDate correctly
+   - Always picks the correct current subscription
+
+2. Verify feature entitlement logic:
+   - HasFeatureAsync returns correct results
+   - Missing subscription returns false safely
+   - Missing feature definition returns false safely
+   - PlanFeatures join is correct
+
+3. Verify limit entitlement logic:
+   - GetLimitAsync returns correct value
+   - Missing subscription is handled safely
+   - Missing limit definition is handled safely
+   - PlanLimits join is correct
+   - Unlimited logic (-1) is handled consistently
+
+4. Verify workflow checks:
+   - CanCreatePropertyAsync counts only valid active properties
+   - Deleted properties are excluded correctly using IsDeleted == false
+   - CanAddAgentAsync counts only active account users
+   - Inactive users are excluded correctly
+
+5. Verify query quality:
+   - No N+1 issues
+   - Async queries are used correctly
+   - No unnecessary repeated queries
+   - Query logic is readable and maintainable
+
+6. Verify null/error safety:
+   - No possible null-reference issues
+   - Edge cases are handled safely
+   - Behavior is predictable when data is missing
+
+7. Verify architecture quality:
+   - No duplicated entitlement logic outside the service
+   - Service remains read-only
+   - Naming is consistent
+   - Clean and ready for integration into workflows
+
+Important:
+- Do NOT modify code yet
+- Do NOT implement new features yet
+- Only provide a validation report
+
+Return:
+- Final validation result
+- Any issues categorized as:
+  - Critical
+  - Recommended
+  - Optional
+- Confirmation whether the code is safe to use in the next phase

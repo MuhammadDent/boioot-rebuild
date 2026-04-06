@@ -1,0 +1,177 @@
+We have a notification logic bug in the request comments/replies system.
+
+BUG DESCRIPTION
+When a Real Estate Office account creates a request, and another user comments/replies on that request, then later the Office replies back, the previous participant does NOT receive a notification.
+
+Example:
+1) Office account publishes a request
+2) User "البراء محمد" comments on that request
+3) Office account replies to the same discussion
+4) "البراء محمد" should receive a notification like:
+   "تم الرد على تعليقك"
+But currently no notification is created/shown.
+
+GOAL
+Fix the notifications system so that EVERY relevant participant in the request discussion receives proper notifications when new comments or replies are added, in order to increase engagement.
+
+REQUIRED BEHAVIOR
+Implement the following rules carefully:
+
+1) On new top-level comment on a request:
+- Notify the request owner/publisher
+- Do NOT notify the actor himself
+
+2) On reply to a specific comment:
+- Notify the parent comment author if the replier is a different user
+- Notify the request owner if the request owner is different from the replier
+- Notify other discussion participants if needed, but never duplicate notifications for the same event
+- Do NOT notify the actor himself
+
+3) For all users who previously participated in the same request discussion:
+- If a new comment/reply is added by another user, eligible participants should receive a notification
+- Exclude:
+  - the actor himself
+  - deleted/inactive users
+  - users who should not have access to this request
+
+4) Deduplication:
+- Do not create duplicate notifications for the same user for the same action
+- If the request owner is also the parent comment owner, create only one notification
+
+5) Notification content:
+Create clear Arabic messages depending on event type:
+- "تم التعليق على طلبك"
+- "تم الرد على تعليقك"
+- "يوجد نشاط جديد على طلب شاركت فيه"
+
+Use the most specific message possible:
+Priority:
+A) reply on your comment → "تم الرد على تعليقك"
+B) new comment on your request → "تم التعليق على طلبك"
+C) new activity in discussion you participated in → "يوجد نشاط جديد على طلب شاركت فيه"
+
+6) Notification click action:
+Each notification must link the user directly to:
+- the request details page
+- and ideally scroll/focus to the relevant comment/reply if supported
+
+TECHNICAL REQUIREMENTS
+Please inspect and fix the full flow:
+
+A) Backend/domain logic
+- Review request comment creation service / reply creation service
+- Centralize notification generation in one reusable service, for example:
+  RequestDiscussionNotificationService
+
+B) Determine recipients using this logic:
+- Request owner
+- Parent comment author (for replies)
+- Other unique discussion participants in the same request thread
+- Exclude current actor
+- Exclude duplicates
+
+Pseudo-logic:
+- recipients = new Set()
+- if request.ownerId != actorId -> add request.ownerId
+- if parentComment exists and parentComment.authorId != actorId -> add parentComment.authorId
+- for each participant in request discussion:
+    if participant.userId != actorId -> add participant.userId
+- remove users without access / inactive / deleted
+- generate one notification per recipient with best-fit message
+
+C) Data model check
+Ensure notifications table/entity supports:
+- userId
+- actorId
+- type
+- title/message
+- referenceType = Request
+- referenceId = requestId
+- optional commentId / replyId
+- isRead
+- createdAt
+
+D) Event types
+Use structured notification types such as:
+- RequestCommentAdded
+- RequestReplyAdded
+- RequestDiscussionActivity
+
+E) Realtime/UI update
+If the app uses SignalR / WebSocket / polling:
+- push new notifications immediately to bell icon dropdown
+- update unread count without full refresh if possible
+
+F) Notification center
+Ensure notifications appear in:
+- bell dropdown
+- notifications page if موجودة
+- unread counter badge
+
+G) Access control
+Only notify users who are legitimately related to the request discussion.
+Do not leak request activity to unrelated users.
+
+H) Performance
+Avoid N+1 queries.
+Fetch participants efficiently from request comments/replies.
+
+I) Tests (important)
+Add tests for these cases:
+
+CASE 1
+- Office creates request
+- User A comments
+- Office replies
+Expected:
+- User A receives "تم الرد على تعليقك"
+
+CASE 2
+- Office creates request
+- User A comments
+- User B replies to User A
+Expected:
+- User A receives reply notification
+- Office receives request activity notification
+- User B receives nothing about his own action
+
+CASE 3
+- Office creates request
+- User A comments
+- User B comments
+- Office comments again
+Expected:
+- User A and User B receive relevant activity notifications
+- Office does not notify نفسه
+
+CASE 4
+- User replies multiple times rapidly
+Expected:
+- no duplicate notifications for same exact event
+
+CASE 5
+- Request owner replies to his own comment
+Expected:
+- no self-notification
+
+DELIVERABLES
+1) Fix the backend notification logic
+2) Ensure notifications are stored correctly in DB
+3) Ensure they appear in UI immediately or on refresh
+4) Add clean logging for notification recipient resolution
+5) Provide a short report with:
+   - root cause
+   - files changed
+   - test scenarios passed
+
+IMPORTANT
+Do NOT patch only the frontend.
+Do NOT hardcode for one account type.
+The fix must work for all user types:
+- owner
+- broker
+- office
+- company
+- any allowed requester/commenter role
+
+Please implement this cleanly without breaking existing request comments functionality.

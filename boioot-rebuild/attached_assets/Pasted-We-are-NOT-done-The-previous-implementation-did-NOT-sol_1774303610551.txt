@@ -1,0 +1,113 @@
+We are NOT done.
+
+The previous implementation did NOT solve the real problem.
+
+Current issue:
+In the plan edit modal, I still do NOT see a real visible and usable section for defining the package value.
+
+What I need is NOT hidden logic, not partial display improvements, and not internal comparison only.
+
+I need a REAL, VISIBLE, ADMIN-EDITABLE package limits and features system inside the plan edit UI.
+
+==================================================
+CRITICAL REQUIREMENT
+==================================================
+
+Inside the "Edit Plan" modal/page, add clearly visible sections with actual editable fields.
+
+The admin must be able to define the commercial value of the package directly.
+
+==================================================
+1) ADD A NEW SECTION: "حدود الباقة"
+==================================================
+
+This section must appear clearly inside the edit modal.
+
+Add these editable fields:
+
+- maxListings = عدد الإعلانات المسموح بها
+- maxRequests = عدد الطلبات التي يمكن استقبالها
+- maxImagesPerListing = عدد الصور لكل إعلان
+- maxVideosPerListing OR canUploadVideo = عدد الفيديوهات أو هل الفيديو مسموح
+- maxMessages = عدد المحادثات / الرسائل الداخلية
+- maxAgents = عدد الوسطاء
+- maxProjects = عدد المشاريع
+- maxFeaturedListings = عدد الإعلانات المميزة
+
+Rules:
+- Support numeric values
+- Support unlimited option (∞ / غير محدود)
+- These fields must be clearly visible in the UI
+
+==================================================
+2) ADD A NEW SECTION: "مميزات الباقة"
+==================================================
+
+This section must also appear clearly inside the edit modal.
+
+Add ON/OFF toggles for:
+
+- canUploadVideo = رفع فيديو
+- hasAnalyticsDashboard = لوحة تحليلات
+- hasPrioritySupport = دعم فني أولوية
+- hasHomepageExposure = ظهور في الصفحة الرئيسية
+- hasVerifiedBadge = شارة موثّق
+- hasSearchPriority = أولوية في نتائج البحث
+- hasDirectWhatsApp = واتساب مباشر
+- hasTeamManagement = إدارة فريق / إضافة أعضاء
+- hasLeadInsights = تحليلات الطلبات والعملاء المحتملين
+
+These toggles must be visible and editable.
+
+==================================================
+3) ADD A NEW SECTION: "القيمة التسويقية للباقة"
+==================================================
+
+Add fields:
+
+- listingPriority = أولوية الإعلان
+- searchRankingBoost = تعزيز الظهور في البحث
+- homepageSlots = عدد مرات / خانات الظهور في الصفحة الرئيسية
+
+==================================================
+4) DISPLAY CHANGES ON THE PLAN CARD
+==================================================
+
+After saving, each plan card must visibly show the real package value, for example:
+
+- 50 إعلان
+- 20 صورة لكل إعلان
+- فيديو متاح
+- لوحة تحليلات
+- 10 وسطاء
+- 5 مشاريع
+- دعم فني أولوية
+
+Do NOT keep the plan card limited to name/price/basic chips only.
+
+==================================================
+5) ADMIN UX REQUIREMENTS
+==================================================
+
+- The new sections must be clearly visible in the edit modal
+- Use section titles and separators
+- Do NOT hide them deep in collapsed areas unless they are still clearly accessible
+- Do NOT implement backend-only or invisible changes
+- I must immediately see the new fields in the modal
+
+==================================================
+6) VALIDATION
+==================================================
+
+After implementation, verify and confirm with screenshots or final summary that:
+
+- "حدود الباقة" section exists visibly
+- "مميزات الباقة" section exists visibly
+- the admin can edit those values
+- the plan card reflects those values after save
+
+==================================================
+IMPORTANT
+==================================================
+
+This task is NOT complete unless the new sections are clearly visible in the plan edit UI and the package card reflects them visually.

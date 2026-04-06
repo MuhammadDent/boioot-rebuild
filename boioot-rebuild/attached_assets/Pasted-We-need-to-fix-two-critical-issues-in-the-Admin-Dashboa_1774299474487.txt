@@ -1,0 +1,138 @@
+We need to fix two critical issues in the Admin Dashboard (Backoffice) of Boioot.
+
+========================================
+ISSUE 1: ADMIN IS TRAPPED INSIDE DASHBOARD
+========================================
+
+PROBLEM:
+Admin cannot:
+- navigate to the public homepage
+- view the public site
+- move between dashboard and main site
+- logout clearly
+
+This is a UX and architecture problem.
+
+GOAL:
+Allow Admin to seamlessly switch between:
+- Backoffice (dashboard)
+- Public website (frontend)
+
+SOLUTION REQUIREMENTS:
+
+1) ADD GLOBAL HEADER FOR ADMIN
+
+Implement a top header (admin toolbar) that appears in all admin pages.
+
+It must include:
+
+- Logo (Boioot)
+- "عرض الموقع" (View Website)
+  -> opens "/" (public homepage) in SAME tab or new tab
+- "فتح في تبويب جديد" (optional icon)
+- "لوحة التحكم" indicator
+- User menu (top right):
+  - Profile
+  - Logout
+
+2) ADD QUICK NAVIGATION LINKS
+
+In header or sidebar:
+- الصفحة الرئيسية (→ /)
+- عرض الموقع (→ /)
+- العقارات العامة (→ /properties)
+- المدونة (if exists)
+- الطلبات (if public)
+
+3) DO NOT BREAK ROUTING
+
+- Admin routes: /dashboard/*
+- Public routes: /*
+- Keep separation clean
+- Do NOT mix layouts
+
+4) OPTIONAL (BEST PRACTICE)
+
+Add a small floating button:
+- "👁 عرض الموقع"
+visible only for admin
+quick preview of frontend
+
+========================================
+ISSUE 2: DEBUG TEXT VISIBLE IN UI
+========================================
+
+PROBLEM:
+A debug string is rendered in UI:
+
+DEBUG: rawProperties=31 | governorateOptions=3 ...
+
+This is a serious production issue.
+
+GOAL:
+Remove ALL debug output from UI safely.
+
+SOLUTION REQUIREMENTS:
+
+1) FIND SOURCE
+
+Search for:
+- console.log rendered in JSX
+- debug variables injected into UI
+- any <div>{debug}</div>
+- any temporary debugging UI
+
+2) REMOVE OR PROTECT DEBUG
+
+Apply one of:
+
+Option A (preferred):
+- completely remove debug rendering from UI
+
+Option B:
+- wrap debug output in condition:
+  if (process.env.NODE_ENV === 'development')
+
+3) KEEP CLEAN LOGGING
+
+- console.log allowed ONLY in dev
+- NEVER render debug text in UI
+
+4) VERIFY
+
+- reload admin page
+- ensure NO debug text appears
+- ensure filters still work correctly
+
+========================================
+BONUS FIX (IMPORTANT)
+========================================
+
+While working on layout:
+
+- Ensure spacing at top is correct (no extra padding from debug container)
+- Fix layout shift caused by removed debug box
+- Ensure filters section aligns properly
+
+========================================
+DELIVERABLES
+========================================
+
+1) New Admin Header implemented
+2) Admin can navigate to:
+   - homepage
+   - public sections
+3) Logout clearly accessible
+4) Debug UI completely removed
+5) No layout breaking
+6) Clean, professional SaaS UX
+
+========================================
+IMPORTANT RULES
+========================================
+
+- Do NOT hack UI
+- Do NOT hardcode URLs
+- Keep architecture clean (admin vs public)
+- Follow reusable layout pattern
+- Keep Arabic labels consistent and professional

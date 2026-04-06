@@ -1,0 +1,111 @@
+We still have a critical naming issue in the Plans UI.
+
+Although displayNameAr was added and partially used,
+the UI is STILL showing legacy names like:
+
+- Silver
+- Gold
+- DeveloperPremium
+
+This means the system is still using old fields like:
+- name
+- planName
+
+instead of the new normalized naming structure.
+
+========================================
+GOAL
+========================================
+
+Make displayNameAr the ONLY source of truth for plan names in ALL UI.
+
+Completely eliminate legacy naming usage.
+
+========================================
+REQUIRED FIXES
+========================================
+
+1) Remove ALL fallback logic
+
+Find and REMOVE any usage like:
+
+- plan.displayNameAr ?? plan.name
+- displayNameAr || name
+- displayNameAr ?? planName
+
+Replace with:
+
+- displayNameAr ONLY
+
+If displayNameAr is missing:
+→ show a warning in dev mode
+→ but DO NOT fallback to old names
+
+----------------------------------------
+
+2) Update all UI components
+
+Fix in ALL places:
+
+- plans/page.tsx
+- PricingCard.tsx
+- PricingComparisonTable.tsx
+- plan-matrix/page.tsx
+- any admin or public pricing components
+
+Replace:
+
+❌ plan.name
+❌ plan.planName
+
+WITH:
+
+✅ plan.displayNameAr
+
+----------------------------------------
+
+3) Clean database values
+
+Ensure:
+
+- displayNameAr is filled for ALL plans
+- no plan relies on old name anymore
+
+Optional:
+- migrate old "name" into displayNameEn if needed
+
+----------------------------------------
+
+4) Deprecate old name field
+
+- Mark "name" as deprecated in backend model
+- Do NOT use it in any UI or DTO
+
+----------------------------------------
+
+5) Debug safety
+
+Temporarily log:
+
+console.warn("Missing displayNameAr for plan:", plan.code)
+
+if any plan has no displayNameAr
+
+----------------------------------------
+
+EXPECTED RESULT
+========================================
+
+- NO more "Silver", "Gold", or legacy names anywhere
+- All plans show Arabic names only
+- Clean, consistent SaaS naming in UI
+
+========================================
+IMPORTANT
+========================================
+
+This is a strict enforcement step.
+
+We are NOT supporting backward UI compatibility.
+
+displayNameAr is now the ONLY allowed UI name.

@@ -1,0 +1,213 @@
+We are now upgrading the Boioot dashboard from a simple navigation page into a smart operational SaaS dashboard with real KPIs, analytics, and actionable insights.
+
+This is not just a UI improvement.
+This should become the main business overview page for the account owner / company user.
+
+==================================================
+GOAL
+==================================================
+
+Build a professional smart dashboard that shows real operational metrics, charts, and actionable insights.
+
+The dashboard must help the user understand:
+
+- how many listings they have
+- how many are active / pending / rejected / expired
+- how many projects and agents they manage
+- how many requests / inquiries they received
+- which listings perform best
+- what needs attention
+
+==================================================
+DASHBOARD STRUCTURE
+==================================================
+
+Build the dashboard in 4 layers:
+
+--------------------------------------------------
+1) TOP KPI CARDS
+--------------------------------------------------
+
+Create real KPI cards at the top of the dashboard.
+
+Required KPIs:
+
+- Total Listings
+- Active Listings
+- Pending Listings
+- Rejected Listings
+- Expired Listings
+- Total Projects
+- Total Agents
+- New Requests
+- Total Inquiries
+- Total Views
+- Conversion Rate (views -> inquiries), if possible
+
+Each KPI card should include:
+- Arabic label
+- main number
+- optional small trend or status note
+- clean SaaS card design
+
+Arabic labels suggestion:
+- إجمالي الإعلانات
+- الإعلانات النشطة
+- قيد المراجعة
+- المرفوضة
+- المنتهية
+- المشاريع
+- الوكلاء
+- الطلبات الجديدة
+- إجمالي الاستفسارات
+- المشاهدات
+- معدل التحويل
+
+--------------------------------------------------
+2) CHARTS / ANALYTICS
+--------------------------------------------------
+
+Add real charts, not placeholders.
+
+Required charts:
+
+A. Listings trend over time
+- Monthly created listings
+- last 6 or 12 months
+
+B. Requests / inquiries trend
+- Monthly incoming requests
+- last 6 or 12 months
+
+C. Views trend
+- daily or monthly views if view data exists
+
+D. Distribution chart
+- listings by status
+  (active / pending / rejected / expired)
+
+If some metrics do not exist yet in DB, implement safe fallback behavior and explain what is missing.
+
+--------------------------------------------------
+3) ACTIONABLE INSIGHTS
+--------------------------------------------------
+
+Add sections such as:
+
+- Top performing listings
+  (most viewed or most inquiries)
+
+- Listings needing attention
+  examples:
+  - missing images
+  - missing price
+  - draft/incomplete
+  - rejected listings
+
+- Recent activity
+  examples:
+  - new listing added
+  - inquiry received
+  - project created
+  - listing approved/rejected
+
+These should be useful cards/lists, not decorative only.
+
+--------------------------------------------------
+4) QUICK ACTIONS
+--------------------------------------------------
+
+Keep quick action buttons/cards, but organize them under a smaller section:
+
+- إضافة إعلان جديد
+- إدارة إعلاناتي
+- إدارة المشاريع
+- إدارة الوكلاء
+- الطلبات والاستفسارات
+
+Quick actions should NOT dominate the page anymore.
+Analytics and KPIs are the priority.
+
+==================================================
+BACKEND REQUIREMENTS
+==================================================
+
+Implement real backend-driven dashboard endpoints/services.
+
+Need aggregated dashboard data from backend, such as:
+
+- total listings count
+- listings count by status
+- listings created by month
+- requests by month
+- projects count
+- agents count
+- total inquiries count
+- recent activity list
+- top listings list
+
+Important:
+- backend is the source of truth
+- do not hardcode fake numbers in frontend
+- if some data is not available yet, return zeros or empty arrays safely
+- structure response cleanly for future scaling
+
+Suggested approach:
+- Create a dashboard summary DTO/view model
+- Create dedicated dashboard service methods
+- Keep queries efficient and tenant/company scoped
+
+==================================================
+MULTI-TENANT / SAAS RULES
+==================================================
+
+The dashboard must show data ONLY for the current business scope:
+- current company
+- current owner / staff access scope
+- no cross-tenant leakage
+
+Respect RBAC and business boundaries.
+
+==================================================
+UI / UX RULES
+==================================================
+
+- Arabic RTL friendly
+- Professional, modern, clean
+- Light enterprise style
+- Consistent spacing
+- Strong hierarchy
+- KPIs first, charts second, actions later
+- Responsive for desktop and tablet
+- Avoid clutter
+
+==================================================
+IMPLEMENTATION NOTES
+==================================================
+
+- Reuse existing card styles where possible
+- Introduce reusable KPI card component
+- Introduce reusable chart section component if useful
+- Keep dashboard maintainable
+- Do not break existing navigation
+
+==================================================
+DELIVERABLES
+==================================================
+
+After implementation, return:
+
+1. What KPI cards were added
+2. What charts were added
+3. What backend endpoints/services were added or changed
+4. What data is real now vs what has safe fallback
+5. What files were changed
+6. Any DB fields or future recommendations needed
+
+==================================================
+IMPORTANT
+==================================================
+
+Do NOT build a fake decorative dashboard.
+
+This must be a real SaaS operational dashboard driven by actual backend data.

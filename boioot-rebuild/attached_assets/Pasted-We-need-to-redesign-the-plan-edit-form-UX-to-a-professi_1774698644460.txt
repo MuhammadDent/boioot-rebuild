@@ -1,0 +1,125 @@
+We need to redesign the plan edit form UX to a professional SaaS-level experience.
+
+========================================
+PROBLEM
+========================================
+
+Currently:
+- Save button exists only in the middle of the form
+- Long form → user may scroll and not see save button
+- No auto-save
+- Risk of losing data
+
+========================================
+GOAL
+========================================
+
+Implement modern form UX with:
+1) Sticky Save Bar
+2) Auto Save (draft)
+3) Save Status Indicator
+
+========================================
+REQUIRED CHANGES
+========================================
+
+1) Sticky Save Footer
+
+Create a fixed footer inside the modal:
+
+- Always visible at bottom
+- Contains:
+  - Save button
+  - Cancel button
+  - Save status text
+
+Example UI:
+
+[ Cancel ]   [ Saving... / Saved ✓ ]   [ Save Changes ]
+
+Behavior:
+- sticks to bottom of modal
+- not affected by scroll
+
+========================================
+2) Move Primary Save Button
+
+- Remove save button from middle of form
+- Keep ONLY sticky footer save button
+
+========================================
+3) Auto Save (Debounced)
+
+Implement auto-save when user edits fields:
+
+- debounce: 800ms–1500ms
+- only save when values change
+
+Example:
+
+useEffect(() => {
+  if (!isDirty) return;
+
+  const timeout = setTimeout(() => {
+    saveDraft(formData);
+  }, 1000);
+
+  return () => clearTimeout(timeout);
+}, [formData]);
+
+========================================
+4) Save Status Indicator
+
+Add state:
+
+- "لم يتم الحفظ"
+- "جارٍ الحفظ..."
+- "تم الحفظ ✓"
+
+Display inside sticky footer
+
+========================================
+5) Dirty State Detection
+
+Track if form changed:
+
+const isDirty = JSON.stringify(formData) !== JSON.stringify(originalData);
+
+- Disable save button if no changes
+- Show warning if user tries to close with unsaved changes
+
+========================================
+6) Prevent Data Loss
+
+Before closing modal:
+
+if (isDirty) {
+  show confirmation:
+  "لديك تغييرات غير محفوظة، هل تريد الخروج؟"
+}
+
+========================================
+7) Optional (Pro UX)
+
+Add top mini indicator:
+
+"● لديك تغييرات غير محفوظة"
+
+========================================
+EXPECTED RESULT
+========================================
+
+- User always sees save button
+- Changes are auto-saved
+- Clear feedback on saving state
+- No data loss
+- Clean professional UX
+
+========================================
+DELIVERABLE
+========================================
+
+- Sticky save bar implemented
+- Auto-save working
+- Save status visible
+- Middle save button removed

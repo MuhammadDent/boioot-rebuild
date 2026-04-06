@@ -1,0 +1,145 @@
+We are now starting Phase 2 of the Blog module for the existing Boioot SaaS platform.
+
+Current context:
+- Backend Blog module is already implemented and hardened
+- Admin APIs are ready
+- Public APIs are ready
+- Backend validation, slug generation, soft delete, DTO separation, and permission-based authorization are already implemented
+- Frontend stack is Next.js
+- Public site + dashboard + admin are inside the same Next.js application
+- We are now building ONLY the Admin UI for Blog management
+- Do NOT build public blog pages in this phase
+
+Goal of this phase:
+Build the admin blog management interface inside the existing admin panel.
+
+Required pages:
+1) /admin/blog
+   - Blog posts list page
+
+2) /admin/blog/posts/new
+   - Create new post page
+
+3) /admin/blog/posts/[id]
+   - Edit existing post page
+
+4) /admin/blog/categories
+   - Categories management page
+
+Required functionality:
+
+A) Posts list page
+- Fetch from admin blog posts API
+- Show:
+  - Title
+  - Slug
+  - Status
+  - Categories
+  - Featured flag
+  - PublishedAt
+  - UpdatedAt
+- Support:
+  - search by title
+  - filter by status
+  - filter by category
+  - pagination
+  - actions per row:
+    - edit
+    - publish
+    - unpublish
+    - archive
+    - delete
+
+B) Create/Edit post page
+Build a reusable BlogPostForm component.
+
+Fields:
+- Title
+- Slug
+- Excerpt
+- Content
+- CoverImageUrl
+- Categories (multi-select)
+- IsFeatured
+- SeoTitle
+- SeoDescription
+
+Behavior:
+- Save draft
+- Publish
+- Unpublish
+- Archive
+- Delete
+- Load existing data on edit page
+- If post is already Published, slug should be disabled/read-only in UI
+- Respect backend rules and show API validation errors clearly
+
+Layout recommendation:
+- Main content area:
+  - Title
+  - Excerpt
+  - Content
+- Sidebar:
+  - status/actions
+  - categories
+  - featured toggle
+  - cover image
+  - SEO fields
+
+Editor:
+- Use a simple textarea or simple content editor for now
+- Do NOT add a heavy rich text editor in this phase unless one already exists in the project
+
+C) Categories page
+- List all categories
+- Create category
+- Edit category
+- Delete category
+- Fields:
+  - Name
+  - Slug
+  - Description
+  - IsActive
+  - SortOrder
+
+UX requirements:
+- Reuse existing admin layout and UI patterns
+- Use clean loading states
+- Use empty states when there is no data
+- Use confirmation prompts for destructive actions
+- Show clear success/error feedback
+- Add visual status badges:
+  - Draft
+  - Published
+  - Archived
+
+Technical requirements:
+- Keep everything inside the existing Next.js admin app
+- Do NOT create a separate frontend app
+- Do NOT modify unrelated modules
+- Create clean frontend API helpers for blog endpoints
+- Create proper TypeScript types for admin blog DTOs
+- Prefer reusable components over duplicated page logic
+- Keep the UI production-safe and extensible
+
+Out of scope in this phase:
+- Public blog pages
+- Rich media manager
+- Advanced SEO preview
+- Revisions/history
+- Autosave
+- Comments
+- Tags
+- Full WYSIWYG editor
+- Scheduling
+
+Deliverables:
+1) Admin blog posts list page
+2) Create post page
+3) Edit post page
+4) Categories management page
+5) Reusable blog form/components
+6) API integration helpers
+7) TypeScript types
+8) Short summary of what was added
+9) Notes about any assumptions made based on the current frontend architecture

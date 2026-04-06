@@ -1,0 +1,103 @@
+The issue still exists, but now it is clearly isolated to the Owner account.
+
+PROBLEM
+When logged in as Owner and clicking "إضافة إعلان جديد", the create listing page opens briefly, then immediately redirects back to the dashboard/listings or dashboard.
+
+This issue appears to be account-type specific and likely related to Owner authorization, Owner profile state, company linkage, or package/quota validation.
+
+I need a ROOT CAUSE FIX specifically for the Owner flow.
+
+====================================================
+TASK
+====================================================
+
+Please debug the create-listing flow specifically for the Owner account.
+
+1) TRACE THE FULL OWNER FLOW
+Check what happens from click until redirect:
+- route navigation
+- page mount
+- data loaders
+- auth guards
+- permission guards
+- company/profile checks
+- subscription/quota checks
+- listing creation eligibility checks
+- any useEffect/router.replace/router.push/redirect logic
+
+2) FIND WHY ONLY OWNER FAILS
+Compare working account types vs Owner account.
+Audit:
+- role name
+- account type
+- permission keys
+- company membership
+- owner profile/company profile existence
+- package/quota payload
+- backend response shape for Owner
+
+3) CHECK CREATE LISTING PAGE REQUIREMENTS
+Inspect the create listing page and any layout/wrapper it uses.
+Identify every required condition to remain on the page.
+Examples:
+- authenticated user
+- active company
+- owner profile exists
+- package allows listings
+- remaining quota > 0
+- correct permission flag
+
+Then verify why Owner fails one of these checks.
+
+4) REMOVE SILENT REDIRECTS
+If a required condition fails, do NOT silently redirect the user back to dashboard.
+Instead:
+- show a clear message
+- or render a proper empty/setup state
+- but do not create redirect loops
+
+5) VERIFY BACKEND FOR OWNER
+Check the APIs used when the create page opens:
+- current user endpoint
+- dashboard/profile/company endpoint
+- subscription/quota endpoint
+- create listing bootstrap endpoint if any
+
+Confirm whether Owner gets:
+- 401
+- 403
+- 404
+- 500
+- null/invalid payload
+
+Fix the backend/frontend mismatch.
+
+6) CHECK DASHBOARD/LISTINGS ROUTE CONSISTENCY
+Verify route naming consistency:
+- /dashboard/listings
+- /dashboard/my-listings
+- /dashboard/listings/create
+- or any other create route
+
+Ensure Owner is redirected only to the intended page and not bounced because of inconsistent route logic.
+
+====================================================
+EXPECTED RESULT
+====================================================
+
+After fix:
+- Owner can click "إضافة إعلان جديد"
+- Create listing page stays open
+- No automatic redirect back to dashboard
+- Any missing setup state is shown clearly instead of silent redirect
+
+====================================================
+DELIVERABLES
+====================================================
+
+Please provide:
+1) exact root cause
+2) files changed
+3) which condition was failing for Owner
+4) whether the problem was frontend, backend, or both
+5) confirmation that Owner create-listing flow now works correctly
