@@ -131,8 +131,8 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler
 
 var app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// app.UseSwagger();    // TEMPORARILY DISABLED — Swashbuckle not resolving on Fly.io build
+// app.UseSwaggerUI(); // Re-enable once package reference is confirmed
 
 app.UseExceptionHandler(errorApp =>
 {
