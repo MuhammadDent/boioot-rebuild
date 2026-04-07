@@ -7,7 +7,7 @@ app = 'backend-bold-snowflake-8206'
 primary_region = 'fra'
 
 [build]
-  dockerfile = "../../../Dockerfile"
+ dockerfile = "boioot/Dockerfile"
 [http_service]
   internal_port = 8080
   force_https = true
