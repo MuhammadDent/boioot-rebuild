@@ -211,7 +211,9 @@ app.MapControllers();
 // ── Database initialization and seeding (runs in background after app binds PORT) ────
 // IMPORTANT: Must run AFTER app.StartAsync() so Kestrel is already listening.
 // This prevents Replit's health check from timing out during long DB init.
-_ = Task.Run(async () =>
+// TEMPORARILY DISABLED — diagnostic: skipping DB init/seeding so Fly.io can start cleanly.
+// Re-enable by removing the `if (false)` wrapper when DB connectivity is confirmed.
+if (false) _ = Task.Run(async () =>
 {
     // Brief delay to ensure the server is fully bound before we start DB work.
     await Task.Delay(TimeSpan.FromSeconds(2));
