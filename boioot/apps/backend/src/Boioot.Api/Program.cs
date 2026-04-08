@@ -31,8 +31,8 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddControllers()
     .AddJsonOptions(opt =>
         opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-// builder.Services.AddEndpointsApiExplorer(); // DISABLED — Swagger removed temporarily
-// builder.Services.AddSwaggerGen();            // DISABLED — Swagger removed temporarily
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.Configure<BankInstructionsOptions>(
     builder.Configuration.GetSection(BankInstructionsOptions.SectionName));
 builder.Services.Configure<StripeOptions>(
@@ -131,8 +131,8 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler
 
 var app = builder.Build();
 
-// app.UseSwagger();    // TEMPORARILY DISABLED — Swashbuckle not resolving on Fly.io build
-// app.UseSwaggerUI(); // Re-enable once package reference is confirmed
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseExceptionHandler(errorApp =>
 {
@@ -266,9 +266,6 @@ Console.WriteLine($"[STARTUP] DATABASE_URL set      : {(string.IsNullOrWhiteSpac
 Console.WriteLine($"[STARTUP] PGHOST set            : {(string.IsNullOrWhiteSpace(diagPgHost)     ? "NO" : $"YES ({diagPgHost})")}");
 Console.WriteLine($"[STARTUP] PGDATABASE set        : {(string.IsNullOrWhiteSpace(diagPgDatabase) ? "NO" : $"YES ({diagPgDatabase})")}");
 Console.WriteLine($"[STARTUP] ConnectionStrings:Postgres set : {(string.IsNullOrWhiteSpace(diagConnStr) ? "NO" : "YES")}");
-
-// app.UseSwagger();    // DISABLED — 'WebApplication' does not contain definition for 'UseSwaggerUI'
-// app.UseSwaggerUI(); // DISABLED — Swashbuckle not resolving on Fly.io build
 
 Console.WriteLine($"[STARTUP] Server starting on port {port} ...");
 Console.WriteLine("[STARTUP] App started successfully on Fly");
