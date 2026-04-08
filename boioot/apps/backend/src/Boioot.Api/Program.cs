@@ -256,8 +256,20 @@ if (false) _ = Task.Run(async () =>
 
 // app.Run() is the final statement — it blocks until shutdown signal.
 // Nothing executes after this line while the server is alive.
-Console.WriteLine($"[startup] Server starting on port {port} ...");
-Console.WriteLine("[STARTUP] App is running and will stay alive");
-app.UseSwagger();
-app.UseSwaggerUI();
+// ── Startup diagnostics (DB connectivity — no secrets exposed) ────────────────
+var diagDbUrl      = Environment.GetEnvironmentVariable("DATABASE_URL");
+var diagPgHost     = Environment.GetEnvironmentVariable("PGHOST");
+var diagPgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+var diagConnStr    = builder.Configuration.GetConnectionString("Postgres");
+
+Console.WriteLine($"[STARTUP] DATABASE_URL set      : {(string.IsNullOrWhiteSpace(diagDbUrl)      ? "NO" : "YES")}");
+Console.WriteLine($"[STARTUP] PGHOST set            : {(string.IsNullOrWhiteSpace(diagPgHost)     ? "NO" : $"YES ({diagPgHost})")}");
+Console.WriteLine($"[STARTUP] PGDATABASE set        : {(string.IsNullOrWhiteSpace(diagPgDatabase) ? "NO" : $"YES ({diagPgDatabase})")}");
+Console.WriteLine($"[STARTUP] ConnectionStrings:Postgres set : {(string.IsNullOrWhiteSpace(diagConnStr) ? "NO" : "YES")}");
+
+// app.UseSwagger();    // DISABLED — 'WebApplication' does not contain definition for 'UseSwaggerUI'
+// app.UseSwaggerUI(); // DISABLED — Swashbuckle not resolving on Fly.io build
+
+Console.WriteLine($"[STARTUP] Server starting on port {port} ...");
+Console.WriteLine("[STARTUP] App started successfully on Fly");
 app.Run();

@@ -201,8 +201,16 @@ public static class ServiceCollectionExtensions
         if (!string.IsNullOrWhiteSpace(pgHost) && !string.IsNullOrWhiteSpace(pgDatabase))
             return $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword};SSL Mode=Disable";
 
-        throw new InvalidOperationException(
-            "No PostgreSQL connection string found. " +
-            "Set ConnectionStrings:Postgres, DATABASE_URL, or the PGHOST/PGDATABASE environment variables.");
+        // ── DIAGNOSTIC FALLBACK ────────────────────────────────────────────────
+        // No connection string found from any source.
+        // Return a clearly-invalid placeholder so the app can START and serve
+        // /health without crashing. DB operations will fail with a clear message.
+        // To fix: set DATABASE_URL or PGHOST+PGDATABASE on Fly.io via:
+        //   fly secrets set DATABASE_URL="postgresql://..."
+        Console.WriteLine("[STARTUP][ERROR] No PostgreSQL connection string found!");
+        Console.WriteLine("[STARTUP][ERROR]   Sources checked: ConnectionStrings:Postgres, DATABASE_URL, PGHOST+PGDATABASE");
+        Console.WriteLine("[STARTUP][ERROR]   App will start but ALL database operations will fail.");
+        Console.WriteLine("[STARTUP][ERROR]   Fix: run `fly secrets set DATABASE_URL=postgresql://user:pass@host/db`");
+        return "Host=MISSING;Database=MISSING;Username=MISSING;Password=MISSING";
     }
 }
