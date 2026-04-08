@@ -134,6 +134,8 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseRouting();
+
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
