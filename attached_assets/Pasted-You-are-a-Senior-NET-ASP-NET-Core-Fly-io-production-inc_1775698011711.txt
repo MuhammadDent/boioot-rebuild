@@ -1,0 +1,75 @@
+You are a Senior .NET + ASP.NET Core + Fly.io production incident engineer.
+
+I need you to APPLY the fix directly in my project, not just explain it.
+
+Current production issue:
+
+* App is deployed on Fly.io
+* Custom domain returns ERR_CONNECTION_CLOSED
+* Fly logs show:
+
+  * waiting for machine to be reachable on 0.0.0.0:8080
+  * failed to connect to machine
+  * Overriding address(es) 'http://*:8080'
+  * Binding to endpoints defined via IConfiguration
+
+Conclusion:
+The app is not binding correctly to 0.0.0.0:8080 inside Fly.
+This is likely caused by custom Kestrel / UseUrls / ListenLocalhost / endpoint override configuration.
+
+Your task:
+
+1. Inspect the ASP.NET Core startup configuration completely
+
+   * Program.cs
+   * appsettings.json
+   * appsettings.*.json
+   * launchSettings.json
+   * any extension methods or infrastructure code configuring Kestrel / URLs / ports
+2. Find any code that overrides Fly binding, especially:
+
+   * UseUrls(...)
+   * ListenLocalhost(...)
+   * Listen(IPAddress.Loopback, ...)
+   * explicit Kestrel endpoint configuration
+   * ASPNETCORE_URLS / HTTP_PORTS / HTTPS_PORTS conflicting logic
+3. Fix the project so the app works correctly on Fly.io.
+
+Required final state:
+
+* App must listen on 0.0.0.0:8080 in production
+* No localhost-only binding
+* No HTTPS redirection inside the container
+* Keep ForwardedHeaders enabled for Fly proxy
+* Preserve Swagger in development
+* Do not break local development
+
+Preferred implementation:
+
+* Remove unnecessary custom Kestrel/UseUrls overrides
+* In production, bind correctly for Fly
+* Safe solution example:
+
+  * either let ASP.NET use Fly PORT automatically
+  * or explicitly use ListenAnyIP(8080) for production
+* Make the minimal clean production-safe fix
+
+After making the fix, do all of the following:
+
+1. Show me exactly what files you changed
+2. Show me before/after diff
+3. Explain root cause in 3 concise bullets
+4. Run/build verification if possible
+5. Give me the exact commands to commit/push/deploy
+
+If fly.toml needs adjustment too, verify it and fix it as well.
+Target expected fly.toml behavior:
+
+* internal_port = 8080
+* port 80 with http handler
+* port 443 with tls + http handlers
+
+Important:
+Do not give me a general explanation only.
+Actually inspect the codebase and make the change.
+If there are multiple conflicting bindings, remove all of them and leave one clean production-safe binding strategy.

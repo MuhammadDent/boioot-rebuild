@@ -11,16 +11,12 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# نسخ ملف المشروع فقط (أفضل للكاش)
 COPY boioot/apps/backend/src/Boioot.Api/Boioot.Api.csproj ./boioot/apps/backend/src/Boioot.Api/
 
-# restore
 RUN dotnet restore ./boioot/apps/backend/src/Boioot.Api/Boioot.Api.csproj
 
-# نسخ باقي الملفات
 COPY . .
 
-# publish
 RUN dotnet publish ./boioot/apps/backend/src/Boioot.Api/Boioot.Api.csproj \
     -c Release \
     -o /app/publish \
@@ -34,6 +30,9 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:8080
+# PORT tells Program.cs which port Kestrel should bind to.
+# Fly.io uses 8080 internally; ASPNETCORE_URLS is intentionally
+# omitted to avoid conflicting with the explicit ConfigureKestrel call.
+ENV PORT=8080
 
 ENTRYPOINT ["dotnet", "Boioot.Api.dll"]
