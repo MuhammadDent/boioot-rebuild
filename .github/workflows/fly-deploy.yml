@@ -9,6 +9,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: boioot/apps/backend
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -17,6 +21,6 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly
-        run: flyctl deploy --remote-only --config boioot/apps/backend/fly.toml
+        run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
