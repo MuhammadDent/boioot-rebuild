@@ -11,13 +11,20 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY boioot/apps/backend/src/Boioot.Api/Boioot.Api.csproj ./boioot/apps/backend/src/Boioot.Api/
+# Copy solution + all project files (for cache-efficient restore)
+# Paths are relative to the Docker build context: boioot/apps/backend/
+COPY Boioot.sln ./
+COPY src/Boioot.Api/Boioot.Api.csproj                     src/Boioot.Api/
+COPY src/Boioot.Domain/Boioot.Domain.csproj               src/Boioot.Domain/
+COPY src/Boioot.Application/Boioot.Application.csproj     src/Boioot.Application/
+COPY src/Boioot.Infrastructure/Boioot.Infrastructure.csproj src/Boioot.Infrastructure/
 
-RUN dotnet restore ./boioot/apps/backend/src/Boioot.Api/Boioot.Api.csproj
+RUN dotnet restore src/Boioot.Api/Boioot.Api.csproj
 
+# Copy the rest of the source
 COPY . .
 
-RUN dotnet publish ./boioot/apps/backend/src/Boioot.Api/Boioot.Api.csproj \
+RUN dotnet publish src/Boioot.Api/Boioot.Api.csproj \
     -c Release \
     -o /app/publish \
     /p:UseAppHost=false
@@ -30,9 +37,8 @@ WORKDIR /app
 
 COPY --from=build /app/publish .
 
-# PORT tells Program.cs which port Kestrel should bind to.
-# Fly.io uses 8080 internally; ASPNETCORE_URLS is intentionally
-# omitted to avoid conflicting with the explicit ConfigureKestrel call.
+# Program.cs reads PORT to determine which port Kestrel binds to.
+# Fly.io internal port is 8080 — no ASPNETCORE_URLS to avoid conflicts.
 ENV PORT=8080
 
 ENTRYPOINT ["dotnet", "Boioot.Api.dll"]

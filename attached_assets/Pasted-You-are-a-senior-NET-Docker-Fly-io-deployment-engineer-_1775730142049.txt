@@ -1,0 +1,80 @@
+You are a senior .NET + Docker + Fly.io deployment engineer.
+
+I need you to FIX the deployment setup inside the current repository, not just explain it.
+
+Context:
+- Project is deployed from Replit to Fly.io
+- Current working backend folder is: boioot/apps/backend
+- Fly app name: backend-bold-snowflake-8206
+- Problem: deployment fails because:
+  1) .dockerignore contains invalid Windows-style patterns using backslashes
+  2) Dockerfile uses wrong paths like boioot/apps/backend/... even though deployment is executed from inside boioot/apps/backend
+  3) We want the app to build correctly and bind to port 8080 on Fly.io
+
+What I want you to do:
+1. Open and rewrite boioot/apps/backend/.dockerignore with valid Docker ignore syntax using forward slashes only.
+2. Open and rewrite boioot/apps/backend/Dockerfile so that all COPY / restore / publish paths are correct relative to boioot/apps/backend.
+3. Keep the image based on .NET 8.
+4. Make sure the final container exposes port 8080 and includes:
+   - EXPOSE 8080
+   - ENV PORT=8080
+5. Do NOT use ASPNETCORE_URLS in Dockerfile.
+6. Do NOT ask me to edit manually. Apply the changes directly in the files.
+7. After editing, verify the exact content of both files.
+8. Then provide the exact shell commands I should run from boioot/apps/backend to deploy to Fly.io.
+
+Use these exact target contents unless you detect a necessary correction from the actual project structure:
+
+For boioot/apps/backend/.dockerignore:
+------------------------------------------------
+.git
+.gitignore
+bin
+obj
+out
+publish
+proof-storage
+**/bin
+**/obj
+**/publish
+**/proof-storage
+boioot.db
+------------------------------------------------
+
+For boioot/apps/backend/Dockerfile:
+------------------------------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 8080
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY Boioot.sln ./
+COPY src/Boioot.Api/Boioot.Api.csproj src/Boioot.Api/
+COPY src/Boioot.Domain/Boioot.Domain.csproj src/Boioot.Domain/
+COPY src/Boioot.Application/Boioot.Application.csproj src/Boioot.Application/
+COPY src/Boioot.Infrastructure/Boioot.Infrastructure.csproj src/Boioot.Infrastructure/
+
+RUN dotnet restore src/Boioot.Api/Boioot.Api.csproj
+
+COPY . .
+
+RUN dotnet publish src/Boioot.Api/Boioot.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+
+ENV PORT=8080
+
+ENTRYPOINT ["dotnet", "Boioot.Api.dll"]
+------------------------------------------------
+
+Important:
+- Actually modify the files.
+- Then show me a short summary of what was changed.
+- Then output the exact commands to run:
+  - git status
+  - fly deploy -a backend-bold-snowflake-8206
+- If you discover additional project references required by the solution, adapt the Dockerfile automatically and explain why in one short paragraph.
