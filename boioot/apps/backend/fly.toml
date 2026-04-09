@@ -7,22 +7,19 @@ primary_region = 'fra'
 [build]
   dockerfile = "Dockerfile"
 
-[[services]]
-  internal_port = 8080
-  protocol      = "tcp"
+[http_service]
+  internal_port        = 8080
+  force_https          = false
+  min_machines_running = 1
+  auto_stop_machines   = false
+  auto_start_machines  = true
 
-  [[services.ports]]
-    handlers = ["http"]
-    port     = 80
-
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port     = 443
-
-  [services.concurrency]
-    type       = "connections"
-    hard_limit = 25
-    soft_limit = 20
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval     = "30s"
+    method       = "GET"
+    path         = "/health"
+    timeout      = "5s"
 
 [[vm]]
   memory    = '1gb'
