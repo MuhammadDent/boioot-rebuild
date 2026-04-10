@@ -33,7 +33,41 @@ builder.Services.AddControllers()
     .AddJsonOptions(opt =>
         opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title   = "Boioot API",
+        Version = "v1",
+    });
+
+    var jwtScheme = new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name         = "Authorization",
+        Type         = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme       = "bearer",
+        BearerFormat = "JWT",
+        In           = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description  = "أدخل الـ JWT token هنا. مثال: eyJhbGci...",
+    };
+
+    options.AddSecurityDefinition("Bearer", jwtScheme);
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id   = "Bearer",
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 builder.Services.Configure<BankInstructionsOptions>(
     builder.Configuration.GetSection(BankInstructionsOptions.SectionName));
 builder.Services.Configure<StripeOptions>(
