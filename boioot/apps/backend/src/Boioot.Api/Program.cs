@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Boioot.Api.Authorization;
+using Microsoft.OpenApi.Models;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Domain.Constants;
@@ -35,32 +36,32 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title   = "Boioot API",
         Version = "v1",
     });
 
-    var jwtScheme = new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    var jwtScheme = new OpenApiSecurityScheme
     {
         Name         = "Authorization",
-        Type         = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Type         = SecuritySchemeType.Http,
         Scheme       = "bearer",
         BearerFormat = "JWT",
-        In           = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        In           = ParameterLocation.Header,
         Description  = "أدخل الـ JWT token هنا. مثال: eyJhbGci...",
     };
 
     options.AddSecurityDefinition("Bearer", jwtScheme);
 
-    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            new OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                Reference = new OpenApiReference
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Type = ReferenceType.SecurityScheme,
                     Id   = "Bearer",
                 }
             },
