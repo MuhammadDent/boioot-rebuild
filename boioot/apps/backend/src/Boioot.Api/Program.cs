@@ -141,11 +141,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseRouting();
 
@@ -218,7 +215,7 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/",           () => "Boioot API is running");
+app.MapGet("/",           () => "Boioot API is running on Fly 🚀");
 app.MapGet("/health",     () => Results.Ok(new { status = "healthy" }));
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
