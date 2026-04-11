@@ -64,7 +64,7 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
-packages = ["flyctl", "dig"]
+packages = ["flyctl", "dig", "nano"]
 
 [[ports]]
 localPort = 3000
