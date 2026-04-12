@@ -17,8 +17,10 @@ interface MobileNavDrawerProps {
   navLinks: NavItem[];
   isAuthenticated: boolean;
   isAdminOrStaff?: boolean;
+  userFullName?: string | null;
   onAddAd: () => void;
   onAddRequest: () => void;
+  onLogout: () => void;
 }
 
 export default function MobileNavDrawer({
@@ -28,8 +30,10 @@ export default function MobileNavDrawer({
   navLinks,
   isAuthenticated,
   isAdminOrStaff = false,
+  userFullName,
   onAddAd,
   onAddRequest,
+  onLogout,
 }: MobileNavDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
 
@@ -166,13 +170,25 @@ export default function MobileNavDrawer({
           <>
             <div className="mobile-drawer__divider" />
             <div className="mobile-drawer__auth">
+              {userFullName && (
+                <div className="mobile-drawer__user-name">
+                  👤 {userFullName}
+                </div>
+              )}
               <Link
                 href={isAdminOrStaff ? "/dashboard/admin" : "/dashboard"}
                 onClick={onClose}
                 className="mobile-drawer__login"
               >
-                {isAdminOrStaff ? "العودة إلى لوحة التحكم" : "لوحة التحكم"}
+                {isAdminOrStaff ? "لوحة تحكم الإدارة" : "لوحة التحكم"}
               </Link>
+              <button
+                type="button"
+                onClick={() => { onClose(); onLogout(); }}
+                className="mobile-drawer__logout"
+              >
+                تسجيل الخروج
+              </button>
             </div>
           </>
         )}

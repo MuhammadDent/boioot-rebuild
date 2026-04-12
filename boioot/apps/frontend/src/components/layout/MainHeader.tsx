@@ -227,8 +227,10 @@ export default function MainHeader() {
           navLinks={NAV_LINKS}
           isAuthenticated={isAuthenticated}
           isAdminOrStaff={isAdminOrStaff}
+          userFullName={user?.fullName}
           onAddAd={() => guardHref("/post-ad")}
           onAddRequest={() => guardHref("/dashboard/my-requests/new")}
+          onLogout={handleLogout}
         />
       )}
     </>

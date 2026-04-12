@@ -2542,3 +2542,33 @@
   font-family: var(--font-arabic, inherit);
 }
 .mobile-drawer__register:hover { background: var(--color-primary-dark, #256029); }
+
+.mobile-drawer__user-name {
+  padding: 0.5rem 0.25rem 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #111827);
+  font-family: var(--font-arabic, inherit);
+}
+
+.mobile-drawer__logout {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #dc2626;
+  text-decoration: none;
+  border: 1.5px solid #fca5a5;
+  background: #fff5f5;
+  transition: background 0.16s, border-color 0.16s, color 0.16s;
+  text-align: center;
+  font-family: var(--font-arabic, inherit);
+  cursor: pointer;
+}
+.mobile-drawer__logout:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #b91c1c;
+}
