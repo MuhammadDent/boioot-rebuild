@@ -36,7 +36,7 @@ export default function LoginPage() {
     if (justLoggedIn.current) return;
     if (!isLoading && isAuthenticated) {
       const target = consumeRedirectTarget();
-      router.replace(target ?? "/dashboard");
+      router.replace(target ?? "/");
     }
   }, [isLoading, isAuthenticated, router]);
 
@@ -56,7 +56,7 @@ export default function LoginPage() {
       const target = consumeRedirectTarget();
       const category = getRoleCategory(res.user.role);
       const isStaffOrAdmin = category === "admin" || category === "staff";
-      const dest = target ?? (isStaffOrAdmin ? "/dashboard/admin" : "/dashboard");
+      const dest = target ?? (isStaffOrAdmin ? "/dashboard/admin" : "/");
       console.log("[login] Role category:", category, "→ redirecting to:", dest);
       router.push(dest);
     } catch (err) {

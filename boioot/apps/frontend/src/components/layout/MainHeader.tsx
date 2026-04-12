@@ -60,7 +60,7 @@ export default function MainHeader() {
     if (isAuthenticated) {
       router.push("/dashboard/messages");
     } else {
-      openAuthModal(() => { router.push("/dashboard/messages"); });
+      openAuthModal();
     }
   }
 

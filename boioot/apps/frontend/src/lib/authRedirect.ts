@@ -12,7 +12,7 @@
 const REDIRECT_KEY = "auth.redirectAfterLogin";
 
 /** Pages that must never be used as a post-login destination. */
-const EXCLUDED_PREFIXES = ["/login", "/register"];
+const EXCLUDED_PREFIXES = ["/login", "/register", "/dashboard/messages"];
 
 /**
  * Returns true when `target` is a safe, internal relative path
