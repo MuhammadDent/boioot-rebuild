@@ -15,6 +15,7 @@ import BillingToggle, { type BillingCycle } from "@/components/pricing/BillingTo
 import PricingCard from "@/components/pricing/PricingCard";
 import PricingComparisonTable from "@/components/pricing/PricingComparisonTable";
 import UpgradeModal from "@/components/pricing/UpgradeModal";
+import PlanDetailsModal from "@/components/pricing/PlanDetailsModal";
 import Spinner from "@/components/ui/Spinner";
 
 // ── Plan grouping ─────────────────────────────────────────────────────────────
@@ -168,9 +169,10 @@ interface GridProps {
   currentSubscription: CurrentSubscriptionResponse | null;
   onUpgradeIntent:     (pricingId: string, planName: string) => void;
   isLoadingIntent:     boolean;
+  onViewDetails:       (plan: PublicPricingItem) => void;
 }
 
-function PlansGrid({ plans, cycle, currentSubscription, onUpgradeIntent, isLoadingIntent }: GridProps) {
+function PlansGrid({ plans, cycle, currentSubscription, onUpgradeIntent, isLoadingIntent, onViewDetails }: GridProps) {
   if (!plans.length) return null;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: "1.5rem" }}>
@@ -182,6 +184,7 @@ function PlansGrid({ plans, cycle, currentSubscription, onUpgradeIntent, isLoadi
           currentSubscription={currentSubscription}
           onUpgradeIntent={onUpgradeIntent}
           isLoadingIntent={isLoadingIntent}
+          onViewDetails={onViewDetails}
         />
       ))}
     </div>
@@ -204,6 +207,7 @@ export default function PricingPage() {
   const [intentError,     setIntentError]     = useState("");
 
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [detailPlan,      setDetailPlan]      = useState<PublicPricingItem | null>(null);
 
   // ── Fetch public plans ──────────────────────────────────────────────────────
 
@@ -277,6 +281,7 @@ export default function PricingPage() {
     currentSubscription: currentSub,
     onUpgradeIntent:     handleUpgradeIntent,
     isLoadingIntent:     intentLoading,
+    onViewDetails:       setDetailPlan,
   };
 
   const showBanner = !bannerDismissed && currentSub !== null && currentSub.priceAmount === 0;
@@ -433,6 +438,20 @@ export default function PricingPage() {
           intent={intent}
           pricingId={modalPricingId}
           onClose={() => { setIntent(null); setModalPricingId(""); }}
+        />
+      )}
+
+      {/* ── Plan details modal ── */}
+      {detailPlan && (
+        <PlanDetailsModal
+          plan={detailPlan}
+          isCurrent={detailPlan.planId === currentSub?.planId}
+          defaultCycle={cycle === "OneTime" ? "Monthly" : (cycle as "Monthly" | "Yearly")}
+          onClose={() => setDetailPlan(null)}
+          onChoose={(_plan, pricing) => {
+            setDetailPlan(null);
+            handleUpgradeIntent(pricing.pricingId);
+          }}
         />
       )}
     </main>

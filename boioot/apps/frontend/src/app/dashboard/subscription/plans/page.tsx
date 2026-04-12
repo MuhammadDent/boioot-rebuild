@@ -31,6 +31,7 @@ import {
   canAccessFeature,
   type FeatureAccessKey,
 } from "@/features/access/featureAccess";
+import PlanDetailsModal from "@/components/pricing/PlanDetailsModal";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,7 @@ function PlanCard({
   onChoose,
   onActivateFree,
   freeActivatingId,
+  onViewDetails,
   user,
 }: {
   plan: PublicPricingItem;
@@ -76,6 +78,7 @@ function PlanCard({
   onChoose: (plan: PublicPricingItem, pricing: PublicPricingEntry) => void;
   onActivateFree: (planId: string) => void;
   freeActivatingId: string | null;
+  onViewDetails: (plan: PublicPricingItem) => void;
   user: { role?: string | null; accountType?: string | null } | null;
 }) {
   const pricing = plan.pricing.find(p => p.billingCycle === cycle)
@@ -200,43 +203,70 @@ function PlanCard({
         </div>
       )}
 
-      {/* CTA */}
-      <button
-        onClick={() => {
-          if (isCurrent || isActivatingFree) return;
-          if (isFree) {
-            onActivateFree(plan.planId);
-          } else if (pricing) {
-            onChoose(plan, pricing);
-          }
-        }}
-        disabled={isCurrent || isActivatingFree}
-        type="button"
-        style={{
-          marginTop: "auto",
-          width: "100%",
-          padding: "0.7rem",
-          borderRadius: 10,
-          border: "none",
-          backgroundColor: isCurrent || isActivatingFree
-            ? "#e2e8f0"
-            : isRecommended
-              ? "#059669"
-              : "#1a2e1a",
-          color: isCurrent || isActivatingFree ? "#94a3b8" : "#fff",
-          fontSize: "0.9rem",
-          fontWeight: 700,
-          cursor: isCurrent || isActivatingFree ? "default" : "pointer",
-        }}
-      >
-        {isCurrent
-          ? "باقتك الحالية"
-          : isActivatingFree
-            ? "جارٍ التفعيل..."
-            : isFree
-              ? "تفعيل مجاني"
-              : "اختر الباقة"}
-      </button>
+      {/* Buttons: تفاصيل + CTA */}
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+
+        {/* Details button — always visible */}
+        <button
+          onClick={() => onViewDetails(plan)}
+          type="button"
+          style={{
+            width:           "100%",
+            padding:         "0.55rem",
+            borderRadius:    10,
+            border:          "1.5px solid #e2e8f0",
+            backgroundColor: "#f8fafc",
+            color:           "#475569",
+            fontSize:        "0.85rem",
+            fontWeight:      600,
+            cursor:          "pointer",
+            display:         "flex",
+            alignItems:      "center",
+            justifyContent:  "center",
+            gap:             "0.35rem",
+          }}
+        >
+          <span style={{ fontSize: "0.9rem" }}>📋</span>
+          تفاصيل الباقة
+        </button>
+
+        {/* Main CTA */}
+        <button
+          onClick={() => {
+            if (isCurrent || isActivatingFree) return;
+            if (isFree) {
+              onActivateFree(plan.planId);
+            } else if (pricing) {
+              onChoose(plan, pricing);
+            }
+          }}
+          disabled={isCurrent || isActivatingFree}
+          type="button"
+          style={{
+            width:           "100%",
+            padding:         "0.7rem",
+            borderRadius:    10,
+            border:          "none",
+            backgroundColor: isCurrent || isActivatingFree
+              ? "#e2e8f0"
+              : isRecommended
+                ? "#059669"
+                : "#1a2e1a",
+            color:           isCurrent || isActivatingFree ? "#94a3b8" : "#fff",
+            fontSize:        "0.9rem",
+            fontWeight:      700,
+            cursor:          isCurrent || isActivatingFree ? "default" : "pointer",
+          }}
+        >
+          {isCurrent
+            ? "باقتك الحالية ✓"
+            : isActivatingFree
+              ? "جارٍ التفعيل..."
+              : isFree
+                ? "تفعيل مجاني"
+                : "اختر الباقة"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -839,6 +869,7 @@ export default function PlansPage() {
 
   const [freeActivatingId, setFreeActivatingId]   = useState<string | null>(null);
   const [freeSuccessPlan, setFreeSuccessPlan]     = useState<string | null>(null);
+  const [detailPlan, setDetailPlan]               = useState<PublicPricingItem | null>(null);
 
   // Audience tab for User role — initialized from ?audience= query param (client-side), defaults to "owner"
   const [userAudienceTab, setUserAudienceTab] = useState<string>("owner");
@@ -1147,6 +1178,7 @@ export default function PlansPage() {
               }}
               onActivateFree={handleActivateFree}
               freeActivatingId={freeActivatingId}
+              onViewDetails={setDetailPlan}
               user={user}
             />
           ))}
@@ -1170,6 +1202,27 @@ export default function PlansPage() {
           {" "}
           للاستفسار تواصل معنا عبر الدعم.
         </div>
+      )}
+
+      {/* Plan details modal */}
+      {detailPlan && (
+        <PlanDetailsModal
+          plan={detailPlan}
+          isCurrent={detailPlan.planId === currentSub?.planId}
+          defaultCycle={cycle}
+          onClose={() => setDetailPlan(null)}
+          onChoose={(p, pricing) => {
+            setDetailPlan(null);
+            const isFree = pricing.priceAmount === 0;
+            if (isFree) {
+              handleActivateFree(p.planId);
+            } else {
+              setCheckoutPlan(p);
+              setCheckoutPricing(pricing);
+              setSuccessMethod(null);
+            }
+          }}
+        />
       )}
 
       {/* Checkout modal — keyed on planId+pricingId to force clean remount on plan change */}

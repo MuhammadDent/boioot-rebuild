@@ -69,6 +69,7 @@ interface PricingCardProps {
   currentSubscription: CurrentSubscriptionResponse | null;
   onUpgradeIntent:     (pricingId: string, planName: string) => void;
   isLoadingIntent:     boolean;
+  onViewDetails?:      (plan: PublicPricingItem) => void;
 }
 
 export default function PricingCard({
@@ -77,6 +78,7 @@ export default function PricingCard({
   currentSubscription,
   onUpgradeIntent,
   isLoadingIntent,
+  onViewDetails,
 }: PricingCardProps) {
   const isBest     = plan.isRecommended;
   const { kind, pricingId } = resolveCta(plan, cycle, currentSubscription);
@@ -341,7 +343,37 @@ export default function PricingCard({
       )}
 
       {/* ── CTA ── */}
-      <div style={{ marginTop: "auto", paddingTop: "0.5rem" }}>
+      <div style={{ marginTop: "auto", paddingTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+
+        {/* Details button — always shown for non-seeker plans */}
+        {onViewDetails && (
+          <button
+            suppressHydrationWarning
+            type="button"
+            onClick={() => onViewDetails(plan)}
+            style={{
+              width:        "100%",
+              padding:      "0.6rem 1rem",
+              borderRadius: "var(--radius-md)",
+              border:       "1.5px solid var(--color-border)",
+              background:   "var(--color-surface)",
+              color:        "var(--color-text-secondary)",
+              cursor:       "pointer",
+              fontFamily:   "inherit",
+              fontSize:     "0.88rem",
+              fontWeight:   600,
+              display:      "flex",
+              alignItems:   "center",
+              justifyContent: "center",
+              gap:          "0.4rem",
+            }}
+          >
+            <span>📋</span>
+            تفاصيل الباقة
+          </button>
+        )}
+
+        {/* Main subscribe CTA */}
         <button
           suppressHydrationWarning
           type="button"
@@ -368,7 +400,7 @@ export default function PricingCard({
         </button>
 
         {isUpgrade && (
-          <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--color-text-muted)", margin: "0.5rem 0 0" }}>
+          <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--color-text-muted)", margin: "0.25rem 0 0" }}>
             يمكنك الترقية في أي وقت بدون فقدان بياناتك
           </p>
         )}
