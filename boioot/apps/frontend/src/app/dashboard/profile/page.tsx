@@ -1092,6 +1092,39 @@ function ProfileSecurityTab({ raw }: { raw: UserProfileResponse }) {
 
 // ─── Tab 3: ProfileAvatarTab ──────────────────────────────────────────────────
 
+/** Compress an image file using the Canvas API. Returns a Blob + preview data URL. */
+async function compressImage(
+  file: File,
+  maxPx = 1200,
+  quality = 0.82,
+): Promise<{ blob: Blob; dataUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round((height * maxPx) / width); width = maxPx; }
+        else                { width  = Math.round((width  * maxPx) / height); height = maxPx; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("canvas error")); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => {
+        if (!blob) { reject(new Error("compression failed")); return; }
+        const reader = new FileReader();
+        reader.onload = () => resolve({ blob, dataUrl: reader.result as string });
+        reader.readAsDataURL(blob);
+      }, "image/jpeg", quality);
+    };
+    img.onerror = reject;
+    img.src = objectUrl;
+  });
+}
+
 function ProfileAvatarTab({
   raw,
   onUpdate,
@@ -1101,19 +1134,56 @@ function ProfileAvatarTab({
 }) {
   const profile  = normalizeProfile(raw);
   const fileRef  = useRef<HTMLInputElement>(null);
-  const [preview, setPreview]   = useState<string | null>(profile.avatarUrl);
-  const [loading, setLoading]   = useState(false);
-  const [banner,  setBanner]    = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [preview,     setPreview]     = useState<string | null>(profile.avatarUrl);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [loading,     setLoading]     = useState(false);
+  const [loadingMsg,  setLoadingMsg]  = useState("جارٍ الحفظ…");
+  const [banner,      setBanner]      = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   function pickFile() { fileRef.current?.click(); }
 
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setBanner({ type: "error", msg: "حجم الصورة يجب أن لا يتجاوز 2MB." });
+    setBanner(null);
+
+    // 1. Type check
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setBanner({ type: "error", msg: "نوع الملف غير مدعوم. الأنواع المقبولة: JPG، PNG، WebP." });
+      if (fileRef.current) fileRef.current.value = "";
       return;
     }
+
+    // 2. Hard size limit: 10 MB
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    if (file.size > 10 * 1024 * 1024) {
+      setBanner({ type: "error", msg: `حجم الصورة (${sizeMB} MB) كبير جداً. الحد الأقصى 10MB.` });
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
+    // 3. Auto-compress if > 1.8 MB
+    if (file.size > 1.8 * 1024 * 1024) {
+      setLoading(true);
+      setLoadingMsg("جارٍ ضغط الصورة…");
+      try {
+        const { blob, dataUrl } = await compressImage(file);
+        const compressed = new File([blob], "photo.jpg", { type: "image/jpeg" });
+        setPendingFile(compressed);
+        setPreview(dataUrl);
+      } catch {
+        setBanner({ type: "error", msg: "تعذّر معالجة الصورة، جرّب صورة أخرى." });
+        if (fileRef.current) fileRef.current.value = "";
+      } finally {
+        setLoading(false);
+        setLoadingMsg("جارٍ الحفظ…");
+      }
+      return;
+    }
+
+    // 4. Small file — use directly
+    setPendingFile(file);
     const reader = new FileReader();
     reader.onload = () => setPreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -1121,24 +1191,40 @@ function ProfileAvatarTab({
 
   function removeImage() {
     setPreview(null);
+    setPendingFile(null);
     if (fileRef.current) fileRef.current.value = "";
   }
 
   async function handleSave() {
     setBanner(null);
     setLoading(true);
+    setLoadingMsg("جارٍ الرفع…");
     try {
+      let imageUrl: string = preview ?? "";
+
+      // Upload new file first → get a real URL
+      if (pendingFile) {
+        const formData = new FormData();
+        formData.append("file", pendingFile);
+        const { url } = await api.upload<{ url: string }>("/upload/image", formData);
+        imageUrl = url;
+        setPreview(url);
+      }
+
+      setLoadingMsg("جارٍ الحفظ…");
       const updated = await api.put<UserProfileResponse>("/auth/profile", {
         fullName: raw.fullName,
-        phone: raw.phone,
-        profileImageUrl: preview ?? "",
+        phone:    raw.phone,
+        profileImageUrl: imageUrl,
       });
       onUpdate(updated);
-      setBanner({ type: "success", msg: "تم تحديث الصورة الشخصية بنجاح." });
+      setPendingFile(null);
+      setBanner({ type: "success", msg: "تم تحديث الصورة الشخصية بنجاح ✓" });
     } catch (err: unknown) {
-      setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ." });
+      setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ أثناء الرفع." });
     } finally {
       setLoading(false);
+      setLoadingMsg("جارٍ الحفظ…");
     }
   }
 
@@ -1147,7 +1233,7 @@ function ProfileAvatarTab({
       {banner && <Banner type={banner.type} msg={banner.msg} />}
 
       <p style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", marginBottom: "1.25rem" }}>
-        الصورة الشخصية تظهر في لوحة التحكم والإعلانات. الحجم الأقصى 2MB.
+        الصورة الشخصية تظهر في لوحة التحكم والإعلانات. الأنواع المقبولة: JPG، PNG، WebP — الحد الأقصى 10MB (يتم الضغط تلقائياً).
       </p>
 
       <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap" }}>
@@ -1183,13 +1269,14 @@ function ProfileAvatarTab({
           <input
             ref={fileRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
             onChange={onFileChange}
             style={{ display: "none" }}
           />
           <button
             type="button"
             onClick={pickFile}
+            disabled={loading}
             style={{
               padding: "0.5rem 1.2rem",
               border: "1.5px solid var(--color-primary)",
@@ -1199,7 +1286,8 @@ function ProfileAvatarTab({
               fontFamily: "var(--font-arabic)",
               fontWeight: 600,
               fontSize: "0.9rem",
-              cursor: "pointer",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1,
             }}
           >
             اختر صورة
@@ -1208,6 +1296,7 @@ function ProfileAvatarTab({
             <button
               type="button"
               onClick={removeImage}
+              disabled={loading}
               style={{
                 padding: "0.5rem 1.2rem",
                 border: "1.5px solid #dc2626",
@@ -1217,7 +1306,8 @@ function ProfileAvatarTab({
                 fontFamily: "var(--font-arabic)",
                 fontWeight: 600,
                 fontSize: "0.9rem",
-                cursor: "pointer",
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.6 : 1,
               }}
             >
               حذف الصورة
@@ -1243,7 +1333,7 @@ function ProfileAvatarTab({
             cursor: loading ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "جارٍ الحفظ…" : "حفظ الصورة"}
+          {loading ? loadingMsg : "حفظ الصورة"}
         </button>
       </div>
     </div>
