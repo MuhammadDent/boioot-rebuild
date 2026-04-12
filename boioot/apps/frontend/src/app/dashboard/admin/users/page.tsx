@@ -159,10 +159,7 @@ export default function AdminUsersPage() {
   // ── Panel helpers ─────────────────────────────────────────────────────────
 
   function openView(u: AdminUserResponse) {
-    setViewUser(u);
-    setEditUser(null);
-    setVerifyUser(null);
-    setShowCreate(false);
+    router.push(`/dashboard/admin/users/${u.id}`);
   }
 
   function openEdit(u: AdminUserResponse) {
@@ -170,6 +167,7 @@ export default function AdminUsersPage() {
     setViewUser(null);
     setVerifyUser(null);
     setShowCreate(false);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
   function openVerify(u: AdminUserResponse) {
