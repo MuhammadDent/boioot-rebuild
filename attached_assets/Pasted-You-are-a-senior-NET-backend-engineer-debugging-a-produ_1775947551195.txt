@@ -1,0 +1,121 @@
+You are a senior .NET backend engineer debugging a production issue in an ASP.NET Core API deployed on Fly.io with PostgreSQL.
+
+I need you to investigate a real production error precisely, not guess.
+
+## Current production symptom
+
+When submitting a property listing from the frontend, the API returns:
+
+* "حدث خطأ داخلي في الخادم"
+
+## Confirmed facts
+
+* User registration works
+* Login works
+* Database connection works
+* The error happens specifically during property creation / post ad flow
+
+## Production logs from Fly.io
+
+The logs show:
+
+* SqlState: 22001
+* MessageText: value too long for type character varying(500)
+
+Stack trace references:
+
+* `Boioot.Infrastructure.Features.Properties.PropertyService.CreateUserListingAsync(...)`
+* `Boioot.Api.Controllers.PropertiesController.PostUserListing(...)`
+* `PropertyService.cs: line 746`
+* `PropertiesController.cs: line 80`
+
+## Important note
+
+The ad description entered by the user was definitely much shorter than 500 characters.
+So the failing field is likely NOT the visible description field only.
+It may be another string field being built/saved during listing creation, such as:
+
+* serialized features
+* images string/json
+* address/location text
+* metadata
+* slug
+* another mapped varchar(500) field
+
+## Your task
+
+Please inspect the codebase and answer with evidence:
+
+1. Open the code around:
+
+   * `PropertyService.CreateUserListingAsync(...)`
+   * especially around line ~746
+   * and `PropertiesController.PostUserListing(...)`
+
+2. Identify ALL entity/model/database fields involved in creating a property listing that are limited to 500 characters, including:
+
+   * `[MaxLength(500)]`
+   * `[StringLength(500)]`
+   * `.HasMaxLength(500)`
+   * database/configuration mappings to varchar(500)
+
+3. Determine which exact field is most likely exceeding 500 during listing creation.
+
+4. Show the exact code snippet where that field is assigned/populated.
+
+5. Explain why this field can exceed 500 even when the visible description is short.
+
+6. Propose the safest fix with minimal production risk:
+
+   * either increase field length in entity/configuration + migration
+   * or validate/truncate input before save
+   * or redesign storage if the field is wrongly modeled as varchar(500)
+
+7. If possible, give me:
+
+   * the exact file path
+   * exact property/column name
+   * the exact code change needed
+   * migration command(s)
+   * any DTO validation updates needed
+
+## Output format
+
+Please respond in this structure:
+
+### Root cause
+
+...
+
+### Evidence
+
+...
+
+### Suspected field(s) with 500-char limit
+
+* File:
+* Property:
+* Current limit:
+* Why it can overflow:
+
+### Code path
+
+...
+
+### Recommended fix
+
+...
+
+### Exact patch
+
+```csharp
+// code here
+```
+
+### Migration steps
+
+```bash
+# commands here
+```
+
+Do not give generic advice. Inspect the actual code and identify the real offending field.
