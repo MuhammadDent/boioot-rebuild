@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,8 +68,13 @@ const addBtnStyle: React.CSSProperties = {
   lineHeight: 1,
 };
 
+const addBtnDisabledStyle: React.CSSProperties = {
+  ...addBtnStyle,
+  opacity: 0.45,
+  cursor: "not-allowed",
+};
+
 // ─── AddLocationModal ─────────────────────────────────────────────────────────
-// Single reusable modal for adding provinces, cities, and neighborhoods.
 
 interface AddLocationModalProps {
   open: boolean;
@@ -110,7 +115,7 @@ function AddLocationModal({
   }, [open]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") { e.preventDefault(); onSave(); }
+    if (e.key === "Enter" && !hasSuggestions) { e.preventDefault(); onSave(); }
     if (e.key === "Escape") { onCancel(); }
   }
 
@@ -135,21 +140,14 @@ function AddLocationModal({
           background: "#fff",
           borderRadius: "14px",
           padding: "1.75rem 1.5rem 1.5rem",
-          width: "min(96vw, 400px)",
+          width: "min(96vw, 420px)",
           boxShadow: "0 8px 32px rgba(0,0,0,0.22)",
           display: "flex",
           flexDirection: "column",
           gap: "1rem",
         }}
       >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: "1.05rem",
-            fontWeight: 700,
-            color: "#1a1a1a",
-          }}
-        >
+        <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#1a1a1a" }}>
           {title}
         </h3>
 
@@ -166,7 +164,7 @@ function AddLocationModal({
         />
 
         {addError && (
-          <p style={{ margin: 0, color: "#c62828", fontSize: "0.85rem" }}>
+          <p style={{ margin: 0, color: "#c62828", fontSize: "0.85rem", background: "#fff3f3", padding: "0.5rem 0.7rem", borderRadius: "7px", border: "1px solid #ffcdd2" }}>
             {addError}
           </p>
         )}
@@ -178,24 +176,32 @@ function AddLocationModal({
             <button
               type="button"
               style={{
-                padding: "0.45rem 1.1rem",
+                padding: "0.5rem 1.3rem",
                 borderRadius: "7px",
                 border: "none",
-                background: "#2E7D32",
+                background: saving ? "#aaa" : "#2E7D32",
                 color: "#fff",
                 fontWeight: 600,
                 fontSize: "0.9rem",
-                cursor: "pointer",
+                cursor: saving ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
               }}
               onClick={onSave}
               disabled={saving}
             >
-              {saving ? "جارٍ الحفظ..." : "حفظ"}
+              {saving ? (
+                <>
+                  <span style={{ display: "inline-block", width: "14px", height: "14px", border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                  جارٍ الحفظ...
+                </>
+              ) : "حفظ"}
             </button>
             <button
               type="button"
               style={{
-                padding: "0.45rem 1.1rem",
+                padding: "0.5rem 1.1rem",
                 borderRadius: "7px",
                 border: "1px solid #ccc",
                 background: "transparent",
@@ -209,7 +215,7 @@ function AddLocationModal({
             </button>
           </div>
         ) : (
-          /* Similar state: show warning + suggestions + cancel */
+          /* Similar state: warning + suggestions + options */
           <div
             style={{
               borderRadius: "10px",
@@ -224,20 +230,13 @@ function AddLocationModal({
             {/* Warning header */}
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
               <span style={{ fontSize: "1.1rem" }}>⚠️</span>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "0.88rem",
-                  fontWeight: 700,
-                  color: "#7A4500",
-                }}
-              >
-                يوجد اسم مشابه — الإنشاء موقوف
+              <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#7A4500" }}>
+                يوجد اسم مشابه — هل تقصد أحد هذه الخيارات؟
               </p>
             </div>
 
             <p style={{ margin: 0, fontSize: "0.82rem", color: "#5D4037" }}>
-              هل تقصد أحد هذه الأسماء؟ اختر الصحيح أو ألغِ العملية.
+              اختر الاسم الصحيح من القائمة، أو أضف اسماً جديداً إذا كان مختلفاً فعلاً.
             </p>
 
             {/* Suggestion list */}
@@ -256,13 +255,7 @@ function AddLocationModal({
                     border: "1px solid #E0C060",
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: "0.9rem",
-                      color: "#4E342E",
-                      fontWeight: 600,
-                    }}
-                  >
+                  <span style={{ fontSize: "0.9rem", color: "#4E342E", fontWeight: 600 }}>
                     {s.name}
                   </span>
                   <button
@@ -287,7 +280,7 @@ function AddLocationModal({
               ))}
             </div>
 
-            {/* Divider + force-add escape hatch */}
+            {/* Divider + actions */}
             <div
               style={{
                 borderTop: "1px solid #E0C060",
@@ -302,20 +295,20 @@ function AddLocationModal({
               <button
                 type="button"
                 style={{
-                  padding: 0,
-                  border: "none",
-                  background: "transparent",
-                  color: "#999",
-                  fontSize: "0.78rem",
+                  padding: "0.38rem 0.9rem",
+                  borderRadius: "7px",
+                  border: "1.5px solid #2E7D32",
+                  background: "#f0fdf4",
+                  color: "#2E7D32",
+                  fontWeight: 600,
+                  fontSize: "0.84rem",
                   cursor: saving ? "not-allowed" : "pointer",
-                  textDecoration: "underline",
-                  textDecorationStyle: "dotted",
                 }}
                 onClick={onForceAdd}
                 disabled={saving}
-                title="أضف الاسم الجديد بقوة — فقط إذا كنت متأكداً أنه مختلف"
+                title="أضف الاسم الجديد حتى لو كان مشابهاً"
               >
-                {saving ? "جارٍ الإنشاء..." : "أضف هذا الاسم بأي حال (متقدم)"}
+                {saving ? "جارٍ الإنشاء..." : `✚ أضف "${newName}" كاسم جديد`}
               </button>
 
               <button
@@ -356,9 +349,10 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
 
   useEffect(() => { fetchProvinces(); }, []);
 
-  async function fetchProvinces() {
+  async function fetchProvinces(nocache = false) {
     try {
-      const data = await api.get<string[]>("/locations/provinces");
+      const url = nocache ? `/locations/provinces?_t=${Date.now()}` : "/locations/provinces";
+      const data = await api.get<string[]>(url);
       setProvinces(data);
     } catch { /* silent */ }
   }
@@ -390,19 +384,19 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
       );
       if (result.status === "created" || result.status === "exists") {
         const finalName = result.item?.name ?? name;
-        await fetchProvinces();
+        await fetchProvinces(true);
         onChange(finalName);
         closeModal();
       } else if (result.status === "similar") {
         setSuggestions(result.suggestions ?? []);
       }
-    } catch {
-      setAddError("تعذّر إضافة المحافظة — حاول مجدداً");
+    } catch (err) {
+      setAddError(err instanceof ApiError ? err.message : "تعذّر إضافة المحافظة — حاول مجدداً");
     } finally { setSaving(false); }
   }, [newName, onChange]);
 
   async function handleUseSuggestion(s: LocationSuggestion) {
-    await fetchProvinces();
+    await fetchProvinces(true);
     onChange(s.name);
     closeModal();
   }
@@ -426,7 +420,7 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
         <button
           type="button"
           title="إضافة محافظة جديدة"
-          style={addBtnStyle}
+          style={disabled ? addBtnDisabledStyle : addBtnStyle}
           disabled={disabled}
           onClick={openModal}
         >
@@ -472,17 +466,25 @@ export function CitySelect({
 
   useEffect(() => { fetchCities(province); }, [province]);
 
-  async function fetchCities(prov?: string) {
+  async function fetchCities(prov?: string, nocache = false) {
     try {
-      const url = prov
+      let url = prov
         ? `/locations/cities?province=${encodeURIComponent(prov)}`
         : "/locations/cities";
+      // Bypass browser HTTP cache after a write operation
+      if (nocache) url += `&_t=${Date.now()}`;
       const data = await api.get<LocationOption[]>(url);
       setCities(data);
     } catch { /* silent */ }
   }
 
   function openModal() {
+    // Guard: province is required by the backend
+    if (!province) {
+      setAddError("اختر المحافظة أولاً ثم أضف المدينة");
+      setModalOpen(true);
+      return;
+    }
     setNewName("");
     setAddError("");
     setSuggestions([]);
@@ -499,6 +501,7 @@ export function CitySelect({
   const handleAdd = useCallback(async (forceCreate = false) => {
     const name = newName.trim();
     if (!name) { setAddError("اسم المدينة مطلوب"); return; }
+    if (!province) { setAddError("اختر المحافظة أولاً"); return; }
     setSaving(true);
     setAddError("");
     setSuggestions([]);
@@ -509,22 +512,25 @@ export function CitySelect({
       );
       if (result.status === "created" || result.status === "exists") {
         const finalName = result.item?.name ?? name;
-        await fetchCities(province);
+        // nocache=true: bypass browser HTTP cache to show fresh list immediately
+        await fetchCities(province, true);
         onChange(finalName);
         closeModal();
       } else if (result.status === "similar") {
         setSuggestions(result.suggestions ?? []);
       }
-    } catch {
-      setAddError("تعذّر إضافة المدينة — حاول مجدداً");
+    } catch (err) {
+      setAddError(err instanceof ApiError ? err.message : "تعذّر إضافة المدينة — حاول مجدداً");
     } finally { setSaving(false); }
   }, [newName, province, onChange]);
 
   async function handleUseSuggestion(s: LocationSuggestion) {
-    await fetchCities(province);
+    await fetchCities(province, true);
     onChange(s.name);
     closeModal();
   }
+
+  const canAdd = !disabled;
 
   return (
     <div className="form-group">
@@ -550,9 +556,9 @@ export function CitySelect({
 
         <button
           type="button"
-          title="إضافة مدينة جديدة"
-          style={addBtnStyle}
-          disabled={disabled}
+          title={!province ? "اختر المحافظة أولاً" : "إضافة مدينة جديدة"}
+          style={canAdd ? addBtnStyle : addBtnDisabledStyle}
+          disabled={!canAdd}
           onClick={openModal}
         >
           +
@@ -603,11 +609,12 @@ export function NeighborhoodSelect({
     }
   }, [city]);
 
-  async function fetchNeighborhoods(cityName: string) {
+  async function fetchNeighborhoods(cityName: string, nocache = false) {
     try {
-      const data = await api.get<LocationOption[]>(
-        `/locations/neighborhoods?city=${encodeURIComponent(cityName)}`
-      );
+      let url = `/locations/neighborhoods?city=${encodeURIComponent(cityName)}`;
+      // Bypass browser HTTP cache after a write operation
+      if (nocache) url += `&_t=${Date.now()}`;
+      const data = await api.get<LocationOption[]>(url);
       setNeighborhoods(data);
     } catch { /* silent */ }
   }
@@ -640,22 +647,25 @@ export function NeighborhoodSelect({
       );
       if (result.status === "created" || result.status === "exists") {
         const finalName = result.item?.name ?? name;
-        await fetchNeighborhoods(city);
+        // nocache=true: bypass browser HTTP cache to show fresh list immediately
+        await fetchNeighborhoods(city, true);
         onChange(finalName);
         closeModal();
       } else if (result.status === "similar") {
         setSuggestions(result.suggestions ?? []);
       }
-    } catch {
-      setAddError("تعذّر إضافة الحي — حاول مجدداً");
+    } catch (err) {
+      setAddError(err instanceof ApiError ? err.message : "تعذّر إضافة الحي — حاول مجدداً");
     } finally { setSaving(false); }
   }, [newName, city, onChange]);
 
   async function handleUseSuggestion(s: LocationSuggestion) {
-    await fetchNeighborhoods(city);
+    await fetchNeighborhoods(city, true);
     onChange(s.name);
     closeModal();
   }
+
+  const canAdd = !disabled && !!city;
 
   return (
     <div className="form-group">
@@ -680,12 +690,8 @@ export function NeighborhoodSelect({
         <button
           type="button"
           title={city ? "إضافة حي جديد" : "اختر المدينة أولاً"}
-          style={{
-            ...addBtnStyle,
-            opacity: !city ? 0.45 : 1,
-            cursor: !city ? "not-allowed" : "pointer",
-          }}
-          disabled={disabled || !city}
+          style={canAdd ? addBtnStyle : addBtnDisabledStyle}
+          disabled={!canAdd}
           onClick={openModal}
         >
           +
