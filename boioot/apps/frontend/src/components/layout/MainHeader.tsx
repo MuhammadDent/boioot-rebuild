@@ -133,7 +133,7 @@ export default function MainHeader() {
               <button
                 suppressHydrationWarning
                 type="button"
-                onClick={() => guardHref("/post-request")}
+                onClick={() => guardHref("/dashboard/my-requests/new")}
                 className="home-cta-secondary"
               >
                 + أضف طلب
@@ -228,7 +228,7 @@ export default function MainHeader() {
           isAuthenticated={isAuthenticated}
           isAdminOrStaff={isAdminOrStaff}
           onAddAd={() => guardHref("/post-ad")}
-          onAddRequest={() => guardHref("/post-request")}
+          onAddRequest={() => guardHref("/dashboard/my-requests/new")}
         />
       )}
     </>
