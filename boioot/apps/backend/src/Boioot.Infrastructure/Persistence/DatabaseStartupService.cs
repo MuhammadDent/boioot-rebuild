@@ -106,6 +106,71 @@ public sealed class DatabaseStartupService
         _log.LogInformation("Running EF Core MigrateAsync for PostgreSQL pending migrations...");
         await _db.Database.MigrateAsync(ct);
         _log.LogInformation("PostgreSQL migration complete.");
+
+        // ── Idempotent column-type fixes (applied after every migration run) ──
+        await ApplyPostgresColumnFixesAsync(ct);
+    }
+
+    /// <summary>
+    /// Applies safe, idempotent ALTER TABLE fixes for PostgreSQL columns whose
+    /// type must be widened beyond what the original EF migration created.
+    /// Each statement is guarded by a data_type check so it is a no-op when
+    /// the column is already the correct type.
+    /// </summary>
+    private async Task ApplyPostgresColumnFixesAsync(CancellationToken ct)
+    {
+        // Fix 1 & 2: ImageUrl was created as varchar(500) — must be text (no limit).
+        // SqlState 22001 was raised during property/project creation with long CDN URLs.
+        var columnFixes = new[]
+        {
+            (Table: "PropertyImages", Column: "ImageUrl"),
+            (Table: "ProjectImages",  Column: "ImageUrl"),
+        };
+
+        foreach (var (table, column) in columnFixes)
+        {
+            try
+            {
+                // Only ALTER if the column is still a character varying — idempotent.
+                string checkSql = $"""
+                    SELECT data_type
+                    FROM   information_schema.columns
+                    WHERE  table_schema = 'public'
+                      AND  table_name   = '{table}'
+                      AND  column_name  = '{column}'
+                    """;
+
+                await using var cmd = _db.Database.GetDbConnection().CreateCommand();
+                await _db.Database.OpenConnectionAsync(ct);
+                cmd.CommandText = checkSql;
+                var dataType = (await cmd.ExecuteScalarAsync(ct))?.ToString() ?? "";
+                await _db.Database.CloseConnectionAsync();
+
+                if (dataType.Contains("character varying", StringComparison.OrdinalIgnoreCase))
+                {
+                    _log.LogInformation(
+                        "[column-fix] Altering {Table}.{Column} from varchar → text ...",
+                        table, column);
+
+                    await _db.Database.ExecuteSqlRawAsync(
+                        $"""ALTER TABLE "{table}" ALTER COLUMN "{column}" TYPE text""", ct);
+
+                    _log.LogInformation(
+                        "[column-fix] {Table}.{Column} → text  ✓", table, column);
+                }
+                else
+                {
+                    _log.LogInformation(
+                        "[column-fix] {Table}.{Column} is already '{DataType}' — skipped.",
+                        table, column, dataType);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(
+                    "[column-fix] Could not fix {Table}.{Column}: {Msg}", table, column, ex.Message);
+            }
+        }
     }
 
     /// <summary>

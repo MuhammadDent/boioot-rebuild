@@ -10,7 +10,7 @@ public class PropertyImageConfiguration : IEntityTypeConfiguration<PropertyImage
     {
         builder.HasKey(i => i.Id);
 
-        builder.Property(i => i.ImageUrl).IsRequired().HasMaxLength(500);
+        builder.Property(i => i.ImageUrl).IsRequired().HasColumnType("text");
 
         builder.HasOne(i => i.Property)
             .WithMany(p => p.Images)

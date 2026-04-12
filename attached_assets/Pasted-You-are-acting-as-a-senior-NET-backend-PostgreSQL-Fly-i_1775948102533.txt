@@ -1,0 +1,119 @@
+You are acting as a senior .NET backend + PostgreSQL + Fly.io engineer.
+
+I do NOT want analysis only. I want you to APPLY the fix end-to-end yourself inside this Replit project with minimal back-and-forth.
+
+## Confirmed root cause
+
+Production logs show:
+
+* `SqlState: 22001`
+* `value too long for type character varying(500)`
+
+The failure happens during property creation.
+The offending field has already been identified as:
+
+* `ImageUrl`
+  in:
+* `PropertyImages`
+* `ProjectImages`
+
+Current EF configuration uses:
+
+```csharp
+.HasMaxLength(500)
+```
+
+This is too small for real image URLs.
+
+## What I want you to do now
+
+Please perform all of the following changes yourself:
+
+### 1) Update EF Core configuration
+
+Find and update all image URL configuration entries so that `ImageUrl` is stored as PostgreSQL `text` instead of `varchar(500)`.
+
+Specifically update any relevant files such as:
+
+* `PropertyImageConfiguration.cs`
+* `ProjectImageConfiguration.cs`
+
+Replace patterns like:
+
+```csharp
+builder.Property(i => i.ImageUrl).IsRequired().HasMaxLength(500);
+```
+
+with:
+
+```csharp
+builder.Property(i => i.ImageUrl).IsRequired().HasColumnType("text");
+```
+
+Also search the codebase for any other `ImageUrl` fields still constrained to 500 and fix them too.
+
+---
+
+### 2) Apply the database schema fix
+
+I want you to handle the schema update as well.
+
+If EF migrations are working in this project, create and apply a migration.
+
+If migrations are NOT practical in this Replit/Fly setup, then safely apply the SQL directly to PostgreSQL for the production database:
+
+```sql
+ALTER TABLE "PropertyImages" ALTER COLUMN "ImageUrl" TYPE text;
+ALTER TABLE "ProjectImages" ALTER COLUMN "ImageUrl" TYPE text;
+```
+
+If needed, use the existing Fly/Postgres setup of this project and perform the required connection/update steps yourself.
+
+---
+
+### 3) Redeploy the backend
+
+After the fix, redeploy the backend to Fly.io so production uses the updated code.
+
+---
+
+### 4) Verify the fix
+
+After deployment, verify that property creation no longer fails due to image URL length.
+If possible, test the relevant endpoint or at least verify from logs that the previous SQL 22001 error is gone.
+
+---
+
+## Important execution rules
+
+* Do not stop at explanation only.
+* Do not ask me to manually edit files if you can do it yourself.
+* Make the minimal safe production fix.
+* Preserve existing behavior except for removing the 500-char limit problem.
+* Show me exactly what you changed after finishing.
+
+## Final response format
+
+Reply only with:
+
+### Changes applied
+
+* ...
+
+### Database update applied
+
+* ...
+
+### Deployment status
+
+* ...
+
+### Verification
+
+* ...
+
+### Any remaining manual action needed
+
+* ...
+
+If you face a blocker, explain the exact blocker and the next best action you can take yourself.
