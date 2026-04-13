@@ -238,7 +238,7 @@ function AddDocumentForm({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const uploadRes = await api.upload<{ url: string }>("/upload/image", formData);
+      const uploadRes = await api.upload<{ url: string }>("/upload/document", formData);
       const updated = await api.post<VRequestResponse>(`/verification/requests/${requestId}/documents`, {
         documentType: docType,
         fileName: file.name,

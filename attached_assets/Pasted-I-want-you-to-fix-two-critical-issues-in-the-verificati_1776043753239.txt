@@ -1,0 +1,208 @@
+I want you to fix **two critical issues** in the verification flow and implement a proper notification system. Please **analyze first, then implement cleanly** without breaking existing functionality.
+
+---
+
+# 🔴 Issue 1: Cannot upload additional documents
+
+## Current behavior
+
+* First document uploads successfully
+* When trying to upload a second document:
+
+  * It gets rejected
+  * Sometimes shows "Invalid document type"
+  * No clear reason for rejection
+  * No proper user feedback
+
+## Expected behavior
+
+Users should be able to:
+
+* Upload **multiple documents**
+* Add documents one by one
+* See validation errors clearly (if any)
+
+---
+
+## 🔍 What you need to check (Root Cause Analysis)
+
+Investigate:
+
+1. Frontend:
+
+   * Is the file input being reset after first upload?
+   * Is state blocking additional uploads?
+   * Is validation incorrectly triggered?
+   * Is FormData reused incorrectly?
+
+2. Backend:
+
+   * Does the API allow multiple documents per request?
+   * Is there a restriction like "only one document per type"?
+   * Is validation rejecting duplicates incorrectly?
+   * Is file type detection wrong (MIME vs extension)?
+
+3. API:
+
+   * Endpoint: POST /api/verification/requests/{id}/documents
+   * Does it overwrite instead of append?
+   * Does it return proper error messages?
+
+---
+
+## ✅ Required Fix
+
+### A) Allow multiple document uploads
+
+* Each upload should append to existing documents
+* Do NOT overwrite previous documents
+* Allow multiple files of same or different types (based on business rules)
+
+### B) Fix validation
+
+* Accept: JPG, PNG, PDF
+* Max size: 10MB
+* Show **clear error message** if invalid:
+
+  * file type
+  * size
+  * duplicate (if applicable)
+
+### C) Fix UI behavior
+
+* Reset file input after upload
+* Show success message after upload
+* Show error message clearly
+* Allow removing individual documents
+
+---
+
+# 🔴 Issue 2: No Notification System
+
+Currently:
+
+* When user submits verification → no notification
+* When admin has new request → no notification
+* Notification icon exists but does nothing meaningful
+
+---
+
+## ✅ Required Implementation: Full Notification Flow
+
+### A) When user submits verification request:
+
+Trigger:
+
+* Notification for Admin
+
+### B) When admin reviews request:
+
+Trigger:
+
+* Notification for User
+
+---
+
+## 🔔 Notification Types
+
+### 1. User Notifications
+
+* "Your verification request has been submitted"
+* "Your verification request was approved"
+* "Your verification needs more information"
+
+### 2. Admin Notifications
+
+* "New verification request submitted"
+* "User updated verification documents"
+
+---
+
+## 🔧 Backend Requirements
+
+Create or verify:
+
+* Notification entity/table
+* Fields:
+
+  * Id
+  * UserId
+  * Title
+  * Message
+  * IsRead
+  * CreatedAt
+  * Type (optional)
+
+Endpoints:
+
+* GET /api/notifications
+* POST (internal trigger)
+* PATCH /api/notifications/{id}/read
+
+---
+
+## 🧠 Trigger Logic
+
+Trigger notifications on:
+
+1. Submit verification
+2. Upload additional document
+3. Admin review (approve / reject / needs info)
+
+---
+
+## 🎨 Frontend Requirements
+
+### Notification UI
+
+* Use existing bell icon in header
+* Show:
+
+  * unread count
+  * dropdown list
+  * mark as read
+  * link to related page
+
+### UX Behavior
+
+* Real-time is optional (polling is fine)
+* Highlight unread notifications
+* Clicking notification navigates to relevant page
+
+---
+
+## 🧪 Testing Requirements
+
+Verify:
+
+1. Upload multiple documents works
+2. Error messages are clear
+3. Documents are not overwritten
+4. Notifications:
+
+   * appear for user
+   * appear for admin
+   * update correctly
+   * mark as read works
+
+---
+
+## ⚠️ Important Rules
+
+* Do NOT break existing verification logic
+* Do NOT remove existing endpoints
+* Keep changes minimal but correct
+* Fix root cause, not just UI symptoms
+
+---
+
+## 📋 Final Output I expect from you
+
+1. Root cause of upload issue
+2. What was wrong in validation or API
+3. Files changed (frontend + backend)
+4. Notification system design
+5. Endpoints added or modified
+6. Final working flow explanation
+
+Start with analysis, then implement full fix.

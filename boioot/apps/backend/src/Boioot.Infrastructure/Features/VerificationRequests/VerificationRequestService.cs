@@ -1,5 +1,6 @@
 using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Application.Features.VerificationRequests.DTOs;
 using Boioot.Application.Features.VerificationRequests.Interfaces;
 using Boioot.Domain.Entities;
@@ -13,14 +14,17 @@ namespace Boioot.Infrastructure.Features.VerificationRequests;
 public class VerificationRequestService : IVerificationRequestService
 {
     private readonly BoiootDbContext _context;
+    private readonly IUserNotificationService _notifications;
     private readonly ILogger<VerificationRequestService> _logger;
 
     public VerificationRequestService(
         BoiootDbContext context,
+        IUserNotificationService notifications,
         ILogger<VerificationRequestService> logger)
     {
-        _context = context;
-        _logger  = logger;
+        _context       = context;
+        _notifications = notifications;
+        _logger        = logger;
     }
 
     // ── User-side ─────────────────────────────────────────────────────────────
@@ -107,6 +111,25 @@ public class VerificationRequestService : IVerificationRequestService
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation("User {UserId} submitted verification request {RequestId}", userId, requestId);
+
+        // Notify admins of new verification submission
+        try
+        {
+            var userName = await _context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync(ct) ?? "مستخدم";
+            await NotifyAdminsVerificationAsync(
+                "verification_new_request",
+                "طلب توثيق جديد",
+                $"تقدّم {userName} بطلب توثيق جديد ويحتاج إلى مراجعة",
+                requestId.ToString(),
+                ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send admin notification for verification request {RequestId}", requestId);
+        }
 
         return await GetRequestByIdCoreAsync(requestId, ct);
     }
@@ -309,6 +332,47 @@ public class VerificationRequestService : IVerificationRequestService
             "Admin {AdminId} reviewed verification request {RequestId}: status={Status}",
             adminUserId, requestId, newStatus);
 
+        // Notify user about the review result
+        try
+        {
+            var (notifType, title, body) = newStatus switch
+            {
+                VerificationRequestStatus.Approved =>
+                    ("verification_approved",
+                     "تمت الموافقة على طلب التوثيق",
+                     "تهانينا! تمت مراجعة طلبك والموافقة عليه. حسابك الآن موثّق."),
+                VerificationRequestStatus.Rejected =>
+                    ("verification_rejected",
+                     "تم رفض طلب التوثيق",
+                     string.IsNullOrWhiteSpace(dto.RejectionReason)
+                         ? "عذراً، تم رفض طلب التوثيق. يمكنك التقديم مجدداً."
+                         : $"عذراً، تم رفض طلب التوثيق. السبب: {dto.RejectionReason}"),
+                VerificationRequestStatus.NeedsMoreInfo =>
+                    ("verification_needs_info",
+                     "طلب التوثيق يحتاج معلومات إضافية",
+                     string.IsNullOrWhiteSpace(dto.AdminNotes)
+                         ? "يرجى إضافة المستندات المطلوبة وإعادة تقديم الطلب."
+                         : $"يرجى استكمال الطلب: {dto.AdminNotes}"),
+                _ =>
+                    ("verification_updated",
+                     "تم تحديث طلب التوثيق",
+                     "تم تحديث حالة طلب التوثيق الخاص بك.")
+            };
+
+            await _notifications.CreateAsync(
+                userId:            request.UserId,
+                type:              notifType,
+                title:             title,
+                body:              body,
+                relatedEntityId:   requestId.ToString(),
+                relatedEntityType: "VerificationRequest",
+                ct:                ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send user notification for verification review {RequestId}", requestId);
+        }
+
         return await GetRequestByIdCoreAsync(requestId, ct);
     }
 
@@ -377,5 +441,32 @@ public class VerificationRequestService : IVerificationRequestService
         }
 
         user.UpdatedAt = DateTime.UtcNow;
+    }
+
+    private async Task NotifyAdminsVerificationAsync(
+        string type, string title, string body, string relatedEntityId, CancellationToken ct)
+    {
+        var adminRole = await _context.RbacRoles
+            .FirstOrDefaultAsync(r => r.Name == "Admin", ct);
+
+        if (adminRole is null) return;
+
+        var adminUserIds = await _context.RbacUserRoles
+            .Where(ur => ur.RoleId == adminRole.Id)
+            .Select(ur => ur.UserId)
+            .ToListAsync(ct);
+
+        if (adminUserIds.Count == 0) return;
+
+        var batch = adminUserIds.Select(uid => new NotificationRequest(
+            UserId:            uid,
+            Type:              type,
+            Title:             title,
+            Body:              body,
+            RelatedEntityId:   relatedEntityId,
+            RelatedEntityType: "VerificationRequest"
+        )).ToList();
+
+        await _notifications.CreateBatchAsync(batch, ct);
     }
 }

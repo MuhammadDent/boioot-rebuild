@@ -59,6 +59,11 @@ function typeIcon(type: string): string {
     system_alert:                 "🔔",
     new_message:                  "✉️",
     new_comment:                  "💬",
+    verification_new_request:     "📋",
+    verification_approved:        "✅",
+    verification_rejected:        "❌",
+    verification_needs_info:      "📝",
+    verification_updated:         "🔔",
   };
   return map[type] ?? "🔔";
 }
@@ -75,6 +80,9 @@ function actionLabel(n: NotificationItem): string | null {
   if (n.relatedEntityType === "BuyerRequest" || n.relatedEntityType === "SpecialRequest") {
     return "عرض الطلب";
   }
+  if (n.relatedEntityType === "VerificationRequest") {
+    return "عرض طلب التوثيق";
+  }
   return null;
 }
 
@@ -82,10 +90,14 @@ function actionLabel(n: NotificationItem): string | null {
 
 function DecisionBadge({ type }: { type: string }) {
   const map: Record<string, { label: string; color: string; bg: string }> = {
-    subscription_approved:        { label: "موافقة",        color: "#166534", bg: "#dcfce7" },
-    subscription_rejected:        { label: "رفض",           color: "#b91c1c", bg: "#fee2e2" },
-    subscription_missing_info:    { label: "استكمال مطلوب", color: "#92400e", bg: "#fef3c7" },
-    subscription_activated:       { label: "مُفعَّل",       color: "#166534", bg: "#bbf7d0" },
+    subscription_approved:        { label: "موافقة",          color: "#166534", bg: "#dcfce7" },
+    subscription_rejected:        { label: "رفض",             color: "#b91c1c", bg: "#fee2e2" },
+    subscription_missing_info:    { label: "استكمال مطلوب",   color: "#92400e", bg: "#fef3c7" },
+    subscription_activated:       { label: "مُفعَّل",         color: "#166534", bg: "#bbf7d0" },
+    verification_approved:        { label: "موافقة",          color: "#166534", bg: "#dcfce7" },
+    verification_rejected:        { label: "مرفوض",           color: "#b91c1c", bg: "#fee2e2" },
+    verification_needs_info:      { label: "معلومات إضافية",  color: "#92400e", bg: "#fef3c7" },
+    verification_new_request:     { label: "طلب جديد",        color: "#1d4ed8", bg: "#dbeafe" },
   };
   const meta = map[type];
   if (!meta) return null;
@@ -128,9 +140,10 @@ export function resolveNotificationTarget(n: NotificationItem): string | null {
 
   if (relatedEntityType && relatedEntityId) {
     switch (relatedEntityType) {
-      case "BuyerRequest":    return `/requests/${relatedEntityId}`;
-      case "Property":        return `/dashboard/properties/${relatedEntityId}`;
-      case "SpecialRequest":  return `/dashboard/requests/${relatedEntityId}`;
+      case "BuyerRequest":       return `/requests/${relatedEntityId}`;
+      case "Property":           return `/dashboard/properties/${relatedEntityId}`;
+      case "SpecialRequest":     return `/dashboard/requests/${relatedEntityId}`;
+      case "VerificationRequest": return `/dashboard/verification/${relatedEntityId}`;
       default: break;
     }
   }

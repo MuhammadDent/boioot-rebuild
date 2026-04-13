@@ -139,6 +139,54 @@ public class UploadController : BaseController
         return Ok(new { url = $"/uploads/sr-att/{fileName}" });
     }
 
+    // ── /api/upload/document ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Upload endpoint for verification documents (JPG, PNG, PDF — max 10 MB).
+    /// Stored in wwwroot/uploads/docs/ for direct public URL access.
+    /// </summary>
+    [HttpPost("document")]
+    [RequestSizeLimit(10_485_760)]
+    public async Task<IActionResult> UploadDocument(IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { error = "لم يتم اختيار ملف" });
+
+        if (file.Length > MaxImageBytes)
+            return BadRequest(new { error = "حجم الملف يتجاوز 10MB" });
+
+        var allowed = new[] { "image/jpeg", "image/jpg", "image/png", "application/pdf" };
+        var mime    = (file.ContentType ?? "").ToLower().Trim();
+        if (!allowed.Contains(mime))
+            return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: JPG، PNG، PDF" });
+
+        var ext = mime switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png"                  => ".png",
+            "application/pdf"            => ".pdf",
+            _                            => null,
+        };
+
+        if (ext is null)
+            return BadRequest(new { error = "نوع الملف غير مدعوم" });
+
+        var dir = Path.Combine(_env.WebRootPath, "uploads", "docs");
+        Directory.CreateDirectory(dir);
+
+        var fileName = $"{Guid.NewGuid()}{ext}";
+        var filePath = Path.Combine(dir, fileName);
+
+        await using var stream = System.IO.File.Create(filePath);
+        await file.CopyToAsync(stream, ct);
+
+        _logger.LogInformation(
+            "Document uploaded: {FileName} ({Size} bytes) by user {UserId}",
+            fileName, file.Length, GetUserId());
+
+        return Ok(new { url = $"/uploads/docs/{fileName}" });
+    }
+
     // ── /api/upload/proof ─────────────────────────────────────────────────────
 
     /// <summary>
