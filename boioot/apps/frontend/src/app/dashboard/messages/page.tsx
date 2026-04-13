@@ -142,7 +142,7 @@ export default function MessagesPage() {
                 onClick={handleContactSupport}
                 disabled={supportLoading}
               >
-                {supportLoading ? "جارٍ الفتح..." : "🎧 مراسلة الدعم الفني"}
+                {supportLoading ? "جارٍ الفتح..." : "✉️ مراسلة الإدارة"}
               </button>
               <button
                 className="btn btn-primary"
