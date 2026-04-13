@@ -1327,6 +1327,7 @@
   border: 2px solid #e4ede4;
   transition: border-color 0.15s;
   flex-shrink: 0;
+  position: relative;
 }
 .dash-hdr__avatar:hover {
   border-color: var(--color-primary);

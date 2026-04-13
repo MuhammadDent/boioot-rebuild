@@ -193,13 +193,20 @@ function ProfileHeaderCard({ profile }: { profile: NormalizedProfile }) {
           justifyContent: "center",
           flexShrink: 0,
           border: "2px solid var(--color-border)",
+          position: "relative",
         }}
       >
         {profile.avatarUrl ? (
           <img
             src={profile.avatarUrl}
             alt={profile.fullName}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            style={{
+              position: "absolute",
+              top: 0, left: 0, right: 0, bottom: 0,
+              width: "100%", height: "100%",
+              objectFit: "cover", objectPosition: "center",
+              display: "block",
+            }}
           />
         ) : (
           <span style={{ color: "#fff", fontSize: "1.5rem", fontWeight: 700 }}>
@@ -1254,13 +1261,20 @@ function ProfileAvatarTab({
             flexShrink: 0,
             border: "3px solid var(--color-border)",
             boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
+            position: "relative",
           }}
         >
           {preview ? (
             <img
               src={preview}
               alt="الصورة الشخصية"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{
+                position: "absolute",
+                top: 0, left: 0, right: 0, bottom: 0,
+                width: "100%", height: "100%",
+                objectFit: "cover", objectPosition: "center",
+                display: "block",
+              }}
             />
           ) : (
             <span style={{ color: "#fff", fontSize: "2rem", fontWeight: 700 }}>

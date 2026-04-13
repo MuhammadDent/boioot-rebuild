@@ -98,7 +98,14 @@ export default function DashboardHeader({ onMenuToggle }: Props) {
             <img
               src={user.profileImageUrl}
               alt="صورة المستخدم"
-              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+              style={{
+                position: "absolute",
+                top: 0, left: 0, right: 0, bottom: 0,
+                width: "100%", height: "100%",
+                objectFit: "cover", objectPosition: "center",
+                display: "block",
+                borderRadius: "50%",
+              }}
             />
           ) : (
             <span className="dash-hdr__avatar-initial">{initial}</span>

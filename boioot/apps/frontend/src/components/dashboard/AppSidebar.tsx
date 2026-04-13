@@ -207,13 +207,20 @@ export default function AppSidebar({
               fontWeight: 700,
               color: "#fff",
               overflow: "hidden",
+              position: "relative",
             }}
           >
             {user?.profileImageUrl ? (
               <img
                 src={user.profileImageUrl}
                 alt=""
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{
+                  position: "absolute",
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  width: "100%", height: "100%",
+                  objectFit: "cover", objectPosition: "center",
+                  display: "block",
+                }}
               />
             ) : (
               initial
