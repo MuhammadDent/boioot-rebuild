@@ -224,8 +224,8 @@ const MESSAGES_GROUP: SidebarGroup = {
   label: "التواصل",
   icon: I.messages,
   items: [
-    { href: "/dashboard/messages",         label: "الرسائل",      icon: I.messages },
-    { href: "/dashboard/messages/support", label: "الدعم الفني",  icon: I.messages },
+    { href: "/dashboard/messages",            label: "الرسائل",     icon: I.messages },
+    { href: "/dashboard/messages?support=1", label: "الدعم الفني", icon: I.messages },
   ],
 };
 

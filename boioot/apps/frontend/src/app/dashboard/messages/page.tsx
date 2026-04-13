@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { useState, useEffect, useCallback, type FormEvent, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { messagingApi } from "@/features/dashboard/messages/api";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
@@ -11,7 +11,7 @@ import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { normalizeError } from "@/lib/api";
 import type { ConversationSummary } from "@/types";
 
-// ─── UUID validation helper ────────────────────────────────────────────────────
+// ─── UUID validation helper ───────────────────────────────────────────────────
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,25 +20,26 @@ function isValidUuid(v: string) {
   return UUID_RE.test(v.trim());
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Inner page (needs useSearchParams — must be wrapped in Suspense) ─────────
 
-export default function MessagesPage() {
+function MessagesPageInner() {
   const { user, isLoading } = useProtectedRoute();
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [fetching, setFetching]           = useState(true);
-  const [fetchError, setFetchError]       = useState("");
+  const [fetching,      setFetching]      = useState(true);
+  const [fetchError,    setFetchError]    = useState("");
 
   // New conversation form state
-  const [showForm, setShowForm]         = useState(false);
-  const [recipientId, setRecipientId]   = useState("");
-  const [propertyId, setPropertyId]     = useState("");
-  const [projectId, setProjectId]       = useState("");
-  const [creating, setCreating]         = useState(false);
-  const [createError, setCreateError]   = useState("");
+  const [showForm,     setShowForm]     = useState(false);
+  const [recipientId,  setRecipientId]  = useState("");
+  const [propertyId,   setPropertyId]   = useState("");
+  const [projectId,    setProjectId]    = useState("");
+  const [creating,     setCreating]     = useState(false);
+  const [createError,  setCreateError]  = useState("");
 
-  // Support conversation state
+  // Support / admin conversation state
   const [supportLoading, setSupportLoading] = useState(false);
   const [supportError,   setSupportError]   = useState("");
 
@@ -59,9 +60,34 @@ export default function MessagesPage() {
     if (!isLoading && user) load();
   }, [isLoading, user, load]);
 
+  // ── Auto-open support conversation when ?support=1 is in URL ──────────────
+  // Used by the sidebar "الدعم الفني" link (/dashboard/messages?support=1)
+  // so there is no separate intermediate page that can 404.
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+    if (searchParams.get("support") !== "1") return;
+
+    // Clear the param from URL immediately (replace, not push)
+    router.replace("/dashboard/messages");
+
+    setSupportLoading(true);
+    setSupportError("");
+    messagingApi
+      .getOrCreateSupportConversation()
+      .then((conv) => {
+        router.push(`/dashboard/messages/${conv.id}`);
+      })
+      .catch((e) => {
+        setSupportError(normalizeError(e));
+        setSupportLoading(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, user]);
+
   if (isLoading || !user) return null;
 
-  // ── Contact support ──────────────────────────────────────────────────────────
+  // ── Contact admin/support ─────────────────────────────────────────────────
 
   async function handleContactSupport() {
     setSupportLoading(true);
@@ -75,7 +101,7 @@ export default function MessagesPage() {
     }
   }
 
-  // ── Create conversation ──────────────────────────────────────────────────────
+  // ── Create conversation (manual UUID form) ────────────────────────────────
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -102,8 +128,8 @@ export default function MessagesPage() {
     try {
       const conv = await messagingApi.getOrCreateConversation({
         recipientId: recipientId.trim(),
-        propertyId: propertyId.trim() || undefined,
-        projectId:  projectId.trim()  || undefined,
+        propertyId:  propertyId.trim() || undefined,
+        projectId:   projectId.trim()  || undefined,
       });
       router.push(`/dashboard/messages/${conv.id}`);
     } catch (e) {
@@ -112,7 +138,7 @@ export default function MessagesPage() {
     }
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
@@ -132,17 +158,17 @@ export default function MessagesPage() {
               <button
                 style={{
                   padding: "0.45rem 1.1rem", fontSize: "0.88rem",
-                  background: "#16a34a", color: "#fff", border: "none",
+                  background: supportLoading ? "#6b7280" : "#16a34a",
+                  color: "#fff", border: "none",
                   borderRadius: 8, fontFamily: "var(--font-arabic)", fontWeight: 700,
                   cursor: supportLoading ? "not-allowed" : "pointer",
-                  opacity: supportLoading ? 0.7 : 1,
-                  display: "flex", alignItems: "center", gap: "0.4rem",
-                  transition: "opacity 0.15s",
+                  opacity: supportLoading ? 0.75 : 1,
+                  transition: "opacity 0.15s, background 0.15s",
                 }}
                 onClick={handleContactSupport}
                 disabled={supportLoading}
               >
-                {supportLoading ? "جارٍ الفتح..." : "✉️ مراسلة الإدارة"}
+                {supportLoading ? "جارٍ الفتح…" : "✉️ مراسلة الإدارة"}
               </button>
               <button
                 className="btn btn-primary"
@@ -153,9 +179,10 @@ export default function MessagesPage() {
               </button>
             </div>
           </div>
+
           {supportError && (
             <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", color: "#dc2626" }}>
-              {supportError}
+              ⚠️ {supportError}
             </p>
           )}
         </div>
@@ -268,70 +295,76 @@ export default function MessagesPage() {
   );
 }
 
-// ─── Conversation row ──────────────────────────────────────────────────────────
+// ─── ConversationRow (unchanged) ─────────────────────────────────────────────
 
 function ConversationRow({ conversation: c }: { conversation: ConversationSummary }) {
-  const subject = c.propertyTitle ?? c.projectTitle;
-  const subjectTag = c.propertyTitle ? "عقار" : c.projectTitle ? "مشروع" : null;
-
-  const timeLabel = c.lastMessageAt
-    ? new Date(c.lastMessageAt).toLocaleString("en-GB", {
-        month: "numeric", day: "numeric",
-        hour: "2-digit", minute: "2-digit",
-      })
-    : new Date(c.createdAt).toLocaleDateString("en-GB", {
-        month: "numeric", day: "numeric",
-      });
+  const label =
+    c.propertyTitle ? `عقار: ${c.propertyTitle}` :
+    c.projectTitle  ? `مشروع: ${c.projectTitle}` :
+    "محادثة عامة";
 
   return (
     <Link
       href={`/dashboard/messages/${c.id}`}
-      style={{ textDecoration: "none", color: "inherit" }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "0.85rem",
+        padding: "0.85rem 1rem",
+        background: "#fff",
+        border: "1px solid var(--color-border)",
+        borderRadius: 10,
+        textDecoration: "none",
+        color: "inherit",
+        transition: "box-shadow 0.15s",
+      }}
     >
-      <div className="form-card" style={{ padding: "1rem 1.25rem", transition: "box-shadow 0.15s" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-
-          {/* ── Avatar ── */}
-          <div style={{
-            width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-            backgroundColor: "var(--color-primary)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", fontWeight: 700, fontSize: "1.1rem",
-          }}>
-            {c.otherUserName.charAt(0).toUpperCase()}
-          </div>
-
-          {/* ── Info ── */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", justifyContent: "space-between" }}>
-              <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--color-text-primary)" }}>
-                {c.otherUserName}
-              </span>
-              <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", flexShrink: 0 }}>
-                {timeLabel}
-              </span>
-            </div>
-
-            {subjectTag && subject && (
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                {subjectTag}: {subject}
-              </p>
-            )}
-          </div>
-
-          {/* ── Unread badge ── */}
-          {c.unreadCount > 0 && (
-            <span style={{
-              backgroundColor: "var(--color-primary)", color: "#fff",
-              borderRadius: "9999px", padding: "0.1rem 0.55rem",
-              fontSize: "0.75rem", fontWeight: 700, flexShrink: 0,
-            }}>
-              {c.unreadCount}
-            </span>
-          )}
-
+      <div
+        style={{
+          width: 40, height: 40, borderRadius: "50%",
+          background: "var(--color-primary)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0, color: "#fff", fontWeight: 700, fontSize: "0.95rem",
+        }}
+      >
+        {c.otherUserName?.[0]?.toUpperCase() ?? "?"}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--color-text-primary)" }}>
+          {c.otherUserName ?? "مستخدم"}
+        </div>
+        <div style={{
+          fontSize: "0.8rem", color: "var(--color-text-secondary)",
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}>
+          {label}
         </div>
       </div>
+      <div style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", flexShrink: 0, textAlign: "start" }}>
+        {c.lastMessageAt
+          ? new Date(c.lastMessageAt).toLocaleDateString("ar-SY", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+          : ""}
+        {(c.unreadCount ?? 0) > 0 && (
+          <span style={{
+            display: "block", marginTop: "0.25rem",
+            background: "var(--color-primary)", color: "#fff",
+            borderRadius: 999, padding: "0.1rem 0.5rem",
+            fontSize: "0.72rem", fontWeight: 700, textAlign: "center",
+          }}>
+            {c.unreadCount}
+          </span>
+        )}
+      </div>
     </Link>
+  );
+}
+
+// ─── Default export wrapped in Suspense (required for useSearchParams) ────────
+
+export default function MessagesPage() {
+  return (
+    <Suspense>
+      <MessagesPageInner />
+    </Suspense>
   );
 }
