@@ -1,0 +1,197 @@
+I want you to improve the **pricing configuration UX and business logic** in the admin plan editor for Boioot, with minimal safe changes and without breaking existing plan behavior.
+
+## Context
+
+In the admin dashboard, when editing plans such as:
+
+* **Advanced plan for property seekers**
+* other plans that may support different purchase models
+
+the pricing section currently has poor UX and shows price inputs too early.
+
+---
+
+## Main business rule to implement
+
+### 1) One-time purchase plans must NOT show monthly/yearly pricing
+
+For plans that are purchased **one time only**:
+
+* do **not** show:
+
+  * monthly price
+  * yearly price
+  * recurring subscription pricing UI
+* instead show only the relevant one-time purchase price field
+
+This applies specifically to the **advanced plan for property seekers** if its purchase model is one-time.
+
+---
+
+## UX improvement required
+
+### 2) Price options should appear only AFTER selecting purchase model
+
+Right now the pricing fields are shown before the admin clearly chooses the purchase type / subscription type.
+
+I want the flow changed to:
+
+1. Admin first selects the plan purchase model, such as:
+
+   * one-time purchase
+   * monthly subscription
+   * yearly subscription
+   * both monthly and yearly
+   * or whatever valid models the current system supports
+
+2. Only after that selection:
+
+   * show the relevant pricing inputs
+   * hide irrelevant pricing inputs
+
+### Expected behavior examples
+
+#### Case A: One-time purchase
+
+Show:
+
+* one-time price only
+
+Hide:
+
+* monthly price
+* yearly price
+* recurring subscription prices list
+
+#### Case B: Monthly subscription only
+
+Show:
+
+* monthly price only
+
+Hide:
+
+* yearly price
+* one-time purchase price
+
+#### Case C: Yearly subscription only
+
+Show:
+
+* yearly price only
+
+Hide:
+
+* monthly price
+* one-time price
+
+#### Case D: Monthly + Yearly
+
+Show:
+
+* monthly price
+* yearly price
+
+Hide:
+
+* one-time purchase price
+
+---
+
+## Design / UX expectations
+
+### 3) Improve the pricing section layout
+
+The pricing area should feel cleaner and more logical.
+
+I want:
+
+* purchase model selection first
+* pricing fields second
+* conditional rendering based on selection
+* no confusing display of irrelevant fields
+* a more professional visual hierarchy
+
+Please improve:
+
+* spacing
+* labels
+* grouping
+* visibility logic
+* section order
+
+without redesigning the whole modal unnecessarily.
+
+---
+
+## What I want you to inspect first
+
+Please inspect and identify:
+
+1. Which frontend file controls the plan edit modal
+2. How pricing types are currently stored
+3. Whether plans currently support:
+
+   * one-time
+   * monthly
+   * yearly
+   * mixed models
+4. Whether the current UI is rendering all fields unconditionally
+5. Whether the backend expects all prices or only the relevant ones
+
+---
+
+## Required implementation
+
+### A) Add/clean purchase model selector
+
+If already exists, improve its behavior.
+If missing, add a clear selector such as:
+
+* Purchase Type
+* Billing Model
+* نوع الشراء / نوع الاشتراك
+
+### B) Conditional pricing rendering
+
+Render only the relevant pricing fields after purchase type is selected.
+
+### C) Validation
+
+Validation must match the selected purchase model:
+
+* one-time => require one-time price only
+* monthly => require monthly price only
+* yearly => require yearly price only
+* monthly + yearly => require both
+* do not validate hidden irrelevant fields
+
+### D) Preserve existing saved data safely
+
+Do not break existing plans already in database.
+If migration logic is needed, keep it minimal.
+
+---
+
+## Important rules
+
+* Do not break currently working plan save/update logic
+* Do not change unrelated fields
+* Keep backend changes minimal unless truly required
+* Fix both UX and conditional business logic properly
+* Do not leave monthly/yearly visible for one-time plans
+
+---
+
+## Output required after implementation
+
+Please provide:
+
+1. Root cause of the current bad behavior
+2. Files changed
+3. Whether backend changes were needed
+4. How purchase model is stored now
+5. What pricing fields appear for each case
+6. Final code changes
+
+Start by inspecting the current pricing logic and modal rendering, then implement the fix.

@@ -1238,11 +1238,70 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
               </div>
             </CollapsibleSection>
 
-            {/* ── Section 2: Pricing ── */}
-            <CollapsibleSection title="التسعير الأساسي" icon="💰" defaultOpen={true}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
-                <div>
-                  <label style={labelStyle}>السعر الشهري (ل.س)</label>
+            {/* ── Section 2: Pricing & Billing Model ── */}
+            <CollapsibleSection title="التسعير ونمط الفوترة" icon="💰" defaultOpen={true}>
+
+              {/* Step 1 — choose billing model */}
+              <div style={{ marginBottom: "1.25rem" }}>
+                <label style={labelStyle}>نمط الفوترة</label>
+                <select
+                  value={planBillingType}
+                  onChange={e => setPlanBillingType(e.target.value)}
+                  style={selectStyle}
+                  disabled={saving}
+                >
+                  <option value="free_default">مجاني دائم</option>
+                  <option value="recurring">اشتراك متكرر (شهري / سنوي)</option>
+                  <option value="one_time_fixed_term">شراء مرة واحدة</option>
+                </select>
+              </div>
+
+              {/* Step 2 — recurring: pick cycle then show matching price */}
+              {planBillingType === "recurring" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div style={{ maxWidth: 260 }}>
+                    <label style={labelStyle}>دورة التجديد</label>
+                    <select
+                      value={recurringCycle}
+                      onChange={e => setRecurringCycle(e.target.value)}
+                      style={selectStyle}
+                      disabled={saving}
+                    >
+                      <option value="monthly">شهري</option>
+                      <option value="yearly">سنوي</option>
+                    </select>
+                  </div>
+                  {recurringCycle === "monthly" && (
+                    <div style={{ maxWidth: 260 }}>
+                      <label style={labelStyle}>السعر الشهري (ل.س)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={priceMonthly}
+                        onChange={e => setPriceMonthly(e.target.value)}
+                        style={inputStyle}
+                      />
+                    </div>
+                  )}
+                  {recurringCycle === "yearly" && (
+                    <div style={{ maxWidth: 260 }}>
+                      <label style={labelStyle}>السعر السنوي (ل.س)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={priceYearly}
+                        onChange={e => setPriceYearly(e.target.value)}
+                        style={inputStyle}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2 — one-time: single price field */}
+              {planBillingType === "one_time_fixed_term" && (
+                <div style={{ maxWidth: 260 }}>
+                  <label style={labelStyle}>سعر الشراء (ل.س)</label>
                   <input
                     type="number"
                     min={0}
@@ -1250,20 +1309,28 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     onChange={e => setPriceMonthly(e.target.value)}
                     style={inputStyle}
                   />
+                  <p style={{ margin: "0.35rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                    السعر المدفوع مرة واحدة فقط عند شراء هذه الخطة.
+                  </p>
                 </div>
-                <div>
-                  <label style={labelStyle}>السعر السنوي (ل.س)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={priceYearly}
-                    onChange={e => setPriceYearly(e.target.value)}
-                    style={inputStyle}
-                  />
+              )}
+
+              {/* Step 2 — free plan: informational message */}
+              {planBillingType === "free_default" && (
+                <div style={{
+                  padding: "0.75rem 1rem",
+                  background: "#f0fdf4",
+                  borderRadius: "8px",
+                  border: "1px solid #bbf7d0",
+                }}>
+                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#166534", fontWeight: 600 }}>
+                    الخطة المجانية لا تحتاج إلى تحديد سعر.
+                  </p>
                 </div>
-              </div>
-              <p style={{ margin: "0.6rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                أسعار الاشتراك المفصّلة (بعملات متعددة) تُضاف في قسم &quot;أسعار الاشتراك&quot; بعد الحفظ.
+              )}
+
+              <p style={{ margin: "0.75rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                أسعار تفصيلية بعملات متعددة تُضاف في قسم &quot;أسعار الاشتراك&quot; بعد الحفظ.
               </p>
             </CollapsibleSection>
 
@@ -1299,42 +1366,12 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
               </CollapsibleSection>
             )}
 
-            {/* ── Section 3b: Billing Lifecycle ── */}
-            <CollapsibleSection title="دورة حياة الخطة (نمط الفوترة)" icon="♻️" defaultOpen={planBillingType !== "recurring"}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                {/* PlanBillingType */}
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={labelStyle}>نمط الفوترة</label>
-                  <select
-                    value={planBillingType}
-                    onChange={e => setPlanBillingType(e.target.value)}
-                    style={selectStyle}
-                    disabled={saving}
-                  >
-                    <option value="free_default">مجاني دائم (free_default)</option>
-                    <option value="recurring">اشتراك متكرر شهري/سنوي (recurring)</option>
-                    <option value="one_time_fixed_term">شراء مرة واحدة – محدود المدة (one_time_fixed_term)</option>
-                  </select>
-                </div>
+            {/* ── Section 3b: Lifecycle Settings (one_time_fixed_term specific) ── */}
+            {planBillingType === "one_time_fixed_term" && (
+              <CollapsibleSection title="إعدادات دورة الحياة" icon="♻️" defaultOpen={true}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
 
-                {/* RecurringCycle — only for recurring */}
-                {planBillingType === "recurring" && (
-                  <div>
-                    <label style={labelStyle}>دورة التجديد</label>
-                    <select
-                      value={recurringCycle}
-                      onChange={e => setRecurringCycle(e.target.value)}
-                      style={selectStyle}
-                      disabled={saving}
-                    >
-                      <option value="monthly">شهري</option>
-                      <option value="yearly">سنوي</option>
-                    </select>
-                  </div>
-                )}
-
-                {/* DurationDays — only for one_time_fixed_term */}
-                {planBillingType === "one_time_fixed_term" && (
+                  {/* DurationDays */}
                   <div>
                     <label style={labelStyle}>مدة الصلاحية (أيام)</label>
                     <input
@@ -1347,10 +1384,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                       disabled={saving}
                     />
                   </div>
-                )}
 
-                {/* ConsumptionPolicy — only for one_time_fixed_term */}
-                {planBillingType === "one_time_fixed_term" && (
+                  {/* ConsumptionPolicy */}
                   <div>
                     <label style={labelStyle}>سياسة الاستهلاك</label>
                     <select
@@ -1363,11 +1398,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                       <option value="listing_quota">حصة إعلانات (listing_quota)</option>
                     </select>
                   </div>
-                )}
 
-                {/* ExpiryRule — only for one_time_fixed_term */}
-                {planBillingType === "one_time_fixed_term" && (
-                  <div>
+                  {/* ExpiryRule */}
+                  <div style={{ gridColumn: "1 / -1" }}>
                     <label style={labelStyle}>قاعدة الانتهاء</label>
                     <select
                       value={expiryRule}
@@ -1375,15 +1408,35 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                       style={selectStyle}
                       disabled={saving}
                     >
-                      <option value="expire_by_date">بالتاريخ فقط (expire_by_date)</option>
-                      <option value="expire_by_consumption">بالاستهلاك فقط (expire_by_consumption)</option>
-                      <option value="expire_by_whichever_comes_first">الأسبق — تاريخ أو استهلاك (expire_by_whichever_comes_first)</option>
+                      <option value="expire_by_date">بالتاريخ فقط</option>
+                      <option value="expire_by_consumption">بالاستهلاك فقط</option>
+                      <option value="expire_by_whichever_comes_first">الأسبق — تاريخ أو استهلاك</option>
                     </select>
                   </div>
-                )}
 
-                {/* DowngradePlanCode */}
-                <div style={{ gridColumn: "1 / -1" }}>
+                  {/* DowngradePlanCode */}
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={labelStyle}>كود خطة التخفيض التلقائي عند الانتهاء</label>
+                    <input
+                      type="text"
+                      value={downgradePlanCode}
+                      onChange={e => setDowngradePlanCode(e.target.value)}
+                      style={inputStyle}
+                      placeholder='مثال: seeker_free — اتركه فارغاً إذا لا تريد تخفيضاً تلقائياً'
+                      disabled={saving}
+                    />
+                    <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+                      عند تفعيل &quot;تخفيض تلقائي عند الانتهاء&quot;، سيتم الانتقال لهذه الخطة.
+                    </p>
+                  </div>
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* DowngradePlanCode for non-one_time plans */}
+            {planBillingType !== "one_time_fixed_term" && (
+              <CollapsibleSection title="إعدادات إضافية" icon="⚙️" defaultOpen={false}>
+                <div>
                   <label style={labelStyle}>كود خطة التخفيض التلقائي عند الانتهاء</label>
                   <input
                     type="text"
@@ -1394,11 +1447,11 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     disabled={saving}
                   />
                   <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                    عند تفعيل &quot;تخفيض تلقائي عند الانتهاء&quot; (في القواعد التجارية)، سيتم الانتقال لهذه الخطة.
+                    عند تفعيل &quot;تخفيض تلقائي عند الانتهاء&quot;، سيتم الانتقال لهذه الخطة.
                   </p>
                 </div>
-              </div>
-            </CollapsibleSection>
+              </CollapsibleSection>
+            )}
 
             {/* ── Section 4: Trial Settings ── */}
             <CollapsibleSection title="إعدادات الفترة التجريبية" icon="🎁" defaultOpen={false}>
