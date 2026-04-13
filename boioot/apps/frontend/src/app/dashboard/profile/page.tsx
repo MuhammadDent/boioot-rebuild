@@ -334,8 +334,8 @@ function EmailChangeSection({
     onClose();
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
     clearErrors();
     setBanner(null);
 
@@ -432,7 +432,7 @@ function EmailChangeSection({
 
       {banner && <Banner type={banner.type} msg={banner.msg} />}
 
-      <form onSubmit={handleSubmit} noValidate>
+      <div>
         <div style={{ display: "grid", gap: "0.85rem" }}>
 
           {/* New email */}
@@ -528,8 +528,9 @@ function EmailChangeSection({
           }}
         >
           <button
-            type="submit"
+            type="button"
             disabled={loading}
+            onClick={() => handleSubmit()}
             style={{
               padding: "0.55rem 1.5rem",
               background: loading ? "#fcd34d" : "#d97706",
@@ -564,7 +565,7 @@ function EmailChangeSection({
             إلغاء
           </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
@@ -698,7 +699,7 @@ function ProfileBasicInfoForm({
             )}
           </div>
 
-          {/* Email — read-only display + toggle button (EmailChangeSection is OUTSIDE this form) */}
+          {/* Email — read-only display + toggle button */}
           <div>
             <FieldLabel>البريد الإلكتروني</FieldLabel>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
@@ -728,6 +729,20 @@ function ProfileBasicInfoForm({
                 {showEmailChange ? "إخفاء" : "تغيير البريد"}
               </button>
             </div>
+
+            {/* EmailChangeSection inline — right below the email row */}
+            {showEmailChange && (
+              <div style={{ marginTop: "0.75rem" }}>
+                <EmailChangeSection
+                  currentEmail={profile.email}
+                  onSuccess={(updated) => {
+                    onUpdate(updated);
+                    setShowEmailChange(false);
+                  }}
+                  onClose={() => setShowEmailChange(false)}
+                />
+              </div>
+            )}
           </div>
 
           {/* Editable: phone */}
@@ -833,17 +848,6 @@ function ProfileBasicInfoForm({
       </div>
       </form>
 
-      {/* EmailChangeSection renders OUTSIDE the form — prevents nested <form> crash */}
-      {showEmailChange && (
-        <EmailChangeSection
-          currentEmail={profile.email}
-          onSuccess={(updated) => {
-            onUpdate(updated);
-            setShowEmailChange(false);
-          }}
-          onClose={() => setShowEmailChange(false)}
-        />
-      )}
     </>
   );
 }
