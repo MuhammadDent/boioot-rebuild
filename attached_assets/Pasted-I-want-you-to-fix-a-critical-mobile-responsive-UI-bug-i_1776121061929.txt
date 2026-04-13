@@ -1,0 +1,141 @@
+I want you to fix a **critical mobile responsive UI bug** in the Boioot dashboard layout.
+
+## Problem description
+
+On mobile devices:
+
+* The sidebar (navigation drawer) is **always visible or partially visible**
+* It **overlaps the main content**
+* It **does not close properly**
+* The layout becomes broken and unusable
+
+From the screenshot:
+
+* Sidebar is covering ~50% of the screen
+* Main content is still rendered behind it
+* No proper mobile toggle behavior
+
+---
+
+## Root cause (what I suspect)
+
+Please verify, but likely issues are:
+
+* Sidebar uses `position: fixed` without proper toggle state
+* Missing `transform: translateX()` logic for hiding/showing
+* No overlay (backdrop) when sidebar is open
+* No mobile breakpoint handling
+* z-index stacking issues
+* Sidebar always rendered as desktop layout
+
+---
+
+## What I want you to implement
+
+### 1. Proper mobile sidebar behavior
+
+On **mobile (max-width: 768px)**:
+
+* Sidebar should be **hidden by default**
+* It should slide in when user clicks menu button
+* It should slide out when:
+
+  * user clicks outside (overlay)
+  * or clicks close button
+
+---
+
+### 2. Use transform-based animation (NOT display:none)
+
+Sidebar must use:
+
+* `transform: translateX(100%)` (hidden)
+* `transform: translateX(0)` (visible)
+
+And smooth transition:
+
+* `transition: transform 0.3s ease`
+
+---
+
+### 3. Add overlay (VERY IMPORTANT)
+
+When sidebar is open:
+
+* Show a semi-transparent overlay:
+
+  * `position: fixed`
+  * full screen
+  * dark background (rgba)
+* Clicking overlay closes sidebar
+
+---
+
+### 4. Fix layout structure
+
+Ensure:
+
+* Main content takes full width on mobile
+* Sidebar does NOT push layout
+* Sidebar is floating (overlay mode)
+
+---
+
+### 5. Add toggle button (if missing)
+
+* Add hamburger/menu button in header
+* Clicking it toggles sidebar state
+
+---
+
+### 6. Desktop behavior must remain unchanged
+
+On desktop:
+
+* Sidebar stays visible
+* No overlay
+* No sliding
+
+---
+
+## Technical expectations
+
+* Use clean React / Next.js state (useState or global store)
+* Avoid hacks
+* No inline random CSS fixes
+* Keep code maintainable
+
+---
+
+## Files to inspect
+
+Please check and fix:
+
+* Layout file (likely: app/dashboard/layout.tsx)
+* Sidebar component
+* Header / toolbar component
+* Global styles or Tailwind classes
+
+---
+
+## Deliverables
+
+After fixing, provide:
+
+1. Root cause explanation
+2. Files modified
+3. How sidebar state is handled
+4. Mobile vs desktop behavior explanation
+5. Before/after behavior summary
+
+---
+
+## Goal
+
+Make the dashboard:
+
+* Fully usable on mobile
+* Clean, modern, professional UX
+* No overlapping or broken layout
+
+Start by inspecting current sidebar implementation and fix it properly.
