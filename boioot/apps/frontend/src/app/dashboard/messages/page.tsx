@@ -38,6 +38,10 @@ export default function MessagesPage() {
   const [creating, setCreating]         = useState(false);
   const [createError, setCreateError]   = useState("");
 
+  // Support conversation state
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportError,   setSupportError]   = useState("");
+
   const load = useCallback(async () => {
     setFetching(true);
     setFetchError("");
@@ -56,6 +60,20 @@ export default function MessagesPage() {
   }, [isLoading, user, load]);
 
   if (isLoading || !user) return null;
+
+  // ── Contact support ──────────────────────────────────────────────────────────
+
+  async function handleContactSupport() {
+    setSupportLoading(true);
+    setSupportError("");
+    try {
+      const conv = await messagingApi.getOrCreateSupportConversation();
+      router.push(`/dashboard/messages/${conv.id}`);
+    } catch (e) {
+      setSupportError(normalizeError(e));
+      setSupportLoading(false);
+    }
+  }
 
   // ── Create conversation ──────────────────────────────────────────────────────
 
@@ -110,14 +128,36 @@ export default function MessagesPage() {
             <h1 style={{ fontSize: "1.4rem", fontWeight: 700, margin: 0, color: "var(--color-text-primary)" }}>
               المحادثات
             </h1>
-            <button
-              className="btn btn-primary"
-              style={{ padding: "0.45rem 1.1rem", fontSize: "0.88rem" }}
-              onClick={() => { setShowForm(f => !f); setCreateError(""); }}
-            >
-              {showForm ? "إلغاء" : "+ محادثة جديدة"}
-            </button>
+            <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+              <button
+                style={{
+                  padding: "0.45rem 1.1rem", fontSize: "0.88rem",
+                  background: "#16a34a", color: "#fff", border: "none",
+                  borderRadius: 8, fontFamily: "var(--font-arabic)", fontWeight: 700,
+                  cursor: supportLoading ? "not-allowed" : "pointer",
+                  opacity: supportLoading ? 0.7 : 1,
+                  display: "flex", alignItems: "center", gap: "0.4rem",
+                  transition: "opacity 0.15s",
+                }}
+                onClick={handleContactSupport}
+                disabled={supportLoading}
+              >
+                {supportLoading ? "جارٍ الفتح..." : "🎧 مراسلة الدعم الفني"}
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ padding: "0.45rem 1.1rem", fontSize: "0.88rem" }}
+                onClick={() => { setShowForm(f => !f); setCreateError(""); }}
+              >
+                {showForm ? "إلغاء" : "+ محادثة جديدة"}
+              </button>
+            </div>
           </div>
+          {supportError && (
+            <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem", color: "#dc2626" }}>
+              {supportError}
+            </p>
+          )}
         </div>
 
         {/* ── New conversation form ── */}

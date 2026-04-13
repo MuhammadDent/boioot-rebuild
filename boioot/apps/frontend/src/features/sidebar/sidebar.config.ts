@@ -223,7 +223,10 @@ const MESSAGES_GROUP: SidebarGroup = {
   id: "messages",
   label: "التواصل",
   icon: I.messages,
-  items: [{ href: "/dashboard/messages", label: "الرسائل", icon: I.messages }],
+  items: [
+    { href: "/dashboard/messages",         label: "الرسائل",      icon: I.messages },
+    { href: "/dashboard/messages/support", label: "الدعم الفني",  icon: I.messages },
+  ],
 };
 
 const VERIFICATION_GROUP: SidebarGroup = {

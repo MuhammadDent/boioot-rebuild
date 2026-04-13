@@ -318,4 +318,49 @@ public class MessagingService : IMessagingService
         AttachmentData = m.AttachmentData,
         AttachmentName = m.AttachmentName
     };
+
+    // ── Support conversation ───────────────────────────────────────────────────
+    // Finds the first active Admin user and creates/returns a conversation with them.
+    // Bypasses subscription limits — users should always be able to contact support.
+
+    public async Task<ConversationSummaryResponse> GetOrCreateSupportConversationAsync(
+        Guid userId, CancellationToken ct = default)
+    {
+        var admin = await _context.Users
+            .Where(u => u.Role == "Admin" && !u.IsDeleted)
+            .OrderBy(u => u.CreatedAt)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new BoiootException("لا يوجد حساب دعم فني متاح حالياً", 503);
+
+        if (admin.Id == userId)
+            throw new BoiootException("لا يمكنك فتح محادثة دعم مع نفسك", 400);
+
+        var existing = await _context.Conversations
+            .Include(c => c.User1)
+            .Include(c => c.User2)
+            .FirstOrDefaultAsync(c =>
+                (c.User1Id == userId && c.User2Id == admin.Id) ||
+                (c.User1Id == admin.Id && c.User2Id == userId), ct);
+
+        if (existing is not null)
+        {
+            var existingUnread = await GetUnreadCountAsync(userId, existing.Id, ct);
+            return MapToSummary(existing, userId, existingUnread);
+        }
+
+        var conversation = new Conversation
+        {
+            User1Id = userId,
+            User2Id = admin.Id,
+        };
+
+        _context.Conversations.Add(conversation);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Support conversation created: {ConversationId} for userId={UserId} with admin={AdminId}",
+            conversation.Id, userId, admin.Id);
+
+        return await LoadAndMapSummaryAsync(conversation.Id, userId, ct);
+    }
 }

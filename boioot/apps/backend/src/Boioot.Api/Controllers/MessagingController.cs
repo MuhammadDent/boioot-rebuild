@@ -59,4 +59,11 @@ public class MessagingController : BaseController
         var count = await _messagingService.GetTotalUnreadCountAsync(GetUserId(), ct);
         return Ok(new { total = count });
     }
+
+    [HttpPost("support")]
+    public async Task<IActionResult> GetOrCreateSupportConversation(CancellationToken ct)
+    {
+        var result = await _messagingService.GetOrCreateSupportConversationAsync(GetUserId(), ct);
+        return Ok(result);
+    }
 }

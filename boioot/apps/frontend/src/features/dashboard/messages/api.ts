@@ -63,4 +63,13 @@ export const messagingApi = {
   getUnreadCount(): Promise<{ total: number }> {
     return api.get("/messages/unread-count");
   },
+
+  /**
+   * POST /messages/support — idempotent get-or-create support conversation.
+   * Finds the first Admin user and returns a conversation with them.
+   * Bypasses subscription limits so any user can always contact support.
+   */
+  getOrCreateSupportConversation(): Promise<ConversationSummary> {
+    return api.post("/messages/support", {});
+  },
 };
