@@ -351,7 +351,10 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       label: "لوحة التحكم",
       icon: I.dashboard,
       alwaysOpen: true,
-      items: [{ href: "/dashboard/admin", label: "نظرة عامة", icon: I.dashboard, exact: true }],
+      items: [
+        { href: "/dashboard/admin",          label: "نظرة عامة", icon: I.dashboard, exact: true },
+        { href: "/dashboard/admin/messages", label: "الرسائل",   icon: I.messages },
+      ],
     },
     {
       id: "operations",

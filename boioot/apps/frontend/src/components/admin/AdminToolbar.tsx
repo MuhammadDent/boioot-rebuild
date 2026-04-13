@@ -4,12 +4,23 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { messagingApi } from "@/features/dashboard/messages/api";
 
 export default function AdminToolbar() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    messagingApi.getUnreadCount().then((r) => setUnreadCount(r.total)).catch(() => {});
+    const interval = setInterval(() => {
+      messagingApi.getUnreadCount().then((r) => setUnreadCount(r.total)).catch(() => {});
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -94,6 +105,52 @@ export default function AdminToolbar() {
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
+
+      {/* Messages bell */}
+      <Link
+        href="/dashboard/admin/messages"
+        style={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.1)",
+          color: "#94a3b8",
+          textDecoration: "none",
+          flexShrink: 0,
+          transition: "color 0.15s, border-color 0.15s",
+        }}
+        title="الرسائل"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        {unreadCount > 0 && (
+          <span style={{
+            position: "absolute",
+            top: -4,
+            insetInlineEnd: -4,
+            background: "#ef4444",
+            color: "#fff",
+            borderRadius: 999,
+            fontSize: "0.6rem",
+            fontWeight: 700,
+            minWidth: 16,
+            height: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 3px",
+            lineHeight: 1,
+            border: "1px solid #0f172a",
+          }}>
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </Link>
 
       {/* View website */}
       <a
