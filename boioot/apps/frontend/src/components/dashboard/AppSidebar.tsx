@@ -147,36 +147,101 @@ export default function AppSidebar({
   const roleLabel = ROLE_DISPLAY[user?.role ?? ""] ?? (user?.role ?? "");
   const isAdmin   = user?.role === "Admin" || user?.role === "Staff";
 
+  // ── Mobile detection (JS-controlled, not CSS-only) ───────────────────────
+  // This bypasses all CSS specificity/cascade issues on mobile.
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // ── Computed sidebar styles based on breakpoint ──────────────────────────
+
+  const sidebarStyle: React.CSSProperties = isMobile
+    ? {
+        // Mobile: fixed right-side drawer, hidden by default
+        position: "fixed",
+        top: 0,
+        right: 0,
+        height: "100vh",
+        width: 280,
+        zIndex: 200,
+        transform: isOpen ? "translateX(0)" : "translateX(100%)",
+        transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        backgroundColor: "#111827",
+        display: "flex",
+        flexDirection: "column",
+        borderLeft: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: isOpen ? "-4px 0 24px rgba(0,0,0,0.4)" : "none",
+        overflowY: "auto",
+        willChange: "transform",
+      }
+    : {
+        // Desktop: sticky sidebar, always visible
+        position: "sticky",
+        top: headerHeight,
+        height: `calc(100vh - ${headerHeight}px)`,
+        width: 250,
+        flexShrink: 0,
+        zIndex: 50,
+        backgroundColor: "#111827",
+        display: "flex",
+        flexDirection: "column",
+        borderLeft: "1px solid rgba(255,255,255,0.07)",
+        overflowY: "auto",
+      };
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
     <>
-      {/* Backdrop (mobile) */}
-      {isOpen && (
+      {/* Backdrop (mobile only) */}
+      {isMobile && isOpen && (
         <div
-          className="admin-overlay open"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            zIndex: 199,
+            backdropFilter: "blur(2px)",
+            WebkitBackdropFilter: "blur(2px)",
+          }}
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
       <aside
-        className={`admin-sidebar${isOpen ? " open" : ""}`}
-        style={{
-          backgroundColor: "#111827",
-          display: "flex",
-          flexDirection: "column",
-          borderLeft: "1px solid rgba(255,255,255,0.07)",
-          top: headerHeight,
-          height: `calc(100vh - ${headerHeight}px)`,
-        }}
+        className="admin-sidebar"
+        style={sidebarStyle}
       >
-        {/* Mobile close button */}
-        {onClose && (
+        {/* Mobile close button — JS-controlled, only shown on mobile */}
+        {isMobile && onClose && (
           <button
             onClick={onClose}
             aria-label="إغلاق القائمة"
-            className="admin-sidebar-close"
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 12,
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.1)",
+              border: "none",
+              color: "#fff",
+              fontSize: "1rem",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 10,
+            }}
           >
             ✕
           </button>

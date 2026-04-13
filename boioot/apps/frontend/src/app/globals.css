@@ -198,25 +198,24 @@ a {
 }
 
 @media (max-width: 768px) {
-  /* Prevent horizontal scroll during sidebar slide animation */
-  .admin-layout {
-    overflow: hidden;
-  }
-
-  /* Sidebar becomes a fixed right-side drawer */
+  /*
+   * Mobile sidebar — NOTE: JS (useMatchMedia in AppSidebar.tsx) is the primary
+   * controller of sidebar layout/transform on mobile. This CSS is a fallback
+   * for the initial SSR render (before JS hydrates).
+   * CRITICAL: transform must NOT use !important here so that JS inline styles
+   * can properly override it when toggling open/close.
+   */
   .admin-sidebar {
     position: fixed !important;
     top: 0 !important;
     right: 0 !important;
     height: 100vh !important;
     width: 280px !important;
-    transform: translateX(105%) !important;
     z-index: 200 !important;
-    box-shadow: -6px 0 32px rgba(0, 0, 0, 0.35);
-    overflow-y: auto;
-  }
-  .admin-sidebar.open {
-    transform: translateX(0) !important;
+    /* No !important on transform — JS inline style must win after hydration */
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto !important;
   }
 
   /* Show hamburger on mobile */
@@ -227,6 +226,11 @@ a {
   /* Show close button inside sidebar on mobile */
   .admin-sidebar-close {
     display: flex !important;
+  }
+
+  /* Reduce padding on mobile content area */
+  .dash-shell__content {
+    padding: 1rem;
   }
 }
 

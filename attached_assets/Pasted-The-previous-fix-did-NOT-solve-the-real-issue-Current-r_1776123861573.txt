@@ -1,0 +1,87 @@
+The previous fix did NOT solve the real issue.
+
+## Current result
+
+On mobile, the sidebar is STILL visible and overlapping the content.
+So the root cause is NOT only the missing viewport meta tag.
+
+## What this means
+
+You need to stop assuming this is a CSS media-query-only issue.
+
+The real issue is likely one of these:
+
+* sidebar is rendered open by default on mobile
+* wrong transform direction for RTL layout
+* mobile and desktop sidebars are both rendered
+* hidden class is not actually applied
+* state/toggle logic is broken
+* sidebar component is always mounted in visible mode
+* overlay mode is not implemented correctly
+
+## I want a deeper fix now
+
+### Step 1: Inspect actual sidebar rendering logic
+
+Check:
+
+* which component renders the sidebar
+* whether there is a mobile-specific state like `isSidebarOpen`
+* whether the sidebar is visible by default on first render
+* whether the mobile hide/show classes are actually applied
+* whether there is a separate desktop sidebar still showing on mobile
+
+### Step 2: Fix mobile behavior from logic, not only CSS
+
+On mobile:
+
+* sidebar must be CLOSED by default
+* it must open only when the hamburger/menu button is clicked
+* it must close when:
+
+  * user clicks overlay
+  * user clicks a nav item
+  * user clicks close button
+
+### Step 3: Handle RTL correctly
+
+Because the UI is RTL:
+
+* verify whether sidebar is anchored to the right
+* verify whether hidden state should be:
+
+  * `translateX(100%)`
+    instead of left-based logic
+* fix transform direction accordingly
+
+### Step 4: Prevent desktop sidebar from leaking into mobile
+
+If desktop sidebar exists:
+
+* hide it completely on mobile
+* render only the mobile drawer version on small screens
+
+### Step 5: Make the final behavior exact
+
+On mobile:
+
+* by default: no sidebar visible at all
+* only top bar + menu button visible
+* opening sidebar should slide from the correct RTL side
+* full overlay behind it
+* main content fully usable
+
+## Important
+
+Do NOT give me another partial CSS patch.
+I want you to inspect the actual component/state/rendering logic and fix the root cause.
+
+## After fixing, report clearly:
+
+1. Was the sidebar open by default?
+2. Was RTL transform direction wrong?
+3. Was there a duplicate desktop sidebar rendered on mobile?
+4. Which files you changed?
+5. What exact logic now controls mobile open/close behavior?
+
+Implement the real fix now.
