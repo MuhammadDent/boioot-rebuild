@@ -10,4 +10,5 @@ public interface IMessagingService
     Task<MessageResponse> SendMessageAsync(Guid userId, Guid conversationId, SendMessageRequest request, CancellationToken ct = default);
     Task<int> GetTotalUnreadCountAsync(Guid userId, CancellationToken ct = default);
     Task<ConversationSummaryResponse> GetOrCreateSupportConversationAsync(Guid userId, CancellationToken ct = default);
+    Task<ConversationSummaryResponse> GetOrCreateAdminConversationAsync(Guid userId, CancellationToken ct = default);
 }

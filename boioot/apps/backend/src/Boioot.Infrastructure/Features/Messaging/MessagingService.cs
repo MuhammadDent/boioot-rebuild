@@ -319,28 +319,60 @@ public class MessagingService : IMessagingService
         AttachmentName = m.AttachmentName
     };
 
-    // ── Support conversation ───────────────────────────────────────────────────
-    // Finds the first active Admin user and creates/returns a conversation with them.
+    // ── Support conversation (الدعم الفني) ────────────────────────────────────
+    // Finds the first active Staff user; falls back to first Admin if no Staff exists.
     // Bypasses subscription limits — users should always be able to contact support.
 
     public async Task<ConversationSummaryResponse> GetOrCreateSupportConversationAsync(
+        Guid userId, CancellationToken ct = default)
+    {
+        // Prefer Staff, fallback to Admin
+        var supportAgent = await _context.Users
+            .Where(u => u.Role == "Staff" && !u.IsDeleted)
+            .OrderBy(u => u.CreatedAt)
+            .FirstOrDefaultAsync(ct)
+            ?? await _context.Users
+                .Where(u => u.Role == "Admin" && !u.IsDeleted)
+                .OrderBy(u => u.CreatedAt)
+                .FirstOrDefaultAsync(ct)
+            ?? throw new BoiootException("لا يوجد حساب دعم فني متاح حالياً", 503);
+
+        if (supportAgent.Id == userId)
+            throw new BoiootException("لا يمكنك فتح محادثة دعم فني مع نفسك", 400);
+
+        return await GetOrCreateConversationWithAgentAsync(userId, supportAgent, "Support", ct);
+    }
+
+    // ── Admin conversation (مراسلة الإدارة) ───────────────────────────────────
+    // Finds the first active Admin user.
+    // Bypasses subscription limits — users should always be able to contact admin.
+
+    public async Task<ConversationSummaryResponse> GetOrCreateAdminConversationAsync(
         Guid userId, CancellationToken ct = default)
     {
         var admin = await _context.Users
             .Where(u => u.Role == "Admin" && !u.IsDeleted)
             .OrderBy(u => u.CreatedAt)
             .FirstOrDefaultAsync(ct)
-            ?? throw new BoiootException("لا يوجد حساب دعم فني متاح حالياً", 503);
+            ?? throw new BoiootException("لا يوجد حساب إدارة متاح حالياً", 503);
 
         if (admin.Id == userId)
-            throw new BoiootException("لا يمكنك فتح محادثة دعم مع نفسك", 400);
+            throw new BoiootException("لا يمكنك فتح محادثة إدارة مع نفسك", 400);
 
+        return await GetOrCreateConversationWithAgentAsync(userId, admin, "Admin", ct);
+    }
+
+    // ── Shared helper: idempotent get-or-create with a specific agent user ────
+
+    private async Task<ConversationSummaryResponse> GetOrCreateConversationWithAgentAsync(
+        Guid userId, User agent, string label, CancellationToken ct)
+    {
         var existing = await _context.Conversations
             .Include(c => c.User1)
             .Include(c => c.User2)
             .FirstOrDefaultAsync(c =>
-                (c.User1Id == userId && c.User2Id == admin.Id) ||
-                (c.User1Id == admin.Id && c.User2Id == userId), ct);
+                (c.User1Id == userId && c.User2Id == agent.Id) ||
+                (c.User1Id == agent.Id && c.User2Id == userId), ct);
 
         if (existing is not null)
         {
@@ -351,15 +383,15 @@ public class MessagingService : IMessagingService
         var conversation = new Conversation
         {
             User1Id = userId,
-            User2Id = admin.Id,
+            User2Id = agent.Id,
         };
 
         _context.Conversations.Add(conversation);
         await _context.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "Support conversation created: {ConversationId} for userId={UserId} with admin={AdminId}",
-            conversation.Id, userId, admin.Id);
+            "[{Label}] Conversation created: {ConversationId} for userId={UserId} with agentId={AgentId}",
+            label, conversation.Id, userId, agent.Id);
 
         return await LoadAndMapSummaryAsync(conversation.Id, userId, ct);
     }

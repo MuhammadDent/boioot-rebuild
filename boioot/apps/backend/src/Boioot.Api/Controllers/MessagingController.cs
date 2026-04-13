@@ -60,10 +60,27 @@ public class MessagingController : BaseController
         return Ok(new { total = count });
     }
 
+    /// <summary>
+    /// POST /api/messages/support
+    /// Get or create a conversation with the support team (Staff role, falls back to Admin).
+    /// Bypasses subscription limits.
+    /// </summary>
     [HttpPost("support")]
     public async Task<IActionResult> GetOrCreateSupportConversation(CancellationToken ct)
     {
         var result = await _messagingService.GetOrCreateSupportConversationAsync(GetUserId(), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// POST /api/messages/admin
+    /// Get or create a conversation with the administration (Admin role only).
+    /// Bypasses subscription limits.
+    /// </summary>
+    [HttpPost("admin")]
+    public async Task<IActionResult> GetOrCreateAdminConversation(CancellationToken ct)
+    {
+        var result = await _messagingService.GetOrCreateAdminConversationAsync(GetUserId(), ct);
         return Ok(result);
     }
 }

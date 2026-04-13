@@ -87,13 +87,13 @@ function MessagesPageInner() {
 
   if (isLoading || !user) return null;
 
-  // ── Contact admin/support ─────────────────────────────────────────────────
+  // ── Contact administration (مراسلة الإدارة — Admin role) ─────────────────
 
-  async function handleContactSupport() {
+  async function handleContactAdmin() {
     setSupportLoading(true);
     setSupportError("");
     try {
-      const conv = await messagingApi.getOrCreateSupportConversation();
+      const conv = await messagingApi.getOrCreateAdminConversation();
       router.push(`/dashboard/messages/${conv.id}`);
     } catch (e) {
       setSupportError(normalizeError(e));
@@ -165,7 +165,7 @@ function MessagesPageInner() {
                   opacity: supportLoading ? 0.75 : 1,
                   transition: "opacity 0.15s, background 0.15s",
                 }}
-                onClick={handleContactSupport}
+                onClick={handleContactAdmin}
                 disabled={supportLoading}
               >
                 {supportLoading ? "جارٍ الفتح…" : "✉️ مراسلة الإدارة"}

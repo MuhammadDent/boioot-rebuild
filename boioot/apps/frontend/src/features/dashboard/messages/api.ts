@@ -66,10 +66,19 @@ export const messagingApi = {
 
   /**
    * POST /messages/support — idempotent get-or-create support conversation.
-   * Finds the first Admin user and returns a conversation with them.
+   * Finds the first Staff user (falls back to first Admin if no Staff exists).
    * Bypasses subscription limits so any user can always contact support.
    */
   getOrCreateSupportConversation(): Promise<ConversationSummary> {
     return api.post("/messages/support", {});
+  },
+
+  /**
+   * POST /messages/admin — idempotent get-or-create admin conversation.
+   * Finds the first Admin user.
+   * Bypasses subscription limits so any user can always contact the administration.
+   */
+  getOrCreateAdminConversation(): Promise<ConversationSummary> {
+    return api.post("/messages/admin", {});
   },
 };
