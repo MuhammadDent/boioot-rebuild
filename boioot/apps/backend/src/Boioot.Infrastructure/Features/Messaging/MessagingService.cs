@@ -5,6 +5,7 @@ using Boioot.Application.Features.Messaging.Interfaces;
 using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Entities;
+using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -326,15 +327,11 @@ public class MessagingService : IMessagingService
     public async Task<ConversationSummaryResponse> GetOrCreateSupportConversationAsync(
         Guid userId, CancellationToken ct = default)
     {
-        // Prefer Staff, fallback to Admin
+        // Find the first Admin user to handle support conversations
         var supportAgent = await _context.Users
-            .Where(u => u.Role == "Staff" && !u.IsDeleted)
+            .Where(u => u.Role == UserRole.Admin && !u.IsDeleted)
             .OrderBy(u => u.CreatedAt)
             .FirstOrDefaultAsync(ct)
-            ?? await _context.Users
-                .Where(u => u.Role == "Admin" && !u.IsDeleted)
-                .OrderBy(u => u.CreatedAt)
-                .FirstOrDefaultAsync(ct)
             ?? throw new BoiootException("لا يوجد حساب دعم فني متاح حالياً", 503);
 
         if (supportAgent.Id == userId)
@@ -351,7 +348,7 @@ public class MessagingService : IMessagingService
         Guid userId, CancellationToken ct = default)
     {
         var admin = await _context.Users
-            .Where(u => u.Role == "Admin" && !u.IsDeleted)
+            .Where(u => u.Role == UserRole.Admin && !u.IsDeleted)
             .OrderBy(u => u.CreatedAt)
             .FirstOrDefaultAsync(ct)
             ?? throw new BoiootException("لا يوجد حساب إدارة متاح حالياً", 503);
