@@ -62,4 +62,22 @@ public class VerificationController : BaseController
         var result = await _service.GetMyRequestByIdAsync(userId, id, ct);
         return Ok(result);
     }
+
+    /// <summary>Delete a draft verification request</summary>
+    [HttpDelete("requests/{id:guid}")]
+    public async Task<IActionResult> DeleteDraft(Guid id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        await _service.DeleteDraftAsync(userId, id, ct);
+        return NoContent();
+    }
+
+    /// <summary>Remove a document from a Draft/NeedsMoreInfo request</summary>
+    [HttpDelete("requests/{id:guid}/documents/{docId:guid}")]
+    public async Task<IActionResult> RemoveDocument(Guid id, Guid docId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        var result = await _service.RemoveDocumentAsync(userId, id, docId, ct);
+        return Ok(result);
+    }
 }

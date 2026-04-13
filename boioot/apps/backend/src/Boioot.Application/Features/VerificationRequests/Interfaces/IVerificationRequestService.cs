@@ -21,6 +21,11 @@ public interface IVerificationRequestService
     Task<VerificationRequestResponse> GetMyRequestByIdAsync(
         Guid userId, Guid requestId, CancellationToken ct = default);
 
+    Task DeleteDraftAsync(Guid userId, Guid requestId, CancellationToken ct = default);
+
+    Task<VerificationRequestResponse> RemoveDocumentAsync(
+        Guid userId, Guid requestId, Guid documentId, CancellationToken ct = default);
+
     // ── Admin-side ────────────────────────────────────────────────────────────
     Task<PagedResult<VerificationRequestSummary>> GetAllRequestsAsync(
         AdminVerificationRequestFilter filter, CancellationToken ct = default);

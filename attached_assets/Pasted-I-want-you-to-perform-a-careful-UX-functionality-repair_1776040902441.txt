@@ -1,0 +1,217 @@
+I want you to perform a **careful UX + functionality repair** for the **verification / document submission flow** in the Boioot project.
+
+## Context
+
+The current verification page and draft flow have multiple problems and I want them fixed **properly**, with **minimal but solid changes**, without breaking anything that already works.
+
+## Current problems to fix
+
+### 1) Document upload must be from the user's device, not by pasting a URL
+
+Right now the flow appears to depend on entering or using a link for images/documents.
+I do **not** want that.
+
+I want users to be able to:
+
+* upload images/documents directly **from their device**
+* use a normal file picker / attachment input
+* attach files such as:
+
+  * image files
+  * PDF documents
+  * identity documents
+  * commercial registration documents
+    depending on the verification type
+
+### 2) The page design looks unprofessional
+
+The current verification page has:
+
+* a dark heavy background
+* weak visual hierarchy
+* poor spacing / layout
+* overall unpolished UI
+
+I want the page redesigned so it feels:
+
+* clean
+* modern
+* professional
+* readable
+* consistent with the rest of the Boioot dashboard
+
+### 3) After creating a draft, there is no way to delete it
+
+This is a functional problem.
+
+I need a clear option to:
+
+* delete a draft verification request
+* with proper confirmation before deletion
+* and update the UI correctly after deletion
+
+### 4) There is no option to create a new request
+
+After a draft exists, the user should still have a clear way to:
+
+* create a new verification request
+* or start a fresh request when appropriate
+
+Please inspect the business logic first:
+
+* if only one active draft is allowed, then handle that cleanly in UI
+* if multiple requests are allowed, provide a proper “New Request” action
+
+### 5) “View” leads to 404
+
+When clicking the **View** button, the page goes to **404**.
+
+This must be diagnosed and fixed from the root.
+
+I need you to determine:
+
+* which route is currently used by the View button
+* why it is broken
+* whether the page does not exist
+* whether the route path is wrong
+* whether the ID / slug passed is invalid
+* whether the button should actually open an edit/details page instead
+
+### 6) No editing ability
+
+There should be a way to edit a draft or pending verification request when allowed.
+
+If the user clicks **View** on a draft, it should most likely open:
+
+* details page
+* or edit page
+  with the submitted information and attached files visible/editable as appropriate
+
+---
+
+## What I want you to do
+
+### First: inspect and diagnose
+
+Please inspect the verification flow and identify:
+
+1. Which frontend files/pages control:
+
+   * verification list page
+   * verification details page
+   * create/edit flow
+   * upload component
+   * draft actions
+
+2. Which backend endpoints currently exist for:
+
+   * create request
+   * save draft
+   * update draft
+   * delete draft
+   * upload document/file
+   * get request details
+
+3. What is the exact root cause of:
+
+   * URL-based upload behavior
+   * missing delete draft action
+   * missing new request action
+   * broken View button / 404
+   * missing edit capability
+
+---
+
+## Then: implement the fixes
+
+### A) Replace URL-style upload with proper file upload from device
+
+Implement a standard attachment flow:
+
+* file input
+* drag/drop if easy, optional
+* upload from local machine
+* validation for file type and size
+* proper preview where appropriate
+
+Do not build a fake upload UI.
+Use a real file selection flow that actually works.
+
+### B) Redesign the verification page UI
+
+Make the page cleaner and more professional:
+
+* lighter, cleaner background
+* proper card layout
+* better spacing
+* clearer section titles
+* cleaner buttons and form hierarchy
+* make the page feel production-ready
+
+### C) Add draft deletion
+
+Add:
+
+* Delete Draft button
+* confirmation prompt/modal
+* proper backend call
+* UI refresh after deletion
+
+### D) Add New Request action
+
+Add a clear action such as:
+
+* “New Verification Request”
+  or similar
+
+But first respect the business rules:
+
+* if only one draft/request is allowed, explain that in the UI
+* otherwise allow creating a new request cleanly
+
+### E) Fix View button 404
+
+Fix the View button properly:
+
+* correct route
+* correct ID handling
+* create missing page if necessary
+* if better, convert it to “View / Edit” page for draft requests
+
+### F) Add edit capability
+
+For drafts or editable requests:
+
+* allow editing the request
+* allow replacing/removing uploaded files where appropriate
+* keep it safe and minimal
+
+---
+
+## Important implementation rules
+
+* Do not break existing working verification logic
+* Reuse existing backend and frontend structure whenever possible
+* If backend changes are required, keep them minimal and production-safe
+* Do not add unnecessary complexity
+* Fix the root cause, not just the symptoms
+
+---
+
+## What I want in your response after implementation
+
+Please provide:
+
+1. The real root causes for each issue
+2. The files you changed
+3. The routes involved
+4. The backend endpoints used or added
+5. The exact UX changes you made
+6. The final code changes
+7. Any migrations or deployment steps if needed
+
+## Very important
+
+If any part of the current flow is conceptually wrong, fix it properly instead of patching around it.
+
+Start with inspection first, then implement the full fix.

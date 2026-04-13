@@ -154,6 +154,44 @@ public class VerificationRequestService : IVerificationRequestService
         return await GetRequestByIdCoreAsync(requestId, ct);
     }
 
+    public async Task DeleteDraftAsync(Guid userId, Guid requestId, CancellationToken ct = default)
+    {
+        var request = await _context.Set<VerificationRequest>()
+            .Include(r => r.Documents)
+            .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId, ct)
+            ?? throw new BoiootException("الطلب غير موجود", 404);
+
+        if (request.Status != VerificationRequestStatus.Draft)
+            throw new BoiootException("لا يمكن حذف طلب مُقدَّم أو مكتمل", 400);
+
+        _context.Set<VerificationDocument>().RemoveRange(request.Documents);
+        _context.Set<VerificationRequest>().Remove(request);
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("User {UserId} deleted draft verification request {RequestId}", userId, requestId);
+    }
+
+    public async Task<VerificationRequestResponse> RemoveDocumentAsync(
+        Guid userId, Guid requestId, Guid documentId, CancellationToken ct = default)
+    {
+        var request = await _context.Set<VerificationRequest>()
+            .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId, ct)
+            ?? throw new BoiootException("الطلب غير موجود", 404);
+
+        if (request.Status is not VerificationRequestStatus.Draft and not VerificationRequestStatus.NeedsMoreInfo)
+            throw new BoiootException("لا يمكن حذف مستند بعد تقديم الطلب", 400);
+
+        var doc = await _context.Set<VerificationDocument>()
+            .FirstOrDefaultAsync(d => d.Id == documentId && d.VerificationRequestId == requestId, ct)
+            ?? throw new BoiootException("المستند غير موجود", 404);
+
+        _context.Set<VerificationDocument>().Remove(doc);
+        request.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(ct);
+
+        return await GetRequestByIdCoreAsync(requestId, ct);
+    }
+
     // ── Admin-side ────────────────────────────────────────────────────────────
 
     public async Task<PagedResult<VerificationRequestSummary>> GetAllRequestsAsync(
