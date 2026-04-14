@@ -1,0 +1,113 @@
+I want you to inspect and explain the **current image compression / image processing workflow** used in the Boioot project.
+
+## Goal
+
+I do **not** want you to change anything yet.
+
+I want you to analyze the existing implementation and tell me exactly **how image upload and compression are currently handled**.
+
+## Please inspect and answer clearly
+
+### 1) Where is image processing currently happening?
+
+Check whether compression/resizing is done in:
+
+* frontend
+* backend
+* both
+* or not done at all
+
+### 2) What exactly happens to uploaded images?
+
+For each image upload flow, explain:
+
+* profile avatar upload
+* property images
+* verification documents (if image-based)
+
+I want to know:
+
+* Is the image resized?
+* Is quality reduced?
+* Is the format changed?
+* Is it cropped?
+* Is it converted to base64?
+* Is it stored as file path, URL, or binary data?
+
+### 3) Which libraries or browser APIs are being used?
+
+Please identify the exact tools used, such as:
+
+* canvas
+* browser image compression library
+* Sharp
+* ImageSharp
+* SkiaSharp
+* custom compression logic
+* no library at all
+
+### 4) What dimensions and limits are currently applied?
+
+For each upload type, tell me:
+
+* max file size accepted
+* max width/height
+* output width/height after compression
+* quality level used
+* allowed file types
+
+### 5) What is stored in the database?
+
+For uploaded images, tell me whether the system stores:
+
+* base64 string
+* relative file path
+* absolute URL
+* binary/blob
+* other metadata
+
+### 6) What happens after deployment / restart?
+
+I specifically want to know whether uploaded images are stored in:
+
+* ephemeral filesystem
+* persistent volume
+* database
+* external object storage
+
+and whether they survive:
+
+* redeploy
+* restart
+* scaling
+
+### 7) Are there different strategies for different image types?
+
+For example:
+
+* avatars
+* property images
+* verification documents
+
+or are all images treated the same way?
+
+---
+
+## Output format I want
+
+Please give me a clear report with these sections:
+
+1. **Current upload flow**
+2. **Current compression/resizing method**
+3. **Storage method**
+4. **Libraries/APIs used**
+5. **Limits and quality settings**
+6. **Weaknesses / risks in the current approach**
+7. **Whether this is production-grade or only a temporary solution**
+
+## Important
+
+* Do not modify code yet
+* Do not implement improvements yet
+* First inspect the real current method and explain it precisely
+* Mention the exact files involved
