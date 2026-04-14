@@ -46,6 +46,7 @@ export const FEATURE_ICONS: Record<string, string> = {
 export const BILLING_CYCLE_LABELS: Record<string, string> = {
   Monthly: "شهري",
   Yearly:  "سنوي",
+  OneTime: "دفعة واحدة",
 };
 
 // ── Highlighted plan ──────────────────────────────────────────────────────────

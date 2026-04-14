@@ -1,6 +1,6 @@
 export interface PublicPricingEntry {
   pricingId:    string;
-  billingCycle: "Monthly" | "Yearly";
+  billingCycle: "Monthly" | "Yearly" | "OneTime";
   priceAmount:  number;
   currencyCode: string;
 }
@@ -34,6 +34,11 @@ export interface PublicPricingItem {
   displayOrder:         number;
   isRecommended:        boolean;
   planCategory:         string | null;
+  /**
+   * Billing type: "free_default" | "one_time_fixed_term" | "recurring"
+   * Use this — not billingCycle — to drive UI decisions (hide toggle for one-time plans).
+   */
+  billingType:          string;
   pricing:              PublicPricingEntry[];
   limits:               PublicLimitItem[];
   features:             PublicFeatureItem[];

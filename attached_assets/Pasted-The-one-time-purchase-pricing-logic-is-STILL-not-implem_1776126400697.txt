@@ -1,0 +1,123 @@
+The one-time purchase pricing logic is STILL not implemented correctly in the frontend.
+
+## Current problem
+
+For the **Basic Owner plan** (and any plan configured as one-time purchase), the user-facing pricing modal still shows:
+
+* Monthly option
+* Yearly option
+* Recurring pricing tabs
+* "/ monthly" style wording
+* yearly discount badge
+
+This is wrong.
+
+## Required business rule
+
+If a plan is configured as **one-time purchase**, then the frontend must show:
+
+* one single price only
+* no monthly tab
+* no yearly tab
+* no recurring wording
+* no annual discount badge
+* no "/ month" or "/ yearly" labels
+
+In short:
+**one-time plans must render as one-time purchase plans, not subscriptions.**
+
+---
+
+## What I need you to inspect
+
+Please inspect BOTH:
+
+### 1) Admin plan configuration
+
+Check whether this plan is actually stored as:
+
+* one-time
+* monthly/yearly
+* mixed
+* or incorrectly mapped
+
+### 2) Frontend plan display modal/card
+
+Check the component that renders:
+
+* plan pricing tabs
+* monthly/yearly switch
+* displayed price label
+* recurring text
+* discount badge
+
+Most likely the UI is still assuming every plan is subscription-based.
+
+---
+
+## Required fix
+
+### A) Fix display logic for one-time plans
+
+If plan.purchaseModel === one-time (or equivalent):
+
+* hide monthly tab
+* hide yearly tab
+* hide discount badge
+* hide recurring labels
+* render only one fixed price card
+
+### B) Keep subscription behavior only for subscription plans
+
+If plan is:
+
+* monthly only → show monthly only
+* yearly only → show yearly only
+* monthly + yearly → show both
+* one-time → show only one-time
+
+### C) Fix wording
+
+For one-time plans, use wording like:
+
+* "One-time purchase"
+* "Pay once"
+* or the Arabic equivalent already used in project
+
+Do NOT display:
+
+* monthly
+* yearly
+* /month
+* /year
+
+### D) Fix user-facing modal completely
+
+The issue is visible in the public/user plan modal, so do not stop at admin form fixes.
+You must also fix the actual component that renders the plan for end users.
+
+---
+
+## Important
+
+Do not patch this visually only.
+Fix the actual rendering logic based on the plan billing model.
+
+---
+
+## What I want after implementation
+
+Please provide:
+
+1. Root cause of why one-time plans still show monthly/yearly
+2. Which frontend component was responsible
+3. Whether the plan data itself was wrong or only the UI logic
+4. Files changed
+5. Final rendering behavior for:
+
+   * one-time
+   * monthly
+   * yearly
+   * monthly + yearly
+
+Implement the real fix now.

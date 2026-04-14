@@ -83,7 +83,7 @@ function RequestCreatedView({
       }}>
         <InfoRow
           label="الباقة"
-          value={`${request.planName} — ${request.billingCycle === "Yearly" ? "سنوي" : "شهري"}`}
+          value={`${request.planName}${request.billingCycle === "OneTime" ? "" : ` — ${request.billingCycle === "Yearly" ? "سنوي" : "شهري"}`}`}
         />
         <InfoRow
           label="المبلغ"
@@ -284,7 +284,7 @@ export default function UpgradeModal({ intent, pricingId, onClose }: UpgradeModa
                       fontWeight: 400, fontSize: "0.8rem",
                       color: "var(--color-text-muted)", marginRight: "0.3rem",
                     }}>
-                      / {intent.billingCycle === "Yearly" ? "سنوياً" : "شهرياً"}
+                      {intent.billingCycle === "OneTime" ? "" : `/ ${intent.billingCycle === "Yearly" ? "سنوياً" : "شهرياً"}`}
                     </span>
                   </span>
                 </div>

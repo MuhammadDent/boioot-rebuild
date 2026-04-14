@@ -23,6 +23,11 @@ public record PublicPricingItem(
     bool IsRecommended,
     /// <summary>Groups plans on the pricing page: "Individual" | "Business" | null.</summary>
     string? PlanCategory,
+    /// <summary>
+    /// Lifecycle billing type: "free_default" | "one_time_fixed_term" | "recurring".
+    /// Use this to drive UI decisions (hide monthly/yearly toggle for one-time plans).
+    /// </summary>
+    string PlanBillingType,
     List<PublicPricingEntry> Pricing,
     List<PublicLimitItem> Limits,
     List<PublicFeatureItem> Features

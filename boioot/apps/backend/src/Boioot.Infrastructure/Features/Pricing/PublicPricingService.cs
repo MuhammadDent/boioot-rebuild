@@ -51,6 +51,7 @@ public class PublicPricingService : IPublicPricingService
                 p.DisplayOrder,
                 p.IsRecommended,
                 p.PlanCategory,
+                p.PlanBillingType,
             })
             .AsNoTracking()
             .ToListAsync(ct);
@@ -112,6 +113,7 @@ public class PublicPricingService : IPublicPricingService
             DisplayOrder:         p.DisplayOrder,
             IsRecommended:        p.IsRecommended,
             PlanCategory:         p.PlanCategory,
+            PlanBillingType:      p.PlanBillingType,
             Pricing: pricings
                 .Where(pp => pp.PlanId == p.Id)
                 .OrderBy(pp => pp.BillingCycle)

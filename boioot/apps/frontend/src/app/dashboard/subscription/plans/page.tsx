@@ -81,8 +81,12 @@ function PlanCard({
   onViewDetails: (plan: PublicPricingItem) => void;
   user: { role?: string | null; accountType?: string | null } | null;
 }) {
-  const pricing = plan.pricing.find(p => p.billingCycle === cycle)
-    ?? (plan.pricing.length > 0 ? plan.pricing[0] : undefined);
+  const isOneTimePlan = plan.billingType === "one_time_fixed_term"
+    || plan.pricing.every(p => p.billingCycle === "OneTime");
+
+  const pricing = isOneTimePlan
+    ? (plan.pricing.find(p => p.billingCycle === "OneTime") ?? plan.pricing[0])
+    : (plan.pricing.find(p => p.billingCycle === cycle) ?? plan.pricing[0]);
 
   // TODO(stabilization): plan.pricing may be empty for misconfigured plans — guard below
   const isFree = pricing ? pricing.priceAmount === 0 : plan.pricing.every(p => p.priceAmount === 0);
@@ -178,7 +182,7 @@ function PlanCard({
             {formatAmount(pricing.priceAmount, pricing.currencyCode)}
           </p>
           <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
-            / {BILLING_CYCLE_LABELS[cycle] ?? cycle}
+            {isOneTimePlan ? "دفعة واحدة" : `/ ${BILLING_CYCLE_LABELS[cycle] ?? cycle}`}
           </p>
         </div>
       )}
@@ -415,13 +419,15 @@ function CheckoutModal({
           <p style={{ margin: "0.4rem 0 0", fontSize: "1.2rem", fontWeight: 900, color: "#059669" }}>
             {formatAmount(selectedPricing.priceAmount, selectedPricing.currencyCode)}
             <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "#64748b", marginRight: "0.35rem" }}>
-              / {BILLING_CYCLE_LABELS[selectedPricing.billingCycle] ?? selectedPricing.billingCycle}
+              {plan.billingType === "one_time_fixed_term"
+                ? "دفعة واحدة"
+                : `/ ${BILLING_CYCLE_LABELS[selectedPricing.billingCycle] ?? selectedPricing.billingCycle}`}
             </span>
           </p>
         </div>
 
-        {/* Billing cycle selector (if multiple options) */}
-        {plan.pricing.length > 1 && (
+        {/* Billing cycle selector (if multiple options — hidden for one-time plans) */}
+        {plan.pricing.length > 1 && plan.billingType !== "one_time_fixed_term" && (
           <div style={{ marginBottom: "1.25rem" }}>
             <p style={{ margin: "0 0 0.6rem", fontSize: "0.85rem", fontWeight: 700, color: "#374151" }}>
               دورة الفوترة
@@ -935,7 +941,9 @@ export default function PlansPage() {
     .sort((a, b) => (a.displayOrder ?? a.rank) - (b.displayOrder ?? b.rank));
 
   const hasBothCycles = visiblePlans.some(p =>
-    p.pricing.some(pr => pr.billingCycle === "Yearly")
+    p.billingType !== "one_time_fixed_term"
+    && p.billingType !== "free_default"
+    && p.pricing.some(pr => pr.billingCycle === "Yearly")
   );
 
   return (
@@ -1032,7 +1040,7 @@ export default function PlansPage() {
             <p style={{ margin: "0.15rem 0 0", fontSize: "0.8rem", color: "#64748b" }}>
               {currentSub.status === "Active" ? "✓ نشط" : currentSub.status}
               {" · "}
-              {currentSub.billingCycle === "Monthly" ? "شهري" : "سنوي"}
+              {currentSub.billingCycle === "OneTime" ? "دفعة واحدة" : currentSub.billingCycle === "Monthly" ? "شهري" : "سنوي"}
             </p>
           </div>
           <button

@@ -21,8 +21,9 @@ function resolveCta(
   cycle: BillingCycle,
   sub: CurrentSubscriptionResponse | null
 ): { kind: CtaKind; pricingId: string | null } {
-  // For one-time plans, use the OneTime entry regardless of toggle cycle
-  const isOneTimePlan = plan.pricing.every((p) => p.billingCycle === "OneTime");
+  // For one-time plans, use the first pricing entry regardless of toggle cycle
+  const isOneTimePlan = plan.billingType === "one_time_fixed_term"
+    || plan.pricing.every((p) => p.billingCycle === "OneTime");
   const entry = isOneTimePlan
     ? plan.pricing.find((p) => p.billingCycle === "OneTime") ?? plan.pricing[0]
     : plan.pricing.find((p) => p.billingCycle === cycle);
@@ -86,7 +87,8 @@ export default function PricingCard({
   const isUpgrade  = kind === "upgrade";
 
   const oneTimeEntry = plan.pricing.find((p) => p.billingCycle === "OneTime");
-  const isOneTimePlan = plan.pricing.every((p) => p.billingCycle === "OneTime");
+  const isOneTimePlan = plan.billingType === "one_time_fixed_term"
+    || plan.pricing.every((p) => p.billingCycle === "OneTime");
 
   // For one-time plans, always show the OneTime entry regardless of toggle cycle
   const entry = isOneTimePlan
@@ -260,7 +262,7 @@ export default function PricingCard({
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.3rem", flexWrap: "wrap" }}>
-              {entry?.billingCycle === "OneTime" ? (
+              {isOneTimePlan ? (
                 <>
                   <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
                     دفعة واحدة
