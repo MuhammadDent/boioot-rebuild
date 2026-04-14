@@ -1,0 +1,117 @@
+I need a **root-cause investigation and permanent fix** for the user profile avatar issue in Boioot.
+
+## Problem
+
+The avatar upload appears to work correctly:
+
+* user uploads a profile image
+* image is displayed correctly
+* it remains visible for several hours
+
+But later:
+
+* the profile image disappears
+* this happens without the user deleting it
+* sometimes the old broken placeholder comes back
+
+## Important
+
+This means the issue is probably **not the upload form itself** and **not just CSS**.
+
+I want you to investigate the **real persistence problem**.
+
+---
+
+## Likely root-cause areas to inspect
+
+Please inspect and verify all of the following:
+
+1. Where is the uploaded avatar actually stored?
+
+   * local filesystem?
+   * temp folder?
+   * app container storage?
+   * public folder?
+   * object storage?
+   * signed URL?
+
+2. What exactly is stored in the database?
+
+   * permanent file path?
+   * public URL?
+   * temporary signed URL?
+   * preview blob URL by mistake?
+
+3. Does the file survive:
+
+   * app restart
+   * redeploy
+   * server recycle
+   * cleanup job
+
+4. If the app runs on Vercel / Fly / containerized environment:
+
+   * are we incorrectly relying on ephemeral local storage?
+
+5. Is there any cleanup process removing files after some time?
+
+---
+
+## Expected diagnosis
+
+I want you to determine which of these is the actual issue:
+
+* uploaded file is stored in non-persistent local storage
+* stored URL is temporary and expires
+* DB stores wrong value after upload
+* frontend uses preview URL instead of final permanent URL
+* backend returns a transient URL
+* another process deletes the file
+
+---
+
+## Required fix
+
+Implement a **permanent avatar storage strategy**.
+
+### If current storage is local/ephemeral:
+
+Move avatar uploads to durable storage and store a permanent reference.
+
+### If current URL is temporary:
+
+Store a permanent URL or file key instead.
+
+### If frontend uses preview/blob URL:
+
+Fix it so only the final persisted URL is saved.
+
+---
+
+## Also verify display logic
+
+After fixing persistence:
+
+* ensure avatar still uses proper object-fit/object-position styling
+* ensure fallback initials only show when there is truly no avatar
+* ensure all avatar usages are consistent:
+
+  * profile page
+  * sidebar
+  * header
+
+---
+
+## What I want from you
+
+1. Real root cause
+2. Files involved
+3. Whether storage is ephemeral or URL is temporary
+4. Exact fix implemented
+5. Whether backend or database changes were needed
+6. Final code changes
+
+## Very important
+
+Do not patch only the UI.
+Fix the persistence problem from the root.

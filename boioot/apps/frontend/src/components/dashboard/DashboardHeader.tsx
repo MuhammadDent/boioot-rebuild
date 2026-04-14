@@ -98,6 +98,7 @@ export default function DashboardHeader({ onMenuToggle }: Props) {
             <img
               src={user.profileImageUrl}
               alt="صورة المستخدم"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
               style={{
                 position: "absolute",
                 top: 0, left: 0, right: 0, bottom: 0,

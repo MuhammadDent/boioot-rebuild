@@ -6,7 +6,7 @@ export interface CurrentSubscriptionResponse {
   audienceType:   string | null;
   tier:           string | null;
   pricingId:      string | null;
-  billingCycle:   "Monthly" | "Yearly";
+  billingCycle:   "Monthly" | "Yearly" | "OneTime";
   priceAmount:    number;
   currencyCode:   string;
   rank:           number;
@@ -93,7 +93,7 @@ export type UpgradeIntentReason =
 export interface UpgradeIntentResponse {
   currentPlanName: string;
   targetPlanName:  string;
-  billingCycle:    "Monthly" | "Yearly";
+  billingCycle:    "Monthly" | "Yearly" | "OneTime";
   priceAmount:     number;
   currencyCode:    string;
   allowed:         boolean;

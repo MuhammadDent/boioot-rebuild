@@ -279,6 +279,7 @@ export default function AppSidebar({
               <img
                 src={user.profileImageUrl}
                 alt=""
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                 style={{
                   position: "absolute",
                   top: 0, left: 0, right: 0, bottom: 0,

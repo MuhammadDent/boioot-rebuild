@@ -75,7 +75,7 @@ export interface PaymentRequestResponse {
 export interface CreatePaymentRequestDto {
   planId:                  string;
   pricingId?:              string;
-  billingCycle:            "Monthly" | "Yearly";
+  billingCycle:            "Monthly" | "Yearly" | "OneTime";
   paymentMethod:           string;
   customerNote?:           string;
   salesRepresentativeName?: string;

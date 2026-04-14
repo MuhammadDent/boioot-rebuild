@@ -200,6 +200,7 @@ function ProfileHeaderCard({ profile }: { profile: NormalizedProfile }) {
           <img
             src={profile.avatarUrl}
             alt={profile.fullName}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
             style={{
               position: "absolute",
               top: 0, left: 0, right: 0, bottom: 0,
@@ -1166,38 +1167,28 @@ function ProfileAvatarTab({
       return;
     }
 
-    // 2. Hard size limit: 10 MB
+    // 2. Hard size limit: 5 MB
     const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-    if (file.size > 10 * 1024 * 1024) {
-      setBanner({ type: "error", msg: `حجم الصورة (${sizeMB} MB) كبير جداً. الحد الأقصى 10MB.` });
+    if (file.size > 5 * 1024 * 1024) {
+      setBanner({ type: "error", msg: `حجم الصورة (${sizeMB} MB) كبير جداً. الحد الأقصى 5MB.` });
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
 
-    // 3. Auto-compress if > 1.8 MB
-    if (file.size > 1.8 * 1024 * 1024) {
-      setLoading(true);
-      setLoadingMsg("جارٍ ضغط الصورة…");
-      try {
-        const { blob, dataUrl } = await compressImage(file);
-        const compressed = new File([blob], "photo.jpg", { type: "image/jpeg" });
-        setPendingFile(compressed);
-        setPreview(dataUrl);
-      } catch {
-        setBanner({ type: "error", msg: "تعذّر معالجة الصورة، جرّب صورة أخرى." });
-        if (fileRef.current) fileRef.current.value = "";
-      } finally {
-        setLoading(false);
-        setLoadingMsg("جارٍ الحفظ…");
-      }
-      return;
+    // 3. Always compress to produce a compact JPEG data URI (max 800px, stored in DB)
+    setLoading(true);
+    setLoadingMsg("جارٍ معالجة الصورة…");
+    try {
+      const { dataUrl } = await compressImage(file, 800, 0.80);
+      setPreview(dataUrl);
+      setPendingFile(file);
+    } catch {
+      setBanner({ type: "error", msg: "تعذّر معالجة الصورة، جرّب صورة أخرى." });
+      if (fileRef.current) fileRef.current.value = "";
+    } finally {
+      setLoading(false);
+      setLoadingMsg("جارٍ الحفظ…");
     }
-
-    // 4. Small file — use directly
-    setPendingFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setPreview(reader.result as string);
-    reader.readAsDataURL(file);
   }
 
   function removeImage() {
@@ -1209,20 +1200,13 @@ function ProfileAvatarTab({
   async function handleSave() {
     setBanner(null);
     setLoading(true);
-    setLoadingMsg("جارٍ الرفع…");
+    setLoadingMsg("جارٍ الحفظ…");
     try {
-      let imageUrl: string = preview ?? "";
+      // Avatar is stored as a base64 data URI directly in the database.
+      // This avoids ephemeral filesystem storage on Fly.io containers,
+      // ensuring the avatar persists across redeployments and restarts.
+      const imageUrl: string = preview ?? "";
 
-      // Upload new file first → get a real URL
-      if (pendingFile) {
-        const formData = new FormData();
-        formData.append("file", pendingFile);
-        const { url } = await api.upload<{ url: string }>("/upload/image", formData);
-        imageUrl = url;
-        setPreview(url);
-      }
-
-      setLoadingMsg("جارٍ الحفظ…");
       const updated = await api.put<UserProfileResponse>("/auth/profile", {
         fullName: raw.fullName,
         phone:    raw.phone,
@@ -1232,7 +1216,7 @@ function ProfileAvatarTab({
       setPendingFile(null);
       setBanner({ type: "success", msg: "تم تحديث الصورة الشخصية بنجاح ✓" });
     } catch (err: unknown) {
-      setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ أثناء الرفع." });
+      setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ أثناء الحفظ." });
     } finally {
       setLoading(false);
       setLoadingMsg("جارٍ الحفظ…");
@@ -1244,7 +1228,7 @@ function ProfileAvatarTab({
       {banner && <Banner type={banner.type} msg={banner.msg} />}
 
       <p style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", marginBottom: "1.25rem" }}>
-        الصورة الشخصية تظهر في لوحة التحكم والإعلانات. الأنواع المقبولة: JPG، PNG، WebP — الحد الأقصى 10MB (يتم الضغط تلقائياً).
+        الصورة الشخصية تظهر في لوحة التحكم والإعلانات. الأنواع المقبولة: JPG، PNG، WebP — الحد الأقصى 5MB (تُضغط تلقائياً وتُحفظ بشكل دائم).
       </p>
 
       <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap" }}>
@@ -1268,6 +1252,10 @@ function ProfileAvatarTab({
             <img
               src={preview}
               alt="الصورة الشخصية"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                setPreview(null);
+              }}
               style={{
                 position: "absolute",
                 top: 0, left: 0, right: 0, bottom: 0,
