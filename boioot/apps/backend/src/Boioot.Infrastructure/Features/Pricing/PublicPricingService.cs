@@ -115,7 +115,7 @@ public class PublicPricingService : IPublicPricingService
             PlanCategory:         p.PlanCategory,
             PlanBillingType:      p.PlanBillingType,
             Pricing: pricings
-                .Where(pp => pp.PlanId == p.Id)
+                .Where(pp => pp.PlanId == p.Id && IsCycleCompatible(pp.BillingCycle, p.PlanBillingType))
                 .OrderBy(pp => pp.BillingCycle)
                 .Select(pp => new PublicPricingEntry(pp.Id, pp.BillingCycle, (decimal)pp.PriceAmount, pp.CurrencyCode))
                 .ToList(),
@@ -129,4 +129,17 @@ public class PublicPricingService : IPublicPricingService
                 .ToList()
         )).ToList();
     }
+
+    /// <summary>
+    /// Returns true when a pricing entry's BillingCycle is compatible with the plan's PlanBillingType.
+    /// This is the single source-of-truth for cycle/type compatibility used across all public APIs.
+    /// </summary>
+    private static bool IsCycleCompatible(string billingCycle, string? planBillingType) =>
+        planBillingType switch
+        {
+            "one_time_fixed_term" => billingCycle == "OneTime",
+            "recurring"           => billingCycle == "Monthly" || billingCycle == "Yearly",
+            "free_default"        => false, // free plans carry no purchasable pricing
+            _                     => true,  // unknown/null billing type — allow all (safe fallback)
+        };
 }

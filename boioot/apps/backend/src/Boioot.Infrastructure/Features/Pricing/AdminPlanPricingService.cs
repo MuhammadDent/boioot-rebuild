@@ -22,10 +22,12 @@ public class AdminPlanPricingService : IAdminPlanPricingService
     // ── GetByPlanAsync ────────────────────────────────────────────────────────
     public async Task<List<PlanPricingResponse>> GetByPlanAsync(Guid planId, CancellationToken ct = default)
     {
-        _ = await GetPlanOrThrowAsync(planId, ct);
+        var plan = await GetPlanOrThrowAsync(planId, ct);
 
+        // Only return pricing entries whose BillingCycle is compatible with the plan's billing type.
+        // This prevents stale Monthly/Yearly entries from surfacing for OneTime plans (and vice-versa).
         return await _db.PlanPricings
-            .Where(pp => pp.PlanId == planId)
+            .Where(pp => pp.PlanId == planId && IsCycleCompatible(pp.BillingCycle, plan.PlanBillingType))
             .OrderBy(pp => pp.BillingCycle)
             .Select(pp => ToResponse(pp))
             .ToListAsync(ct);
@@ -35,8 +37,9 @@ public class AdminPlanPricingService : IAdminPlanPricingService
     public async Task<PlanPricingResponse> CreateAsync(
         Guid planId, UpsertPlanPricingRequest request, CancellationToken ct = default)
     {
-        _ = await GetPlanOrThrowAsync(planId, ct);
+        var plan = await GetPlanOrThrowAsync(planId, ct);
         ValidateBillingCycle(request.BillingCycle);
+        ValidateCycleCompatibility(request.BillingCycle, plan.PlanBillingType);
 
         var entry = new PlanPricing
         {
@@ -66,8 +69,10 @@ public class AdminPlanPricingService : IAdminPlanPricingService
     public async Task<PlanPricingResponse> UpdateAsync(
         Guid planId, Guid pricingId, UpsertPlanPricingRequest request, CancellationToken ct = default)
     {
+        var plan  = await GetPlanOrThrowAsync(planId, ct);
         var entry = await GetPricingOrThrowAsync(planId, pricingId, ct);
         ValidateBillingCycle(request.BillingCycle);
+        ValidateCycleCompatibility(request.BillingCycle, plan.PlanBillingType);
 
         entry.BillingCycle     = request.BillingCycle;
         entry.PriceAmount      = request.PriceAmount;
@@ -131,6 +136,30 @@ public class AdminPlanPricingService : IAdminPlanPricingService
         if (cycle is not ("Monthly" or "Yearly" or "OneTime"))
             throw new BoiootException("BillingCycle يجب أن يكون 'Monthly' أو 'Yearly' أو 'OneTime'", 400);
     }
+
+    /// <summary>
+    /// Throws 400 if the billing cycle is incompatible with the plan's billing type.
+    /// Prevents adding Monthly/Yearly pricing to a one_time plan (and vice-versa).
+    /// </summary>
+    private static void ValidateCycleCompatibility(string billingCycle, string planBillingType)
+    {
+        if (!IsCycleCompatible(billingCycle, planBillingType))
+            throw new BoiootException(
+                $"لا يمكن إضافة سعر بدورة '{billingCycle}' إلى خطة من نوع '{planBillingType}'. " +
+                "تحقق من توافق نوع الفوترة مع دورة السعر.", 400);
+    }
+
+    /// <summary>
+    /// Returns true when a pricing BillingCycle is compatible with the plan's PlanBillingType.
+    /// </summary>
+    private static bool IsCycleCompatible(string billingCycle, string? planBillingType) =>
+        planBillingType switch
+        {
+            "one_time_fixed_term" => billingCycle == "OneTime",
+            "recurring"           => billingCycle == "Monthly" || billingCycle == "Yearly",
+            "free_default"        => false,
+            _                     => true,
+        };
 
     private static PlanPricingResponse ToResponse(PlanPricing pp) => new(
         pp.Id,

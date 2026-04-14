@@ -433,7 +433,9 @@ function CheckoutModal({
               دورة الفوترة
             </p>
             <div style={{ display: "flex", gap: "0.6rem" }}>
-              {plan.pricing.map(p => (
+              {plan.pricing
+                .filter(p => p.billingCycle !== "OneTime") // defensive: never show OneTime in recurring selector
+                .map(p => (
                 <button
                   key={p.pricingId}
                   onClick={() => setSelectedPricing(p)}
