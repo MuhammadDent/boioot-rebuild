@@ -1,0 +1,77 @@
+You are a senior .NET architect working on a production SaaS migration.
+
+Project context:
+- ASP.NET Core Web API
+- Current upload logic is inside UploadController
+- Existing endpoints must remain stable
+- Do NOT break existing API contracts
+- Do NOT remove current local upload logic yet unless replacing it safely
+- We are migrating storage to Cloudflare R2 step-by-step
+
+What I want in this phase:
+Implement the storage abstraction and configuration layer only, plus safe dependency registration.
+Do NOT fully rewrite UploadController yet unless needed minimally for wiring.
+Do NOT introduce breaking changes.
+
+Requirements:
+
+1) Analyze the current project structure and add a clean storage abstraction:
+- Create an interface: IFileStorageService
+- Create supporting models/options for Cloudflare R2 configuration
+- Create an R2-backed implementation class, but keep it isolated and clean
+- Also create a LocalFileStorageService fallback implementation so the app can still run safely if R2 is not configured
+
+2) Add configuration classes:
+Create something like:
+- StorageOptions
+- R2Options
+
+They should support settings such as:
+- Provider (Local or R2)
+- BucketName
+- PublicBaseUrl
+- AccountId
+- AccessKeyId
+- SecretAccessKey
+
+3) Register services in Program.cs safely:
+- Bind options from configuration
+- Register IFileStorageService
+- If storage provider is R2 and required config exists, use R2FileStorageService
+- Otherwise use LocalFileStorageService as fallback
+
+4) Add required NuGet packages if needed for R2 S3-compatible access
+Use the AWS S3 SDK appropriate for .NET if that is the best fit for Cloudflare R2.
+
+5) Add configuration placeholders to:
+- appsettings.json
+- appsettings.Production.json if appropriate
+
+Use placeholder values only, no real secrets.
+Secrets must come from environment variables / Fly.io secrets later.
+
+Suggested structure:
+- Provider: "Local" by default for safety
+- PublicBaseUrl for current local files can remain relative or configurable
+- Add a new "Storage" section
+
+6) Do NOT yet change frontend behavior.
+7) Do NOT yet remove existing endpoints.
+8) Do NOT yet add image compression libraries in this phase.
+9) Keep compile-safe and production-safe.
+
+10) Return in your response:
+- What files you created
+- What files you modified
+- Full code for each created/modified file
+- Any NuGet package added
+- A short explanation of how the fallback works
+
+Important constraints:
+- Existing upload endpoints must keep working after this phase
+- No temporary hacks
+- No hardcoded secrets
+- No breaking renames
+- Clean architecture mindset
+
+After making changes, also tell me the exact next phase you recommend before touching UploadController heavily.

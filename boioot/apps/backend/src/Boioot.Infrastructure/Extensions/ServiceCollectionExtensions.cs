@@ -2,6 +2,9 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Features.Billing.Interfaces;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Application.Features.Admin.Interfaces;
+using Boioot.Application.Features.Storage;
+using Boioot.Application.Features.Storage.Settings;
+using Boioot.Infrastructure.Features.Storage;
 using Boioot.Application.Features.VerificationRequests.Interfaces;
 using Boioot.Infrastructure.Features.VerificationRequests;
 using Boioot.Application.Features.AgentManagement.Interfaces;
@@ -150,6 +153,48 @@ public static class ServiceCollectionExtensions
         services.AddScoped<DatabaseStartupService>();
         services.AddScoped<SchemaEvolutionService>();
         services.AddScoped<RbacRepository>();
+
+        // ── File storage abstraction ───────────────────────────────────────────
+        // Bind StorageOptions (includes nested R2Options) from config.
+        // Registration logic:
+        //   - Provider = "R2" AND all R2 fields are non-empty  →  R2FileStorageService
+        //   - Everything else (Local, missing config, partial config)  →  LocalFileStorageService
+        //
+        // This means the app ALWAYS starts safely: if Fly.io secrets are not
+        // yet configured, it silently falls back to local disk.
+        services.Configure<StorageOptions>(
+            configuration.GetSection(StorageOptions.SectionName));
+
+        var storageSection = configuration.GetSection(StorageOptions.SectionName);
+        var provider       = storageSection["Provider"] ?? "Local";
+
+        var r2AccountId  = storageSection["R2:AccountId"]       ?? string.Empty;
+        var r2BucketName = storageSection["R2:BucketName"]      ?? string.Empty;
+        var r2AccessKey  = storageSection["R2:AccessKeyId"]     ?? string.Empty;
+        var r2Secret     = storageSection["R2:SecretAccessKey"] ?? string.Empty;
+        var r2BaseUrl    = storageSection["R2:PublicBaseUrl"]   ?? string.Empty;
+
+        var r2IsConfigured =
+            provider.Equals("R2", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(r2AccountId)  &&
+            !string.IsNullOrWhiteSpace(r2BucketName) &&
+            !string.IsNullOrWhiteSpace(r2AccessKey)  &&
+            !string.IsNullOrWhiteSpace(r2Secret)     &&
+            !string.IsNullOrWhiteSpace(r2BaseUrl);
+
+        if (r2IsConfigured)
+        {
+            Console.WriteLine("[STARTUP] IFileStorageService → R2FileStorageService (Cloudflare R2)");
+            services.AddSingleton<IFileStorageService, R2FileStorageService>();
+        }
+        else
+        {
+            var reason = provider.Equals("R2", StringComparison.OrdinalIgnoreCase)
+                ? "R2 credentials incomplete — falling back to Local"
+                : $"Provider='{provider}'";
+            Console.WriteLine($"[STARTUP] IFileStorageService → LocalFileStorageService ({reason})");
+            services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        }
 
         return services;
     }
