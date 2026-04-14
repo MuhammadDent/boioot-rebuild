@@ -343,7 +343,7 @@ function CheckoutModal({
         setSubmitPhase("uploading");
         const form = new FormData();
         form.append("file", proofFile);
-        const { url } = await api.postForm<{ url: string; fileName: string }>("/upload/proof", form);
+        const { url } = await api.upload<{ url: string; fileName: string }>("/upload/proof", form);
 
         setSubmitPhase("attaching");
         await paymentRequestsApi.uploadReceipt(result.id, { receiptImageUrl: url });

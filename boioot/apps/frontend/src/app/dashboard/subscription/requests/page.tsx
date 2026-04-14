@@ -100,7 +100,7 @@ function ReceiptUploadSection({
     try {
       const form = new FormData();
       form.append("file", selectedFile);
-      const { url } = await api.postForm<{ url: string; fileName: string }>("/upload/proof", form);
+      const { url } = await api.upload<{ url: string; fileName: string }>("/upload/proof", form);
       const updated = await paymentRequestsApi.uploadReceipt(requestId, {
         receiptImageUrl: url,
       });

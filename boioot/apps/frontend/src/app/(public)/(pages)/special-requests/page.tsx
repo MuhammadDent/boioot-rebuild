@@ -143,7 +143,7 @@ export default function SpecialRequestsPage() {
       try {
         const fd = new FormData();
         fd.append("file", file);
-        const res = await api.postForm<{ url: string }>("/upload/special-request-attachment", fd);
+        const res = await api.upload<{ url: string }>("/upload/special-request-attachment", fd);
         newFiles.push({ name: file.name, url: res.url, isPdf: file.type === "application/pdf" });
       } catch {
         setFileError(`فشل رفع الملف: ${file.name}`);

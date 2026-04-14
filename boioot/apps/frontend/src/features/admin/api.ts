@@ -334,7 +334,7 @@ export const adminApi = {
   uploadImage(file: File): Promise<{ url: string }> {
     const form = new FormData();
     form.append("file", file);
-    return api.postForm("/upload/image", form);
+    return api.upload("/upload/image", form);
   },
 
   /** POST /api/admin/companies */
