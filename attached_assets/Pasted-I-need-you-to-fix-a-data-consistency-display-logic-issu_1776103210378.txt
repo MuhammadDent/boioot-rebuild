@@ -1,0 +1,98 @@
+I need you to fix a **data consistency + display logic issue** in the admin plan editor for Boioot.
+
+## Problem
+
+We already changed the billing model UI so that when the admin selects:
+
+* **One-time purchase**
+
+the edit form correctly shows only the **one-time price** field.
+
+However, the plan details still show old pricing entries such as:
+
+* monthly
+* yearly
+
+inside the **subscription prices / plan pricing details** section.
+
+This is incorrect and confusing.
+
+## Expected behavior
+
+If the selected billing model is:
+
+### OneTime
+
+Then the plan should:
+
+* display only the one-time purchase price
+* NOT display monthly pricing
+* NOT display yearly pricing
+* NOT appear as if it still supports subscriptions
+
+## Root cause to investigate
+
+Please inspect both:
+
+1. **Frontend display logic**
+
+   * Is the UI still rendering old monthly/yearly pricing rows even when billingCycle = OneTime?
+   * Is the display component ignoring the selected billing model?
+
+2. **Backend / persistence logic**
+
+   * When a plan is changed to OneTime, are old monthly/yearly price records still left active in the database?
+   * Are they supposed to be deleted, disabled, or filtered out?
+
+## Required fix
+
+Implement the correct behavior from the root.
+
+### A) Frontend fix
+
+Wherever pricing details are shown:
+
+* if billingCycle / purchase model = OneTime
+* show only the one-time purchase price
+* hide monthly/yearly entries entirely
+
+### B) Backend / save logic fix
+
+When a plan is saved as OneTime:
+
+* make sure old recurring subscription price rows do not remain active/visible
+* choose the safest strategy:
+
+  * disable them
+  * archive them
+  * delete them
+  * or exclude them from plan details queries
+    depending on current architecture
+
+### C) Validation / consistency
+
+Make sure:
+
+* OneTime plan cannot simultaneously appear as Monthly or Yearly in the plan details UI
+* pricing summary and pricing list stay consistent with selected billing model
+
+## Important
+
+Do not only hide the fields in the edit form.
+Fix:
+
+* the saved data consistency
+* the displayed pricing summary
+* the prices list section
+
+## Output required
+
+After fixing, tell me:
+
+1. The real root cause
+2. Whether the issue was frontend only, backend only, or both
+3. Which files were changed
+4. How old monthly/yearly prices are handled now when plan becomes OneTime
+5. Final behavior for OneTime plans
+
+Please implement a clean and production-safe fix.

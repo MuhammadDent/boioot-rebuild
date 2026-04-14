@@ -342,12 +342,40 @@ public class AdminPlanService : IAdminPlanService
         plan.AutoDowngradeOnExpiry          = request.AutoDowngradeOnExpiry;
         plan.AllowRepurchaseOnConsumption   = request.AllowRepurchaseOnConsumption;
         plan.AllowEarlyRenewalOnConsumption = request.AllowEarlyRenewalOnConsumption;
-        plan.PlanBillingType         = string.IsNullOrWhiteSpace(request.PlanBillingType) ? "recurring" : request.PlanBillingType.Trim();
+        var newBillingType           = string.IsNullOrWhiteSpace(request.PlanBillingType) ? "recurring" : request.PlanBillingType.Trim();
+        plan.PlanBillingType         = newBillingType;
         plan.RecurringCycle          = string.IsNullOrWhiteSpace(request.RecurringCycle)  ? null : request.RecurringCycle.Trim();
         plan.DurationDays            = request.DurationDays;
         plan.ConsumptionPolicy       = string.IsNullOrWhiteSpace(request.ConsumptionPolicy) ? "none" : request.ConsumptionPolicy.Trim();
         plan.ExpiryRule              = string.IsNullOrWhiteSpace(request.ExpiryRule) ? "expire_by_date" : request.ExpiryRule.Trim();
         plan.DowngradePlanCode       = string.IsNullOrWhiteSpace(request.DowngradePlanCode) ? null : request.DowngradePlanCode.Trim();
+
+        // ── Deactivate pricing entries that are incompatible with the new billing type ──
+        // Strategy: soft-deactivate (IsActive = false) rather than hard-delete.
+        // This preserves historical data and allows re-activation if the billing type is reverted.
+        var existingPricings = await _db.PlanPricings
+            .Where(pp => pp.PlanId == plan.Id)
+            .ToListAsync(ct);
+
+        foreach (var pp in existingPricings)
+        {
+            bool compatible = newBillingType switch
+            {
+                "one_time_fixed_term" => pp.BillingCycle == "OneTime",
+                "recurring"           => pp.BillingCycle == "Monthly" || pp.BillingCycle == "Yearly",
+                "free_default"        => false, // free plans carry no pricing entries
+                _                     => true,
+            };
+
+            if (!compatible && pp.IsActive)
+            {
+                pp.IsActive  = false;
+                pp.UpdatedAt = DateTime.UtcNow;
+                _logger.LogInformation(
+                    "Deactivated incompatible PlanPricing {PricingId} ({Cycle}) — plan billing type changed to {BillingType}",
+                    pp.Id, pp.BillingCycle, newBillingType);
+            }
+        }
 
         await _db.SaveChangesAsync(ct);
 

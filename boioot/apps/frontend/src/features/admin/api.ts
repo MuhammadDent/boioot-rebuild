@@ -445,6 +445,12 @@ export const adminApi = {
     applicableAccountType?: string;
     planCategory?: string;
     billingMode?: string;
+    planBillingType?: string;
+    recurringCycle?: string;
+    durationDays?: number;
+    consumptionPolicy?: string;
+    expiryRule?: string;
+    downgradePlanCode?: string;
     displayOrder?: number;
     badgeText?: string;
     planColor?: string;
@@ -481,6 +487,12 @@ export const adminApi = {
     isRecommended: boolean;
     planCategory?: string;
     billingMode: string;
+    planBillingType?: string;
+    recurringCycle?: string;
+    durationDays?: number;
+    consumptionPolicy?: string;
+    expiryRule?: string;
+    downgradePlanCode?: string;
     badgeText?: string;
     planColor?: string;
     hasTrial?: boolean;

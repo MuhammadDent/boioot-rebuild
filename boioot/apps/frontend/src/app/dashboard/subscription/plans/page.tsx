@@ -875,6 +875,7 @@ export default function PlansPage() {
 
   const [freeActivatingId, setFreeActivatingId]   = useState<string | null>(null);
   const [freeSuccessPlan, setFreeSuccessPlan]     = useState<string | null>(null);
+  const [freeActivateError, setFreeActivateError] = useState<string | null>(null);
   const [detailPlan, setDetailPlan]               = useState<PublicPricingItem | null>(null);
 
   // Audience tab for User role — initialized from ?audience= query param (client-side), defaults to "owner"
@@ -922,7 +923,7 @@ export default function PlansPage() {
         .then(sub => setCurrentSub(sub))
         .catch(() => {});
     } catch (err) {
-      setError(normalizeError(err));
+      setFreeActivateError(normalizeError(err));
     } finally {
       setFreeActivatingId(null);
     }
@@ -1191,6 +1192,13 @@ export default function PlansPage() {
             />
           ))}
         </div>
+      )}
+
+      {/* Free activation error */}
+      {freeActivateError && (
+        <p style={{ color: "var(--color-error, #dc2626)", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "0.6rem 1rem", fontSize: "0.88rem", margin: "0.75rem 0" }}>
+          {freeActivateError}
+        </p>
       )}
 
       {/* Info footer */}

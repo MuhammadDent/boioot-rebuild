@@ -364,11 +364,12 @@ function NamedFeatureToggle({
 interface PricingRowProps {
   entry: AdminPlanPricingEntry;
   planId: string;
+  planBillingType: string;
   onUpdated: (entry: AdminPlanPricingEntry) => void;
   onDeleted: (id: string) => void;
 }
 
-function PricingRow({ entry, planId, onUpdated, onDeleted }: PricingRowProps) {
+function PricingRow({ entry, planId, planBillingType, onUpdated, onDeleted }: PricingRowProps) {
   const [editing, setEditing]     = useState(false);
   const [price, setPrice]         = useState(String(entry.priceAmount));
   const [currency, setCurrency]   = useState(entry.currencyCode);
@@ -432,9 +433,9 @@ function PricingRow({ entry, planId, onUpdated, onDeleted }: PricingRowProps) {
         <div>
           <label style={labelStyle}>دورة الفوترة</label>
           <select value={cycle} onChange={e => setCycle(e.target.value)} style={selectStyle}>
-            <option value="Monthly">شهري</option>
-            <option value="Yearly">سنوي</option>
-            <option value="OneTime">مرة واحدة</option>
+            {planBillingType !== "one_time_fixed_term" && <option value="Monthly">شهري</option>}
+            {planBillingType !== "one_time_fixed_term" && <option value="Yearly">سنوي</option>}
+            {planBillingType === "one_time_fixed_term" && <option value="OneTime">مرة واحدة</option>}
           </select>
         </div>
         <div>
@@ -467,12 +468,14 @@ function PricingRow({ entry, planId, onUpdated, onDeleted }: PricingRowProps) {
 
 interface AddPricingFormProps {
   planId: string;
+  planBillingType: string;
   onCreated: (entry: AdminPlanPricingEntry) => void;
   onCancel: () => void;
 }
 
-function AddPricingForm({ planId, onCreated, onCancel }: AddPricingFormProps) {
-  const [cycle, setCycle]         = useState("Monthly");
+function AddPricingForm({ planId, planBillingType, onCreated, onCancel }: AddPricingFormProps) {
+  const defaultCycle = planBillingType === "one_time_fixed_term" ? "OneTime" : "Monthly";
+  const [cycle, setCycle]         = useState(defaultCycle);
   const [price, setPrice]         = useState("0");
   const [currency, setCurrency]   = useState("SYP");
   const [isActive, setIsActive]   = useState(true);
@@ -502,9 +505,9 @@ function AddPricingForm({ planId, onCreated, onCancel }: AddPricingFormProps) {
         <div>
           <label style={labelStyle}>دورة الفوترة</label>
           <select value={cycle} onChange={e => setCycle(e.target.value)} style={selectStyle}>
-            <option value="Monthly">شهري</option>
-            <option value="Yearly">سنوي</option>
-            <option value="OneTime">مرة واحدة</option>
+            {planBillingType !== "one_time_fixed_term" && <option value="Monthly">شهري</option>}
+            {planBillingType !== "one_time_fixed_term" && <option value="Yearly">سنوي</option>}
+            {planBillingType === "one_time_fixed_term" && <option value="OneTime">مرة واحدة</option>}
           </select>
         </div>
         <div>
@@ -1536,49 +1539,70 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           </form>
 
           {/* ── Section 4: Pricing Entries (existing plans only) ── */}
-          {!isNew && (
-            <CollapsibleSection
-              title="أسعار الاشتراك"
-              icon="🏷"
-              count={pricing.length}
-              defaultOpen={false}
-            >
-              {!showAddPricing && (
-                <div style={{ marginBottom: "0.75rem" }}>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    style={{ padding: "0.3rem 0.85rem", fontSize: "0.82rem" }}
-                    onClick={() => setShowAddPricing(true)}
-                  >
-                    + إضافة سعر
-                  </button>
+          {!isNew && (() => {
+            // Only show pricing entries that are compatible with the current billing type.
+            const visiblePricing = planBillingType === "one_time_fixed_term"
+              ? pricing.filter(p => p.billingCycle === "OneTime")
+              : planBillingType === "recurring"
+                ? pricing.filter(p => p.billingCycle !== "OneTime")
+                : pricing; // free_default: show all (typically empty)
+            const hiddenCount = pricing.length - visiblePricing.length;
+            return (
+              <CollapsibleSection
+                title="أسعار الاشتراك"
+                icon="🏷"
+                count={visiblePricing.length}
+                defaultOpen={false}
+              >
+                {planBillingType === "free_default" && (
+                  <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem", margin: "0 0 0.75rem" }}>
+                    الخطط المجانية لا تحتاج إلى أسعار.
+                  </p>
+                )}
+                {hiddenCount > 0 && (
+                  <p style={{ color: "#b45309", background: "#fef9c3", borderRadius: 6, padding: "0.4rem 0.75rem", fontSize: "0.82rem", marginBottom: "0.75rem", border: "1px solid #fde68a" }}>
+                    ⚠ {hiddenCount} سعر غير متوافق مع نمط الفوترة الحالي (تم إيقافه تلقائياً عند الحفظ).
+                  </p>
+                )}
+                {planBillingType !== "free_default" && !showAddPricing && (
+                  <div style={{ marginBottom: "0.75rem" }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      style={{ padding: "0.3rem 0.85rem", fontSize: "0.82rem" }}
+                      onClick={() => setShowAddPricing(true)}
+                    >
+                      + إضافة سعر
+                    </button>
+                  </div>
+                )}
+                {pricingLoading && <p style={{ color: "var(--color-text-secondary)", fontSize: "0.88rem" }}>جاري التحميل...</p>}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {visiblePricing.map(entry => (
+                    <PricingRow
+                      key={entry.id}
+                      entry={entry}
+                      planId={plan!.id}
+                      planBillingType={planBillingType}
+                      onUpdated={updated => setPricing(prev => prev.map(p => p.id === updated.id ? updated : p))}
+                      onDeleted={id => setPricing(prev => prev.filter(p => p.id !== id))}
+                    />
+                  ))}
+                  {!pricingLoading && visiblePricing.length === 0 && !showAddPricing && planBillingType !== "free_default" && (
+                    <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem", textAlign: "center", padding: "0.75rem 0" }}>لا توجد أسعار بعد.</p>
+                  )}
+                  {showAddPricing && (
+                    <AddPricingForm
+                      planId={plan!.id}
+                      planBillingType={planBillingType}
+                      onCreated={entry => { setPricing(prev => [...prev, entry]); setShowAddPricing(false); }}
+                      onCancel={() => setShowAddPricing(false)}
+                    />
+                  )}
                 </div>
-              )}
-              {pricingLoading && <p style={{ color: "var(--color-text-secondary)", fontSize: "0.88rem" }}>جاري التحميل...</p>}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {pricing.map(entry => (
-                  <PricingRow
-                    key={entry.id}
-                    entry={entry}
-                    planId={plan!.id}
-                    onUpdated={updated => setPricing(prev => prev.map(p => p.id === updated.id ? updated : p))}
-                    onDeleted={id => setPricing(prev => prev.filter(p => p.id !== id))}
-                  />
-                ))}
-                {!pricingLoading && pricing.length === 0 && !showAddPricing && (
-                  <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem", textAlign: "center", padding: "0.75rem 0" }}>لا توجد أسعار بعد.</p>
-                )}
-                {showAddPricing && (
-                  <AddPricingForm
-                    planId={plan!.id}
-                    onCreated={entry => { setPricing(prev => [...prev, entry]); setShowAddPricing(false); }}
-                    onCancel={() => setShowAddPricing(false)}
-                  />
-                )}
-              </div>
-            </CollapsibleSection>
-          )}
+              </CollapsibleSection>
+            );
+          })()}
 
           {/* ── Section 5: حدود الباقة ── */}
           {!isNew && (
