@@ -1,4 +1,5 @@
 using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Storage;
 using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +13,7 @@ namespace Boioot.Api.Controllers;
 public class UploadController : BaseController
 {
     private readonly IWebHostEnvironment _env;
+    private readonly IFileStorageService _storage;
     private readonly IPlanEntitlementService _entitlement;
     private readonly IAccountResolver _accountResolver;
     private readonly ILogger<UploadController> _logger;
@@ -50,11 +52,13 @@ public class UploadController : BaseController
 
     public UploadController(
         IWebHostEnvironment env,
+        IFileStorageService storage,
         IPlanEntitlementService entitlement,
         IAccountResolver accountResolver,
         ILogger<UploadController> logger)
     {
         _env             = env;
+        _storage         = storage;
         _entitlement     = entitlement;
         _accountResolver = accountResolver;
         _logger          = logger;
@@ -76,21 +80,32 @@ public class UploadController : BaseController
         if (!AllowedImageTypes.Contains(contentType))
             return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: JPG، PNG، GIF، WebP، SVG" });
 
-        var uploadsDir = Path.Combine(_env.WebRootPath, "uploads");
-        Directory.CreateDirectory(uploadsDir);
+        // ── Derive extension from MIME type (safer than trusting the filename) ─
+        // Falls back to filename extension, then ".jpg" as a last resort.
+        var ext = contentType switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png"                  => ".png",
+            "image/gif"                  => ".gif",
+            "image/webp"                 => ".webp",
+            "image/svg+xml"              => ".svg",
+            "image/bmp"                  => ".bmp",
+            _ => Path.GetExtension(file.FileName).ToLower() is { Length: > 0 } e ? e : ".jpg",
+        };
 
-        var ext = Path.GetExtension(file.FileName).ToLower();
-        if (string.IsNullOrWhiteSpace(ext)) ext = ".jpg";
+        var safeFileName = $"{Guid.NewGuid()}{ext}";
 
-        var fileName = $"{Guid.NewGuid()}{ext}";
-        var filePath = Path.Combine(uploadsDir, fileName);
+        // ── Save via IFileStorageService (Local or R2 depending on config) ──────
+        // folder = "uploads" preserves the existing /uploads/{file} URL structure
+        // in Local mode so existing frontend code requires no changes.
+        await using var stream = file.OpenReadStream();
+        var result = await _storage.UploadAsync(stream, safeFileName, contentType, "uploads", ct);
 
-        await using var stream = System.IO.File.Create(filePath);
-        await file.CopyToAsync(stream, ct);
+        _logger.LogInformation(
+            "[Upload/image] {FileName} ({Size} bytes) → {Provider}",
+            safeFileName, file.Length, _storage.GetType().Name);
 
-        _logger.LogInformation("Image uploaded: {FileName} ({Size} bytes)", fileName, file.Length);
-
-        return Ok(new { url = $"/uploads/{fileName}" });
+        return Ok(new { url = result.PublicUrl });
     }
 
     // ── /api/upload/special-request-attachment ────────────────────────────────
