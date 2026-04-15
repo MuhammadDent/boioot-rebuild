@@ -656,7 +656,8 @@ public class ImagesController : BaseController
 
             var images = await _db.PropertyImages
                 .Where(i => i.PropertyId == entityId)
-                .OrderBy(i => i.Order)
+                .OrderByDescending(i => i.IsCover)   // cover first (bridge ordering)
+                .ThenBy(i => i.Order)
                 .Select(i => new
                 {
                     i.Id,
@@ -666,6 +667,8 @@ public class ImagesController : BaseController
                     i.Order,
                     i.UserImageId,
                     i.PropertyId,
+                    // Bridge: indicates which system provided this image
+                    ImageSource = i.UserImageId != null ? "user_upload" : "legacy",
                 })
                 .ToListAsync(ct);
 
@@ -681,7 +684,8 @@ public class ImagesController : BaseController
 
             var images = await _db.ProjectImages
                 .Where(i => i.ProjectId == entityId)
-                .OrderBy(i => i.Order)
+                .OrderByDescending(i => i.IsCover)   // cover first (bridge ordering)
+                .ThenBy(i => i.Order)
                 .Select(i => new
                 {
                     i.Id,
@@ -691,6 +695,8 @@ public class ImagesController : BaseController
                     i.Order,
                     i.UserImageId,
                     i.ProjectId,
+                    // Bridge: indicates which system provided this image
+                    ImageSource = i.UserImageId != null ? "user_upload" : "legacy",
                 })
                 .ToListAsync(ct);
 

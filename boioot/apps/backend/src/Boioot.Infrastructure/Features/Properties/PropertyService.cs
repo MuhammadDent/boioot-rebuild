@@ -46,6 +46,7 @@ public class PropertyService : IPropertyService
             .AsNoTracking()
             .Include(p => p.Company)
             .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
+                .ThenInclude(i => i.UserImage)              // bridge: prefer R2 URL when available
             .Where(p => p.Status == PropertyStatus.Available);
 
         query = ApplyFilters(query, filters);
@@ -68,7 +69,7 @@ public class PropertyService : IPropertyService
         var property = await _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstOrDefaultAsync(p => p.Id == id && p.Status != PropertyStatus.Inactive, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
@@ -171,7 +172,7 @@ public class PropertyService : IPropertyService
     {
         var property = await _context.Properties
             .Include(p => p.Company)
-            .Include(p => p.Images)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstOrDefaultAsync(p => p.Id == propertyId, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
@@ -519,7 +520,9 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsCover));  // cover image only for list views
+            .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
+                .ThenInclude(i => i.UserImage)             // bridge: prefer R2 URL when available
+            ;
 
         IQueryable<Property> filteredQuery = userRole switch
         {
@@ -779,6 +782,7 @@ public class PropertyService : IPropertyService
             .AsNoTracking()
             .Include(p => p.Company)
             .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
+                .ThenInclude(i => i.UserImage)             // bridge: prefer R2 URL when available
             .Where(p => !p.IsDeleted && (
                 p.OwnerId == ownerIdStr ||
                 (p.AgentId != null && userAgentIds.Contains(p.AgentId.Value)) ||
@@ -1038,7 +1042,7 @@ public class PropertyService : IPropertyService
     {
         var property = await _context.Properties
             .Include(p => p.Company)
-            .Include(p => p.Images)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstAsync(p => p.Id == propertyId, ct);
 
@@ -1116,15 +1120,19 @@ public class PropertyService : IPropertyService
                 : System.Text.Json.JsonSerializer.Deserialize<List<string>>(p.Features) ?? []),
         VideoUrl = p.VideoUrl,
         Images = p.Images
-            .OrderBy(i => i.Order)
+            .OrderByDescending(i => i.IsCover)   // cover first
+            .ThenBy(i => i.Order)
             .Select(i => new PropertyImageResponse
             {
                 Id          = i.Id,
-                ImageUrl    = i.ImageUrl,
+                // Bridge merge: prefer live R2 URL (UserImage.Url) for new uploads;
+                // fall back to PropertyImage.ImageUrl for legacy rows (base64/external URL).
+                ImageUrl    = !string.IsNullOrEmpty(i.UserImage?.Url) ? i.UserImage!.Url : i.ImageUrl,
                 IsCover     = i.IsCover,
                 IsPrimary   = i.IsPrimary,   // backward-compat alias
                 Order       = i.Order,
                 UserImageId = i.UserImageId,
+                ImageSource = i.UserImageId.HasValue ? "user_upload" : "legacy",
             })
             .ToList(),
         ViewCount = p.ViewCount,

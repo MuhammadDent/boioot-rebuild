@@ -44,6 +44,7 @@ public class ProjectService : IProjectService
         var query = _context.Projects
             .Include(p => p.Company)
             .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
+                .ThenInclude(i => i.UserImage)             // bridge: prefer R2 URL when available
             .Where(p => p.IsPublished);
 
         query = ApplyFilters(query, filters);
@@ -65,7 +66,7 @@ public class ProjectService : IProjectService
     {
         var project = await _context.Projects
             .Include(p => p.Company)
-            .Include(p => p.Images)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .FirstOrDefaultAsync(p => p.Id == id && p.IsPublished, ct)
             ?? throw new BoiootException("المشروع غير موجود", 404);
 
@@ -77,7 +78,7 @@ public class ProjectService : IProjectService
     {
         var project = await _context.Projects
             .Include(p => p.Company)
-            .Include(p => p.Images)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .FirstOrDefaultAsync(p => p.Id == projectId, ct)
             ?? throw new BoiootException("المشروع غير موجود", 404);
 
@@ -191,7 +192,9 @@ public class ProjectService : IProjectService
 
         var query = _context.Projects
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsCover));  // cover image only for list views
+            .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
+                .ThenInclude(i => i.UserImage)             // bridge: prefer R2 URL when available
+            ;
 
         IQueryable<Project> filteredQuery = userRole == RoleNames.CompanyOwner
             ? await BuildCompanyOwnerQueryAsync(query, userId, ct)
@@ -288,7 +291,7 @@ public class ProjectService : IProjectService
     {
         var project = await _context.Projects
             .Include(p => p.Company)
-            .Include(p => p.Images)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .FirstAsync(p => p.Id == projectId, ct);
 
         return MapToResponse(project);
@@ -311,15 +314,19 @@ public class ProjectService : IProjectService
         CompanyId = p.CompanyId,
         CompanyName = p.Company?.Name ?? string.Empty,
         Images = p.Images
-            .OrderBy(i => i.Order)
+            .OrderByDescending(i => i.IsCover)   // cover first
+            .ThenBy(i => i.Order)
             .Select(i => new ProjectImageResponse
             {
                 Id          = i.Id,
-                ImageUrl    = i.ImageUrl,
+                // Bridge merge: prefer live R2 URL (UserImage.Url) for new uploads;
+                // fall back to ProjectImage.ImageUrl for legacy rows (base64/external URL).
+                ImageUrl    = !string.IsNullOrEmpty(i.UserImage?.Url) ? i.UserImage!.Url : i.ImageUrl,
                 IsCover     = i.IsCover,
                 IsPrimary   = i.IsPrimary,   // backward-compat alias
                 Order       = i.Order,
                 UserImageId = i.UserImageId,
+                ImageSource = i.UserImageId.HasValue ? "user_upload" : "legacy",
             })
             .ToList(),
         CreatedAt = p.CreatedAt,
