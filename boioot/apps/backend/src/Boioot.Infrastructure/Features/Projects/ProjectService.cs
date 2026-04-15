@@ -43,7 +43,7 @@ public class ProjectService : IProjectService
 
         var query = _context.Projects
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsPrimary))
+            .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
             .Where(p => p.IsPublished);
 
         query = ApplyFilters(query, filters);
@@ -191,7 +191,7 @@ public class ProjectService : IProjectService
 
         var query = _context.Projects
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsPrimary));
+            .Include(p => p.Images.Where(i => i.IsCover));  // cover image only for list views
 
         IQueryable<Project> filteredQuery = userRole == RoleNames.CompanyOwner
             ? await BuildCompanyOwnerQueryAsync(query, userId, ct)
@@ -314,10 +314,12 @@ public class ProjectService : IProjectService
             .OrderBy(i => i.Order)
             .Select(i => new ProjectImageResponse
             {
-                Id = i.Id,
-                ImageUrl = i.ImageUrl,
-                IsPrimary = i.IsPrimary,
-                Order = i.Order
+                Id          = i.Id,
+                ImageUrl    = i.ImageUrl,
+                IsCover     = i.IsCover,
+                IsPrimary   = i.IsPrimary,   // backward-compat alias
+                Order       = i.Order,
+                UserImageId = i.UserImageId,
             })
             .ToList(),
         CreatedAt = p.CreatedAt,

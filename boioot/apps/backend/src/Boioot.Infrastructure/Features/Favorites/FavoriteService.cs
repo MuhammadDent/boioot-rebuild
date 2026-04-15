@@ -34,8 +34,10 @@ public class FavoriteService : IFavoriteService
                 Neighborhood = f.Property.Neighborhood,
                 ListingType  = f.Property.ListingType,
                 Type         = f.Property.Type.ToString(),
+                // Cover image first (IsCover=true sorts before false), then by Order
                 ThumbnailUrl = f.Property.Images
-                    .OrderBy(i => i.Order)
+                    .OrderByDescending(i => i.IsCover)
+                    .ThenBy(i => i.Order)
                     .Select(i => i.ImageUrl)
                     .FirstOrDefault(),
                 Bedrooms = f.Property.Bedrooms,

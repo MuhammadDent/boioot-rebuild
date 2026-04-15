@@ -45,7 +45,7 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsPrimary))
+            .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
             .Where(p => p.Status == PropertyStatus.Available);
 
         query = ApplyFilters(query, filters);
@@ -453,6 +453,7 @@ public class PropertyService : IPropertyService
                         PropertyId = property.Id,
                         ImageUrl   = request.NewImages[i],
                         IsPrimary  = false,
+                        IsCover    = false,
                         Order      = nextOrder + i,
                         CreatedAt  = now,
                         UpdatedAt  = now,
@@ -518,7 +519,7 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsPrimary));
+            .Include(p => p.Images.Where(i => i.IsCover));  // cover image only for list views
 
         IQueryable<Property> filteredQuery = userRole switch
         {
@@ -734,11 +735,12 @@ public class PropertyService : IPropertyService
             {
                 _context.Set<PropertyImage>().Add(new PropertyImage
                 {
-                    Id = Guid.NewGuid(),
+                    Id        = Guid.NewGuid(),
                     PropertyId = property.Id,
-                    ImageUrl = request.Images[i],
-                    IsPrimary = i == 0,
-                    Order = i,
+                    ImageUrl  = request.Images[i],
+                    IsPrimary = i == 0,   // first image is primary (backward compat)
+                    IsCover   = i == 0,   // first image is cover (canonical flag)
+                    Order     = i,
                     CreatedAt = now,
                     UpdatedAt = now,
                 });
@@ -776,7 +778,7 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsPrimary))
+            .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
             .Where(p => !p.IsDeleted && (
                 p.OwnerId == ownerIdStr ||
                 (p.AgentId != null && userAgentIds.Contains(p.AgentId.Value)) ||
@@ -1117,10 +1119,12 @@ public class PropertyService : IPropertyService
             .OrderBy(i => i.Order)
             .Select(i => new PropertyImageResponse
             {
-                Id = i.Id,
-                ImageUrl = i.ImageUrl,
-                IsPrimary = i.IsPrimary,
-                Order = i.Order
+                Id          = i.Id,
+                ImageUrl    = i.ImageUrl,
+                IsCover     = i.IsCover,
+                IsPrimary   = i.IsPrimary,   // backward-compat alias
+                Order       = i.Order,
+                UserImageId = i.UserImageId,
             })
             .ToList(),
         ViewCount = p.ViewCount,

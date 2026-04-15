@@ -109,6 +109,9 @@ public sealed class DatabaseStartupService
 
         // ── Idempotent column-type fixes (applied after every migration run) ──
         await ApplyPostgresColumnFixesAsync(ct);
+
+        // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
+        await SyncIsCoverFromIsPrimaryAsync(ct);
     }
 
     /// <summary>
@@ -229,6 +232,57 @@ public sealed class DatabaseStartupService
                 _log.LogWarning(
                     "[column-fix] Could not fix {Table}.{Column}: {Msg}", table, column, ex.Message);
             }
+        }
+    }
+
+    /// <summary>
+    /// Idempotent one-time data fix: copies IsPrimary → IsCover for any
+    /// PropertyImage / ProjectImage row that has IsPrimary=true but IsCover=false.
+    ///
+    /// Background: IsCover was added later (migration 20260415160000) with defaultValue=false.
+    /// Rows that existed before that migration have IsCover=false even if IsPrimary=true.
+    /// This fix ensures IsCover is always consistent with IsPrimary for legacy data so
+    /// that filtering by IsCover reliably returns the cover image.
+    ///
+    /// Safe to re-run: only touches rows where IsPrimary=true AND IsCover=false.
+    /// </summary>
+    private async Task SyncIsCoverFromIsPrimaryAsync(CancellationToken ct)
+    {
+        if (IsSqlite) return; // Only needed on PostgreSQL (production)
+
+        try
+        {
+            int propFixed = await _db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "PropertyImages"
+                SET    "IsCover" = TRUE
+                WHERE  "IsPrimary" = TRUE
+                  AND  "IsCover"   = FALSE
+                """, ct);
+
+            int projFixed = await _db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "ProjectImages"
+                SET    "IsCover" = TRUE
+                WHERE  "IsPrimary" = TRUE
+                  AND  "IsCover"   = FALSE
+                """, ct);
+
+            if (propFixed > 0 || projFixed > 0)
+            {
+                _log.LogInformation(
+                    "[data-fix] SyncIsCoverFromIsPrimary: updated {P} PropertyImages, {Pr} ProjectImages.",
+                    propFixed, projFixed);
+            }
+            else
+            {
+                _log.LogInformation(
+                    "[data-fix] SyncIsCoverFromIsPrimary: no rows needed updating — already in sync.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[data-fix] SyncIsCoverFromIsPrimary failed (non-critical): {Msg}", ex.Message);
         }
     }
 
