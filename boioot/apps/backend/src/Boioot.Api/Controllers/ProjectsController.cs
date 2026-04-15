@@ -1,7 +1,10 @@
 using Boioot.Application.Features.Projects.DTOs;
 using Boioot.Application.Features.Projects.Interfaces;
+using Boioot.Domain.Entities;
+using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Boioot.Api.Controllers;
 
@@ -9,10 +12,12 @@ namespace Boioot.Api.Controllers;
 public class ProjectsController : BaseController
 {
     private readonly IProjectService _projectService;
+    private readonly BoiootDbContext _db;
 
-    public ProjectsController(IProjectService projectService)
+    public ProjectsController(IProjectService projectService, BoiootDbContext db)
     {
         _projectService = projectService;
+        _db = db;
     }
 
     [HttpGet]
@@ -56,5 +61,37 @@ public class ProjectsController : BaseController
     {
         await _projectService.DeleteAsync(GetUserId(), GetUserRole(), id, ct);
         return NoContent();
+    }
+
+    // ── GET /api/projects/{id}/images ─────────────────────────────────────────
+
+    /// <summary>
+    /// Returns all images for a project, ordered by Order ASC.
+    /// Public endpoint — no auth required.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("{id:guid}/images")]
+    public async Task<IActionResult> GetImages(Guid id, CancellationToken ct)
+    {
+        bool exists = await _db.Projects
+            .AnyAsync(p => p.Id == id && !p.IsDeleted, ct);
+
+        if (!exists)
+            return NotFound(new { error = "المشروع غير موجود" });
+
+        var images = await _db.Set<ProjectImage>()
+            .Where(i => i.ProjectId == id)
+            .OrderBy(i => i.Order)
+            .Select(i => new
+            {
+                i.Id,
+                i.ImageUrl,
+                i.IsPrimary,
+                i.Order,
+                i.UserImageId,
+            })
+            .ToListAsync(ct);
+
+        return Ok(images);
     }
 }

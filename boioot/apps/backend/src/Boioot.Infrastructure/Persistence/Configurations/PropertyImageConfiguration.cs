@@ -18,5 +18,11 @@ public class PropertyImageConfiguration : IEntityTypeConfiguration<PropertyImage
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasQueryFilter(i => !i.Property.IsDeleted);
+
+        builder.HasOne(i => i.UserImage)
+               .WithMany(u => u.PropertyImages)
+               .HasForeignKey(i => i.UserImageId)
+               .OnDelete(DeleteBehavior.SetNull)
+               .IsRequired(false);
     }
 }

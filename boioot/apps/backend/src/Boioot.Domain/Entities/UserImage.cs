@@ -20,4 +20,7 @@ public class UserImage : BaseEntity
     public string FileKey { get; set; } = string.Empty;
 
     public User User { get; set; } = null!;
+
+    public ICollection<PropertyImage> PropertyImages { get; set; } = [];
+    public ICollection<ProjectImage>  ProjectImages  { get; set; } = [];
 }

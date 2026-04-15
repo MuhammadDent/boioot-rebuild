@@ -18,5 +18,11 @@ public class ProjectImageConfiguration : IEntityTypeConfiguration<ProjectImage>
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasQueryFilter(i => !i.Project.IsDeleted);
+
+        builder.HasOne(i => i.UserImage)
+               .WithMany(u => u.ProjectImages)
+               .HasForeignKey(i => i.UserImageId)
+               .OnDelete(DeleteBehavior.SetNull)
+               .IsRequired(false);
     }
 }

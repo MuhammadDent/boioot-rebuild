@@ -1,7 +1,10 @@
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
+using Boioot.Domain.Entities;
+using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Boioot.Api.Controllers;
 
@@ -9,10 +12,12 @@ namespace Boioot.Api.Controllers;
 public class PropertiesController : BaseController
 {
     private readonly IPropertyService _propertyService;
+    private readonly BoiootDbContext _db;
 
-    public PropertiesController(IPropertyService propertyService)
+    public PropertiesController(IPropertyService propertyService, BoiootDbContext db)
     {
         _propertyService = propertyService;
+        _db = db;
     }
 
     [HttpGet]
@@ -104,6 +109,38 @@ public class PropertiesController : BaseController
     {
         var (used, limit, isFreeTrial) = await _propertyService.GetMonthlyListingStatsAsync(GetUserId(), GetUserRole(), ct);
         return Ok(new { used, limit, isFreeTrial });
+    }
+
+    // ── GET /api/properties/{id}/images ──────────────────────────────────────
+
+    /// <summary>
+    /// Returns all images for a property, ordered by Order ASC.
+    /// Public endpoint — no auth required.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("{id:guid}/images")]
+    public async Task<IActionResult> GetImages(Guid id, CancellationToken ct)
+    {
+        bool exists = await _db.Properties
+            .AnyAsync(p => p.Id == id && !p.IsDeleted, ct);
+
+        if (!exists)
+            return NotFound(new { error = "العقار غير موجود" });
+
+        var images = await _db.Set<PropertyImage>()
+            .Where(i => i.PropertyId == id)
+            .OrderBy(i => i.Order)
+            .Select(i => new
+            {
+                i.Id,
+                i.ImageUrl,
+                i.IsPrimary,
+                i.Order,
+                i.UserImageId,
+            })
+            .ToListAsync(ct);
+
+        return Ok(images);
     }
 
     // ── Admin moderation ──────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Storage;
 using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
+using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -173,6 +174,136 @@ public class UploadController : BaseController
         _logger.LogInformation("[Upload/delete] Image {Id} deleted by user {UserId}", id, userId);
 
         return NoContent();
+    }
+
+    // ── POST /api/upload/assign-to-listing ────────────────────────────────────
+
+    public record AssignToListingRequest(Guid ImageId, Guid ListingId, string ListingType, bool IsPrimary = false);
+
+    /// <summary>
+    /// Assigns an already-uploaded UserImage to a Property or Project listing.
+    /// Creates a PropertyImage or ProjectImage row, setting UserImageId and ImageUrl
+    /// from the UserImage record.
+    ///
+    /// ListingType: "property" | "project"
+    /// </summary>
+    [HttpPost("assign-to-listing")]
+    public async Task<IActionResult> AssignToListing(
+        [FromBody] AssignToListingRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+
+        // Validate image belongs to the requesting user
+        var userImage = await _db.UserImages
+            .FirstOrDefaultAsync(i => i.Id == request.ImageId, ct);
+
+        if (userImage is null)
+            return NotFound(new { error = "الصورة غير موجودة" });
+
+        if (userImage.UserId != userId)
+            return Forbid();
+
+        var listingType = request.ListingType.ToLowerInvariant();
+
+        if (listingType == "property")
+        {
+            var property = await _db.Properties
+                .FirstOrDefaultAsync(p => p.Id == request.ListingId && !p.IsDeleted, ct);
+
+            if (property is null)
+                return NotFound(new { error = "العقار غير موجود" });
+
+            // Admin bypasses ownership check; others must own the property
+            var userRole = GetUserRole();
+            if (userRole != RoleNames.Admin &&
+                property.OwnerId != userId.ToString() &&
+                property.CreatedByUserId != userId.ToString())
+                return Forbid();
+
+            // Check for duplicate (same UserImageId already attached to this property)
+            bool alreadyAssigned = await _db.Set<PropertyImage>()
+                .AnyAsync(i => i.PropertyId == request.ListingId && i.UserImageId == request.ImageId, ct);
+
+            if (alreadyAssigned)
+                return Conflict(new { error = "الصورة مرتبطة بهذا العقار بالفعل" });
+
+            int nextOrder = await _db.Set<PropertyImage>()
+                .Where(i => i.PropertyId == request.ListingId)
+                .Select(i => (int?)i.Order)
+                .MaxAsync(ct) ?? -1;
+            nextOrder++;
+
+            var propertyImage = new PropertyImage
+            {
+                PropertyId  = request.ListingId,
+                UserImageId = request.ImageId,
+                ImageUrl    = userImage.Url,
+                IsPrimary   = request.IsPrimary,
+                Order       = nextOrder,
+            };
+
+            _db.Set<PropertyImage>().Add(propertyImage);
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "[Upload/assign] UserImage {ImageId} assigned to Property {ListingId}", 
+                request.ImageId, request.ListingId);
+
+            return Ok(new { id = propertyImage.Id, url = userImage.Url });
+        }
+
+        if (listingType == "project")
+        {
+            var project = await _db.Projects
+                .FirstOrDefaultAsync(p => p.Id == request.ListingId && !p.IsDeleted, ct);
+
+            if (project is null)
+                return NotFound(new { error = "المشروع غير موجود" });
+
+            // Admin bypasses ownership check; others must be an agent of the company
+            var projectUserRole = GetUserRole();
+            if (projectUserRole != RoleNames.Admin)
+            {
+                var userOwnsCompany = await _db.Agents
+                    .AnyAsync(a => a.UserId == userId && a.CompanyId == project.CompanyId, ct);
+
+                if (!userOwnsCompany)
+                    return Forbid();
+            }
+
+            bool alreadyAssigned = await _db.Set<ProjectImage>()
+                .AnyAsync(i => i.ProjectId == request.ListingId && i.UserImageId == request.ImageId, ct);
+
+            if (alreadyAssigned)
+                return Conflict(new { error = "الصورة مرتبطة بهذا المشروع بالفعل" });
+
+            int nextOrder = await _db.Set<ProjectImage>()
+                .Where(i => i.ProjectId == request.ListingId)
+                .Select(i => (int?)i.Order)
+                .MaxAsync(ct) ?? -1;
+            nextOrder++;
+
+            var projectImage = new ProjectImage
+            {
+                ProjectId   = request.ListingId,
+                UserImageId = request.ImageId,
+                ImageUrl    = userImage.Url,
+                IsPrimary   = request.IsPrimary,
+                Order       = nextOrder,
+            };
+
+            _db.Set<ProjectImage>().Add(projectImage);
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "[Upload/assign] UserImage {ImageId} assigned to Project {ListingId}",
+                request.ImageId, request.ListingId);
+
+            return Ok(new { id = projectImage.Id, url = userImage.Url });
+        }
+
+        return BadRequest(new { error = "listingType يجب أن يكون 'property' أو 'project'" });
     }
 
     // ── /api/upload/special-request-attachment ────────────────────────────────
