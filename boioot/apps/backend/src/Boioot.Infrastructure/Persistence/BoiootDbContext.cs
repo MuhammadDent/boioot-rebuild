@@ -83,6 +83,9 @@ public class BoiootDbContext : DbContext
     // ── Monetization Phase 1 ──────────────────────────────────────────────────
     public DbSet<LeadUnlock> LeadUnlocks => Set<LeadUnlock>();
 
+    // ── User uploaded images ───────────────────────────────────────────────────
+    public DbSet<UserImage> UserImages => Set<UserImage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BoiootDbContext).Assembly);

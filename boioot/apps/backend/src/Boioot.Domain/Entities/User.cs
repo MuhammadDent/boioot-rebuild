@@ -71,4 +71,5 @@ public class User : BaseEntity, ISoftDeletable
     public Agent? Agent { get; set; }
     public ICollection<Review> Reviews { get; set; } = [];
     public ICollection<AccountUser> AccountUsers { get; set; } = [];
+    public ICollection<UserImage> UserImages { get; set; } = [];
 }

@@ -2,8 +2,11 @@ using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Storage;
 using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
+using Boioot.Domain.Entities;
+using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Boioot.Api.Controllers;
 
@@ -17,6 +20,7 @@ public class UploadController : BaseController
     private readonly IPlanEntitlementService _entitlement;
     private readonly IAccountResolver _accountResolver;
     private readonly ILogger<UploadController> _logger;
+    private readonly BoiootDbContext _db;
 
     // ── Allowed MIME types ────────────────────────────────────────────────────
 
@@ -55,13 +59,15 @@ public class UploadController : BaseController
         IFileStorageService storage,
         IPlanEntitlementService entitlement,
         IAccountResolver accountResolver,
-        ILogger<UploadController> logger)
+        ILogger<UploadController> logger,
+        BoiootDbContext db)
     {
         _env             = env;
         _storage         = storage;
         _entitlement     = entitlement;
         _accountResolver = accountResolver;
         _logger          = logger;
+        _db              = db;
     }
 
     // ── /api/upload/image ─────────────────────────────────────────────────────
@@ -105,7 +111,68 @@ public class UploadController : BaseController
             "[Upload/image] {FileName} ({Size} bytes) → {Provider}",
             safeFileName, file.Length, _storage.GetType().Name);
 
-        return Ok(new { url = result.PublicUrl });
+        // ── Persist record to UserImages table ────────────────────────────────
+        var userId = GetUserId();
+        var userImage = new UserImage
+        {
+            UserId  = userId,
+            Url     = result.PublicUrl,
+            FileKey = result.FileKey,
+        };
+        _db.UserImages.Add(userImage);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new { id = userImage.Id, url = result.PublicUrl });
+    }
+
+    // ── GET /api/upload/my-images ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns all images uploaded by the authenticated user, newest first.
+    /// </summary>
+    [HttpGet("my-images")]
+    public async Task<IActionResult> GetMyImages(CancellationToken ct)
+    {
+        var userId = GetUserId();
+
+        var images = await _db.UserImages
+            .Where(i => i.UserId == userId)
+            .OrderByDescending(i => i.CreatedAt)
+            .Select(i => new { i.Id, i.Url, i.CreatedAt })
+            .ToListAsync(ct);
+
+        return Ok(images);
+    }
+
+    // ── DELETE /api/upload/{id} ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Deletes an image owned by the authenticated user from both R2 and the DB.
+    /// Returns 403 Forbidden if the image belongs to another user.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteImage(Guid id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+
+        var image = await _db.UserImages
+            .FirstOrDefaultAsync(i => i.Id == id, ct);
+
+        if (image is null)
+            return NotFound(new { error = "الصورة غير موجودة" });
+
+        if (image.UserId != userId)
+            return Forbid();
+
+        // Delete from storage (R2 or local filesystem)
+        await _storage.DeleteAsync(image.FileKey, ct);
+
+        _db.UserImages.Remove(image);
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation("[Upload/delete] Image {Id} deleted by user {UserId}", id, userId);
+
+        return NoContent();
     }
 
     // ── /api/upload/special-request-attachment ────────────────────────────────

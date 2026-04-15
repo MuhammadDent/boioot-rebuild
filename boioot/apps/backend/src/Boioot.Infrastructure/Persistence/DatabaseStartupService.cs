@@ -171,6 +171,65 @@ public sealed class DatabaseStartupService
                     "[column-fix] Could not fix {Table}.{Column}: {Msg}", table, column, ex.Message);
             }
         }
+
+        // Fix 3 & 4: UserImages.CreatedAt / UpdatedAt were created as TEXT by the manual
+        // EF Core migration (which uses TEXT for cross-DB compat).  Npgsql refuses to read
+        // TEXT columns as System.DateTime, so we ALTER them to the proper PostgreSQL type.
+        // The USING clause casts the stored ISO-8601 strings produced by EF Core.
+        var datetimeFixes = new[]
+        {
+            (Table: "UserImages", Column: "CreatedAt"),
+            (Table: "UserImages", Column: "UpdatedAt"),
+        };
+
+        foreach (var (table, column) in datetimeFixes)
+        {
+            try
+            {
+                string checkSql = $"""
+                    SELECT data_type
+                    FROM   information_schema.columns
+                    WHERE  table_schema = 'public'
+                      AND  table_name   = '{table}'
+                      AND  column_name  = '{column}'
+                    """;
+
+                await using var cmd = _db.Database.GetDbConnection().CreateCommand();
+                await _db.Database.OpenConnectionAsync(ct);
+                cmd.CommandText = checkSql;
+                var dataType = (await cmd.ExecuteScalarAsync(ct))?.ToString() ?? "";
+                await _db.Database.CloseConnectionAsync();
+
+                if (dataType.Equals("text", StringComparison.OrdinalIgnoreCase))
+                {
+                    _log.LogInformation(
+                        "[column-fix] Altering {Table}.{Column} from text → timestamp ...",
+                        table, column);
+
+                    await _db.Database.ExecuteSqlRawAsync(
+                        $"""
+                        ALTER TABLE "{table}"
+                        ALTER COLUMN "{column}" TYPE timestamp with time zone
+                        USING "{column}"::timestamp with time zone
+                        """, ct);
+
+                    _log.LogInformation(
+                        "[column-fix] {Table}.{Column} → timestamp with time zone  ✓",
+                        table, column);
+                }
+                else
+                {
+                    _log.LogInformation(
+                        "[column-fix] {Table}.{Column} is already '{DataType}' — skipped.",
+                        table, column, dataType);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(
+                    "[column-fix] Could not fix {Table}.{Column}: {Msg}", table, column, ex.Message);
+            }
+        }
     }
 
     /// <summary>

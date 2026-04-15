@@ -28,6 +28,7 @@ I prefer simple language. I want iterative development. Ask before making major 
     - **RBAC Dashboard Isolation:** Fine-grained access control for dashboard features based on user roles and account types.
     - **Multi-Level User Verification:** Comprehensive system for identity and business verification with admin review workflows.
     - **CMS Lite:** `SiteContent` entity for managing site content with admin CRUD and a public API, integrated into the frontend via a context provider.
+    - **UserImage Module:** `POST /api/upload/image` persists the uploaded file to Cloudflare R2 and saves a `UserImage` record (UserId, Url, FileKey) to the DB. `GET /api/upload/my-images` returns all images for the authenticated user (newest first). `DELETE /api/upload/{id}` removes the image from R2 and the DB (owner-only, 403 if mismatch, 404 if not found). The `UploadController` injects `BoiootDbContext` directly. Migration `20260415120000_AddUserImages` creates the `UserImages` table; `ApplyPostgresColumnFixesAsync` ALTERs its `CreatedAt`/`UpdatedAt` columns from TEXT → `timestamp with time zone` because Npgsql rejects reading TEXT as DateTime (all migrations use TEXT for cross-DB compat but EnsureCreated uses proper PG types only for the initial schema).
     - **Global Error Handling:** Consistent, localized JSON error responses.
     - **Plan-Based Access Control (PBAC):** Frontend-driven feature gating and limit enforcement based on user's subscription plan, with graceful degradation.
 
