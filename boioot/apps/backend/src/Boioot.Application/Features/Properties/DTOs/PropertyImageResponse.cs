@@ -9,10 +9,18 @@ public class PropertyImageResponse
     public Guid   Id          { get; set; }
 
     /// <summary>
-    /// Resolved display URL. For new images this is UserImage.Url (live R2 CDN URL).
+    /// Full-size display URL (max 1600 px, WebP for new uploads).
     /// For legacy images this is PropertyImage.ImageUrl (base64 or external URL).
+    /// Use for detail pages where full resolution is needed.
     /// </summary>
     public string ImageUrl    { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 480 px WebP thumbnail URL. Null for legacy images (uploaded before optimization).
+    /// Use for cards and lists — significantly smaller file, same visual quality at card size.
+    /// Fall back to ImageUrl when null.
+    /// </summary>
+    public string? ThumbnailUrl { get; set; }
 
     /// <summary>True when this is the canonical cover image for the listing.</summary>
     public bool   IsCover     { get; set; }

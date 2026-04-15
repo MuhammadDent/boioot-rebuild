@@ -154,6 +154,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SchemaEvolutionService>();
         services.AddScoped<RbacRepository>();
 
+        // ── Image processing (compress → WebP + thumbnail) ────────────────────
+        // Stateless, thread-safe — registered as singleton to avoid repeated allocations.
+        services.AddSingleton<IImageProcessingService, ImageProcessingService>();
+
         // ── File storage abstraction ───────────────────────────────────────────
         // Bind StorageOptions (includes nested R2Options) from config.
         // Registration logic:

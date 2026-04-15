@@ -24,7 +24,7 @@ function ProjectCardInner({ project }: ProjectCardProps) {
         {mainImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={mainImage.imageUrl}
+            src={mainImage.thumbnailUrl ?? mainImage.imageUrl}
             alt={project.title}
             className="project-card__img"
             loading="lazy"

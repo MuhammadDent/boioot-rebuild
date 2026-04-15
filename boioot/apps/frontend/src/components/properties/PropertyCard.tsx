@@ -70,7 +70,7 @@ function PropertyCardInner({ property, initialIsFavorited = false }: PropertyCar
             {mainImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={mainImage.imageUrl}
+                src={mainImage.thumbnailUrl ?? mainImage.imageUrl}
                 alt={property.title}
                 className="property-card__img"
                 loading="lazy"

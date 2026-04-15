@@ -18,6 +18,12 @@ public class UserImageConfiguration : IEntityTypeConfiguration<UserImage>
                .IsRequired()
                .HasColumnType("text");
 
+        builder.Property(i => i.ThumbnailUrl)
+               .HasColumnType("text");
+
+        builder.Property(i => i.ThumbnailFileKey)
+               .HasColumnType("text");
+
         builder.HasOne(i => i.User)
                .WithMany(u => u.UserImages)
                .HasForeignKey(i => i.UserId)

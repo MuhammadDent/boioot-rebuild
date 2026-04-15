@@ -8,6 +8,7 @@ using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Boioot.Api.Controllers;
 
@@ -18,6 +19,7 @@ public class UploadController : BaseController
 {
     private readonly IWebHostEnvironment _env;
     private readonly IFileStorageService _storage;
+    private readonly IImageProcessingService _imageProcessor;
     private readonly IPlanEntitlementService _entitlement;
     private readonly IAccountResolver _accountResolver;
     private readonly ILogger<UploadController> _logger;
@@ -58,17 +60,19 @@ public class UploadController : BaseController
     public UploadController(
         IWebHostEnvironment env,
         IFileStorageService storage,
+        IImageProcessingService imageProcessor,
         IPlanEntitlementService entitlement,
         IAccountResolver accountResolver,
         ILogger<UploadController> logger,
         BoiootDbContext db)
     {
-        _env             = env;
-        _storage         = storage;
-        _entitlement     = entitlement;
+        _env            = env;
+        _storage        = storage;
+        _imageProcessor = imageProcessor;
+        _entitlement    = entitlement;
         _accountResolver = accountResolver;
-        _logger          = logger;
-        _db              = db;
+        _logger         = logger;
+        _db             = db;
     }
 
     // ── /api/upload/image ─────────────────────────────────────────────────────
@@ -87,46 +91,87 @@ public class UploadController : BaseController
         if (!AllowedImageTypes.Contains(contentType))
             return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: JPG، PNG، GIF، WebP، SVG" });
 
-        // ── Derive extension from MIME type (safer than trusting the filename) ─
-        // Falls back to filename extension, then ".jpg" as a last resort.
-        var ext = contentType switch
+        var userId = GetUserId();
+        UserImage userImage;
+
+        if (_imageProcessor.CanProcess(contentType))
         {
-            "image/jpeg" or "image/jpg" => ".jpg",
-            "image/png"                  => ".png",
-            "image/gif"                  => ".gif",
-            "image/webp"                 => ".webp",
-            "image/svg+xml"              => ".svg",
-            "image/bmp"                  => ".bmp",
-            _ => Path.GetExtension(file.FileName).ToLower() is { Length: > 0 } e ? e : ".jpg",
-        };
+            // ── Process: compress + resize → WebP main + WebP thumbnail ─────────
+            // JPEG, PNG, WebP, BMP → converted to WebP for ~60-70% size reduction.
+            await using var inputStream = file.OpenReadStream();
+            using var processed = await _imageProcessor.ProcessAsync(inputStream, ct);
 
-        var safeFileName = $"{Guid.NewGuid()}{ext}";
+            // Upload main image (max 1600 px)
+            var mainResult = await _storage.UploadAsync(
+                processed.MainStream,
+                $"{Guid.NewGuid()}.webp",
+                processed.ContentType,
+                "uploads",
+                ct);
 
-        // ── Save via IFileStorageService (Local or R2 depending on config) ──────
-        // folder = "uploads" preserves the existing /uploads/{file} URL structure
-        // in Local mode so existing frontend code requires no changes.
-        await using var stream = file.OpenReadStream();
-        var result = await _storage.UploadAsync(stream, safeFileName, contentType, "uploads", ct);
+            // Upload thumbnail (max 480 px)
+            var thumbResult = await _storage.UploadAsync(
+                processed.ThumbnailStream,
+                $"{Guid.NewGuid()}.webp",
+                processed.ContentType,
+                "uploads/thumbs",
+                ct);
 
-        _logger.LogInformation(
-            "[Upload/image] {FileName} ({Size} bytes) → {Provider}",
-            safeFileName, file.Length, _storage.GetType().Name);
+            _logger.LogInformation(
+                "[Upload/image] {OrigName} ({Size} bytes) → WebP main={MainKey} thumb={ThumbKey}",
+                file.FileName, file.Length, mainResult.FileKey, thumbResult.FileKey);
+
+            userImage = new UserImage
+            {
+                UserId           = userId,
+                Url              = mainResult.PublicUrl,
+                FileKey          = mainResult.FileKey,
+                ThumbnailUrl     = thumbResult.PublicUrl,
+                ThumbnailFileKey = thumbResult.FileKey,
+                OriginalFileName = Path.GetFileName(file.FileName),
+                MimeType         = processed.ContentType,
+                SizeBytes        = processed.MainStream.Length,
+            };
+        }
+        else
+        {
+            // ── Bypass: SVG, GIF — upload as-is, no thumbnail ────────────────────
+            var ext = contentType switch
+            {
+                "image/gif"     => ".gif",
+                "image/svg+xml" => ".svg",
+                _ => Path.GetExtension(file.FileName).ToLower() is { Length: > 0 } e ? e : ".jpg",
+            };
+            var safeFileName = $"{Guid.NewGuid()}{ext}";
+
+            await using var stream = file.OpenReadStream();
+            var result = await _storage.UploadAsync(stream, safeFileName, contentType, "uploads", ct);
+
+            _logger.LogInformation(
+                "[Upload/image] {FileName} ({Size} bytes) → {Provider} (no processing)",
+                safeFileName, file.Length, _storage.GetType().Name);
+
+            userImage = new UserImage
+            {
+                UserId           = userId,
+                Url              = result.PublicUrl,
+                FileKey          = result.FileKey,
+                OriginalFileName = Path.GetFileName(file.FileName),
+                MimeType         = contentType,
+                SizeBytes        = file.Length,
+            };
+        }
 
         // ── Persist record to UserImages table ────────────────────────────────
-        var userId = GetUserId();
-        var userImage = new UserImage
-        {
-            UserId           = userId,
-            Url              = result.PublicUrl,
-            FileKey          = result.FileKey,
-            OriginalFileName = Path.GetFileName(file.FileName),
-            MimeType         = contentType,
-            SizeBytes        = file.Length,
-        };
         _db.UserImages.Add(userImage);
         await _db.SaveChangesAsync(ct);
 
-        return Ok(new { id = userImage.Id, url = result.PublicUrl });
+        return Ok(new
+        {
+            id           = userImage.Id,
+            url          = userImage.Url,
+            thumbnailUrl = userImage.ThumbnailUrl,
+        });
     }
 
     // ── GET /api/upload/my-images ──────────────────────────────────────────────
@@ -180,6 +225,10 @@ public class UploadController : BaseController
         try
         {
             await _storage.DeleteAsync(image.FileKey, ct);
+
+            // Also delete thumbnail if it exists (new optimized images have a separate thumbnail file)
+            if (!string.IsNullOrEmpty(image.ThumbnailFileKey))
+                await _storage.DeleteAsync(image.ThumbnailFileKey, ct);
         }
         catch (Exception ex)
         {

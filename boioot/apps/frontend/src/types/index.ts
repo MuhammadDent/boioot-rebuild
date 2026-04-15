@@ -87,6 +87,7 @@ export interface PagedResult<T> {
 export interface ProjectImageResponse {
   id: string;
   imageUrl: string;
+  thumbnailUrl?: string;  // 480px WebP — use for cards; null for legacy images
   isCover: boolean;
   isPrimary: boolean;   // backward-compat alias for isCover
   order: number;
@@ -118,6 +119,7 @@ export interface ProjectResponse {
 export interface PropertyImageResponse {
   id: string;
   imageUrl: string;
+  thumbnailUrl?: string;  // 480px WebP — use for cards; null for legacy images
   isCover: boolean;
   isPrimary: boolean;   // backward-compat alias for isCover
   order: number;

@@ -420,10 +420,13 @@ public class ImagesController : BaseController
 
         if (stillReferenced) return;
 
-        // Attempt R2 deletion
+        // Attempt R2 deletion (main + thumbnail if present)
         try
         {
             await _storage.DeleteAsync(userImage.FileKey, ct);
+
+            if (!string.IsNullOrEmpty(userImage.ThumbnailFileKey))
+                await _storage.DeleteAsync(userImage.ThumbnailFileKey, ct);
         }
         catch (Exception ex)
         {

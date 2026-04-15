@@ -318,15 +318,16 @@ public class ProjectService : IProjectService
             .ThenBy(i => i.Order)
             .Select(i => new ProjectImageResponse
             {
-                Id          = i.Id,
+                Id           = i.Id,
                 // Bridge merge: prefer live R2 URL (UserImage.Url) for new uploads;
                 // fall back to ProjectImage.ImageUrl for legacy rows (base64/external URL).
-                ImageUrl    = !string.IsNullOrEmpty(i.UserImage?.Url) ? i.UserImage!.Url : i.ImageUrl,
-                IsCover     = i.IsCover,
-                IsPrimary   = i.IsPrimary,   // backward-compat alias
-                Order       = i.Order,
-                UserImageId = i.UserImageId,
-                ImageSource = i.UserImageId.HasValue ? "user_upload" : "legacy",
+                ImageUrl     = !string.IsNullOrEmpty(i.UserImage?.Url) ? i.UserImage!.Url : i.ImageUrl,
+                ThumbnailUrl = i.UserImage?.ThumbnailUrl,
+                IsCover      = i.IsCover,
+                IsPrimary    = i.IsPrimary,   // backward-compat alias
+                Order        = i.Order,
+                UserImageId  = i.UserImageId,
+                ImageSource  = i.UserImageId.HasValue ? "user_upload" : "legacy",
             })
             .ToList(),
         CreatedAt = p.CreatedAt,

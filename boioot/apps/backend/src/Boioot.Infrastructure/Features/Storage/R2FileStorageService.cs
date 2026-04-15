@@ -73,6 +73,9 @@ public sealed class R2FileStorageService : IFileStorageService, IAsyncDisposable
             ContentType = contentType,
             // Do NOT set CannedACL — R2 ignores ACLs; access is controlled by bucket policy.
             DisablePayloadSigning = true, // Required for R2 compatibility
+            // Long-lived caching: UUID-named files are content-addressed and never mutated.
+            // Browsers + CDN will cache for 1 year; immutable tells them never to revalidate.
+            CacheControl = "public, max-age=31536000, immutable",
         };
 
         await _s3.PutObjectAsync(request, ct);
