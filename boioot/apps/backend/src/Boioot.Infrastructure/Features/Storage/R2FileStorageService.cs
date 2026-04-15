@@ -40,10 +40,8 @@ public sealed class R2FileStorageService : IFileStorageService, IAsyncDisposable
         // Cloudflare R2 uses path-style addressing with a custom endpoint
         var config = new AmazonS3Config
         {
-            ServiceURL      = $"https://{_r2.AccountId}.r2.cloudflarestorage.com",
-            ForcePathStyle  = true,   // Required for R2
-            RequestTimeout  = TimeSpan.FromSeconds(30),
-            ReadWriteTimeout = TimeSpan.FromSeconds(30),
+            ServiceURL     = $"https://{_r2.AccountId}.r2.cloudflarestorage.com",
+            ForcePathStyle = true,   // Required for R2
         };
 
         var credentials = new BasicAWSCredentials(_r2.AccessKeyId, _r2.SecretAccessKey);
