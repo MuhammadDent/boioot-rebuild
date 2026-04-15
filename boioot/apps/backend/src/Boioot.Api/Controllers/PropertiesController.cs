@@ -116,6 +116,8 @@ public class PropertiesController : BaseController
     /// <summary>
     /// Returns all images for a property, ordered by Order ASC.
     /// Public endpoint — no auth required.
+    ///
+    /// Prefer: GET /api/images/property/{id}
     /// </summary>
     [AllowAnonymous]
     [HttpGet("{id:guid}/images")]
@@ -134,6 +136,7 @@ public class PropertiesController : BaseController
             {
                 i.Id,
                 i.ImageUrl,
+                i.IsCover,
                 i.IsPrimary,
                 i.Order,
                 i.UserImageId,

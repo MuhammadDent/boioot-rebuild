@@ -68,6 +68,8 @@ public class ProjectsController : BaseController
     /// <summary>
     /// Returns all images for a project, ordered by Order ASC.
     /// Public endpoint — no auth required.
+    ///
+    /// Prefer: GET /api/images/project/{id}
     /// </summary>
     [AllowAnonymous]
     [HttpGet("{id:guid}/images")]
@@ -86,6 +88,7 @@ public class ProjectsController : BaseController
             {
                 i.Id,
                 i.ImageUrl,
+                i.IsCover,
                 i.IsPrimary,
                 i.Order,
                 i.UserImageId,

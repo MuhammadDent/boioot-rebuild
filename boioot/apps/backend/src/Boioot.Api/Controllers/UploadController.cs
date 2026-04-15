@@ -195,137 +195,30 @@ public class UploadController : BaseController
         return NoContent();
     }
 
-    // ── POST /api/upload/assign-to-listing ────────────────────────────────────
-
-    public record AssignToListingRequest(Guid ImageId, Guid ListingId, string ListingType, bool IsPrimary = false);
+    // ── POST /api/upload/assign-to-listing  [REMOVED — use POST /api/images/attach] ──
 
     /// <summary>
-    /// [DEPRECATED] Use POST /api/images/attach instead.
-    ///
-    /// Assigns an already-uploaded UserImage to a Property or Project listing.
-    /// Creates a PropertyImage or ProjectImage row, setting UserImageId and ImageUrl
-    /// from the UserImage record.
-    ///
-    /// ListingType: "property" | "project"
+    /// This endpoint has been removed.
+    /// Use POST /api/images/attach instead:
+    ///   { "imageId": "GUID", "entityType": "property|project", "entityId": "GUID" }
     /// </summary>
-    [Obsolete("Use POST /api/images/attach instead.")]
     [HttpPost("assign-to-listing")]
-    public async Task<IActionResult> AssignToListing(
-        [FromBody] AssignToListingRequest request,
+    [AllowAnonymous]
+    public IActionResult AssignToListing(
+        [FromBody] object? _,
         CancellationToken ct)
     {
-        var userId = GetUserId();
-
-        // Validate image belongs to the requesting user
-        var userImage = await _db.UserImages
-            .FirstOrDefaultAsync(i => i.Id == request.ImageId, ct);
-
-        if (userImage is null)
-            return NotFound(new { error = "الصورة غير موجودة" });
-
-        if (userImage.UserId != userId)
-            return Forbid();
-
-        var listingType = request.ListingType.ToLowerInvariant();
-
-        if (listingType == "property")
+        return StatusCode(410, new
         {
-            var property = await _db.Properties
-                .FirstOrDefaultAsync(p => p.Id == request.ListingId && !p.IsDeleted, ct);
-
-            if (property is null)
-                return NotFound(new { error = "العقار غير موجود" });
-
-            // Admin bypasses ownership check; others must own the property
-            var userRole = GetUserRole();
-            if (userRole != RoleNames.Admin &&
-                property.OwnerId != userId.ToString() &&
-                property.CreatedByUserId != userId.ToString())
-                return Forbid();
-
-            // Check for duplicate (same UserImageId already attached to this property)
-            bool alreadyAssigned = await _db.Set<PropertyImage>()
-                .AnyAsync(i => i.PropertyId == request.ListingId && i.UserImageId == request.ImageId, ct);
-
-            if (alreadyAssigned)
-                return Conflict(new { error = "الصورة مرتبطة بهذا العقار بالفعل" });
-
-            int nextOrder = await _db.Set<PropertyImage>()
-                .Where(i => i.PropertyId == request.ListingId)
-                .Select(i => (int?)i.Order)
-                .MaxAsync(ct) ?? -1;
-            nextOrder++;
-
-            var propertyImage = new PropertyImage
+            error    = "هذا الـ endpoint تم إيقافه. استخدم POST /api/images/attach بدلاً منه.",
+            newEndpoint = "POST /api/images/attach",
+            newBody  = new
             {
-                PropertyId  = request.ListingId,
-                UserImageId = request.ImageId,
-                ImageUrl    = userImage.Url,
-                IsPrimary   = request.IsPrimary,
-                Order       = nextOrder,
-            };
-
-            _db.Set<PropertyImage>().Add(propertyImage);
-            await _db.SaveChangesAsync(ct);
-
-            _logger.LogInformation(
-                "[Upload/assign] UserImage {ImageId} assigned to Property {ListingId}", 
-                request.ImageId, request.ListingId);
-
-            return Ok(new { id = propertyImage.Id, url = userImage.Url });
-        }
-
-        if (listingType == "project")
-        {
-            var project = await _db.Projects
-                .FirstOrDefaultAsync(p => p.Id == request.ListingId && !p.IsDeleted, ct);
-
-            if (project is null)
-                return NotFound(new { error = "المشروع غير موجود" });
-
-            // Admin bypasses ownership check; others must be an agent of the company
-            var projectUserRole = GetUserRole();
-            if (projectUserRole != RoleNames.Admin)
-            {
-                var userOwnsCompany = await _db.Agents
-                    .AnyAsync(a => a.UserId == userId && a.CompanyId == project.CompanyId, ct);
-
-                if (!userOwnsCompany)
-                    return Forbid();
-            }
-
-            bool alreadyAssigned = await _db.Set<ProjectImage>()
-                .AnyAsync(i => i.ProjectId == request.ListingId && i.UserImageId == request.ImageId, ct);
-
-            if (alreadyAssigned)
-                return Conflict(new { error = "الصورة مرتبطة بهذا المشروع بالفعل" });
-
-            int nextOrder = await _db.Set<ProjectImage>()
-                .Where(i => i.ProjectId == request.ListingId)
-                .Select(i => (int?)i.Order)
-                .MaxAsync(ct) ?? -1;
-            nextOrder++;
-
-            var projectImage = new ProjectImage
-            {
-                ProjectId   = request.ListingId,
-                UserImageId = request.ImageId,
-                ImageUrl    = userImage.Url,
-                IsPrimary   = request.IsPrimary,
-                Order       = nextOrder,
-            };
-
-            _db.Set<ProjectImage>().Add(projectImage);
-            await _db.SaveChangesAsync(ct);
-
-            _logger.LogInformation(
-                "[Upload/assign] UserImage {ImageId} assigned to Project {ListingId}",
-                request.ImageId, request.ListingId);
-
-            return Ok(new { id = projectImage.Id, url = userImage.Url });
-        }
-
-        return BadRequest(new { error = "listingType يجب أن يكون 'property' أو 'project'" });
+                imageId    = "GUID",
+                entityType = "property | project",
+                entityId   = "GUID",
+            },
+        });
     }
 
     // ── /api/upload/special-request-attachment ────────────────────────────────
