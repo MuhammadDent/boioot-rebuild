@@ -19,6 +19,15 @@ public class UserImage : BaseEntity
     /// </summary>
     public string FileKey { get; set; } = string.Empty;
 
+    /// <summary>Original filename as provided by the uploader (sanitised, for display only).</summary>
+    public string? OriginalFileName { get; set; }
+
+    /// <summary>MIME type e.g. "image/jpeg". Derived from the uploaded Content-Type header.</summary>
+    public string? MimeType { get; set; }
+
+    /// <summary>File size in bytes at the time of upload.</summary>
+    public long? SizeBytes { get; set; }
+
     public User User { get; set; } = null!;
 
     public ICollection<PropertyImage> PropertyImages { get; set; } = [];

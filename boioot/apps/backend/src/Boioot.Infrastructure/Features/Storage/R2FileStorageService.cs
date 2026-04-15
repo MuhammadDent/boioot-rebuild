@@ -88,6 +88,11 @@ public sealed class R2FileStorageService : IFileStorageService, IAsyncDisposable
 
     // ── DeleteAsync ───────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Deletes the object at <paramref name="fileKey"/> from R2.
+    /// Silently succeeds if the key does not exist (404) — nothing to delete.
+    /// Any other error (network, auth, etc.) is re-thrown so callers can handle it explicitly.
+    /// </summary>
     public async Task DeleteAsync(string fileKey, CancellationToken ct = default)
     {
         try
@@ -102,12 +107,10 @@ public sealed class R2FileStorageService : IFileStorageService, IAsyncDisposable
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            // Silently succeed — file already gone
+            // File already gone — treat as success
+            _logger.LogInformation("[R2Storage] Key not found (already deleted): {Key}", fileKey);
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[R2Storage] Failed to delete key={Key}", fileKey);
-        }
+        // All other exceptions propagate to the caller so they can return a proper error response.
     }
 
     // ── GetPublicUrl ──────────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ public class PropertyImageConfiguration : IEntityTypeConfiguration<PropertyImage
         builder.HasKey(i => i.Id);
 
         builder.Property(i => i.ImageUrl).IsRequired().HasColumnType("text");
+        builder.Property(i => i.IsCover).HasDefaultValue(false);
 
         builder.HasOne(i => i.Property)
             .WithMany(p => p.Images)

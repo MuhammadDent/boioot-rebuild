@@ -11,6 +11,7 @@ public class ProjectImageConfiguration : IEntityTypeConfiguration<ProjectImage>
         builder.HasKey(i => i.Id);
 
         builder.Property(i => i.ImageUrl).IsRequired().HasColumnType("text");
+        builder.Property(i => i.IsCover).HasDefaultValue(false);
 
         builder.HasOne(i => i.Project)
             .WithMany(p => p.Images)

@@ -116,9 +116,12 @@ public class UploadController : BaseController
         var userId = GetUserId();
         var userImage = new UserImage
         {
-            UserId  = userId,
-            Url     = result.PublicUrl,
-            FileKey = result.FileKey,
+            UserId           = userId,
+            Url              = result.PublicUrl,
+            FileKey          = result.FileKey,
+            OriginalFileName = Path.GetFileName(file.FileName),
+            MimeType         = contentType,
+            SizeBytes        = file.Length,
         };
         _db.UserImages.Add(userImage);
         await _db.SaveChangesAsync(ct);
@@ -139,7 +142,15 @@ public class UploadController : BaseController
         var images = await _db.UserImages
             .Where(i => i.UserId == userId)
             .OrderByDescending(i => i.CreatedAt)
-            .Select(i => new { i.Id, i.Url, i.CreatedAt })
+            .Select(i => new
+            {
+                i.Id,
+                i.Url,
+                i.OriginalFileName,
+                i.MimeType,
+                i.SizeBytes,
+                i.CreatedAt,
+            })
             .ToListAsync(ct);
 
         return Ok(images);
@@ -165,8 +176,16 @@ public class UploadController : BaseController
         if (image.UserId != userId)
             return Forbid();
 
-        // Delete from storage (R2 or local filesystem)
-        await _storage.DeleteAsync(image.FileKey, ct);
+        // Delete from storage first — if it fails we abort so the DB record stays consistent.
+        try
+        {
+            await _storage.DeleteAsync(image.FileKey, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Upload/delete] R2 deletion failed for key={Key}", image.FileKey);
+            return StatusCode(502, new { error = "فشل حذف الملف من التخزين السحابي. يُرجى المحاولة لاحقاً." });
+        }
 
         _db.UserImages.Remove(image);
         await _db.SaveChangesAsync(ct);
@@ -181,12 +200,15 @@ public class UploadController : BaseController
     public record AssignToListingRequest(Guid ImageId, Guid ListingId, string ListingType, bool IsPrimary = false);
 
     /// <summary>
+    /// [DEPRECATED] Use POST /api/images/attach instead.
+    ///
     /// Assigns an already-uploaded UserImage to a Property or Project listing.
     /// Creates a PropertyImage or ProjectImage row, setting UserImageId and ImageUrl
     /// from the UserImage record.
     ///
     /// ListingType: "property" | "project"
     /// </summary>
+    [Obsolete("Use POST /api/images/attach instead.")]
     [HttpPost("assign-to-listing")]
     public async Task<IActionResult> AssignToListing(
         [FromBody] AssignToListingRequest request,
