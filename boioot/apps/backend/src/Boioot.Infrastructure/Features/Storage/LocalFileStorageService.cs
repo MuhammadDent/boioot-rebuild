@@ -19,6 +19,10 @@ namespace Boioot.Infrastructure.Features.Storage;
 /// IMPORTANT: On Fly.io the local filesystem is ephemeral — files are lost
 /// on every deploy or container restart. This implementation is intentionally
 /// a safe fallback for development and early production stages only.
+///
+/// Direct upload (presigned URLs) is NOT supported in local mode.
+/// GeneratePresignedUploadUrlAsync returns null — callers should fall back
+/// to POST /api/upload/image for traditional multipart upload.
 /// </summary>
 public sealed class LocalFileStorageService : IFileStorageService
 {
@@ -97,12 +101,60 @@ public sealed class LocalFileStorageService : IFileStorageService
 
     public string GetPublicUrl(string fileKey) => BuildPublicUrl(fileKey);
 
+    // ── GeneratePresignedUploadUrlAsync ───────────────────────────────────────
+
+    /// <summary>
+    /// Presigned URLs are not supported in local storage mode.
+    /// Returns null — callers should fall back to POST /api/upload/image.
+    /// </summary>
+    public Task<string?> GeneratePresignedUploadUrlAsync(
+        string            fileKey,
+        string            contentType,
+        int               expiresInSeconds,
+        CancellationToken ct = default)
+    {
+        _logger.LogWarning(
+            "[LocalStorage] GeneratePresignedUploadUrlAsync called but not supported. " +
+            "Use POST /api/upload/image instead.");
+
+        return Task.FromResult<string?>(null);
+    }
+
+    // ── ObjectExistsAsync ─────────────────────────────────────────────────────
+
+    public Task<bool> ObjectExistsAsync(string fileKey, CancellationToken ct = default)
+    {
+        var safePath = Path.GetFullPath(Path.Combine(_env.WebRootPath, fileKey.TrimStart('/')));
+
+        if (!safePath.StartsWith(_env.WebRootPath, StringComparison.OrdinalIgnoreCase))
+            return Task.FromResult(false);
+
+        return Task.FromResult(File.Exists(safePath));
+    }
+
+    // ── GetObjectStreamAsync ──────────────────────────────────────────────────
+
+    public async Task<Stream> GetObjectStreamAsync(string fileKey, CancellationToken ct = default)
+    {
+        var safePath = Path.GetFullPath(Path.Combine(_env.WebRootPath, fileKey.TrimStart('/')));
+
+        if (!safePath.StartsWith(_env.WebRootPath, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException($"Path traversal attempt: {fileKey}");
+
+        if (!File.Exists(safePath))
+            throw new FileNotFoundException($"File not found: {fileKey}");
+
+        var ms = new MemoryStream();
+        await using var fs = File.OpenRead(safePath);
+        await fs.CopyToAsync(ms, ct);
+        ms.Position = 0;
+        return ms;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private string BuildPublicUrl(string fileKey)
     {
-        var basePath = _options.LocalPublicBasePath.TrimEnd('/');
-
         // If fileKey already starts with the base path, don't duplicate it
         var key = fileKey.TrimStart('/');
         return $"/{key}";

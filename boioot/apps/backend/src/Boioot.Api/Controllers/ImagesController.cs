@@ -31,16 +31,31 @@ public class ImagesController : BaseController
 {
     private readonly BoiootDbContext _db;
     private readonly IFileStorageService _storage;
+    private readonly IImageProcessingService _imageProcessor;
     private readonly ILogger<ImagesController> _logger;
+
+    // ── Direct-upload constants ────────────────────────────────────────────────
+
+    private static readonly HashSet<string> AllowedDirectUploadTypes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg", "image/jpg", "image/png", "image/webp",
+            "image/gif",  "image/svg+xml", "image/bmp",
+        };
+
+    /// <summary>Maximum raw file size accepted for direct upload: 10 MB.</summary>
+    private const long MaxDirectUploadBytes = 10L * 1024 * 1024;
 
     public ImagesController(
         BoiootDbContext db,
         IFileStorageService storage,
+        IImageProcessingService imageProcessor,
         ILogger<ImagesController> logger)
     {
-        _db      = db;
-        _storage = storage;
-        _logger  = logger;
+        _db             = db;
+        _storage        = storage;
+        _imageProcessor = imageProcessor;
+        _logger         = logger;
     }
 
     // ────────────────────────────────────────────────────────────────────────────
@@ -59,6 +74,25 @@ public class ImagesController : BaseController
         string EntityType,
         Guid   EntityId,
         IEnumerable<ReorderItem> Items);
+
+    // ── Direct-upload DTOs ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Request body for POST /api/images/direct-upload-url.
+    /// </summary>
+    public record DirectUploadUrlRequest(
+        string FileName,
+        string ContentType,
+        long   SizeBytes);
+
+    /// <summary>
+    /// Request body for POST /api/images/finalize-direct-upload.
+    /// </summary>
+    public record FinalizeDirectUploadRequest(
+        string FileKey,
+        string FileName,
+        string ContentType,
+        long   SizeBytes);
 
     // ────────────────────────────────────────────────────────────────────────────
     // POST /api/images/attach
@@ -747,6 +781,235 @@ public class ImagesController : BaseController
         _logger.LogInformation(
             "[Images/promote-cover] ProjectImage {Id} promoted for Project {ProjId}",
             next.Id, projectId);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // POST /api/images/direct-upload-url
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Generates a presigned PUT URL that allows the browser to upload a file
+    /// directly to Cloudflare R2 — bypassing the API server for the raw transfer.
+    ///
+    /// The file is stored under a per-user "pending" prefix in R2 and is NOT yet
+    /// accessible publicly. Call POST /api/images/finalize-direct-upload after
+    /// the browser PUT completes to process and register the image.
+    ///
+    /// Returns 501 if the active storage backend does not support presigned URLs
+    /// (e.g., local development mode). Use POST /api/upload/image in that case.
+    ///
+    /// CORS note: The R2 bucket must allow PUT from browser origins.
+    /// </summary>
+    [HttpPost("direct-upload-url")]
+    public async Task<IActionResult> RequestDirectUploadUrl(
+        [FromBody] DirectUploadUrlRequest req,
+        CancellationToken ct)
+    {
+        // ── Validate content type ─────────────────────────────────────────────
+        var contentType = req.ContentType?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (!AllowedDirectUploadTypes.Contains(contentType))
+            return BadRequest(new { error = "نوع الملف غير مدعوم. الأنواع المقبولة: JPG، PNG، WebP، GIF، SVG" });
+
+        // ── Validate file size ────────────────────────────────────────────────
+        if (req.SizeBytes <= 0 || req.SizeBytes > MaxDirectUploadBytes)
+            return BadRequest(new { error = "حجم الملف يتجاوز 10 MB أو غير صالح" });
+
+        // ── Build safe, user-scoped file key ──────────────────────────────────
+        var userId = GetUserId();
+        var ext    = contentType switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png"                 => ".png",
+            "image/webp"                => ".webp",
+            "image/gif"                 => ".gif",
+            "image/svg+xml"             => ".svg",
+            "image/bmp"                 => ".bmp",
+            _                           => ".jpg",
+        };
+        var fileKey          = $"pending-direct-uploads/{userId}/{Guid.NewGuid()}{ext}";
+        const int ExpiresIn  = 300; // 5 minutes
+
+        // ── Ask storage backend for a presigned PUT URL ───────────────────────
+        var uploadUrl = await _storage.GeneratePresignedUploadUrlAsync(fileKey, contentType, ExpiresIn, ct);
+
+        if (uploadUrl is null)
+        {
+            // Local storage mode — direct upload is not available
+            return StatusCode(501, new
+            {
+                error = "Direct upload غير متاح في وضع التطوير. استخدم POST /api/upload/image"
+            });
+        }
+
+        _logger.LogInformation(
+            "[Images/direct-upload-url] userId={UserId} fileKey={FileKey}",
+            userId, fileKey);
+
+        return Ok(new
+        {
+            uploadUrl,
+            fileKey,
+            expiresInSeconds = ExpiresIn,
+        });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // POST /api/images/finalize-direct-upload
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Called by the frontend AFTER the browser has PUT the raw file to R2
+    /// via the presigned URL from POST /api/images/direct-upload-url.
+    ///
+    /// Steps:
+    ///   1. Security: Verifies fileKey is in the caller's own pending folder.
+    ///   2. Existence: Confirms the raw file is present in R2.
+    ///   3. Processing:
+    ///      • Processable types (JPEG, PNG, WebP, BMP):
+    ///          - Downloads raw file from R2.
+    ///          - Converts to WebP (≤1600 px) + thumbnail (≤480 px).
+    ///          - Uploads both to permanent R2 keys.
+    ///      • Non-processable types (SVG, GIF):
+    ///          - Downloads and re-uploads to a permanent key as-is.
+    ///   4. Cleanup: Deletes the raw pending file from R2 (best-effort).
+    ///   5. DB: Creates a UserImage row.
+    ///   6. Returns { id, url, thumbnailUrl } — same shape as /api/upload/image.
+    ///
+    /// The response is drop-in compatible with the legacy upload endpoint so the
+    /// frontend can use the same attach/cover/reorder flow after finalize.
+    /// </summary>
+    [HttpPost("finalize-direct-upload")]
+    public async Task<IActionResult> FinalizeDirectUpload(
+        [FromBody] FinalizeDirectUploadRequest req,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+
+        // ── Security: fileKey MUST live inside the caller's pending folder ────
+        var expectedPrefix = $"pending-direct-uploads/{userId}/";
+        if (string.IsNullOrWhiteSpace(req.FileKey) ||
+            !req.FileKey.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(
+                "[Images/finalize] Rejected invalid fileKey={Key} for userId={UserId}",
+                req.FileKey, userId);
+            return BadRequest(new { error = "معرف الملف غير صالح أو لا تملك صلاحية الوصول إليه" });
+        }
+
+        // ── Validate content type ─────────────────────────────────────────────
+        var contentType = req.ContentType?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (!AllowedDirectUploadTypes.Contains(contentType))
+            return BadRequest(new { error = "نوع الملف غير مدعوم" });
+
+        // ── Confirm the raw file was actually uploaded ────────────────────────
+        var exists = await _storage.ObjectExistsAsync(req.FileKey, ct);
+        if (!exists)
+        {
+            _logger.LogWarning(
+                "[Images/finalize] Raw file not found in R2: {Key}", req.FileKey);
+            return NotFound(new
+            {
+                error = "الملف الخام غير موجود في التخزين. تأكد من اكتمال عملية الرفع المباشر."
+            });
+        }
+
+        UserImage userImage;
+
+        if (_imageProcessor.CanProcess(contentType))
+        {
+            // ── Download → process → upload optimized versions ────────────────
+            await using var rawStream = await _storage.GetObjectStreamAsync(req.FileKey, ct);
+            using var processed       = await _imageProcessor.ProcessAsync(rawStream, ct);
+
+            var mainResult = await _storage.UploadAsync(
+                processed.MainStream,
+                $"{Guid.NewGuid()}.webp",
+                processed.ContentType,
+                "uploads",
+                ct);
+
+            var thumbResult = await _storage.UploadAsync(
+                processed.ThumbnailStream,
+                $"{Guid.NewGuid()}.webp",
+                processed.ContentType,
+                "uploads/thumbs",
+                ct);
+
+            // Delete raw pending file (best-effort — don't abort on failure)
+            try { await _storage.DeleteAsync(req.FileKey, ct); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "[Images/finalize] Failed to delete pending file {Key} — will remain in R2",
+                    req.FileKey);
+            }
+
+            _logger.LogInformation(
+                "[Images/finalize] Processed userId={UserId}: {Orig} → main={Main} thumb={Thumb}",
+                userId, req.FileName, mainResult.FileKey, thumbResult.FileKey);
+
+            userImage = new UserImage
+            {
+                UserId           = userId,
+                Url              = mainResult.PublicUrl,
+                FileKey          = mainResult.FileKey,
+                ThumbnailUrl     = thumbResult.PublicUrl,
+                ThumbnailFileKey = thumbResult.FileKey,
+                OriginalFileName = Path.GetFileName(req.FileName ?? string.Empty),
+                MimeType         = processed.ContentType,
+                SizeBytes        = req.SizeBytes,
+            };
+        }
+        else
+        {
+            // ── SVG / GIF — download and re-upload to permanent key ───────────
+            // S3 does not support server-side move; we copy + delete.
+            await using var rawStream = await _storage.GetObjectStreamAsync(req.FileKey, ct);
+
+            var permExt = contentType switch
+            {
+                "image/gif"     => ".gif",
+                "image/svg+xml" => ".svg",
+                _               => ".bin",
+            };
+            var permResult = await _storage.UploadAsync(
+                rawStream,
+                $"{Guid.NewGuid()}{permExt}",
+                contentType,
+                "uploads",
+                ct);
+
+            try { await _storage.DeleteAsync(req.FileKey, ct); }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "[Images/finalize] Failed to delete pending file {Key}", req.FileKey);
+            }
+
+            _logger.LogInformation(
+                "[Images/finalize] Non-processable userId={UserId}: {Orig} → {Perm}",
+                userId, req.FileName, permResult.FileKey);
+
+            userImage = new UserImage
+            {
+                UserId           = userId,
+                Url              = permResult.PublicUrl,
+                FileKey          = permResult.FileKey,
+                OriginalFileName = Path.GetFileName(req.FileName ?? string.Empty),
+                MimeType         = contentType,
+                SizeBytes        = req.SizeBytes,
+            };
+        }
+
+        _db.UserImages.Add(userImage);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new
+        {
+            id           = userImage.Id,
+            url          = userImage.Url,
+            thumbnailUrl = userImage.ThumbnailUrl,
+        });
     }
 
     // ────────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,296 @@
+أريدك الآن أن تبدأ **مرحلة Direct Upload to Cloudflare R2 باستخدام Presigned URLs** في مشروع **Boioot**، لكن بشكل معماري صحيح يحافظ على نظام الصور الحالي ولا يكسره.
+
+## الهدف
+
+تقليل الحمل على الـ backend وتسريع رفع الصور عبر:
+
+* رفع الملف مباشرة من الـ browser إلى Cloudflare R2
+* مع الحفاظ على:
+
+  * image processing
+  * webp conversion
+  * thumbnail generation
+  * UserImage metadata
+  * cover / reorder / attach flows الحالية
+
+---
+
+# القرار المعماري المطلوب
+
+**لا أريد direct upload كاملًا بطريقة تكسر النظام الحالي.**
+
+أريد تنفيذ **Hybrid Direct Upload Flow** كالتالي:
+
+## التدفق المطلوب
+
+1. الـ frontend يطلب من backend:
+
+   * `presigned upload URL`
+   * و `fileKey`
+   * وأي metadata لازمة
+
+2. الـ browser يرفع الملف مباشرة إلى R2 باستخدام الـ presigned URL
+
+3. بعد نجاح الرفع، الـ frontend ينادي backend endpoint نهائي مثل:
+
+   * `POST /api/images/finalize-direct-upload`
+
+4. الـ backend عند finalize:
+
+   * يتحقق من الملف
+   * يسجل/يحدث `UserImage`
+   * ينفذ image processing إذا كان مناسبًا
+   * يولد thumbnail / optimized version
+   * يعيد response متوافق مع النظام الحالي
+
+---
+
+# المطلوب منك الآن
+
+## 1) افحص الوضع الحالي أولًا
+
+ابدأ بتحليل النظام الحالي وحدد:
+
+* كيف يتم رفع الصور الآن عبر `/api/upload/image`
+* أين تتم المعالجة الحالية للصور
+* أين يتم إنشاء:
+
+  * `ThumbnailUrl`
+  * `ThumbnailFileKey`
+  * `WebP`
+* ما هو أفضل مكان لإدخال direct upload بدون كسر شيء
+* هل `UploadController` هو أفضل مكان أم يلزم endpoint جديد
+* ما هو أقل مسار خطر للتنفيذ
+
+أريد أولًا **تقريرًا مختصرًا جدًا** يوضح:
+
+1. الوضع الحالي
+2. أفضل مسار لإضافة direct upload
+3. كيف نحافظ على التوافق
+
+---
+
+## 2) أنشئ endpoint لطلب presigned URL
+
+أريد endpoint احترافي مثل:
+
+* `POST /api/images/direct-upload-url`
+  أو اسم أوضح إن رأيته أفضل
+
+### request متوقع
+
+مثلًا:
+
+```json
+{
+  "fileName": "photo.jpg",
+  "contentType": "image/jpeg",
+  "sizeBytes": 1234567
+}
+```
+
+### response متوقع
+
+يرجع مثلًا:
+
+```json
+{
+  "uploadUrl": "...",
+  "fileKey": "...",
+  "publicUrl": "...",
+  "expiresInSeconds": 300
+}
+```
+
+### المطلوب
+
+* توليد key منظم وآمن
+* التأكد من content type المسموح
+* التحقق من الحد الأقصى للحجم
+* عدم السماح بأنواع غير مرغوبة
+
+---
+
+## 3) أنشئ finalize endpoint
+
+أريد endpoint واضح مثل:
+
+* `POST /api/images/finalize-direct-upload`
+
+### request متوقع
+
+مثلًا:
+
+```json
+{
+  "fileKey": "...",
+  "fileName": "photo.jpg",
+  "contentType": "image/jpeg",
+  "sizeBytes": 1234567
+}
+```
+
+### المطلوب عند finalize
+
+* التحقق أن الملف موجود في R2
+* إنشاء أو تحديث `UserImage`
+* تشغيل image processing pipeline الحالية:
+
+  * optimization
+  * webp
+  * thumbnail
+* حفظ:
+
+  * `Url`
+  * `ThumbnailUrl`
+  * metadata
+* إعادة response متوافق مع `/api/upload/image` أو قريب جدًا منه
+
+إذا كانت pipeline الحالية تتوقع `IFormFile` فقط، فقم بتعديلها بشكل نظيف لتدعم:
+
+* upload التقليدي
+* direct upload finalize
+  بدون duplicating logic
+
+---
+
+## 4) أبقِ الـ upload الحالي موجودًا
+
+مهم جدًا:
+
+* لا تحذف `POST /api/upload/image`
+* اجعله يعمل كما هو للتوافق
+* direct upload يكون مسارًا جديدًا ومحسنًا
+* ويمكن لاحقًا للـ frontend الانتقال إليه تدريجيًا
+
+---
+
+## 5) تحسين abstraction للتخزين إذا احتاج الأمر
+
+إذا كانت خدمة R2 الحالية تحتاج توسعة، قم بتحسينها لتدعم بوضوح:
+
+* `GeneratePresignedUploadUrlAsync`
+* `ObjectExistsAsync`
+* `GetObjectStreamAsync`
+* `UploadAsync`
+* `DeleteAsync`
+
+بحيث تبقى كل تفاصيل R2 داخل Infrastructure.
+
+---
+
+## 6) تعديل الـ frontend تدريجيًا
+
+أريدك أن تعدل frontend image uploader بطريقة آمنة:
+
+### في الوضع الجديد
+
+بدل:
+
+* رفع الملف مباشرة إلى backend
+
+يصبح:
+
+1. طلب presigned URL من backend
+2. رفع الملف مباشرة إلى R2
+3. استدعاء finalize endpoint
+4. ثم استخدام response كما كان سابقًا
+
+### مهم
+
+* لا تكسر الـ UI الحالية
+* احتفظ بنفس states:
+
+  * uploading
+  * uploaded
+  * failed
+* إذا فشل direct upload:
+
+  * أعرض خطأ واضح
+  * وإذا كان من الأسهل توفير fallback إلى المسار القديم، قيّم ذلك واشرحه
+
+---
+
+## 7) التوافق مع processing الحالية
+
+هذه أهم نقطة:
+
+أنا لا أريد direct upload إذا كان سيضيع:
+
+* thumbnail generation
+* webp conversion
+* metadata
+
+لذلك إن احتجت:
+
+* تنزيل الملف من R2 داخل backend أثناء finalize
+* ثم تمريره إلى image processing service
+  فهذا مقبول حاليًا
+
+لكن نفّذه بشكل نظيف وفسّر السبب.
+
+---
+
+## 8) الأمان والقيود
+
+أريدك أن تطبق بشكل واضح:
+
+* السماح فقط بأنواع الصور المعتمدة
+* حد أقصى للحجم
+* صلاحية قصيرة للـ presigned URL
+* naming strategy منظمة وآمنة
+* عدم الثقة في المدخلات القادمة من الواجهة
+
+---
+
+## 9) بعد التنفيذ أريد تقريرًا واضحًا
+
+أعطني بوضوح:
+
+### أ) ما الذي كان موجودًا قبل
+
+### ب) ما الذي أضفته
+
+### ج) الملفات المعدلة
+
+### د) الـ endpoints الجديدة
+
+### هـ) كيف يعمل direct upload flow الآن
+
+### و) كيف حافظت على image processing الحالية
+
+### ز) كيف حافظت على backward compatibility
+
+### ح) أي limitations حالية أو تحسينات مستقبلية
+
+---
+
+## 10) خطوات اختبار عملية
+
+أريدك أن تعطيني خطوات اختبار واضحة للتأكد من:
+
+1. طلب presigned URL
+2. رفع الملف مباشرة إلى R2
+3. finalize بنجاح
+4. إنشاء thumbnail
+5. ظهور الصورة في الواجهة
+6. استمرار عمل cover / reorder / attach
+7. استمرار عمل `/api/upload/image` القديم
+
+---
+
+# أسلوب العمل المطلوب
+
+* افحص أولًا
+* لا تكسر النظام الحالي
+* نفّذ direct upload كمسار جديد
+* حافظ على processing pipeline
+* اجعل التنفيذ production-minded
+* تجنب overengineering
+
+ابدأ الآن بـ:
+
+1. تحليل الوضع الحالي
+2. تقرير مختصر جدًا
+3. ثم تنفيذ direct upload step by step
+4. ثم أعطني الملخص التنفيذي النهائي

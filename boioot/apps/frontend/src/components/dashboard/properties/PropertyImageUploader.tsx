@@ -159,7 +159,7 @@ export default function PropertyImageUploader({
     // Upload each file independently
     for (const item of newItems) {
       try {
-        const info = await imagesService.upload(item.file, token);
+        const info = await imagesService.uploadViaDirect(item.file, token);
 
         setUploads((prev) =>
           prev.map((u) =>
@@ -286,7 +286,7 @@ export default function PropertyImageUploader({
     );
     const token = tokenStorage.getToken() ?? "";
     try {
-      const info = await imagesService.upload(item.file, token);
+      const info = await imagesService.uploadViaDirect(item.file, token);
       setUploads((prev) =>
         prev.map((u) =>
           u.localId === localId

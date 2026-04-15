@@ -1,15 +1,17 @@
 /**
  * images.service.ts
- * All image-related API calls for the new R2 upload pipeline.
+ * All image-related API calls for the R2 upload pipeline.
  *
  * Endpoints used:
- *   POST   /api/upload/image               — upload a file, get { id, url }
- *   POST   /api/images/attach              — attach UserImage to entity
- *   POST   /api/images/{id}/set-cover      — set cover
- *   POST   /api/images/reorder             — reorder images
- *   DELETE /api/images/{id}/detach         — detach only (keep R2)
- *   DELETE /api/images/{id}?entityType=    — full delete (R2 + DB)
- *   GET    /api/images/{entityType}/{id}   — get all images for entity
+ *   POST   /api/images/direct-upload-url       — request presigned PUT URL (NEW)
+ *   POST   /api/images/finalize-direct-upload  — finalize after browser PUT (NEW)
+ *   POST   /api/upload/image                   — legacy multipart upload (kept for compat)
+ *   POST   /api/images/attach                  — attach UserImage to entity
+ *   POST   /api/images/{id}/set-cover          — set cover
+ *   POST   /api/images/reorder                 — reorder images
+ *   DELETE /api/images/{id}/detach             — detach only (keep R2)
+ *   DELETE /api/images/{id}?entityType=        — full delete (R2 + DB)
+ *   GET    /api/images/{entityType}/{id}       — get all images for entity
  */
 
 import { apiConfig } from "@/lib/api-config";
@@ -19,8 +21,9 @@ const BASE = apiConfig.baseUrl;
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface UploadedImageInfo {
-  id: string;   // UserImage.Id
-  url: string;  // public CDN URL
+  id:           string;  // UserImage.Id
+  url:          string;  // public CDN URL
+  thumbnailUrl?: string; // WebP thumbnail URL (available after processing)
 }
 
 export interface AttachRequest {
@@ -50,6 +53,13 @@ export interface ServerImageItem {
   imageSource: string;   // "legacy" | "user_upload"
 }
 
+/** Response from POST /api/images/direct-upload-url */
+interface DirectUploadUrlResponse {
+  uploadUrl:        string;
+  fileKey:          string;
+  expiresInSeconds: number;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function authHeader(token: string) {
@@ -66,15 +76,89 @@ async function throwIfError(res: Response, fallback: string): Promise<void> {
 
 export const imagesService = {
 
-  // ── Upload ────────────────────────────────────────────────────────────────
+  // ── Direct Upload (presigned URL → R2 → finalize) ─────────────────────────
+  //
+  // Preferred upload path in production.
+  //
+  // Flow:
+  //   1. Request presigned PUT URL from backend  (→ POST /api/images/direct-upload-url)
+  //   2. Browser PUTs file directly to R2        (no backend involvement)
+  //   3. Backend finalizes: downloads raw file,  (→ POST /api/images/finalize-direct-upload)
+  //      processes WebP + thumbnail, creates UserImage
+  //
+  // If the backend returns 501 (unsupported — local dev mode), falls back
+  // automatically to the legacy multipart POST /api/upload/image.
+  //
+  async uploadViaDirect(file: File, token: string): Promise<UploadedImageInfo> {
+    // Step 1 — request presigned URL
+    let urlRes: Response;
+    try {
+      urlRes = await fetch(`${BASE}/images/direct-upload-url`, {
+        method:  "POST",
+        headers: { ...authHeader(token), "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          fileName:    file.name,
+          contentType: file.type || "image/jpeg",
+          sizeBytes:   file.size,
+        }),
+      });
+    } catch {
+      // Network error — fall back to legacy upload
+      console.warn("[images] direct-upload-url network error, falling back to multipart");
+      return imagesService.upload(file, token);
+    }
 
+    // 501 = direct upload not supported (local dev) → fall back
+    if (urlRes.status === 501) {
+      console.info("[images] Direct upload not supported by backend, using multipart fallback");
+      return imagesService.upload(file, token);
+    }
+
+    await throwIfError(urlRes, "فشل طلب رابط الرفع المباشر");
+    const { uploadUrl, fileKey } = (await urlRes.json()) as DirectUploadUrlResponse;
+
+    // Step 2 — browser PUTs raw file directly to R2
+    const putRes = await fetch(uploadUrl, {
+      method:  "PUT",
+      headers: { "Content-Type": file.type || "image/jpeg" },
+      body:    file,
+    });
+
+    if (!putRes.ok) {
+      throw new Error(
+        `فشل الرفع المباشر إلى التخزين (${putRes.status}). حاول مرة أخرى.`
+      );
+    }
+
+    // Step 3 — finalize: backend processes and registers the image
+    const finalRes = await fetch(`${BASE}/images/finalize-direct-upload`, {
+      method:  "POST",
+      headers: { ...authHeader(token), "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        fileKey,
+        fileName:    file.name,
+        contentType: file.type || "image/jpeg",
+        sizeBytes:   file.size,
+      }),
+    });
+
+    await throwIfError(finalRes, "فشل إتمام معالجة الصورة");
+    return finalRes.json() as Promise<UploadedImageInfo>;
+  },
+
+  // ── Legacy Upload (multipart — kept for compatibility) ─────────────────────
+  //
+  // Sends the entire file through the backend API server.
+  // Still used as fallback when direct upload is unavailable (local dev mode)
+  // and remains the endpoint used by PropertyImageUploader as the fallback.
+  //
   async upload(file: File, token: string): Promise<UploadedImageInfo> {
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch(`${BASE}/upload/image`, {
-      method: "POST",
+      method:  "POST",
       headers: authHeader(token),
-      body: fd,
+      body:    fd,
     });
     await throwIfError(res, "فشل رفع الصورة");
     return res.json() as Promise<UploadedImageInfo>;
@@ -84,9 +168,9 @@ export const imagesService = {
 
   async attach(req: AttachRequest, token: string): Promise<void> {
     const res = await fetch(`${BASE}/images/attach`, {
-      method: "POST",
+      method:  "POST",
       headers: { ...authHeader(token), "Content-Type": "application/json" },
-      body: JSON.stringify(req),
+      body:    JSON.stringify(req),
     });
     await throwIfError(res, "فشل ربط الصورة بالعقار");
   },
@@ -105,9 +189,9 @@ export const imagesService = {
 
   async reorder(req: ReorderRequest, token: string): Promise<void> {
     const res = await fetch(`${BASE}/images/reorder`, {
-      method: "POST",
+      method:  "POST",
       headers: { ...authHeader(token), "Content-Type": "application/json" },
-      body: JSON.stringify(req),
+      body:    JSON.stringify(req),
     });
     await throwIfError(res, "فشل إعادة ترتيب الصور");
   },
@@ -116,7 +200,7 @@ export const imagesService = {
 
   async detach(propertyImageId: string, token: string): Promise<void> {
     const res = await fetch(`${BASE}/images/${propertyImageId}/detach`, {
-      method: "DELETE",
+      method:  "DELETE",
       headers: authHeader(token),
     });
     await throwIfError(res, "فشل إزالة الصورة");
