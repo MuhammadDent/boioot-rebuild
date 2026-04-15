@@ -66,11 +66,7 @@ public class UploadController : BaseController
 
     // ── /api/upload/image ─────────────────────────────────────────────────────
 
-    // TEMPORARY: [AllowAnonymous] added solely to verify Cloudflare R2 upload via Swagger.
-    // MUST be removed before merging to production. The [Authorize] on the controller
-    // remains in place — this attribute overrides it only for this single action.
     [HttpPost("image")]
-    [AllowAnonymous]
     [RequestSizeLimit(10_485_760)]
     public async Task<IActionResult> UploadImage(IFormFile file, CancellationToken ct)
     {
