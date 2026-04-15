@@ -9,6 +9,9 @@ import { dashboardPropertiesApi } from "@/features/dashboard/properties/api";
 import PropertyForm from "@/components/dashboard/properties/PropertyForm";
 import { api, normalizeError } from "@/lib/api";
 import type { CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
+import { imagesService } from "@/services/images.service";
+import type { PendingImageUpload } from "@/components/dashboard/properties/PropertyImageUploader";
+import { tokenStorage } from "@/lib/token";
 
 const COMPANY_ROLES = ["Admin", "CompanyOwner"];
 
@@ -37,16 +40,32 @@ export default function NewPropertyPage() {
       .catch(() => {});
   }, [user, router]);
 
-  async function handleSubmit(data: CreatePropertyRequest | UpdatePropertyRequest) {
+  async function handleSubmit(
+    data: CreatePropertyRequest | UpdatePropertyRequest,
+    pendingUploads?: PendingImageUpload[]
+  ) {
     setIsSubmitting(true);
     setServerError("");
     try {
       const payload = data as CreatePropertyRequest;
+      let property;
       if (user && COMPANY_ROLES.includes(user.role)) {
-        await dashboardPropertiesApi.create(payload);
+        property = await dashboardPropertiesApi.create(payload);
       } else {
-        await dashboardPropertiesApi.postUserListing(payload);
+        property = await dashboardPropertiesApi.postUserListing(payload);
       }
+
+      // Attach, order, and set-cover for any uploaded images
+      if (pendingUploads && pendingUploads.length > 0) {
+        const token = tokenStorage.getToken() ?? "";
+        await imagesService.finalizeCreate(
+          property.id,
+          "property",
+          pendingUploads,
+          token
+        );
+      }
+
       router.push("/dashboard/listings?success=1");
     } catch (e) {
       const msg = normalizeError(e);

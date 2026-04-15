@@ -87,8 +87,11 @@ export interface PagedResult<T> {
 export interface ProjectImageResponse {
   id: string;
   imageUrl: string;
-  isPrimary: boolean;
+  isCover: boolean;
+  isPrimary: boolean;   // backward-compat alias for isCover
   order: number;
+  userImageId?: string;  // non-null when uploaded via R2 pipeline
+  imageSource?: string;  // "legacy" | "user_upload"
 }
 
 export interface ProjectResponse {
@@ -115,8 +118,11 @@ export interface ProjectResponse {
 export interface PropertyImageResponse {
   id: string;
   imageUrl: string;
-  isPrimary: boolean;
+  isCover: boolean;
+  isPrimary: boolean;   // backward-compat alias for isCover
   order: number;
+  userImageId?: string;  // non-null when uploaded via R2 pipeline
+  imageSource?: string;  // "legacy" | "user_upload"
 }
 
 export interface PropertyResponse {

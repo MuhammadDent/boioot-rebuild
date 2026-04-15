@@ -46,7 +46,7 @@ export default function EditPropertyPage() {
     loadProperty();
   }, [isLoading, user, id]);
 
-  async function handleSubmit(data: CreatePropertyRequest | UpdatePropertyRequest) {
+  async function handleSubmit(data: CreatePropertyRequest | UpdatePropertyRequest, _pendingUploads?: unknown) {
     setIsSubmitting(true);
     setServerError("");
     try {
