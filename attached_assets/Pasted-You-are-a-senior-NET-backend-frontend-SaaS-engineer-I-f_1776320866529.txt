@@ -1,0 +1,54 @@
+You are a senior .NET backend + frontend SaaS engineer.
+
+I found a business logic issue in my Boioot subscription/ads quota system.
+
+Current wrong behavior:
+- My package allows 5 ads per month.
+- I created 5 ads.
+- Then I deleted 3 ads.
+- The UI now shows that I have 3 ads remaining.
+- But when I try to create a new ad, the system blocks me because I already consumed the monthly quota.
+
+This is inconsistent and creates a loophole for user confusion and possible abuse.
+
+I want you to fix the logic properly.
+
+Business rule المطلوبة:
+1. Ad creation quota must be based on how many ads the user CREATED during the billing period/month.
+2. Deleting an ad must NOT restore quota.
+3. The system must distinguish between:
+   - active ads count
+   - consumed monthly ad quota
+4. If the user created 5/5 ads this month, then deleted some of them, they must still be considered as having consumed 5/5.
+5. The UI must NOT show "remaining ads" based on currently active ads.
+6. Instead, it should show something like:
+   - "استخدمت 5 من 5 إعلانات هذا الشهر"
+   - or "لقد استهلكت كامل رصيد الإعلانات لهذه الفترة"
+7. Validation message and displayed quota must use the SAME source of truth.
+
+What I need from you:
+1. Inspect the backend code that calculates package ad limits and remaining ads.
+2. Find where the system incorrectly uses active/non-deleted ads count instead of created ads count within the quota period.
+3. Fix backend logic so quota is calculated from ad creations within the billing cycle.
+4. Ensure deleted ads remain counted in quota consumption.
+5. Update frontend labels/messages so they do not display misleading remaining count after deletion.
+6. Keep backward compatibility and do not break existing packages.
+7. If needed, add a dedicated field or query for:
+   - monthly ads consumed
+   - monthly ads limit
+   - active ads count
+8. Show me clearly:
+   - which files you changed
+   - old logic vs new logic
+   - exact business rule implemented
+
+Important:
+- Do not make assumptions silently.
+- Inspect the real code first.
+- If the DB schema needs change, propose the safest option.
+- Prefer minimal and safe changes.
+- After implementation, explain how to test the fix with this scenario:
+  1) create 5 ads
+  2) delete 3 ads
+  3) verify displayed quota still shows 5/5 consumed
+  4) verify creating a new ad is blocked

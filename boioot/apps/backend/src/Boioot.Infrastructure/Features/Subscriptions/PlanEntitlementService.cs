@@ -183,14 +183,26 @@ public class PlanEntitlementService : IPlanEntitlementService
         if (limit == -1) return true;
         if (limit == 0)  return false;
 
-        var activeCount = await _db.Properties
-            .Where(p => p.AccountId == accountId
-                     && p.IsDeleted == false
-                     && (p.Status == PropertyStatus.Available ||
-                         p.Status == PropertyStatus.Inactive))
-            .CountAsync(ct);
+        // Load the active subscription to determine the quota period start.
+        // For recurring plans use CurrentPeriodStart; for one-time plans use StartDate.
+        var subPeriod = await _db.Subscriptions
+            .Where(s => s.AccountId == accountId
+                     && s.IsActive
+                     && (s.Status == SubscriptionStatus.Trial ||
+                         s.Status == SubscriptionStatus.Active)
+                     && (s.EndDate == null || s.EndDate > DateTime.UtcNow))
+            .OrderByDescending(s => s.StartDate)
+            .Select(s => new { s.StartDate, s.CurrentPeriodStart })
+            .FirstOrDefaultAsync(ct);
 
-        return activeCount < (int)limit;
+        // Count ALL listings created since the quota period start.
+        // Deliberately excludes the IsDeleted filter: deleting an ad must NOT restore quota.
+        var periodStart = subPeriod?.CurrentPeriodStart ?? subPeriod?.StartDate ?? DateTime.UtcNow;
+        var quotaUsed = await _db.Properties
+            .CountAsync(p => p.AccountId == accountId
+                          && p.CreatedAt >= periodStart, ct);
+
+        return quotaUsed < (int)limit;
     }
 
     // ── CanAddAgentAsync ──────────────────────────────────────────────────

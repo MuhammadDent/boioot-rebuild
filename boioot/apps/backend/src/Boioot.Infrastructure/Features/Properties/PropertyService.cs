@@ -586,8 +586,9 @@ public class PropertyService : IPropertyService
             .Select(a => a.CompanyId!.Value)
             .ToListAsync(ct);
 
+        // Deliberately excludes the IsDeleted filter: deleting an ad must NOT restore monthly quota.
         var monthlyUsed = await _context.Properties
-            .CountAsync(p => !p.IsDeleted && p.CreatedAt >= startOfMonth && (
+            .CountAsync(p => p.CreatedAt >= startOfMonth && (
                 p.OwnerId == ownerIdStr ||
                 userCompanyIds.Contains(p.CompanyId)
             ), ct);

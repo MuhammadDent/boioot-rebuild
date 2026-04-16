@@ -116,7 +116,14 @@ export default function ListingsPage() {
     try {
       await api.delete(`/properties/my-listings/${id}`);
       setListings((prev) => prev.filter((p) => p.id !== id));
-      setStats((prev) => prev ? { ...prev, used: Math.max(0, prev.used - 1) } : prev);
+      // Re-fetch stats from the server — deleting an ad does NOT restore quota,
+      // so the server is the single source of truth for the used/limit counts.
+      try {
+        const statsRes = await api.get<{ used: number; limit: number }>("/properties/my-listings/stats");
+        setStats(statsRes ?? null);
+      } catch {
+        // Non-critical: keep previous stats if refresh fails
+      }
     } catch (e) {
       setListingsError(normalizeError(e));
     } finally {

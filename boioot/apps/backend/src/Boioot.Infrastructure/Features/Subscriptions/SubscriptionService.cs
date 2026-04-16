@@ -77,7 +77,14 @@ public sealed class SubscriptionService : ISubscriptionService
 
         var ent = await LoadPlanEntitlementsAsync(sub.PlanId, ct);
 
-        return BuildResponse(sub, sub.Plan, pricing, ent);
+        // Compute quota used from the Properties table (never decremented by deletion).
+        // For recurring plans use CurrentPeriodStart; for one-time plans use StartDate.
+        var periodStart = sub.CurrentPeriodStart ?? sub.StartDate;
+        var computedQuotaUsed = await _db.Properties
+            .AsNoTracking()
+            .CountAsync(p => p.AccountId == accountId && p.CreatedAt >= periodStart, ct);
+
+        return BuildResponse(sub, sub.Plan, pricing, ent, computedQuotaUsed);
     }
 
     // ── GetUpgradeIntentAsync ─────────────────────────────────────────────────
@@ -679,7 +686,8 @@ public sealed class SubscriptionService : ISubscriptionService
         Subscription sub,
         Plan plan,
         PlanPricing? pricing,
-        PlanEntitlements ent)
+        PlanEntitlements ent,
+        int? overrideQuotaUsed = null)
     {
         var now       = DateTime.UtcNow;
         var isTrial   = sub.Status == SubscriptionStatus.Trial
@@ -688,9 +696,11 @@ public sealed class SubscriptionService : ISubscriptionService
                         || (sub.EndDate.HasValue && sub.EndDate < now);
         var isCanceled = sub.Status == SubscriptionStatus.Cancelled;
 
-        // Quota exhaustion
+        // Quota exhaustion.
+        // overrideQuotaUsed (computed from Properties table) takes priority over
+        // sub.ListingQuotaUsed (DB counter that may be stale / never incremented).
         var listingLimit     = ent.Limit("max_active_listings");
-        var listingQuotaUsed = sub.ListingQuotaUsed;
+        var listingQuotaUsed = overrideQuotaUsed ?? sub.ListingQuotaUsed;
         var isQuotaExhausted = !string.Equals(plan.ConsumptionPolicy, "none", StringComparison.OrdinalIgnoreCase)
                                && listingLimit > 0
                                && listingQuotaUsed >= listingLimit;
