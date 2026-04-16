@@ -205,7 +205,7 @@ public sealed class R2FileStorageService : IFileStorageService, IAsyncDisposable
                 ]
             };
 
-            await _s3.PutBucketCORSAsync(new PutBucketCorsRequest
+            await _s3.PutCORSConfigurationAsync(new PutCORSConfigurationRequest
             {
                 BucketName    = _r2.BucketName,
                 Configuration = corsConfig,
