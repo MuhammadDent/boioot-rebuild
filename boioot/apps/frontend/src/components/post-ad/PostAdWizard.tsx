@@ -306,6 +306,30 @@ export default function PostAdWizard({
   async function handleSubmit() {
     const err = validateStep(step, data);
     if (err) { setStepError(err); return; }
+
+    // ─── Full payload diagnostics before submit ────────────────────────────
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("[PostAdWizard] ▶ SUBMIT clicked (step 7 — review)");
+    console.log("[PostAdWizard] ── Step validation for step", step, "→ PASSED (no frontend block)");
+    console.log("[PostAdWizard] Full wizard data snapshot:");
+    console.log("  title       :", JSON.stringify(data.title));
+    console.log("  description :", JSON.stringify(data.description));
+    console.log("  propertyType:", JSON.stringify(data.propertyType));
+    console.log("  listingType :", JSON.stringify(data.listingType));
+    console.log("  price       :", data.price, "  currency:", data.currency);
+    console.log("  area        :", data.area);
+    console.log("  city        :", JSON.stringify(data.city));
+    console.log("  province    :", JSON.stringify(data.province));
+    console.log("  latitude    :", data.latitude, "  longitude:", data.longitude);
+    console.log("  images count:", data.images.length);
+    data.images.forEach((img, i) => {
+      const prefix = img.slice(0, 40);
+      console.log(`  image[${i}]  : ${img.length} chars — starts with: ${prefix}…`);
+    });
+    console.log("  videoUrl    :", JSON.stringify(data.videoUrl));
+    console.log("  features    :", data.features);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
     await onSubmit(data);
   }
 

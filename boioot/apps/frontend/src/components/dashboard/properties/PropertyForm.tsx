@@ -263,9 +263,41 @@ export default function PropertyForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
+    // ─── Log full form data before validation ─────────────────────────────
+    console.log("════════════════════════════════════════════════════════");
+    console.log("[PropertyForm] ▶ SUBMIT triggered — mode:", mode);
+    console.log("[PropertyForm] Full fields snapshot:");
+    console.log("  title       :", JSON.stringify(fields.title));
+    console.log("  description :", JSON.stringify(fields.description));
+    console.log("  type        :", JSON.stringify(fields.type));
+    console.log("  listingType :", JSON.stringify(fields.listingType));
+    console.log("  status      :", JSON.stringify(fields.status));
+    console.log("  price       :", fields.price, " currency:", fields.currency);
+    console.log("  area        :", fields.area);
+    console.log("  bedrooms    :", fields.bedrooms);
+    console.log("  bathrooms   :", fields.bathrooms);
+    console.log("  city        :", JSON.stringify(fields.city));
+    console.log("  province    :", JSON.stringify(fields.province));
+    console.log("  lat / lng   :", lat, "/", lng);
+    console.log("  pendingUploads:", pendingUploads.length, "images");
+    pendingUploads.forEach((u, i) => {
+      console.log(`  pendingUpload[${i}]: fileKey=${u.fileKey ?? "(none)"} file=${u.file?.name ?? "(none)"}`);
+    });
+    console.log("════════════════════════════════════════════════════════");
+
     const fieldErrors = validate(fields, mode);
     setErrors(fieldErrors);
-    if (Object.keys(fieldErrors).length > 0) return;
+
+    const errorKeys = Object.keys(fieldErrors) as Array<keyof typeof fieldErrors>;
+    if (errorKeys.length > 0) {
+      console.error("[PropertyForm] ✗ Validation FAILED —", errorKeys.length, "field(s) invalid:");
+      errorKeys.forEach((key) => {
+        console.error(`  Field "${key}": ${fieldErrors[key]}`);
+      });
+      return;
+    }
+
+    console.log("[PropertyForm] ✓ Validation PASSED — proceeding to submit");
 
     const base = {
       title: fields.title.trim(),

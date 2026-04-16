@@ -99,9 +99,36 @@ export default function PostAdPage() {
         videoUrl:         wizardData.videoUrl.trim() || undefined,
       };
 
+      // ─── Payload diagnostics before API call ──────────────────────────────
+      console.log("════════════════════════════════════════════════════════");
+      console.log("[PostAdPage] ▶ Sending POST /properties/post");
+      console.log("[PostAdPage] Payload summary:");
+      console.log("  type        :", payload.type);
+      console.log("  listingType :", payload.listingType);
+      console.log("  title       :", JSON.stringify(payload.title));
+      console.log("  description :", JSON.stringify(payload.description));
+      console.log("  price       :", payload.price, " currency:", payload.currency);
+      console.log("  area        :", payload.area);
+      console.log("  bedrooms    :", payload.bedrooms);
+      console.log("  bathrooms   :", payload.bathrooms);
+      console.log("  city        :", JSON.stringify(payload.city));
+      console.log("  province    :", JSON.stringify(payload.province));
+      console.log("  latitude    :", payload.latitude, " longitude:", payload.longitude);
+      console.log("  images      :", payload.images?.length ?? 0, "images");
+      (payload.images ?? []).forEach((img, i) => {
+        console.log(`  image[${i}]   : ${img.length} chars — ${img.slice(0, 50)}…`);
+      });
+      console.log("  videoUrl    :", JSON.stringify(payload.videoUrl));
+      console.log("  features    :", payload.features);
+      console.log("  hasCommission:", payload.hasCommission);
+      console.log("  paymentType  :", payload.paymentType);
+      console.log("════════════════════════════════════════════════════════");
+
       await api.post("/properties/post", payload);
       router.push("/dashboard/listings?success=1");
     } catch (e) {
+      console.error("[PostAdPage] ✗ API call FAILED. Raw error object:", e);
+      console.error("[PostAdPage] normalizeError result:", normalizeError(e));
       setServerError(normalizeError(e));
     } finally {
       setIsSubmitting(false);
