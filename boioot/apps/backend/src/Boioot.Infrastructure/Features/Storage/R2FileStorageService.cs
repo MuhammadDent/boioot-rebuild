@@ -139,13 +139,14 @@ public sealed class R2FileStorageService : IFileStorageService, IAsyncDisposable
     /// <summary>
     /// Creates a time-limited PUT presigned URL for direct browser upload to R2.
     ///
-    /// IMPORTANT: The R2 bucket must have CORS configured to allow PUT requests
-    /// from browser origins. The client must also send the exact Content-Type header
-    /// that was specified when requesting the URL, or R2 will reject the PUT.
+    /// Content-Type is intentionally NOT included in the signed headers.
+    /// Including it causes SignatureDoesNotMatch (401) when the browser sends a
+    /// slightly different MIME type string (e.g. "image/jpeg" vs "image/jpg").
+    /// The browser PUT request can send any Content-Type header it wants; R2 will
+    /// store whatever it receives.  We validate the content type separately in the
+    /// finalize step by inspecting the downloaded file.
     ///
-    /// The file at <paramref name="fileKey"/> is expected to be in the
-    /// "pending-direct-uploads/{userId}/" prefix.  Finalize via
-    /// POST /api/images/finalize-direct-upload to process and register the image.
+    /// CORS note: the bucket CORS is configured at startup via EnsureBucketCorsAsync().
     /// </summary>
     public Task<string?> GeneratePresignedUploadUrlAsync(
         string            fileKey,
@@ -155,21 +156,75 @@ public sealed class R2FileStorageService : IFileStorageService, IAsyncDisposable
     {
         var request = new GetPreSignedUrlRequest
         {
-            BucketName  = _r2.BucketName,
-            Key         = fileKey,
-            Verb        = HttpVerb.PUT,
-            Expires     = DateTime.UtcNow.AddSeconds(expiresInSeconds),
-            ContentType = contentType,
+            BucketName = _r2.BucketName,
+            Key        = fileKey,
+            Verb       = HttpVerb.PUT,
+            Expires    = DateTime.UtcNow.AddSeconds(expiresInSeconds),
+            // ⚠ Do NOT set ContentType here — it becomes a signed header and
+            //   causes 401 SignatureDoesNotMatch if the browser sends a different
+            //   (but equivalent) MIME type string.
         };
 
         // GetPreSignedURL is synchronous in the AWS SDK for .NET
         var url = _s3.GetPreSignedURL(request);
 
         _logger.LogInformation(
-            "[R2Storage] Presigned PUT URL generated: key={Key} expiresIn={Exp}s",
-            fileKey, expiresInSeconds);
+            "[R2Storage] Presigned PUT URL generated: key={Key} contentType={CT} expiresIn={Exp}s",
+            fileKey, contentType, expiresInSeconds);
 
         return Task.FromResult<string?>(url);
+    }
+
+    // ── EnsureBucketCorsAsync ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Applies CORS rules to the R2 bucket so that browsers can PUT files
+    /// directly from production origins.
+    ///
+    /// Safe to call on every startup — PutBucketCors is idempotent (overwrites).
+    /// Errors are logged but do NOT prevent the application from starting.
+    /// </summary>
+    public async Task EnsureBucketCorsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var corsConfig = new CORSConfiguration
+            {
+                Rules =
+                [
+                    new CORSRule
+                    {
+                        // Allow PUT from all known production and development origins.
+                        // "*" is included as a safe fallback for Vercel preview URLs.
+                        AllowedOrigins = ["https://boioot.net", "https://www.boioot.net", "*"],
+                        AllowedMethods = ["GET", "PUT", "POST", "HEAD"],
+                        AllowedHeaders = ["*"],
+                        ExposeHeaders  = ["ETag"],
+                        MaxAgeSeconds  = 3000,
+                    }
+                ]
+            };
+
+            await _s3.PutBucketCORSAsync(new PutBucketCorsRequest
+            {
+                BucketName    = _r2.BucketName,
+                Configuration = corsConfig,
+            }, ct);
+
+            _logger.LogInformation(
+                "[R2Storage] CORS configured on bucket '{Bucket}': " +
+                "AllowedOrigins=[boioot.net, www.boioot.net, *] Methods=[GET,PUT,POST,HEAD]",
+                _r2.BucketName);
+        }
+        catch (Exception ex)
+        {
+            // Log but do not crash — missing CORS is caught during upload attempts.
+            _logger.LogWarning(ex,
+                "[R2Storage] Failed to configure bucket CORS (bucket='{Bucket}'). " +
+                "Direct uploads from browsers may fail with CORS errors. " +
+                "Configure CORS manually in the Cloudflare dashboard if this persists.",
+                _r2.BucketName);
+        }
     }
 
     // ── ObjectExistsAsync ─────────────────────────────────────────────────────

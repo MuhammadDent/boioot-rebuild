@@ -5,7 +5,9 @@ using Microsoft.OpenApi.Models;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Domain.Constants;
+using Boioot.Application.Features.Storage;
 using Boioot.Infrastructure.Extensions;
+using Boioot.Infrastructure.Features.Storage;
 using Boioot.Infrastructure.Persistence;
 using Boioot.Infrastructure.Persistence.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -298,6 +300,27 @@ if (app.Environment.IsProduction()) _ = Task.Run(async () =>
     catch (Exception ex)
     {
         bgLogger.LogError(ex, "[startup] تعذّر تهيئة قاعدة البيانات أو تنفيذ بيانات البذر — التطبيق يستمر بدون قاعدة البيانات");
+    }
+
+    // ── Configure R2 bucket CORS (idempotent — safe to run every deploy) ─────
+    // Ensures browser PUT requests from boioot.net are allowed by the R2 bucket.
+    // Must run AFTER DB init so the server is confirmed healthy before touching R2.
+    try
+    {
+        var storageService = bgServices.GetService<IFileStorageService>();
+        if (storageService is R2FileStorageService r2Service)
+        {
+            bgLogger.LogInformation("[startup] Applying R2 bucket CORS configuration...");
+            await r2Service.EnsureBucketCorsAsync();
+        }
+        else
+        {
+            bgLogger.LogInformation("[startup] Storage is not R2 — skipping CORS configuration.");
+        }
+    }
+    catch (Exception ex)
+    {
+        bgLogger.LogWarning(ex, "[startup] R2 CORS configuration failed — continuing startup.");
     }
 });
 
