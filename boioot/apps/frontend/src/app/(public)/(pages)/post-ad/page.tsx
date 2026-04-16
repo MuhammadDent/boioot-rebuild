@@ -6,8 +6,10 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
 import { api, normalizeError } from "@/lib/api";
+import { tokenStorage } from "@/lib/token";
+import { imagesService } from "@/services/images.service";
 import PostAdWizard from "@/components/post-ad/PostAdWizard";
-import type { CreatePropertyRequest, ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
+import type { CreatePropertyRequest, PropertyResponse, ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
 import Spinner from "@/components/ui/Spinner";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -62,11 +64,14 @@ export default function PostAdPage() {
     installmentsCount: string; hasCommission: boolean; commissionType: "Percentage" | "Fixed";
     commissionValue: string; province: string; city: string; neighborhood: string;
     address: string; latitude: number | null; longitude: number | null;
-    features: string[]; images: string[]; videoUrl: string;
+    features: string[];
+    uploadedImages: { imageId: string; url: string }[];
+    videoUrl: string;
   }) {
     setIsSubmitting(true);
     setServerError("");
     try {
+      // ── Step 1: create the property (without images — handled separately) ──
       const payload: CreatePropertyRequest = {
         type:             wizardData.propertyType,
         listingType:      wizardData.listingType,
@@ -95,11 +100,11 @@ export default function PostAdPage() {
         latitude:         wizardData.latitude     ?? undefined,
         longitude:        wizardData.longitude    ?? undefined,
         features:         wizardData.features.length > 0 ? wizardData.features : undefined,
-        images:           wizardData.images.length > 0 ? wizardData.images : undefined,
+        // images NOT included here — attached via finalizeCreate after creation
         videoUrl:         wizardData.videoUrl.trim() || undefined,
       };
 
-      // ─── Payload diagnostics before API call ──────────────────────────────
+      // ─── Payload diagnostics ──────────────────────────────────────────────
       console.log("════════════════════════════════════════════════════════");
       console.log("[PostAdPage] ▶ Sending POST /properties/post");
       console.log("[PostAdPage] Payload summary:");
@@ -114,9 +119,9 @@ export default function PostAdPage() {
       console.log("  city        :", JSON.stringify(payload.city));
       console.log("  province    :", JSON.stringify(payload.province));
       console.log("  latitude    :", payload.latitude, " longitude:", payload.longitude);
-      console.log("  images      :", payload.images?.length ?? 0, "images");
-      (payload.images ?? []).forEach((img, i) => {
-        console.log(`  image[${i}]   : ${img.length} chars — ${img.slice(0, 50)}…`);
+      console.log("  uploadedImages:", wizardData.uploadedImages.length, "images (will attach after create)");
+      wizardData.uploadedImages.forEach((img, i) => {
+        console.log(`  image[${i}]   : imageId=${img.imageId} url=${img.url}`);
       });
       console.log("  videoUrl    :", JSON.stringify(payload.videoUrl));
       console.log("  features    :", payload.features);
@@ -124,7 +129,27 @@ export default function PostAdPage() {
       console.log("  paymentType  :", payload.paymentType);
       console.log("════════════════════════════════════════════════════════");
 
-      await api.post("/properties/post", payload);
+      const property = await api.post<PropertyResponse>("/properties/post", payload);
+      console.log("[PostAdPage] ✓ Property created — id:", property.id);
+
+      // ── Step 2: attach uploaded images (all already in R2 as UserImages) ─
+      if (wizardData.uploadedImages.length > 0) {
+        const token = tokenStorage.getToken() ?? "";
+        const uploads = wizardData.uploadedImages.map((img, i) => ({
+          imageId:   img.imageId,
+          isCover:   i === 0,
+          sortOrder: i,
+        }));
+        console.log("[PostAdPage] Attaching", uploads.length, "images via finalizeCreate…");
+        try {
+          await imagesService.finalizeCreate(property.id, "property", uploads, token);
+          console.log("[PostAdPage] ✓ Images attached successfully");
+        } catch (imgErr) {
+          // Property was created — don't block the redirect, just log the image error
+          console.error("[PostAdPage] ✗ Image attachment failed (property still created):", imgErr);
+        }
+      }
+
       router.push("/dashboard/listings?success=1");
     } catch (e) {
       console.error("[PostAdPage] ✗ API call FAILED. Raw error object:", e);

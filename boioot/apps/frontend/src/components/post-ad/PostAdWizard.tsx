@@ -4,6 +4,7 @@ import { useState, useRef, type ChangeEvent } from "react";
 import Link from "next/link";
 import { apiConfig } from "@/lib/api-config";
 import { tokenStorage } from "@/lib/token";
+import { imagesService } from "@/services/images.service";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { FEATURES_LIST } from "@/features/properties/constants";
@@ -67,8 +68,8 @@ interface WizardData {
   longitude: number | null;
   // Step 5
   features: string[];
-  // Step 6
-  images: string[];      // base64 data URLs
+  // Step 6 — images are uploaded to R2 immediately on selection
+  uploadedImages: { imageId: string; url: string }[];
   videoUrl: string;
 }
 
@@ -98,32 +99,16 @@ const EMPTY: WizardData = {
   latitude: null,
   longitude: null,
   features: [],
-  images: [],
+  uploadedImages: [],
   videoUrl: "",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function resizeImage(file: File, maxPx = 1200): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * ratio);
-        canvas.height = Math.round(img.height * ratio);
-        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
-      };
-      img.onerror = reject;
-      img.src = e.target!.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+// (resizeImage removed — images are now uploaded directly to R2 via presigned URL.
+//  The backend handles WebP conversion + thumbnail generation in finalize-direct-upload.
+//  See: imagesService.uploadViaDirect() in images.service.ts)
+
 
 function formatPrice(price: string, currency: string) {
   const n = Number(price);
@@ -244,24 +229,52 @@ export default function PostAdWizard({
     }));
   }
 
+  // Upload images immediately to R2 as soon as the user selects them.
+  // Each file goes through: POST /api/images/direct-upload-url → PUT to R2
+  // → POST /api/images/finalize-direct-upload → UserImage created with WebP + thumbnail.
+  // After property creation, imagesService.finalizeCreate() attaches them to the property.
   async function handleImageFiles(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    const remaining = 10 - data.images.length;
+
+    const maxImages = getLimit("maxImagesPerListing", 10);
+    const remaining = maxImages - data.uploadedImages.length;
     if (remaining <= 0) return;
+
     const toProcess = files.slice(0, remaining);
     setImageLoading(true);
-    try {
-      const b64s = await Promise.all(toProcess.map((f) => resizeImage(f)));
-      setData((prev) => ({ ...prev, images: [...prev.images, ...b64s] }));
-    } finally {
-      setImageLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    setStepError(null);
+
+    const token = tokenStorage.getToken() ?? "";
+
+    for (const file of toProcess) {
+      console.log(`[PostAdWizard/images] ▶ Uploading: "${file.name}" (${file.size}B)`);
+      try {
+        const result = await imagesService.uploadViaDirect(file, token);
+        console.log(`[PostAdWizard/images] ✓ Uploaded: imageId=${result.id} url=${result.url}`);
+        setData((prev) => ({
+          ...prev,
+          uploadedImages: [
+            ...prev.uploadedImages,
+            { imageId: result.id, url: result.url },
+          ],
+        }));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "فشل رفع الصورة";
+        console.error(`[PostAdWizard/images] ✗ Failed: "${file.name}"`, err);
+        setStepError(`فشل رفع "${file.name}": ${msg}`);
+      }
     }
+
+    setImageLoading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function removeImage(idx: number) {
-    setData((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }));
+    setData((prev) => ({
+      ...prev,
+      uploadedImages: prev.uploadedImages.filter((_, i) => i !== idx),
+    }));
   }
 
   async function handleVideoFile(e: ChangeEvent<HTMLInputElement>) {
@@ -321,10 +334,9 @@ export default function PostAdWizard({
     console.log("  city        :", JSON.stringify(data.city));
     console.log("  province    :", JSON.stringify(data.province));
     console.log("  latitude    :", data.latitude, "  longitude:", data.longitude);
-    console.log("  images count:", data.images.length);
-    data.images.forEach((img, i) => {
-      const prefix = img.slice(0, 40);
-      console.log(`  image[${i}]  : ${img.length} chars — starts with: ${prefix}…`);
+    console.log("  uploadedImages count:", data.uploadedImages.length);
+    data.uploadedImages.forEach((img, i) => {
+      console.log(`  image[${i}]  : imageId=${img.imageId} url=${img.url}`);
     });
     console.log("  videoUrl    :", JSON.stringify(data.videoUrl));
     console.log("  features    :", data.features);
@@ -729,35 +741,43 @@ export default function PostAdWizard({
                 صور العقار
                 <span style={{ color: "#94a3b8", fontWeight: 400, marginRight: "0.4rem" }}>(حتى 10 صور)</span>
               </label>
-              <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{data.images.length} / 10</span>
+              <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{data.uploadedImages.length} / {getLimit("maxImagesPerListing", 10)}</span>
             </div>
 
-            {/* Upload button */}
-            {data.images.length < 10 && (
+            {/* Upload area — shown while under the limit, hidden while uploading */}
+            {data.uploadedImages.length < getLimit("maxImagesPerListing", 10) && (
               <label style={{
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                border: "2px dashed #d1d5db", borderRadius: 12, padding: "1.5rem",
+                border: `2px dashed ${imageLoading ? "#a5b4fc" : "#d1d5db"}`,
+                borderRadius: 12, padding: "1.5rem",
                 cursor: disabled || imageLoading ? "default" : "pointer",
-                background: "#f9fafb", marginBottom: "0.75rem",
+                background: imageLoading ? "#eef2ff" : "#f9fafb",
+                marginBottom: "0.75rem",
                 color: "#6b7280", gap: "0.4rem",
+                transition: "all 0.2s",
               }}>
                 <span style={{ fontSize: "1.8rem" }}>{imageLoading ? "⏳" : "📷"}</span>
                 <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>
-                  {imageLoading ? "جاري المعالجة..." : "اضغط لرفع الصور"}
+                  {imageLoading ? "جاري الرفع إلى السحابة…" : "اضغط لرفع الصور"}
                 </span>
-                <span style={{ fontSize: "0.78rem" }}>JPG، PNG — حتى 5MB لكل صورة</span>
+                <span style={{ fontSize: "0.78rem" }}>JPG، PNG، WebP — حتى 10MB لكل صورة</span>
+                {imageLoading && (
+                  <span style={{ fontSize: "0.75rem", color: "#6366f1", fontWeight: 600 }}>
+                    يُرجى الانتظار حتى اكتمال الرفع…
+                  </span>
+                )}
                 <input ref={fileInputRef} type="file" accept="image/*" multiple hidden
                   disabled={disabled || imageLoading} onChange={handleImageFiles} />
               </label>
             )}
 
-            {/* Image previews */}
-            {data.images.length > 0 && (
+            {/* Image previews — show R2 public URLs */}
+            {data.uploadedImages.length > 0 && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-                {data.images.map((src, idx) => (
-                  <div key={idx} style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "4/3" }}>
+                {data.uploadedImages.map((img, idx) => (
+                  <div key={img.imageId} style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "4/3" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={`صورة ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <img src={img.url} alt={`صورة ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     {idx === 0 && (
                       <span style={{
                         position: "absolute", top: 4, right: 4,
@@ -780,7 +800,7 @@ export default function PostAdWizard({
               </div>
             )}
 
-            {data.images.length > 0 && (
+            {data.uploadedImages.length > 0 && (
               <p style={{ fontSize: "0.78rem", color: "#64748b", margin: "0.4rem 0 0" }}>
                 الصورة الأولى ستكون الصورة الرئيسية للإعلان
               </p>
@@ -917,7 +937,7 @@ propertyType: ${JSON.stringify(data.propertyType)}
 listingType : ${JSON.stringify(data.listingType)}
 latitude    : ${data.latitude}
 longitude   : ${data.longitude}
-images      : ${data.images.length} images`}
+uploadedImages: ${data.uploadedImages.length} (already on R2)`}
             </pre>
           </details>
 
@@ -973,10 +993,10 @@ images      : ${data.images.length} images`}
               </ReviewSection>
             )}
 
-            {(data.images.length > 0 || data.videoUrl) && (
+            {(data.uploadedImages.length > 0 || data.videoUrl) && (
               <ReviewSection title="الصور والفيديو" onEdit={() => setStep(6)}>
-                {data.images.length > 0 && (
-                  <ReviewRow label="الصور" value={`${data.images.length} صورة`} />
+                {data.uploadedImages.length > 0 && (
+                  <ReviewRow label="الصور" value={`${data.uploadedImages.length} صورة (مرفوعة)`} />
                 )}
                 {data.videoUrl && <ReviewRow label="فيديو" value="تم إضافة رابط الفيديو" />}
               </ReviewSection>

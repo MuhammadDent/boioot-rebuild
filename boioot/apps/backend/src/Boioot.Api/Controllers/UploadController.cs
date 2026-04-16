@@ -75,6 +75,70 @@ public class UploadController : BaseController
         _db             = db;
     }
 
+    // ── POST /api/uploads/presigned-url ──────────────────────────────────────
+    //
+    // Simple presigned-URL generator: returns a time-limited PUT URL that the
+    // browser can use to upload a file directly to R2, plus the final public URL
+    // that the file will be available at after the PUT completes.
+    //
+    // Unlike /api/images/direct-upload-url + finalize, this endpoint does NOT
+    // process the image (no WebP conversion) and does NOT create a UserImage
+    // record. It is intended for lightweight ad-hoc uploads where image management
+    // features (cover, reorder, delete by ID) are not required.
+    //
+    // Response:
+    //   { url: "<presigned PUT URL>", publicUrl: "<final CDN URL>", fileKey: "..." }
+    //
+    // Returns 501 if the active storage backend does not support presigned URLs
+    // (e.g., local development mode with LocalFileStorageService).
+
+    public record PresignedUrlRequest(string FileName, string ContentType);
+
+    [HttpPost("/api/uploads/presigned-url")]
+    public async Task<IActionResult> GetPresignedUrl(
+        [FromBody] PresignedUrlRequest req,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req?.ContentType))
+            return BadRequest(new { error = "ContentType مطلوب" });
+
+        var contentType = req.ContentType.Trim().ToLowerInvariant();
+        if (!AllowedImageTypes.Contains(contentType))
+            return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: JPG، PNG، GIF، WebP، SVG" });
+
+        var userId = GetUserId();
+        var ext = contentType switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png"                 => ".png",
+            "image/webp"                => ".webp",
+            "image/gif"                 => ".gif",
+            "image/svg+xml"             => ".svg",
+            "image/bmp"                 => ".bmp",
+            _                           => ".jpg",
+        };
+
+        var fileKey      = $"uploads/{userId}/{Guid.NewGuid()}{ext}";
+        const int Expiry = 300; // 5 minutes
+
+        var uploadUrl = await _storage.GeneratePresignedUploadUrlAsync(fileKey, contentType, Expiry, ct);
+
+        if (uploadUrl is null)
+        {
+            return StatusCode(501, new
+            {
+                error = "Direct upload غير متاح في وضع التطوير. استخدم POST /api/upload/image"
+            });
+        }
+
+        var publicUrl = _storage.GetPublicUrl(fileKey);
+
+        _logger.LogInformation(
+            "[Upload/presigned-url] userId={UserId} fileKey={FileKey}", userId, fileKey);
+
+        return Ok(new { url = uploadUrl, publicUrl, fileKey });
+    }
+
     // ── /api/upload/image ─────────────────────────────────────────────────────
 
     [HttpPost("image")]
