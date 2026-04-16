@@ -173,11 +173,12 @@ export const imagesService = {
     );
 
     // Step 2 — browser PUTs raw file directly to R2
+    // No headers sent — the presigned URL is not signed with Content-Type,
+    // so sending any Content-Type header causes SignatureDoesNotMatch (401).
     console.log(`[images:direct] Step 2 → PUT to R2 presigned URL (${file.size}B)`);
     const putRes = await fetch(uploadUrl, {
-      method:  "PUT",
-      headers: { "Content-Type": file.type || "image/jpeg" },
-      body:    file,
+      method: "PUT",
+      body:   file,
     });
 
     console.log(`[images:direct] Step 2 response → HTTP ${putRes.status}`);
