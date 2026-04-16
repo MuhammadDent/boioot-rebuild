@@ -466,7 +466,12 @@ export default function PropertyForm({
               min={0}
               step="any"
               value={fields.price}
-              onChange={set("price")}
+              onChange={(e) => {
+                const val = e.target.value;
+                console.log("[PropertyForm] price state:", JSON.stringify(val));
+                setFields((prev) => ({ ...prev, price: val }));
+                if (errors.price) setErrors((prev) => ({ ...prev, price: undefined }));
+              }}
               placeholder="0"
               disabled={disabled}
               dir="ltr"
@@ -548,8 +553,9 @@ export default function PropertyForm({
             label="المدينة"
             value={fields.city}
             onChange={(val) => {
-              setField("city", val);
-              setField("neighborhood", "");
+              console.log("[PropertyForm] city state:", JSON.stringify(val));
+              setFields((prev) => ({ ...prev, city: val, neighborhood: "" }));
+              if (errors.city) setErrors((prev) => ({ ...prev, city: undefined }));
             }}
             province={fields.province}
             required

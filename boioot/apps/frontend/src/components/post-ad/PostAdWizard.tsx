@@ -516,7 +516,13 @@ export default function PostAdWizard({
           <Field label="السعر" required>
             <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
               <input className="form-input" type="number" min={0} dir="ltr" disabled={disabled}
-                value={data.price} onChange={(e) => set("price", e.target.value)}
+                value={data.price}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  console.log("[PostAdWizard] price state:", JSON.stringify(val));
+                  setData((prev) => ({ ...prev, price: val }));
+                  setStepError(null);
+                }}
                 placeholder="0"
                 style={{ flex: 1, borderTop: "none", borderBottom: "none", borderRight: "none", borderLeft: "none", borderRadius: 0, outline: "none", boxShadow: "none", minWidth: 0 }} />
               {(["SYP", "USD"] as const).map((cur) => (
@@ -649,7 +655,11 @@ export default function PostAdWizard({
             <ProvinceSelect label="المحافظة (اختياري)" value={data.province} disabled={disabled}
               onChange={(val) => { set("province", val); set("city", ""); set("neighborhood", ""); }} />
             <CitySelect label="المدينة" required value={data.city} province={data.province} disabled={disabled}
-              onChange={(val) => { set("city", val); set("neighborhood", ""); }}
+              onChange={(val) => {
+                console.log("[PostAdWizard] city state:", JSON.stringify(val));
+                setData((prev) => ({ ...prev, city: val, neighborhood: "" }));
+                setStepError(null);
+              }}
               error={stepError && !data.city ? stepError : undefined} />
           </Row>
 
@@ -893,6 +903,23 @@ export default function PostAdWizard({
           <p style={{ margin: "0 0 1.25rem", fontSize: "0.88rem", color: "#64748b" }}>
             تأكد من المعلومات قبل نشر الإعلان
           </p>
+
+          {/* ── Debug state panel (visible in all environments for diagnosis) ── */}
+          <details style={{ marginBottom: "1rem", fontSize: "0.75rem", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "0.6rem 0.85rem" }}>
+            <summary style={{ cursor: "pointer", fontWeight: 700, color: "#64748b" }}>🔍 قيم الحالة الداخلية (للتشخيص)</summary>
+            <pre style={{ margin: "0.5rem 0 0", whiteSpace: "pre-wrap", wordBreak: "break-all", color: "#334155", lineHeight: 1.5 }}>
+              {`price       : ${JSON.stringify(data.price)}
+city        : ${JSON.stringify(data.city)}
+province    : ${JSON.stringify(data.province)}
+title       : ${JSON.stringify(data.title)}
+area        : ${JSON.stringify(data.area)}
+propertyType: ${JSON.stringify(data.propertyType)}
+listingType : ${JSON.stringify(data.listingType)}
+latitude    : ${data.latitude}
+longitude   : ${data.longitude}
+images      : ${data.images.length} images`}
+            </pre>
+          </details>
 
           {/* Summary cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
