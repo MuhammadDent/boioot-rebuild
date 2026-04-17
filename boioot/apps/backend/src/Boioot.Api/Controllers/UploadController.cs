@@ -145,97 +145,106 @@ public class UploadController : BaseController
     [RequestSizeLimit(10_485_760)]
     public async Task<IActionResult> UploadImage(IFormFile file, CancellationToken ct)
     {
-        if (file is null || file.Length == 0)
-            return BadRequest(new { error = "لم يتم اختيار ملف" });
-
-        if (file.Length > MaxImageBytes)
-            return BadRequest(new { error = "حجم الصورة يتجاوز 10MB" });
-
-        var contentType = file.ContentType.ToLower();
-        if (!AllowedImageTypes.Contains(contentType))
-            return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: JPG، PNG، GIF، WebP، SVG" });
-
-        var userId = GetUserId();
-        UserImage userImage;
-
-        if (_imageProcessor.CanProcess(contentType))
+        try
         {
-            // ── Process: compress + resize → WebP main + WebP thumbnail ─────────
-            // JPEG, PNG, WebP, BMP → converted to WebP for ~60-70% size reduction.
-            await using var inputStream = file.OpenReadStream();
-            using var processed = await _imageProcessor.ProcessAsync(inputStream, ct);
+            if (file is null || file.Length == 0)
+                return BadRequest(new { error = "لم يتم اختيار ملف" });
 
-            // Upload main image (max 1600 px)
-            var mainResult = await _storage.UploadAsync(
-                processed.MainStream,
-                $"{Guid.NewGuid()}.webp",
-                processed.ContentType,
-                "uploads",
-                ct);
+            if (file.Length > MaxImageBytes)
+                return BadRequest(new { error = "حجم الصورة يتجاوز 10MB" });
 
-            // Upload thumbnail (max 480 px)
-            var thumbResult = await _storage.UploadAsync(
-                processed.ThumbnailStream,
-                $"{Guid.NewGuid()}.webp",
-                processed.ContentType,
-                "uploads/thumbs",
-                ct);
+            var contentType = file.ContentType.ToLower();
+            if (!AllowedImageTypes.Contains(contentType))
+                return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: JPG، PNG، GIF، WebP، SVG" });
 
-            _logger.LogInformation(
-                "[Upload/image] {OrigName} ({Size} bytes) → WebP main={MainKey} thumb={ThumbKey}",
-                file.FileName, file.Length, mainResult.FileKey, thumbResult.FileKey);
+            var userId = GetUserId();
+            UserImage userImage;
 
-            userImage = new UserImage
+            if (_imageProcessor.CanProcess(contentType))
             {
-                UserId           = userId,
-                Url              = mainResult.PublicUrl,
-                FileKey          = mainResult.FileKey,
-                ThumbnailUrl     = thumbResult.PublicUrl,
-                ThumbnailFileKey = thumbResult.FileKey,
-                OriginalFileName = Path.GetFileName(file.FileName),
-                MimeType         = processed.ContentType,
-                SizeBytes        = processed.MainStream.Length,
-            };
+                // ── Process: compress + resize → WebP main + WebP thumbnail ─────────
+                await using var inputStream = file.OpenReadStream();
+                using var processed = await _imageProcessor.ProcessAsync(inputStream, ct);
+
+                var mainResult = await _storage.UploadAsync(
+                    processed.MainStream,
+                    $"{Guid.NewGuid()}.webp",
+                    processed.ContentType,
+                    "uploads",
+                    ct);
+
+                var thumbResult = await _storage.UploadAsync(
+                    processed.ThumbnailStream,
+                    $"{Guid.NewGuid()}.webp",
+                    processed.ContentType,
+                    "uploads/thumbs",
+                    ct);
+
+                _logger.LogInformation(
+                    "[Upload/image] {OrigName} ({Size} bytes) → WebP main={MainKey} thumb={ThumbKey}",
+                    file.FileName, file.Length, mainResult.FileKey, thumbResult.FileKey);
+
+                userImage = new UserImage
+                {
+                    UserId           = userId,
+                    Url              = mainResult.PublicUrl,
+                    FileKey          = mainResult.FileKey,
+                    ThumbnailUrl     = thumbResult.PublicUrl,
+                    ThumbnailFileKey = thumbResult.FileKey,
+                    OriginalFileName = Path.GetFileName(file.FileName),
+                    MimeType         = processed.ContentType,
+                    SizeBytes        = processed.MainStream.Length,
+                };
+            }
+            else
+            {
+                // ── Bypass: SVG, GIF — upload as-is ──────────────────────────────
+                var ext = contentType switch
+                {
+                    "image/gif"     => ".gif",
+                    "image/svg+xml" => ".svg",
+                    _ => Path.GetExtension(file.FileName).ToLower() is { Length: > 0 } e ? e : ".jpg",
+                };
+                var safeFileName = $"{Guid.NewGuid()}{ext}";
+
+                await using var stream = file.OpenReadStream();
+                var result = await _storage.UploadAsync(stream, safeFileName, contentType, "uploads", ct);
+
+                _logger.LogInformation(
+                    "[Upload/image] {FileName} ({Size} bytes) → {Provider} (no processing)",
+                    safeFileName, file.Length, _storage.GetType().Name);
+
+                userImage = new UserImage
+                {
+                    UserId           = userId,
+                    Url              = result.PublicUrl,
+                    FileKey          = result.FileKey,
+                    OriginalFileName = Path.GetFileName(file.FileName),
+                    MimeType         = contentType,
+                    SizeBytes        = file.Length,
+                };
+            }
+
+            _db.UserImages.Add(userImage);
+            await _db.SaveChangesAsync(ct);
+
+            return Ok(new
+            {
+                id           = userImage.Id,
+                url          = userImage.Url,
+                thumbnailUrl = userImage.ThumbnailUrl,
+            });
         }
-        else
+        catch (Exception ex)
         {
-            // ── Bypass: SVG, GIF — upload as-is, no thumbnail ────────────────────
-            var ext = contentType switch
+            _logger.LogError(ex, "[Upload/image] Unhandled exception during image upload");
+            return StatusCode(500, new
             {
-                "image/gif"     => ".gif",
-                "image/svg+xml" => ".svg",
-                _ => Path.GetExtension(file.FileName).ToLower() is { Length: > 0 } e ? e : ".jpg",
-            };
-            var safeFileName = $"{Guid.NewGuid()}{ext}";
-
-            await using var stream = file.OpenReadStream();
-            var result = await _storage.UploadAsync(stream, safeFileName, contentType, "uploads", ct);
-
-            _logger.LogInformation(
-                "[Upload/image] {FileName} ({Size} bytes) → {Provider} (no processing)",
-                safeFileName, file.Length, _storage.GetType().Name);
-
-            userImage = new UserImage
-            {
-                UserId           = userId,
-                Url              = result.PublicUrl,
-                FileKey          = result.FileKey,
-                OriginalFileName = Path.GetFileName(file.FileName),
-                MimeType         = contentType,
-                SizeBytes        = file.Length,
-            };
+                message = ex.Message,
+                type    = ex.GetType().Name,
+                stack   = ex.StackTrace,
+            });
         }
-
-        // ── Persist record to UserImages table ────────────────────────────────
-        _db.UserImages.Add(userImage);
-        await _db.SaveChangesAsync(ct);
-
-        return Ok(new
-        {
-            id           = userImage.Id,
-            url          = userImage.Url,
-            thumbnailUrl = userImage.ThumbnailUrl,
-        });
     }
 
     // ── GET /api/upload/my-images ──────────────────────────────────────────────

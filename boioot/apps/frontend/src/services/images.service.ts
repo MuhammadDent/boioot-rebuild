@@ -87,9 +87,10 @@ export const imagesService = {
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch(`${BASE}/upload/image`, {
-      method:  "POST",
-      headers: authHeader(token),
-      body:    fd,
+      method:      "POST",
+      body:        fd,
+      credentials: "include",
+      headers:     { Authorization: `Bearer ${token}` },
     });
     await throwIfError(res, "فشل رفع الصورة");
     const result = await res.json() as UploadedImageInfo;
