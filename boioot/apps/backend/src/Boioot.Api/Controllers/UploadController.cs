@@ -171,6 +171,11 @@ public class UploadController : BaseController
                 await using var inputStream = file.OpenReadStream();
                 using var processed = await _imageProcessor.ProcessAsync(inputStream, ct);
 
+                // ⚠ Capture sizes BEFORE UploadAsync — AWS SDK disposes the
+                // InputStream automatically after PutObjectAsync completes.
+                // Accessing .Length after upload throws ObjectDisposedException.
+                var mainSizeBytes  = processed.MainStream.Length;
+
                 var mainResult = await _storage.UploadAsync(
                     processed.MainStream,
                     $"{Guid.NewGuid()}.webp",
@@ -198,7 +203,7 @@ public class UploadController : BaseController
                     ThumbnailFileKey = thumbResult.FileKey,
                     OriginalFileName = Path.GetFileName(file.FileName),
                     MimeType         = processed.ContentType,
-                    SizeBytes        = processed.MainStream.Length,
+                    SizeBytes        = mainSizeBytes,
                 };
             }
             else
