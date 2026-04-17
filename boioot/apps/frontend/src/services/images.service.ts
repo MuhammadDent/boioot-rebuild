@@ -172,22 +172,15 @@ export const imagesService = {
       `uploadUrl="${uploadUrl.slice(0, 60)}…"`
     );
 
-    // Step 2 — browser PUTs raw file directly to R2.
-    //
-    // WHY ArrayBuffer instead of File:
-    //   fetch(url, { body: file }) — even with NO headers object — causes the
-    //   browser to automatically inject "Content-Type: image/jpeg" from file.type.
-    //   This is browser-native behaviour and cannot be suppressed any other way.
-    //   When the presigned URL signature does NOT include Content-Type, R2 may
-    //   reject the request.  Using an ArrayBuffer body bypasses this auto-injection
-    //   because the browser treats raw binary buffers as content-type-less.
-    console.log(`[images:direct] Step 2 → converting File to ArrayBuffer (type=${file.type} size=${file.size}B)`);
-    const fileBuffer = await file.arrayBuffer();
-
-    console.log(`[images:direct] Step 2 → PUT to R2 presigned URL (no Content-Type header)`);
+    // Step 2 — PUT file directly to R2 presigned URL.
+    // Content-Type must be sent explicitly so R2 stores the correct MIME type
+    // and the presigned URL signature matches the request headers.
+    const contentType = file.type || "image/jpeg";
+    console.log(`[images:direct] Step 2 → PUT to R2 presigned URL (Content-Type=${contentType} size=${file.size}B)`);
     const putRes = await fetch(uploadUrl, {
-      method: "PUT",
-      body:   fileBuffer,
+      method:  "PUT",
+      headers: { "Content-Type": contentType },
+      body:    file,
     });
 
     console.log(`[images:direct] Step 2 response → HTTP ${putRes.status}`);
