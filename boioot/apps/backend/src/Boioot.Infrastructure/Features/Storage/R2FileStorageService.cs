@@ -73,21 +73,39 @@ public sealed class R2FileStorageService : IFileStorageService, IAsyncDisposable
         if (string.IsNullOrWhiteSpace(safeFolder)) safeFolder = "uploads";
         var fileKey = $"{safeFolder}/{safeName}";
 
+        Console.WriteLine($"[R2Storage] AccountId={_r2.AccountId} Bucket={_r2.BucketName} Key={fileKey} ContentType={contentType}");
+        Console.WriteLine($"[R2Storage] AccessKeyId={(_r2.AccessKeyId.Length > 4 ? _r2.AccessKeyId[..4] : "???")}*** SecretKey configured={!string.IsNullOrEmpty(_r2.SecretAccessKey)}");
+        Console.WriteLine($"[R2Storage] ServiceURL=https://{_r2.AccountId}.r2.cloudflarestorage.com");
+
         var request = new PutObjectRequest
         {
             BucketName  = _r2.BucketName,
             Key         = fileKey,
             InputStream = content,
             ContentType = contentType,
-            // Do NOT set CannedACL — R2 ignores ACLs; access is controlled by bucket policy.
-            DisablePayloadSigning = true, // Required for R2 compatibility
+            DisablePayloadSigning = true,
         };
 
-        // Long-lived caching: UUID-named files are content-addressed and never mutated.
-        // Browsers + CDN will cache for 1 year; immutable tells them never to revalidate.
         request.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
 
-        await _s3.PutObjectAsync(request, ct);
+        try
+        {
+            Console.WriteLine($"[R2Storage] >>> Calling PutObjectAsync...");
+            await _s3.PutObjectAsync(request, ct);
+            Console.WriteLine($"[R2Storage] >>> PutObjectAsync SUCCESS key={fileKey}");
+        }
+        catch (Amazon.S3.AmazonS3Exception ex)
+        {
+            Console.WriteLine($"[R2Storage] S3 ERROR: StatusCode={ex.StatusCode} Code={ex.ErrorCode} Message={ex.Message}");
+            Console.WriteLine($"[R2Storage] S3 StackTrace: {ex.StackTrace}");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[R2Storage] GENERAL ERROR: Type={ex.GetType().Name} Message={ex.Message}");
+            Console.WriteLine($"[R2Storage] StackTrace: {ex.StackTrace}");
+            throw;
+        }
 
         var publicUrl = GetPublicUrl(fileKey);
 
