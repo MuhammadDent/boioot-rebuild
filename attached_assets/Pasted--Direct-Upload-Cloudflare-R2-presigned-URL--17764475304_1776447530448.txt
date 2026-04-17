@@ -1,0 +1,75 @@
+أريد منك تنفيذ تحويل رفع الصور من Direct Upload إلى Cloudflare R2 عبر presigned URL إلى رفع عبر الباكند مباشرة، بشكل production clean، بدون كسر أي جزء آخر من النظام.
+
+المشروع:
+
+* Frontend: Next.js
+* Backend: ASP.NET Core
+* Storage: Cloudflare R2
+* الموقع: boioot.net
+
+المشكلة الحالية:
+
+* رفع الصور من الفرونت مباشرة إلى R2 يفشل بسبب CORS / OPTIONS 401
+* نريد إلغاء direct upload بالكامل حاليًا والتحول إلى:
+  Frontend → Backend → R2
+
+المطلوب منك تنفيذ التالي بدقة:
+
+1. في الباكند:
+
+* إنشاء endpoint جديد:
+  POST /api/uploads/image
+* يستقبل الملف عبر multipart/form-data باستخدام IFormFile
+* يرفع الملف إلى Cloudflare R2 باستخدام AWSSDK.S3 و PutObjectAsync
+* استخدم SignatureVersion = "4"
+* استخدم ServiceURL = https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+* استخدم ForcePathStyle = true
+* اسم الملف يكون unique داخل مسار مثل:
+  uploads/yyyy/MM/{guid}.{ext}
+* السماح فقط بالأنواع:
+  image/jpeg, image/png, image/webp
+* وضع حد 10MB
+* يرجع JSON فيه:
+  { key, url }
+
+2. في الباكند:
+
+* إضافة service نظيف مثل:
+  IFileUploadService / R2FileUploadService
+* قراءة إعدادات R2 من configuration / environment variables:
+  R2__AccountId
+  R2__AccessKey
+  R2__SecretKey
+  R2__BucketName
+  R2__PublicBaseUrl
+
+3. في الفرونت:
+
+* إزالة استخدام presigned URL و direct PUT إلى R2
+* استبدال ذلك بطلب:
+  POST /api/uploads/image
+  باستخدام FormData
+* تحديث كود صفحة /post-ad بحيث يرفع الصورة عبر الباكند
+* عند النجاح، حفظ الرابط العائد من الباكند داخل بيانات النموذج كما كان النظام يفعل سابقًا
+* الحفاظ على تجربة المستخدم الحالية قدر الإمكان
+* عدم كسر رفع عدة صور
+
+4. تنظيف الكود:
+
+* إزالة أو تعطيل أي دوال قديمة مرتبطة بـ:
+  direct-upload-url
+  presigned url
+  uploadViaDirect
+  PUT to R2
+* لكن بدون حذف أي شيء حساس قبل التأكد أن المسار الجديد يعمل
+
+5. بعد التعديل:
+
+* اعطني قائمة دقيقة بالملفات التي تم تعديلها
+* واعطني summary واضح:
+
+  * ما الذي تغير
+  * كيف أضبط env vars المطلوبة
+  * كيف أختبر رفع صورة خطوة بخطوة
+
+ابدأ أولًا بفحص المشروع لمعرفة أماكن كود الرفع الحالية، ثم نفّذ التعديل بالكامل.
