@@ -340,3 +340,4 @@ Console.WriteLine($"[STARTUP] ConnectionStrings:Postgres set : {(string.IsNullOr
 Console.WriteLine($"[STARTUP] Server starting on port {port} ...");
 Console.WriteLine("[STARTUP] App started successfully on Fly");
 app.Run();
+// trigger backend deploy
