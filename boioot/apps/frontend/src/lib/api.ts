@@ -130,10 +130,14 @@ async function extractErrorMessage(res: Response, fallback: string): Promise<str
 
     // ASP.NET DataAnnotations validation errors: { errors: { Field: ["msg1"] }, title: "..." }
     if (payload?.errors && typeof payload.errors === "object") {
-      const allMsgs = Object.values(payload.errors as Record<string, string[]>)
-        .flat()
-        .filter(Boolean);
-      if (allMsgs.length > 0) return allMsgs.join(" | ");
+      console.log("[api] Validation errors from backend:", JSON.stringify(payload.errors, null, 2));
+      const allMsgs = Object.entries(payload.errors as Record<string, string[]>)
+        .flatMap(([field, msgs]) => (msgs ?? []).map((m: string) => m ? `[${field}] ${m}` : null))
+        .filter(Boolean) as string[];
+      if (allMsgs.length > 0) {
+        console.log("[api] Field errors joined:", allMsgs.join(" | "));
+        return allMsgs.join(" | ");
+      }
     }
 
     const msg =

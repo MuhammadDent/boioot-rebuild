@@ -35,6 +35,38 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddControllers()
     .AddJsonOptions(opt =>
         opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+// Override the default 400 factory so validation field names + messages are logged
+// and also returned in the response body for easier frontend debugging.
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(e => e.Value?.Errors.Count > 0)
+            .ToDictionary(
+                e => e.Key,
+                e => e.Value!.Errors.Select(er =>
+                    string.IsNullOrWhiteSpace(er.ErrorMessage) ? er.Exception?.Message ?? "خطأ" : er.ErrorMessage
+                ).ToArray()
+            );
+
+        Console.WriteLine("[Validation] 400 Bad Request on: " + context.HttpContext.Request.Path);
+        foreach (var kv in errors)
+            Console.WriteLine($"  [{kv.Key}] → {string.Join("; ", kv.Value)}");
+
+        var result = new Microsoft.AspNetCore.Mvc.ObjectResult(new
+        {
+            title  = "One or more validation errors occurred.",
+            status = 400,
+            errors,
+        })
+        {
+            StatusCode = 400,
+        };
+        return result;
+    };
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
