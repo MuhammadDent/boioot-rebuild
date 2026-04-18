@@ -1,0 +1,143 @@
+You are a Senior Frontend Engineer fixing a silent click bug.
+
+==================================================
+BUG
+==================================================
+
+"اشترك الآن" button is clickable visually,
+but clicking it does NOTHING.
+
+No error, no redirect, no API call.
+
+==================================================
+ROOT CAUSE
+==================================================
+
+Current logic:
+
+const targetPricing = pricing ?? plan.pricing[0];
+
+if (targetPricing) {
+  onChoose(plan, targetPricing);
+}
+
+Problem:
+- pricing is sometimes undefined
+- plan.pricing may be empty []
+→ targetPricing becomes undefined
+→ condition fails
+→ click does nothing
+
+==================================================
+GOAL
+==================================================
+
+Ensure button ALWAYS responds to click.
+
+NEVER allow silent failure.
+
+==================================================
+FIX REQUIRED
+==================================================
+
+Replace logic with SAFE handling:
+
+--------------------------------------------------
+
+const targetPricing =
+  pricing ??
+  (plan.pricing && plan.pricing.length > 0
+    ? plan.pricing[0]
+    : null);
+
+--------------------------------------------------
+
+Then:
+
+IF plan is FREE:
+  → call free activation flow
+
+ELSE IF plan has pricing:
+  → call onChoose(plan, targetPricing)
+
+ELSE:
+  → fallback to subscription flow (NOT do nothing)
+
+--------------------------------------------------
+
+CRITICAL:
+If no pricing exists, DO NOT silently fail.
+
+Instead:
+
+console.warn('[PlanCard] Missing pricing, fallback triggered');
+
+router.push(`/subscription/request?planId=${plan.id}`);
+
+==================================================
+STEP 2: ALWAYS ATTACH CLICK HANDLER
+==================================================
+
+Even if pricing is missing, button MUST react.
+
+Example:
+
+onClick={() => {
+  console.log('[CTA CLICK]', plan.id);
+
+  if (plan.billingType === 'free_default') {
+    handleFreeActivation(plan);
+    return;
+  }
+
+  if (targetPricing) {
+    onChoose(plan, targetPricing);
+    return;
+  }
+
+  // fallback (IMPORTANT)
+  router.push(`/subscription/request?planId=${plan.id}`);
+}}
+
+==================================================
+STEP 3: ADD DEBUG LOGS
+==================================================
+
+console.log('[Plan Debug]', {
+  planId: plan.id,
+  pricing,
+  planPricing: plan.pricing,
+  targetPricing,
+});
+
+==================================================
+STEP 4: DO NOT BREAK UI
+==================================================
+
+DO NOT change:
+- button design
+- layout
+- colors
+- card structure
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+Clicking "اشترك الآن" must ALWAYS:
+
+- trigger action
+- OR redirect
+- OR log warning
+
+BUT NEVER do nothing
+
+==================================================
+OUTPUT
+==================================================
+
+Explain:
+1. Why click was not firing
+2. What condition was blocking execution
+3. What fallback was added
+4. Confirm button now always responds

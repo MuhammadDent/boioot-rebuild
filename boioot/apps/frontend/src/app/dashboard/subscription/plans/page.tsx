@@ -81,12 +81,17 @@ function PlanCard({
   onViewDetails: (plan: PublicPricingItem) => void;
   user: { role?: string | null; accountType?: string | null } | null;
 }) {
+  const cardRouter = useRouter();
+
   const isOneTimePlan = plan.billingType === "one_time_fixed_term"
     || plan.pricing.every(p => p.billingCycle === "OneTime");
 
   const pricing = isOneTimePlan
     ? (plan.pricing.find(p => p.billingCycle === "OneTime") ?? plan.pricing[0])
     : (plan.pricing.find(p => p.billingCycle === cycle) ?? plan.pricing[0]);
+
+  // Safe target pricing — prefer cycle-matched; fall back to first entry; null if empty
+  const targetPricing = pricing ?? (plan.pricing.length > 0 ? plan.pricing[0] : null);
 
   // isFree = display only (price = 0) — used for formatting the price label
   // isActivatableFree = ONLY "free_default" billing type → safe to call activate-free API
@@ -246,24 +251,25 @@ function PlanCard({
               isCurrent,
               isActivatableFree,
               isActivatingFree,
-              hasPricing:      !!pricing,
-              pricingAmount:   pricing?.priceAmount,
-              pricingCycle:    pricing?.billingCycle,
+              pricingCount:    plan.pricing.length,
+              targetPricing:   targetPricing?.pricingId ?? null,
+              pricingAmount:   targetPricing?.priceAmount ?? null,
+              pricingCycle:    targetPricing?.billingCycle ?? null,
             });
             if (isCurrent || isActivatingFree) return;
-            // Only truly free plans (free_default billing type) go to activate-free API
+            // Case 1: truly free plan → activate-free API
             if (isActivatableFree) {
               onActivateFree(plan.planId);
-            } else {
-              // Paid plans → checkout flow.
-              // Prefer the cycle-matched pricing; fall back to first entry if cycle is unmatched.
-              const targetPricing = pricing ?? plan.pricing[0];
-              if (targetPricing) {
-                onChoose(plan, targetPricing);
-              } else {
-                console.warn("[PlanCard CTA] No pricing entries for plan:", plan.planId, plan.displayNameAr);
-              }
+              return;
             }
+            // Case 2: paid plan with pricing → open checkout modal
+            if (targetPricing) {
+              onChoose(plan, targetPricing);
+              return;
+            }
+            // Case 3: fallback — pricing data missing from API → go to subscription request page
+            console.warn("[PlanCard CTA] No pricing found for plan:", plan.planId, plan.displayNameAr, "— redirecting to request page");
+            cardRouter.push(`/dashboard/subscription/requests?planId=${plan.planId}`);
           }}
           disabled={isCurrent || isActivatingFree}
           type="button"
