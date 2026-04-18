@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { PropertyDetailSkeleton } from "@/components/properties/PropertyDetailSkeleton";
 import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
@@ -184,6 +185,14 @@ export default function PropertyDetailPage() {
   const sortedImages = property.images;
   const activeImage  = sortedImages[selectedImageIdx] ?? sortedImages[0];
   const shares       = shareUrls(pageUrl, property.title);
+
+  // ── Debug: log the active cover image URL so we can confirm it's full-res ──
+  if (activeImage) {
+    console.log("[PropertyDetail] Cover Image URL:", activeImage.imageUrl);
+    if (activeImage.thumbnailUrl) {
+      console.log("[PropertyDetail] Thumbnail URL (used in strip):", activeImage.thumbnailUrl);
+    }
+  }
   // ── Advertiser fallback chain ──────────────────────────────────────
   // recipientId: backend-resolved chat target (OwnerId → Agent.UserId → company agent)
   const resolvedRecipient = property.recipientId ?? property.ownerId ?? property.agentId?.toString();
@@ -208,28 +217,32 @@ export default function PropertyDetailPage() {
           ← العودة إلى الرئيسية
         </Link>
 
-        {/* ── Hero image ── */}
+        {/* ── Hero image — full-resolution via Next.js <Image fill> ── */}
         {activeImage ? (
           <div className="detail-hero-wrap">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={activeImage.imageUrl}
               alt={property.title}
-              className="detail-hero"
-              loading="eager"
-              decoding="sync"
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, 1200px"
+              style={{ objectFit: "cover", objectPosition: "center" }}
             />
           </div>
         ) : (
           <div className="detail-hero-placeholder">🏠</div>
         )}
 
-        {/* Thumbnails */}
+        {/* Thumbnails — use 480px thumbnailUrl when available (faster, less bandwidth) */}
         {sortedImages.length > 1 && (
           <div className="gallery-thumbs">
             {sortedImages.map((img, i) => (
+              // Thumbnails intentionally use the small variant; clicking loads full hero above
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={img.id} src={img.imageUrl} alt={`صورة ${i + 1}`}
+              <img
+                key={img.id}
+                src={img.thumbnailUrl ?? img.imageUrl}
+                alt={`صورة ${i + 1}`}
                 className={`gallery-thumb${i === selectedImageIdx ? " gallery-thumb--active" : ""}`}
                 onClick={() => setSelectedImageIdx(i)}
               />

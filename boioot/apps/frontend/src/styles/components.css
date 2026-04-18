@@ -556,16 +556,23 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* ─────────────── Detail Page ─────────────── */
+/* ─────────────── Detail Page — Hero Image ─────────────── */
+/*
+ * .detail-hero-wrap is the container for Next.js <Image fill>
+ * Required: position:relative + explicit height + overflow:hidden
+ * The <Image> component sets position:absolute + inset:0 internally.
+ */
 .detail-hero-wrap {
   position: relative;
   width: 100%;
   height: 420px;
+  max-height: 60vh;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--color-bg-secondary);
   margin-bottom: 2rem;
 }
+/* .detail-hero kept only for backward-compat (no longer rendered) */
 .detail-hero {
   position: absolute;
   inset: 0;
@@ -574,11 +581,11 @@
   object-fit: cover;
   object-position: center;
   display: block;
-  image-rendering: auto;
 }
 .detail-hero-placeholder {
   width: 100%;
   height: 420px;
+  max-height: 60vh;
   border-radius: var(--radius-lg);
   background: var(--color-bg-secondary);
   display: flex;
@@ -589,8 +596,8 @@
   color: var(--color-text-muted);
 }
 @media (max-width: 768px) {
-  .detail-hero-wrap { height: 250px; }
-  .detail-hero-placeholder { height: 250px; }
+  .detail-hero-wrap       { height: 240px; }
+  .detail-hero-placeholder { height: 240px; }
 }
 .detail-grid {
   display: grid;
