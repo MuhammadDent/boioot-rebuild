@@ -800,24 +800,216 @@ function RequestCard({
 
 // ── New request form ───────────────────────────────────────────────────────────
 
+// ── Inline file drop zone used inside NewRequestForm ──────────────────────────
+
+const UPLOAD_MAX_MB = 5;
+const UPLOAD_ACCEPT = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
+
+function FileDropZone({
+  label,
+  required,
+  file,
+  onChange,
+  onRemove,
+  validationError,
+}: {
+  label: string;
+  required: boolean;
+  file: File | null;
+  onChange: (f: File) => void;
+  onRemove: () => void;
+  validationError?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > UPLOAD_MAX_MB * 1024 * 1024) return;
+    if (!UPLOAD_ACCEPT.includes(f.type)) return;
+    onChange(f);
+  }
+
+  return (
+    <div style={{ marginBottom: "0.85rem" }}>
+      <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#475569", marginBottom: 5 }}>
+        {label} {required && <span style={{ color: "#ef4444" }}>*</span>}
+        <span style={{ fontWeight: 400, color: "#94a3b8", marginRight: 4 }}>
+          (JPG · PNG · PDF · حد {UPLOAD_MAX_MB} MB)
+        </span>
+      </div>
+
+      {/* Drop / click zone */}
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const f = e.dataTransfer.files?.[0];
+          if (!f) return;
+          if (f.size > UPLOAD_MAX_MB * 1024 * 1024) return;
+          if (!UPLOAD_ACCEPT.includes(f.type)) return;
+          onChange(f);
+        }}
+        style={{
+          border: `2px dashed ${validationError ? "#ef4444" : file ? "var(--color-primary)" : "#cbd5e1"}`,
+          borderRadius: 9,
+          padding: "0.85rem 1rem",
+          textAlign: "center",
+          cursor: "pointer",
+          background: file ? "#f0fdf4" : validationError ? "#fef2f2" : "#fff",
+          transition: "all 0.15s",
+        }}
+      >
+        {file ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+              stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <span style={{ fontSize: "0.82rem", color: "#166534", fontWeight: 500 }}>{file.name}</span>
+            <span style={{ fontSize: "0.71rem", color: "#64748b" }}>
+              ({(file.size / 1024).toFixed(0)} KB)
+            </span>
+          </div>
+        ) : (
+          <div>
+            <svg width={24} height={24} viewBox="0 0 24 24" fill="none"
+              stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+              style={{ display: "block", margin: "0 auto 0.35rem" }}>
+              <polyline points="16 16 12 12 8 16" />
+              <line x1="12" y1="12" x2="12" y2="21" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+            </svg>
+            <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
+              اسحب الملف هنا أو اضغط للاختيار
+            </div>
+          </div>
+        )}
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+        onChange={handleChange}
+        style={{ display: "none" }}
+      />
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 20, marginTop: 3 }}>
+        {validationError ? (
+          <span style={{ fontSize: "0.72rem", color: "#ef4444" }}>{validationError}</span>
+        ) : <span />}
+        {file && (
+          <button
+            type="button"
+            onClick={onRemove}
+            style={{ fontSize: "0.72rem", color: "#94a3b8", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+          >
+            إزالة الملف
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
-  const [type, setType]     = useState("Identity");
-  const [notes, setNotes]   = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState("");
+  const [type, setType]             = useState("Identity");
+  const [notes, setNotes]           = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [savePhase, setSavePhase]   = useState<"idle" | "creating" | "uploading" | "done">("idle");
+  const [error, setError]           = useState("");
+
+  // ── Document files ──────────────────────────────────────────────────────────
+  const [identityDocType, setIdentityDocType]     = useState("NationalId");
+  const [identityFile, setIdentityFile]           = useState<File | null>(null);
+  const [identityFileErr, setIdentityFileErr]     = useState("");
+
+  const [businessDocType, setBusinessDocType]     = useState("CommercialRecord");
+  const [businessFile, setBusinessFile]           = useState<File | null>(null);
+  const [businessFileErr, setBusinessFileErr]     = useState("");
+
+  const needsIdentity = type === "Identity" || type === "Both";
+  const needsBusiness = type === "Business" || type === "Both";
+
+  // Identity doc type options
+  const IDENTITY_DOC_TYPES = [
+    { value: "NationalId",    label: "الهوية الوطنية" },
+    { value: "Passport",      label: "جواز السفر" },
+    { value: "DriverLicense", label: "رخصة القيادة" },
+  ];
+
+  // Business doc type options
+  const BUSINESS_DOC_TYPES = [
+    { value: "CommercialRecord", label: "السجل التجاري" },
+    { value: "TaxCertificate",  label: "الشهادة الضريبية" },
+  ];
+
+  function getSavePhaseLabel() {
+    if (savePhase === "creating")  return "جاري إنشاء الطلب…";
+    if (savePhase === "uploading") return "جاري رفع المستندات…";
+    return "إنشاء الطلب";
+  }
+
+  async function uploadAndAddDocument(requestId: string, file: File, docType: string) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const { url } = await api.upload<{ url: string }>("/upload/document", formData);
+    await api.post(`/verification/requests/${requestId}/documents`, {
+      documentType: docType,
+      fileName:     file.name,
+      fileUrl:      url,
+      mimeType:     file.type,
+    });
+    console.log(`[Verification] uploaded ${docType}:`, url);
+  }
 
   async function handleCreate() {
-    setSaving(true); setError("");
+    // ── Client-side validation ──────────────────────────────────────────────
+    let valid = true;
+    if (needsIdentity && !identityFile) {
+      setIdentityFileErr("يرجى رفع مستند الهوية (هوية وطنية أو جواز سفر أو رخصة)");
+      valid = false;
+    } else {
+      setIdentityFileErr("");
+    }
+    if (needsBusiness && !businessFile) {
+      setBusinessFileErr("يرجى رفع مستند السجل التجاري أو الشهادة الضريبية");
+      valid = false;
+    } else {
+      setBusinessFileErr("");
+    }
+    if (!valid) return;
+
+    setSaving(true);
+    setError("");
     try {
-      await api.post("/verification/requests", {
+      // Step 1: Create the request (Draft)
+      setSavePhase("creating");
+      const created = await api.post<{ id: string }>("/verification/requests", {
         verificationType: type,
         userNotes: notes.trim() || undefined,
       });
+      console.log("[Verification] created request:", created.id);
+
+      // Step 2: Upload documents
+      setSavePhase("uploading");
+      if (needsIdentity && identityFile) {
+        await uploadAndAddDocument(created.id, identityFile, identityDocType);
+      }
+      if (needsBusiness && businessFile) {
+        await uploadAndAddDocument(created.id, businessFile, businessDocType);
+      }
+
+      setSavePhase("done");
       onCreated();
     } catch (e) {
       setError(normalizeError(e));
     } finally {
       setSaving(false);
+      setSavePhase("idle");
     }
   }
 
@@ -833,11 +1025,11 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
         طلب توثيق جديد
       </div>
       <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginBottom: "1.25rem" }}>
-        حدد نوع التوثيق المطلوب ثم أضف المستندات بعد إنشاء الطلب
+        حدد نوع التوثيق وارفع المستندات المطلوبة
       </div>
 
-      {/* Type selection */}
-      <div style={{ marginBottom: "1rem" }}>
+      {/* ── Type selection ── */}
+      <div style={{ marginBottom: "1.1rem" }}>
         <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>
           نوع التوثيق
         </div>
@@ -860,7 +1052,7 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
                 name="verType"
                 value={o.value}
                 checked={type === o.value}
-                onChange={() => setType(o.value)}
+                onChange={() => { setType(o.value); setIdentityFileErr(""); setBusinessFileErr(""); }}
                 style={{ accentColor: "var(--color-primary)", marginTop: 2 }}
               />
               <div>
@@ -874,7 +1066,95 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
         </div>
       </div>
 
-      {/* Notes */}
+      {/* ── Identity document upload ── */}
+      {needsIdentity && (
+        <div style={{
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
+          borderRadius: 10,
+          padding: "1rem 1.1rem",
+          marginBottom: "0.85rem",
+        }}>
+          <div style={{ fontSize: "0.83rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.65rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <span>🪪</span> مستند إثبات الهوية
+          </div>
+
+          {/* Identity doc type selector */}
+          <div style={{ marginBottom: "0.65rem" }}>
+            <label style={{ fontSize: "0.76rem", color: "#475569", display: "block", marginBottom: 4, fontWeight: 500 }}>
+              نوع المستند
+            </label>
+            <select
+              value={identityDocType}
+              onChange={(e) => setIdentityDocType(e.target.value)}
+              style={{
+                width: "100%", border: "1px solid #cbd5e1", borderRadius: 7,
+                padding: "0.4rem 0.7rem", fontSize: "0.83rem", color: "#1e293b",
+                background: "#fff", outline: "none",
+              }}
+            >
+              {IDENTITY_DOC_TYPES.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <FileDropZone
+            label="الملف"
+            required
+            file={identityFile}
+            onChange={(f) => { setIdentityFile(f); setIdentityFileErr(""); }}
+            onRemove={() => { setIdentityFile(null); }}
+            validationError={identityFileErr}
+          />
+        </div>
+      )}
+
+      {/* ── Business document upload ── */}
+      {needsBusiness && (
+        <div style={{
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
+          borderRadius: 10,
+          padding: "1rem 1.1rem",
+          marginBottom: "0.85rem",
+        }}>
+          <div style={{ fontSize: "0.83rem", fontWeight: 700, color: "#1e293b", marginBottom: "0.65rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <span>🏢</span> مستند السجل التجاري
+          </div>
+
+          {/* Business doc type selector */}
+          <div style={{ marginBottom: "0.65rem" }}>
+            <label style={{ fontSize: "0.76rem", color: "#475569", display: "block", marginBottom: 4, fontWeight: 500 }}>
+              نوع المستند
+            </label>
+            <select
+              value={businessDocType}
+              onChange={(e) => setBusinessDocType(e.target.value)}
+              style={{
+                width: "100%", border: "1px solid #cbd5e1", borderRadius: 7,
+                padding: "0.4rem 0.7rem", fontSize: "0.83rem", color: "#1e293b",
+                background: "#fff", outline: "none",
+              }}
+            >
+              {BUSINESS_DOC_TYPES.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <FileDropZone
+            label="الملف"
+            required
+            file={businessFile}
+            onChange={(f) => { setBusinessFile(f); setBusinessFileErr(""); }}
+            onRemove={() => { setBusinessFile(null); }}
+            validationError={businessFileErr}
+          />
+        </div>
+      )}
+
+      {/* ── Notes ── */}
       <div style={{ marginBottom: "1rem" }}>
         <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", display: "block", marginBottom: 5 }}>
           ملاحظات إضافية <span style={{ fontWeight: 400, color: "#94a3b8" }}>(اختياري)</span>
@@ -899,6 +1179,7 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
       <div style={{ display: "flex", gap: "0.6rem", justifyContent: "flex-end" }}>
         <button
           onClick={onCancel}
+          disabled={saving}
           style={{
             padding: "0.5rem 1.1rem",
             border: "1px solid #e2e8f0",
@@ -906,7 +1187,8 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
             background: "#fff",
             color: "#64748b",
             fontSize: "0.85rem",
-            cursor: "pointer",
+            cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.5 : 1,
           }}
         >
           إلغاء
@@ -926,7 +1208,7 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
             opacity: saving ? 0.7 : 1,
           }}
         >
-          {saving ? "جاري الإنشاء…" : "إنشاء الطلب"}
+          {saving ? getSavePhaseLabel() : "إنشاء الطلب"}
         </button>
       </div>
     </div>
