@@ -1,0 +1,137 @@
+You are fixing a regression on the property details page.
+
+CRITICAL:
+You introduced a UI regression.
+You added the WhatsApp button, BUT you removed/hid two existing actions that MUST remain visible:
+
+1) "المراسلة عبر التطبيق"
+2) "إظهار رقم الهاتف" / "عرض رقم الهاتف"
+
+This is NOT acceptable.
+
+==================================================
+GOAL
+==================================================
+
+Keep ALL THREE contact actions visible together in the contact card:
+
+1. المراسلة عبر التطبيق
+2. التواصل عبر واتساب
+3. إظهار رقم الهاتف / عرض رقم الهاتف
+
+Do NOT remove any existing contact actions.
+Do NOT replace one button with another.
+Do NOT hide buttons conditionally by mistake.
+
+==================================================
+REQUIRED CONTACT CARD STRUCTURE
+==================================================
+
+Inside the advertiser/contact card, render the buttons in this exact order:
+
+1) Blue button:
+   "المراسلة عبر التطبيق"
+
+2) Green button:
+   "التواصل عبر واتساب"
+
+3) Neutral outlined button:
+   "إظهار رقم الهاتف"
+   or keep existing wording if it is currently "عرض رقم الهاتف"
+
+All three must be visible at the same time.
+
+==================================================
+STRICT BUTTON STYLES
+==================================================
+
+Blue app message button:
+- background: #1D4ED8
+- color: white
+- height: 52px
+- border-radius: 12px
+- width: 100%
+
+Green WhatsApp button:
+- background: #16A34A
+- color: white
+- height: 52px
+- border-radius: 12px
+- width: 100%
+
+Phone button:
+- background: white
+- color: #111827
+- border: 1px solid #D1D5DB
+- height: 52px
+- border-radius: 12px
+- width: 100%
+
+Spacing:
+- vertical gap between buttons: 12px
+
+==================================================
+IMPORTANT LOGIC RULES
+==================================================
+
+- Do NOT delete the existing app message button component
+- Do NOT delete the existing phone button component
+- Restore them if hidden or replaced
+- Keep existing click handlers / actions
+- WhatsApp is an additional button, not a replacement
+
+If the old components still exist:
+- re-render them
+- do not recreate broken duplicates if not needed
+
+==================================================
+DEBUG / REGRESSION CHECK
+==================================================
+
+Check for these common mistakes and fix them:
+
+- conditional rendering accidentally hiding app button
+- conditional rendering accidentally hiding phone button
+- overwritten JSX block
+- CSS display:none
+- overflow/z-index clipping
+- replacing original actions array with only WhatsApp
+- returning only one button from contact actions component
+
+==================================================
+EXPECTED FINAL JSX ORDER
+==================================================
+
+Render three stacked actions in the contact section:
+
+- app message button
+- WhatsApp button
+- phone button
+
+Do not change advertiser info above them.
+
+==================================================
+DO NOT TOUCH
+==================================================
+
+Do NOT change:
+- gallery again
+- title
+- price
+- metadata
+- description
+- property details cards
+
+Only fix the contact card regression.
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+After fixing, explain exactly:
+
+1. Why the app message button disappeared
+2. Why the phone button disappeared
+3. What file(s) were modified
+4. Confirm that all 3 buttons are now visible together
+5. Confirm that existing handlers for app message and phone button were preserved
