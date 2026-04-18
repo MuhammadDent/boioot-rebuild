@@ -88,8 +88,10 @@ function PlanCard({
     ? (plan.pricing.find(p => p.billingCycle === "OneTime") ?? plan.pricing[0])
     : (plan.pricing.find(p => p.billingCycle === cycle) ?? plan.pricing[0]);
 
-  // TODO(stabilization): plan.pricing may be empty for misconfigured plans — guard below
+  // isFree = display only (price = 0) — used for formatting the price label
+  // isActivatableFree = ONLY "free_default" billing type → safe to call activate-free API
   const isFree = pricing ? pricing.priceAmount === 0 : plan.pricing.every(p => p.priceAmount === 0);
+  const isActivatableFree = plan.billingType === "free_default";
   const isCurrent = plan.planId === currentPlanId;
   const isRecommended = plan.isRecommended;
   const isActivatingFree = freeActivatingId === plan.planId;
@@ -238,9 +240,11 @@ function PlanCard({
         <button
           onClick={() => {
             if (isCurrent || isActivatingFree) return;
-            if (isFree) {
+            // Only truly free plans (free_default billing type) go to activate-free API
+            if (isActivatableFree) {
               onActivateFree(plan.planId);
             } else if (pricing) {
+              // Paid plans (even price=0 if not free_default) → checkout flow
               onChoose(plan, pricing);
             }
           }}
@@ -266,9 +270,9 @@ function PlanCard({
             ? "باقتك الحالية ✓"
             : isActivatingFree
               ? "جارٍ التفعيل..."
-              : isFree
+              : isActivatableFree
                 ? "تفعيل مجاني"
-                : "اختر الباقة"}
+                : "اشترك الآن"}
         </button>
       </div>
     </div>
@@ -925,7 +929,20 @@ export default function PlansPage() {
         .then(sub => setCurrentSub(sub))
         .catch(() => {});
     } catch (err) {
-      setFreeActivateError(normalizeError(err));
+      const msg = normalizeError(err);
+      // If backend rejects because plan is not free → open checkout instead of showing raw error
+      if (msg.includes("ليست مجانية") || msg.includes("not free") || msg.includes("NotFree")) {
+        const plan = plans.find(p => p.planId === planId);
+        if (plan) {
+          const pricing = plan.pricing.find(p => p.billingCycle === cycle) ?? plan.pricing[0];
+          if (pricing) {
+            setCheckoutPlan(plan);
+            setCheckoutPricing(pricing);
+            return;
+          }
+        }
+      }
+      setFreeActivateError(msg);
     } finally {
       setFreeActivatingId(null);
     }

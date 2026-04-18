@@ -1,0 +1,156 @@
+You are a Senior Product + Full-Stack Engineer fixing a broken subscription activation flow.
+
+CRITICAL:
+The current UX is broken and confusing.
+We must implement a PROFESSIONAL subscription flow.
+
+DO NOT change visual design.
+ONLY fix logic and user flow.
+
+==================================================
+PROBLEM
+==================================================
+
+Currently:
+- "تفعيل مجاني" button exists
+- But clicking it returns error:
+  "هذه الباقة ليست مجانية"
+
+This is BAD UX.
+
+Also:
+- No redirect to payment
+- No redirect to document upload
+- No clear flow
+
+==================================================
+GOAL
+==================================================
+
+Create a smart activation flow:
+
+User clicks a plan →
+System decides →
+User is guided correctly
+
+==================================================
+TASK 1: DETERMINE PLAN TYPE
+==================================================
+
+Each plan must have:
+
+- isFree (boolean)
+- requiresApproval (boolean)
+- requiresPayment (boolean)
+
+If not present → derive it.
+
+==================================================
+TASK 2: HANDLE CLICK LOGIC PROPERLY
+==================================================
+
+When user clicks "activate":
+
+CASE 1: Free plan AND allowed
+→ activate immediately (call API)
+
+CASE 2: Paid plan
+→ redirect to payment page
+
+CASE 3: Requires approval
+→ redirect to request/verification page
+
+CASE 4: User clicks "free" on non-free plan
+→ DO NOT show error only
+→ show modal:
+
+"هذه الباقة مدفوعة"
+
+Buttons:
+- "الانتقال للدفع"
+- "إلغاء"
+
+==================================================
+TASK 3: ADD REDIRECTION
+==================================================
+
+Implement:
+
+router.push('/payment?planId=XXX')
+
+OR
+
+router.push('/subscription/request?planId=XXX')
+
+depending on plan type
+
+==================================================
+TASK 4: REMOVE MISLEADING BEHAVIOR
+==================================================
+
+- Do NOT allow "تفعيل مجاني" button to call free API if plan is NOT free
+- Either:
+  → change behavior
+  OR
+  → intercept and redirect
+
+==================================================
+TASK 5: OPTIONAL IMPROVEMENT (SAFE)
+==================================================
+
+If possible:
+
+Change button label dynamically:
+
+- Free plan → "تفعيل مجاني"
+- Paid plan → "اشترك الآن"
+
+BUT ONLY if easy and safe
+
+==================================================
+TASK 6: HANDLE BACKEND ERROR PROPERLY
+==================================================
+
+If backend returns:
+
+"هذه الباقة ليست مجانية"
+
+Frontend must:
+
+- NOT show raw error only
+- Instead:
+  → trigger redirect to payment
+
+==================================================
+TASK 7: DO NOT BREAK ANYTHING
+==================================================
+
+Do NOT change:
+- UI layout
+- plan cards design
+- colors
+- spacing
+
+Only fix behavior and navigation
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+User experience becomes:
+
+Click → Smart decision → Correct page
+
+NO dead-end errors
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+Explain:
+
+1. How plan type is detected
+2. What happens on click now
+3. Where user is redirected
+4. How error was replaced with flow
+5. Confirm no UI changes
