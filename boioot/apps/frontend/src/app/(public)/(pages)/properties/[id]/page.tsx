@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { PropertyDetailSkeleton } from "@/components/properties/PropertyDetailSkeleton";
+import ImageSlider from "@/components/properties/ImageSlider";
 import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
@@ -89,7 +89,6 @@ export default function PropertyDetailPage() {
   const [property, setProperty] = useState<PropertyResponse | null>(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState("");
-  const [selectedImageIdx, setSelectedImageIdx] = useState(0);
 
   const [isFav, setIsFav]           = useState(false);
   const [favLoading, setFavLoading] = useState(false);
@@ -107,7 +106,6 @@ export default function PropertyDetailPage() {
     if (!id) return;
     setLoading(true);
     setError("");
-    setSelectedImageIdx(0);
 
     propertiesApi
       .getById(id)
@@ -183,22 +181,7 @@ export default function PropertyDetailPage() {
   if (!property) return null;
 
   const sortedImages = property.images;
-  const activeImage  = sortedImages[selectedImageIdx] ?? sortedImages[0];
   const shares       = shareUrls(pageUrl, property.title);
-
-  // ── COVER image URL — ALWAYS use imageUrl (1600px WebP / legacy full-res)
-  // NEVER use thumbnailUrl here — thumbnail (480px) is only for the strip below.
-  const heroSrc = activeImage?.imageUrl ?? null;
-
-  // ── Debug logs — check browser console to confirm correct URL ──
-  if (activeImage) {
-    console.log("[PropertyDetail] ✅ HERO  src (imageUrl / full-res):", heroSrc);
-    console.log("[PropertyDetail] 🔵 THUMB src (thumbnailUrl / 480px):", activeImage.thumbnailUrl ?? "(none — legacy image)");
-    const isWrongUrl = heroSrc?.includes("thumbs") || heroSrc?.includes("thumb_");
-    if (isWrongUrl) {
-      console.error("[PropertyDetail] ❌ BUG: heroSrc appears to be a thumbnail! Fix required.");
-    }
-  }
   // ── Advertiser fallback chain ──────────────────────────────────────
   // recipientId: backend-resolved chat target (OwnerId → Agent.UserId → company agent)
   const resolvedRecipient = property.recipientId ?? property.ownerId ?? property.agentId?.toString();
@@ -223,38 +206,8 @@ export default function PropertyDetailPage() {
           ← العودة إلى الرئيسية
         </Link>
 
-        {/* ── Hero image — ALWAYS uses imageUrl (1600px full-res), never thumbnailUrl ── */}
-        {heroSrc ? (
-          <div className="detail-hero-wrap">
-            <Image
-              src={heroSrc}
-              alt={property.title}
-              fill
-              priority
-              sizes="(max-width: 768px) 100vw, 1200px"
-              style={{ objectFit: "cover", objectPosition: "center" }}
-            />
-          </div>
-        ) : (
-          <div className="detail-hero-placeholder">🏠</div>
-        )}
-
-        {/* Thumbnails — use 480px thumbnailUrl when available (faster, less bandwidth) */}
-        {sortedImages.length > 1 && (
-          <div className="gallery-thumbs">
-            {sortedImages.map((img, i) => (
-              // Thumbnails intentionally use the small variant; clicking loads full hero above
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={img.id}
-                src={img.thumbnailUrl ?? img.imageUrl}
-                alt={`صورة ${i + 1}`}
-                className={`gallery-thumb${i === selectedImageIdx ? " gallery-thumb--active" : ""}`}
-                onClick={() => setSelectedImageIdx(i)}
-              />
-            ))}
-          </div>
-        )}
+        {/* ── Image Slider — Airbnb-style with arrows, counter, and thumbnail strip ── */}
+        <ImageSlider images={sortedImages} />
 
         {/* ── Content grid ── */}
         <div className="detail-grid">
@@ -358,7 +311,7 @@ export default function PropertyDetailPage() {
           <div>
 
             {/* ── Advertiser card ── */}
-            <div style={{ background: "var(--color-bg-card)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "1.25rem", marginBottom: "1rem" }}>
+            <div className="contact-section" style={{ background: "var(--color-bg-card)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "1.25rem", marginBottom: "1rem" }}>
               <h2 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.85rem" }}>المعلن</h2>
 
               {/* Photo + name row */}
@@ -390,6 +343,13 @@ export default function PropertyDetailPage() {
                   التواصل مع المعلن
                 </p>
 
+                {/* Debug: confirm message button is visible */}
+                {typeof window !== "undefined" && (() => {
+                  const visible = hasRecipient && !isOwn;
+                  console.log("Message button visible:", visible);
+                  return null;
+                })()}
+
                 {hasContactInfo ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
 
@@ -418,28 +378,23 @@ export default function PropertyDetailPage() {
                       </a>
                     )}
 
-                    {/* Internal messaging */}
+                    {/* Internal messaging — المراسلة عبر التطبيق */}
                     {hasRecipient && !isOwn && (
                       <button
                         type="button"
+                        className="contact-btn"
                         onClick={openChat}
                         disabled={msgLoading}
                         style={{
-                          display: "flex", alignItems: "center", justifyContent: "center", gap: "0.55rem",
-                          background: "#1e40af", color: "#fff",
-                          padding: "0.7rem 1rem", borderRadius: 10,
-                          fontWeight: 700, fontSize: "0.9rem",
-                          border: "none",
-                          cursor: msgLoading ? "not-allowed" : "pointer",
+                          background: "#1e40af",
                           opacity: msgLoading ? 0.7 : 1,
-                          boxShadow: "0 2px 8px rgba(30,64,175,0.15)",
-                          transition: "opacity 0.15s",
+                          cursor: msgLoading ? "not-allowed" : "pointer",
                         }}
                       >
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
-                        {msgLoading ? "جاري الفتح..." : "مراسلة داخل الموقع"}
+                        {msgLoading ? "جاري الفتح..." : "المراسلة عبر التطبيق"}
                       </button>
                     )}
 

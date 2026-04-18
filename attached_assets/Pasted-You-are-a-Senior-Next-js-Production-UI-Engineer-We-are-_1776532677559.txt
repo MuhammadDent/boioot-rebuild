@@ -1,0 +1,165 @@
+You are a Senior Next.js + Production UI Engineer.
+
+We are redesigning the property details image section WITHOUT breaking any existing functionality.
+
+-------------------------------------
+🎯 GOAL
+-------------------------------------
+
+Transform the image section into a professional slider gallery (like Airbnb)
+
+AND
+
+Restore and guarantee visibility of the "message via app" button.
+
+-------------------------------------
+🎯 PART 1: Replace Cover Image with Slider
+-------------------------------------
+
+1. Remove hero/cover image concept
+
+2. Create component:
+ImageSlider.tsx
+
+3. Behavior:
+- show one image at a time
+- currentIndex state
+- next / prev navigation
+- swipe support (mobile)
+
+-------------------------------------
+🎯 PART 2: Square Layout (IMPORTANT)
+-------------------------------------
+
+.image-slider {
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 1 / 1;
+  margin: auto;
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f5f5f5;
+}
+
+-------------------------------------
+🎯 PART 3: Use Next.js Image
+-------------------------------------
+
+<Image
+  src={images[currentIndex].imageUrl}
+  fill
+  sizes="(max-width: 768px) 100vw, 600px"
+  style={{ objectFit: "cover" }}
+  priority
+/>
+
+IMPORTANT:
+- MUST use imageUrl (full resolution)
+- NEVER use thumbnailUrl for main image
+
+-------------------------------------
+🎯 PART 4: Thumbnails Strip
+-------------------------------------
+
+Below slider:
+
+- horizontal scroll
+- each thumbnail = 80px
+- click → change image
+
+Active thumbnail:
+- border highlight
+
+Thumbnails use:
+thumbnailUrl ONLY
+
+-------------------------------------
+🎯 PART 5: Navigation
+-------------------------------------
+
+Add:
+- left/right arrows
+- image counter (1 / N)
+
+-------------------------------------
+🎯 PART 6: Restore Message Button (CRITICAL)
+-------------------------------------
+
+The "message via app" button is currently missing.
+
+You MUST:
+
+1. Locate the original component (Contact / Actions section)
+
+2. Ensure it is rendered BELOW the slider
+
+3. Add button:
+
+<button className="contact-btn">
+  المراسلة عبر التطبيق
+</button>
+
+-------------------------------------
+🎯 PART 7: Fix Visibility Issues
+-------------------------------------
+
+Common issue: button hidden بسبب CSS
+
+Fix ALL of these:
+
+- z-index problems
+- overflow: hidden
+- parent container clipping
+
+Add:
+
+.contact-section {
+  position: relative;
+  z-index: 10;
+}
+
+.contact-btn {
+  width: 100%;
+  background: #1f7a4c;
+  color: white;
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: bold;
+  margin-top: 16px;
+}
+
+-------------------------------------
+🎯 PART 8: Safety Rules (VERY IMPORTANT)
+-------------------------------------
+
+DO NOT:
+- break existing layout
+- remove contact section
+- change backend API
+- remove any buttons
+
+ONLY:
+- refactor image UI
+- fix button visibility
+
+-------------------------------------
+🎯 PART 9: Debug Check
+-------------------------------------
+
+After rendering:
+
+console.log("Slider images:", images.length)
+console.log("Message button visible:", true)
+
+-------------------------------------
+🎯 OUTPUT REQUIRED
+-------------------------------------
+
+Explain:
+
+1) What component was created
+2) Where slider is placed
+3) Where message button is placed
+4) Why it was hidden before
+5) How it was fixed
