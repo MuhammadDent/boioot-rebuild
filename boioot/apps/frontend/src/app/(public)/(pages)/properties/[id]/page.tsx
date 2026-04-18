@@ -210,8 +210,16 @@ export default function PropertyDetailPage() {
 
         {/* ── Hero image ── */}
         {activeImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={activeImage.imageUrl} alt={property.title} className="detail-hero" />
+          <div className="detail-hero-wrap">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={activeImage.imageUrl}
+              alt={property.title}
+              className="detail-hero"
+              loading="eager"
+              decoding="sync"
+            />
+          </div>
         ) : (
           <div className="detail-hero-placeholder">🏠</div>
         )}

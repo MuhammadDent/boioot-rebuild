@@ -1,0 +1,148 @@
+You are a Senior Frontend + Next.js + UX Engineer working on a production real estate platform.
+
+Project:
+Next.js frontend connected to ASP.NET backend + Cloudflare R2.
+
+Current state:
+- Image upload works via backend
+- Ads are created successfully
+- Images display correctly inside property page
+- BUT:
+  1) Cover image is blurry
+  2) Cover image container is too large
+  3) UX of image upload is basic and needs improvement
+
+-------------------------------------
+🎯 TASK 1: Fix Cover Image Quality + Layout
+-------------------------------------
+
+Problem:
+- Cover image appears blurry
+- Container height is too large
+- Image is stretched or poorly fitted
+
+Required fixes:
+
+1. Replace normal <img> with Next.js <Image> component
+
+2. Use proper props:
+   - fill={true}
+   - sizes="(max-width: 768px) 100vw, 1200px"
+   - priority (for main cover image)
+
+3. Fix container:
+
+   Wrap image inside a container like:
+
+   position: relative
+   width: 100%
+   height: 400px (desktop)
+   height: 250px (mobile)
+
+4. Apply:
+   object-fit: cover
+
+5. Ensure image is NOT stretched:
+   - remove fixed width/height on img
+   - rely on container + fill
+
+6. If using R2 URLs:
+   - make sure image is NOT low resolution
+   - DO NOT use thumbnails for cover image
+
+-------------------------------------
+🎯 TASK 2: Add Image Preview Before Upload
+-------------------------------------
+
+In "Create Ad" page:
+
+1. When user selects images:
+   - generate preview using:
+     URL.createObjectURL(file)
+
+2. Store images in state:
+   array of:
+   {
+     file,
+     previewUrl
+   }
+
+3. Display grid preview:
+   - thumbnail for each image
+   - delete button
+
+4. On remove:
+   - remove from state
+   - revokeObjectURL
+
+-------------------------------------
+🎯 TASK 3: Multi Upload (Do NOT overwrite)
+-------------------------------------
+
+1. Input must support multiple
+
+2. When user selects more images:
+   - append to existing state
+   - NOT replace
+
+3. Prevent duplicates:
+   by name + size
+
+4. Limit:
+   max 10 images
+
+-------------------------------------
+🎯 TASK 4: Select Cover Image
+-------------------------------------
+
+1. Allow user to choose main image
+
+2. Add button:
+   "Set as Cover"
+
+3. Store:
+   coverImageIndex
+
+4. On submit:
+   - send cover index OR
+   - reorder images so cover = first
+
+-------------------------------------
+🎯 TASK 5: Improve Upload UX
+-------------------------------------
+
+1. Add loading state:
+   - "Uploading images..."
+   - "Creating ad..."
+
+2. Disable submit while uploading
+
+3. If request fails:
+   - DO NOT clear images
+   - show error message
+   - allow retry
+
+-------------------------------------
+🎯 IMPORTANT RULES
+-------------------------------------
+
+- Do NOT break existing upload logic
+- Do NOT change backend API unless necessary
+- Keep changes isolated to frontend
+- Use clean reusable components
+- Use TypeScript types if available
+
+-------------------------------------
+🎯 BONUS (if easy)
+-------------------------------------
+
+- Add basic drag & drop support
+- Add simple fade-in animation for images
+
+-------------------------------------
+
+After implementation:
+Explain:
+- What files were modified
+- What components were added
+- How cover image issue was fixed

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, type ChangeEvent } from "react";
+import { useState, useRef, useEffect, type ChangeEvent, type DragEvent } from "react";
 import Link from "next/link";
 import { apiConfig } from "@/lib/api-config";
 import { tokenStorage } from "@/lib/token";
@@ -70,6 +70,7 @@ interface WizardData {
   features: string[];
   // Step 6 — images are uploaded to R2 immediately on selection
   uploadedImages: { imageId: string; url: string }[];
+  coverImageIndex: number;   // index into uploadedImages that is the cover
   videoUrl: string;
 }
 
@@ -100,6 +101,7 @@ const EMPTY: WizardData = {
   longitude: null,
   features: [],
   uploadedImages: [],
+  coverImageIndex: 0,
   videoUrl: "",
 };
 
@@ -197,9 +199,20 @@ export default function PostAdWizard({
   const [videoMode, setVideoMode] = useState<"url" | "file">("url");
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileRef = useRef<HTMLInputElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
+
+  // Cleanup object URLs when component unmounts to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      data.uploadedImages.forEach((img) => {
+        if (img.url.startsWith("blob:")) URL.revokeObjectURL(img.url);
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function set<K extends keyof WizardData>(key: K, value: WizardData[K]) {
     setData((prev) => ({ ...prev, [key]: value }));
@@ -229,39 +242,88 @@ export default function PostAdWizard({
     }));
   }
 
-  // Upload images immediately to R2 as soon as the user selects them.
-  // Each file goes through: POST /api/images/direct-upload-url → PUT to R2
-  // → POST /api/images/finalize-direct-upload → UserImage created with WebP + thumbnail.
-  // After property creation, imagesService.finalizeCreate() attaches them to the property.
-  async function handleImageFiles(e: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
+  // ── Image upload helpers ────────────────────────────────────────────────────
 
+  // We track a set of file keys (name+size) currently in-flight or uploaded to prevent
+  // duplicate submissions across multiple selections / drag-drops.
+  const activeFileKeys = useRef(new Set<string>());
+
+  // Upload a batch of File objects: show local blob preview immediately, then upload to R2.
+  async function processFiles(files: FileList | File[]) {
+    const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (!arr.length) return;
+
+    // Snapshot current count synchronously so we can compute remaining slots
     const maxImages = getLimit("maxImagesPerListing", 10);
-    const remaining = maxImages - data.uploadedImages.length;
-    if (remaining <= 0) return;
 
-    const toProcess = files.slice(0, remaining);
+    // Filter out duplicates (by name+size) and files exceeding the slot limit
+    const toProcess: Array<{ file: File; previewUrl: string }> = [];
+    for (const file of arr) {
+      const key = `${file.name}-${file.size}`;
+      if (activeFileKeys.current.has(key)) continue;
+      activeFileKeys.current.add(key);
+      toProcess.push({ file, previewUrl: URL.createObjectURL(file) });
+    }
+    if (!toProcess.length) return;
+
+    // Trim to remaining slots (read current count inside setData to be safe)
+    let slotsUsed = 0;
+    setData((prev) => {
+      slotsUsed = prev.uploadedImages.length;
+      return prev;
+    });
+    // Give React a tick to flush
+    await new Promise((r) => setTimeout(r, 0));
+
+    const allowed = Math.max(0, maxImages - slotsUsed);
+    const batch = toProcess.slice(0, allowed);
+
+    // Revoke URLs for files we're not using
+    toProcess.slice(allowed).forEach(({ previewUrl, file }) => {
+      URL.revokeObjectURL(previewUrl);
+      const key = `${file.name}-${file.size}`;
+      activeFileKeys.current.delete(key);
+    });
+
+    if (!batch.length) return;
+
     setImageLoading(true);
     setStepError(null);
-
     const token = tokenStorage.getToken() ?? "";
 
-    for (const file of toProcess) {
-      console.log(`[PostAdWizard/images] ▶ Uploading: "${file.name}" (${file.size}B)`);
+    for (const { file, previewUrl } of batch) {
+      // Show blob preview immediately (imageId="" means "uploading")
+      setData((prev) => ({
+        ...prev,
+        uploadedImages: [...prev.uploadedImages, { imageId: "", url: previewUrl }],
+      }));
+
       try {
+        console.log(`[PostAdWizard/images] ▶ Uploading: "${file.name}" (${file.size}B)`);
         const result = await imagesService.uploadViaDirect(file, token);
-        console.log(`[PostAdWizard/images] ✓ Uploaded: imageId=${result.id} url=${result.url}`);
-        setData((prev) => ({
-          ...prev,
-          uploadedImages: [
-            ...prev.uploadedImages,
-            { imageId: result.id, url: result.url },
-          ],
-        }));
+        console.log(`[PostAdWizard/images] ✓ Done: imageId=${result.id}`);
+
+        // Swap blob placeholder with real R2 entry
+        setData((prev) => {
+          const imgs = [...prev.uploadedImages];
+          const idx = imgs.findIndex((img) => img.url === previewUrl);
+          if (idx !== -1) {
+            URL.revokeObjectURL(previewUrl);
+            imgs[idx] = { imageId: result.id, url: result.url };
+          }
+          return { ...prev, uploadedImages: imgs };
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "فشل رفع الصورة";
         console.error(`[PostAdWizard/images] ✗ Failed: "${file.name}"`, err);
+        // Remove failed placeholder + free slot
+        setData((prev) => ({
+          ...prev,
+          uploadedImages: prev.uploadedImages.filter((img) => img.url !== previewUrl),
+        }));
+        URL.revokeObjectURL(previewUrl);
+        const key = `${file.name}-${file.size}`;
+        activeFileKeys.current.delete(key);
         setStepError(`فشل رفع "${file.name}": ${msg}`);
       }
     }
@@ -270,11 +332,50 @@ export default function PostAdWizard({
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  async function handleImageFiles(e: ChangeEvent<HTMLInputElement>) {
+    if (e.target.files) await processFiles(e.target.files);
+  }
+
   function removeImage(idx: number) {
-    setData((prev) => ({
-      ...prev,
-      uploadedImages: prev.uploadedImages.filter((_, i) => i !== idx),
-    }));
+    setData((prev) => {
+      const imgs = [...prev.uploadedImages];
+      const [removed] = imgs.splice(idx, 1);
+      if (removed) {
+        if (removed.url.startsWith("blob:")) URL.revokeObjectURL(removed.url);
+        const key = removed.imageId ? undefined : `${removed.url}`; // only delete key for blob entries
+        if (key) activeFileKeys.current.delete(key);
+      }
+      // Adjust coverImageIndex
+      let newCover = prev.coverImageIndex;
+      if (idx === prev.coverImageIndex) newCover = 0;
+      else if (idx < prev.coverImageIndex) newCover = Math.max(0, prev.coverImageIndex - 1);
+      return { ...prev, uploadedImages: imgs, coverImageIndex: newCover };
+    });
+  }
+
+  function setCoverImage(idx: number) {
+    setData((prev) => ({ ...prev, coverImageIndex: idx }));
+  }
+
+  // ── Drag & Drop ─────────────────────────────────────────────────────────────
+
+  function handleDragOver(e: DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragOver) setIsDragOver(true);
+  }
+
+  function handleDragLeave(e: DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }
+
+  async function handleDrop(e: DragEvent<HTMLLabelElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    if (e.dataTransfer.files.length) await processFiles(e.dataTransfer.files);
   }
 
   async function handleVideoFile(e: ChangeEvent<HTMLInputElement>) {
@@ -744,25 +845,34 @@ export default function PostAdWizard({
               <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{data.uploadedImages.length} / {getLimit("maxImagesPerListing", 10)}</span>
             </div>
 
-            {/* Upload area — shown while under the limit, hidden while uploading */}
+            {/* Upload zone — drag & drop + click */}
             {data.uploadedImages.length < getLimit("maxImagesPerListing", 10) && (
-              <label style={{
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                border: `2px dashed ${imageLoading ? "#a5b4fc" : "#d1d5db"}`,
-                borderRadius: 12, padding: "1.5rem",
-                cursor: disabled || imageLoading ? "default" : "pointer",
-                background: imageLoading ? "#eef2ff" : "#f9fafb",
-                marginBottom: "0.75rem",
-                color: "#6b7280", gap: "0.4rem",
-                transition: "all 0.2s",
-              }}>
-                <span style={{ fontSize: "1.8rem" }}>{imageLoading ? "⏳" : "📷"}</span>
-                <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>
-                  {imageLoading ? "جاري الرفع إلى السحابة…" : "اضغط لرفع الصور"}
+              <label
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  border: `2px dashed ${isDragOver ? "#6366f1" : imageLoading ? "#a5b4fc" : "#d1d5db"}`,
+                  borderRadius: 12, padding: "1.75rem 1.5rem",
+                  cursor: disabled || imageLoading ? "default" : "pointer",
+                  background: isDragOver ? "#eef2ff" : imageLoading ? "#f5f3ff" : "#f9fafb",
+                  marginBottom: "0.75rem",
+                  color: isDragOver ? "#4f46e5" : "#6b7280", gap: "0.3rem",
+                  transition: "all 0.2s",
+                  userSelect: "none",
+                }}>
+                <span style={{ fontSize: "2rem" }}>
+                  {isDragOver ? "📂" : imageLoading ? "⏳" : "📷"}
                 </span>
-                <span style={{ fontSize: "0.78rem" }}>JPG، PNG، WebP — حتى 10MB لكل صورة</span>
+                <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                  {isDragOver ? "أفلت الصور هنا" : imageLoading ? "جاري الرفع إلى السحابة…" : "اضغط أو اسحب وأفلت صوراً هنا"}
+                </span>
+                <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                  JPG ، PNG ، WebP — حتى 10MB لكل صورة
+                </span>
                 {imageLoading && (
-                  <span style={{ fontSize: "0.75rem", color: "#6366f1", fontWeight: 600 }}>
+                  <span style={{ fontSize: "0.73rem", color: "#6366f1", fontWeight: 600, marginTop: "0.2rem" }}>
                     يُرجى الانتظار حتى اكتمال الرفع…
                   </span>
                 )}
@@ -771,38 +881,95 @@ export default function PostAdWizard({
               </label>
             )}
 
-            {/* Image previews — show R2 public URLs */}
+            {/* Image grid — local preview + R2 images */}
             {data.uploadedImages.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
-                {data.uploadedImages.map((img, idx) => (
-                  <div key={img.imageId} style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "4/3" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img.url} alt={`صورة ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    {idx === 0 && (
-                      <span style={{
-                        position: "absolute", top: 4, right: 4,
-                        background: "#16a34a", color: "#fff",
-                        fontSize: "0.65rem", fontWeight: 700, padding: "2px 6px", borderRadius: 99,
-                      }}>رئيسية</span>
-                    )}
-                    <button type="button"
-                      onClick={() => removeImage(idx)}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                {data.uploadedImages.map((img, idx) => {
+                  const isUploading = img.imageId === "";
+                  const isCover    = idx === data.coverImageIndex;
+                  return (
+                    <div
+                      key={img.url}
                       style={{
-                        position: "absolute", top: 4, left: 4,
-                        background: "rgba(0,0,0,0.55)", color: "#fff",
-                        border: "none", borderRadius: "50%", width: 24, height: 24,
-                        cursor: "pointer", fontSize: "0.75rem", lineHeight: 1,
-                        display: "flex", alignItems: "center", justifyContent: "center",
+                        position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "4/3",
+                        outline: isCover ? "3px solid #6366f1" : "none",
+                        outlineOffset: "2px",
+                        opacity: isUploading ? 0.75 : 1,
+                        transition: "opacity 0.25s, outline 0.15s",
+                        animation: isUploading ? "fadeInImg 0.3s ease" : "fadeInImg 0.3s ease",
                       }}
-                    >✕</button>
-                  </div>
-                ))}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={img.url}
+                        alt={`صورة ${idx + 1}`}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      />
+
+                      {/* Uploading spinner overlay */}
+                      {isUploading && (
+                        <div style={{
+                          position: "absolute", inset: 0, background: "rgba(255,255,255,0.6)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: "1.5rem",
+                        }}>
+                          ⏳
+                        </div>
+                      )}
+
+                      {/* Cover badge */}
+                      {isCover && !isUploading && (
+                        <span style={{
+                          position: "absolute", top: 4, right: 4,
+                          background: "#6366f1", color: "#fff",
+                          fontSize: "0.62rem", fontWeight: 700, padding: "2px 7px", borderRadius: 99,
+                          letterSpacing: "0.02em",
+                        }}>✦ غلاف</span>
+                      )}
+
+                      {/* Set as cover button — shown only on non-cover uploaded images */}
+                      {!isCover && !isUploading && (
+                        <button
+                          type="button"
+                          title="اجعلها صورة الغلاف"
+                          onClick={() => setCoverImage(idx)}
+                          style={{
+                            position: "absolute", bottom: 4, right: 4,
+                            background: "rgba(0,0,0,0.6)", color: "#fff",
+                            border: "none", borderRadius: 6, padding: "2px 7px",
+                            fontSize: "0.6rem", fontWeight: 600, cursor: "pointer",
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          غلاف
+                        </button>
+                      )}
+
+                      {/* Remove button */}
+                      <button
+                        type="button"
+                        title="حذف الصورة"
+                        onClick={() => removeImage(idx)}
+                        style={{
+                          position: "absolute", top: 4, left: 4,
+                          background: "rgba(0,0,0,0.55)", color: "#fff",
+                          border: "none", borderRadius: "50%", width: 22, height: 22,
+                          cursor: "pointer", fontSize: "0.7rem",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          lineHeight: 1,
+                        }}
+                      >✕</button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             {data.uploadedImages.length > 0 && (
-              <p style={{ fontSize: "0.78rem", color: "#64748b", margin: "0.4rem 0 0" }}>
-                الصورة الأولى ستكون الصورة الرئيسية للإعلان
+              <p style={{ fontSize: "0.76rem", color: "#64748b", margin: "0.25rem 0 0" }}>
+                {data.uploadedImages.some((i) => i.imageId === "")
+                  ? "جاري رفع الصور… لا تغلق الصفحة"
+                  : "اضغط \"غلاف\" لاختيار الصورة الرئيسية للإعلان"}
               </p>
             )}
           </div>

@@ -133,11 +133,15 @@ export default function PostAdPage() {
       console.log("[PostAdPage] ✓ Property created — id:", property.id);
 
       // ── Step 2: attach uploaded images (all already in R2 as UserImages) ─
-      if (wizardData.uploadedImages.length > 0) {
+      // Filter out any entries still uploading (imageId === "") before submitting
+      const readyImages = wizardData.uploadedImages.filter((img) => img.imageId !== "");
+      if (readyImages.length > 0) {
         const token = tokenStorage.getToken() ?? "";
-        const uploads = wizardData.uploadedImages.map((img, i) => ({
+        // coverImageIndex may point to a slot; find the nearest valid index
+        const coverIdx = Math.min(wizardData.coverImageIndex, readyImages.length - 1);
+        const uploads = readyImages.map((img, i) => ({
           imageId:   img.imageId,
-          isCover:   i === 0,
+          isCover:   i === coverIdx,
           sortOrder: i,
         }));
         console.log("[PostAdPage] Attaching", uploads.length, "images via finalizeCreate…");
