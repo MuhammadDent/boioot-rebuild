@@ -20,6 +20,48 @@ const ROLE_LABELS: Record<string, string> = {
   Admin:        "مشرف",
 };
 
+// ── All upgrade paths (shown when limit is reached) ────────────────────────
+// Each entry declares which user roles should see it.
+// null = show to all roles (Admin, unknown).
+const ALL_UPGRADE_PATHS = [
+  {
+    label: "🏠 مالك عقار",
+    href: "/pricing?upgrade=Owner",
+    bg: "var(--color-primary)",
+    roles: ["User", "Owner"],          // Owner can upgrade to a higher Owner plan
+  },
+  {
+    label: "🤝 وسيط / سمسار",
+    href: "/pricing?upgrade=Broker",
+    bg: "#1e293b",
+    roles: ["User", "Broker"],
+  },
+  {
+    label: "🏢 مكتب عقاري",
+    href: "/pricing?upgrade=RealEstateOffice",
+    bg: "#0369a1",
+    roles: ["User", "CompanyOwner", "Agent"],
+  },
+  {
+    label: "🏗️ شركة تطوير",
+    href: "/pricing?upgrade=DeveloperCompany",
+    bg: "#7c3aed",
+    roles: ["User", "CompanyOwner"],
+  },
+] as const;
+
+/**
+ * Returns the upgrade paths relevant for the given user role.
+ * - User role  → all paths (they're choosing which account type to become)
+ * - Admin      → all paths
+ * - Any other  → only the paths that include that role
+ */
+function getUpgradePathsForRole(role: string | null | undefined) {
+  if (!role || role === "Admin") return ALL_UPGRADE_PATHS;
+  if (role === "User") return ALL_UPGRADE_PATHS;
+  return ALL_UPGRADE_PATHS.filter(p => p.roles.includes(role as never));
+}
+
 type StatsResponse = { used: number; limit: number; isFreeTrial?: boolean };
 
 export default function PostAdPage() {
@@ -278,32 +320,25 @@ export default function PostAdPage() {
                     لقد استخدمت إعلاناتك الشهرية كاملةً. قم بترقية عضويتك للمتابعة.
                   </>}
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", maxWidth: 480, margin: "0 auto 1rem" }}>
-              <Link
-                href="/pricing?upgrade=Owner"
-                style={{ padding: "0.75rem 1rem", borderRadius: 10, background: "var(--color-primary)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}
-              >
-                🏠 مالك عقار
-              </Link>
-              <Link
-                href="/pricing?upgrade=Broker"
-                style={{ padding: "0.75rem 1rem", borderRadius: 10, background: "#1e293b", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}
-              >
-                🤝 وسيط / سمسار
-              </Link>
-              <Link
-                href="/pricing?upgrade=RealEstateOffice"
-                style={{ padding: "0.75rem 1rem", borderRadius: 10, background: "#0369a1", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}
-              >
-                🏢 مكتب عقاري
-              </Link>
-              <Link
-                href="/pricing?upgrade=DeveloperCompany"
-                style={{ padding: "0.75rem 1rem", borderRadius: 10, background: "#7c3aed", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}
-              >
-                🏗️ شركة تطوير
-              </Link>
-            </div>
+            {(() => {
+              const upgradePaths = getUpgradePathsForRole(user?.role);
+              console.log("[UpgradePlans] currentUserRole :", user?.role);
+              console.log("[UpgradePlans] allPaths        :", ALL_UPGRADE_PATHS.map(p => p.label).join(", "));
+              console.log("[UpgradePlans] filteredPaths   :", upgradePaths.map(p => p.label).join(", "));
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", maxWidth: 480, margin: "0 auto 1rem" }}>
+                  {upgradePaths.map(path => (
+                    <Link
+                      key={path.href}
+                      href={path.href}
+                      style={{ padding: "0.75rem 1rem", borderRadius: 10, background: path.bg, color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.85rem", textAlign: "center" }}
+                    >
+                      {path.label}
+                    </Link>
+                  ))}
+                </div>
+              );
+            })()}
             <Link
               href="/dashboard/listings"
               style={{ display: "inline-block", padding: "0.55rem 1.25rem", borderRadius: 9, border: "1.5px solid #e2e8f0", color: "#374151", textDecoration: "none", fontWeight: 600, fontSize: "0.85rem" }}

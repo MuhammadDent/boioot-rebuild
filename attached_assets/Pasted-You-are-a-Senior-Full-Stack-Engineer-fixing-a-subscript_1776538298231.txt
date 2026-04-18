@@ -1,0 +1,170 @@
+You are a Senior Full-Stack Engineer fixing a subscription upgrade logic bug.
+
+CRITICAL:
+This is a LOGIC-ONLY fix.
+Do NOT redesign the page.
+Do NOT change layout.
+Do NOT remove elements.
+Do NOT restyle buttons/cards.
+Do NOT touch unrelated code.
+
+==================================================
+BUG
+==================================================
+
+On the subscription upgrade page, the user currently sees upgrade options from ALL user categories.
+
+This is wrong.
+
+Upgrade options must be restricted ONLY to the current user's category.
+
+Example:
+- If current user type is "مالك عقار" / Owner
+  -> show ONLY Owner plans
+  -> do NOT show Broker / Office / Developer plans
+
+- If current user type is Broker
+  -> show ONLY Broker plans
+
+- If current user type is Office
+  -> show ONLY Office plans
+
+- If current user type is Developer
+  -> show ONLY Developer plans
+
+==================================================
+GOAL
+==================================================
+
+Filter upgrade plan options by the CURRENT USER TYPE only.
+
+This must be enforced in the logic that builds the upgrade options list.
+
+==================================================
+STRICT RULES
+==================================================
+
+1. DO NOT change any visual design
+2. DO NOT change card sizes
+3. DO NOT change colors
+4. DO NOT change spacing
+5. DO NOT remove existing headings/buttons/labels
+6. DO NOT rename plans unless absolutely necessary
+7. ONLY fix which plans are shown
+
+==================================================
+TASK 1: FIND SOURCE OF CURRENT USER TYPE
+==================================================
+
+Trace where the current user membership/account type is coming from.
+
+Possible examples:
+- user.accountType
+- user.role
+- membership.type
+- subscription.category
+- currentPlan.userType
+
+Find the actual source of truth.
+
+==================================================
+TASK 2: FILTER UPGRADE OPTIONS
+==================================================
+
+When rendering upgrade choices, apply strict filtering:
+
+Only include plans where:
+plan.userType === currentUserType
+
+OR equivalent normalized comparison if naming differs.
+
+Examples:
+- owner plans visible only for owner users
+- broker plans visible only for broker users
+- office plans visible only for office users
+- developer plans visible only for developer users
+
+==================================================
+TASK 3: NORMALIZE MAPPING IF NEEDED
+==================================================
+
+If backend/frontend use different names, add a minimal mapping layer.
+
+Example only if needed:
+- "Owner" <-> "مالك عقار"
+- "Broker" <-> "وسيط"
+- "Office" <-> "مكتب عقاري"
+- "Developer" <-> "شركة تطوير"
+
+But keep it minimal and safe.
+
+==================================================
+TASK 4: KEEP CURRENT PLAN EXCLUSION BEHAVIOR
+==================================================
+
+If the page already excludes the currently active plan from upgrade options, keep that behavior.
+
+We want:
+- same category only
+- higher/different plans within same category only
+- no cross-category upgrades shown
+
+==================================================
+TASK 5: ADD TEMPORARY DEBUG LOGS
+==================================================
+
+Add temporary logs to verify logic:
+
+- current user type
+- all fetched plans
+- filtered plans shown to user
+
+Example:
+console.log("[UpgradePlans] currentUserType:", currentUserType);
+console.log("[UpgradePlans] allPlans:", allPlans);
+console.log("[UpgradePlans] filteredPlans:", filteredPlans);
+
+==================================================
+TASK 6: DO NOT BREAK ANYTHING
+==================================================
+
+Do NOT break:
+- current subscription display
+- quota display
+- renew/cancel actions
+- payment flow
+- upgrade buttons
+- existing page layout
+
+This is only about restricting visible upgrade options.
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+If current user is Owner:
+- show only Owner upgrade plans
+
+If current user is Broker:
+- show only Broker upgrade plans
+
+If current user is Office:
+- show only Office upgrade plans
+
+If current user is Developer:
+- show only Developer upgrade plans
+
+No cross-category plans must appear.
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+After fixing, explain exactly:
+
+1. What was the current source of truth for user type
+2. Where the upgrade plans were being filtered
+3. What file(s) were modified
+4. Whether a type mapping was needed
+5. Confirm that only same-category plans are now shown
+6. Confirm that no UI/design changes were made
