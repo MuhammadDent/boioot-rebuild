@@ -510,20 +510,28 @@ public class ImagesController : BaseController
                 img.Property.CreatedByUserId != userId.ToString())
                 return Forbid();
 
+            // Step 1: clear all OTHER covers (exclude target to avoid clearing it before we set it)
             await _db.PropertyImages
-                .Where(i => i.PropertyId == img.PropertyId && i.IsCover)
+                .Where(i => i.PropertyId == img.PropertyId && i.IsCover && i.Id != id)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(i => i.IsCover,   false)
                     .SetProperty(i => i.IsPrimary, false), ct);
 
-            img.IsCover   = true;
-            img.IsPrimary = true;
-            await _db.SaveChangesAsync(ct);
+            // Step 2: set target as cover via ExecuteUpdateAsync (avoids EF change-tracker
+            // staleness that occurs when the entity was loaded BEFORE step 1 cleared it,
+            // causing SaveChangesAsync to see no "change" and skip the UPDATE).
+            await _db.PropertyImages
+                .Where(i => i.Id == id)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(i => i.IsCover,   true)
+                    .SetProperty(i => i.IsPrimary, true), ct);
 
             _logger.LogInformation(
                 "[Images/set-cover] PropertyImage {Id} set as cover for Property {PropId}",
                 id, img.PropertyId);
 
+            img.IsCover   = true;
+            img.IsPrimary = true;
             return Ok(MapPropertyImage(img));
         }
 
@@ -542,20 +550,26 @@ public class ImagesController : BaseController
                 if (!isAgent) return Forbid();
             }
 
+            // Step 1: clear all OTHER covers (exclude target)
             await _db.ProjectImages
-                .Where(i => i.ProjectId == img.ProjectId && i.IsCover)
+                .Where(i => i.ProjectId == img.ProjectId && i.IsCover && i.Id != id)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(i => i.IsCover,   false)
                     .SetProperty(i => i.IsPrimary, false), ct);
 
-            img.IsCover   = true;
-            img.IsPrimary = true;
-            await _db.SaveChangesAsync(ct);
+            // Step 2: set target as cover via ExecuteUpdateAsync (avoids EF tracker staleness)
+            await _db.ProjectImages
+                .Where(i => i.Id == id)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(i => i.IsCover,   true)
+                    .SetProperty(i => i.IsPrimary, true), ct);
 
             _logger.LogInformation(
                 "[Images/set-cover] ProjectImage {Id} set as cover for Project {ProjId}",
                 id, img.ProjectId);
 
+            img.IsCover   = true;
+            img.IsPrimary = true;
             return Ok(MapProjectImage(img));
         }
 

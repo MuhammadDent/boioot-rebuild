@@ -45,7 +45,7 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
+            .Include(p => p.Images.Where(i => i.IsCover || i.IsPrimary || i.Order == 0))  // cover (+ fallback) for cards
                 .ThenInclude(i => i.UserImage)              // bridge: prefer R2 URL when available
             .Where(p => p.Status == PropertyStatus.Available);
 
@@ -520,7 +520,7 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
+            .Include(p => p.Images.Where(i => i.IsCover || i.IsPrimary || i.Order == 0))  // cover (+ fallback) for cards
                 .ThenInclude(i => i.UserImage)             // bridge: prefer R2 URL when available
             ;
 
@@ -782,7 +782,7 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsCover))  // cover image only for list views
+            .Include(p => p.Images.Where(i => i.IsCover || i.IsPrimary || i.Order == 0))  // cover (+ fallback) for cards
                 .ThenInclude(i => i.UserImage)             // bridge: prefer R2 URL when available
             .Where(p => !p.IsDeleted && (
                 p.OwnerId == ownerIdStr ||
