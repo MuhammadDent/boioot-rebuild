@@ -1,0 +1,135 @@
+You are a Senior Next.js + Frontend Debugging Engineer.
+
+We have a BUG on the subscription plans page:
+
+==================================================
+BUG
+==================================================
+
+The button:
+"اشترك الآن"
+
+is visible, but it is NOT clickable.
+
+User clicks it and nothing happens.
+
+This is a functional bug and must be fixed.
+
+==================================================
+IMPORTANT RULES
+==================================================
+
+- Do NOT redesign the page
+- Do NOT change card layout
+- Do NOT change colors
+- Do NOT remove any elements
+- Do NOT touch unrelated subscription logic
+- ONLY fix why the button is not clickable
+
+==================================================
+TASK 1: FIND ROOT CAUSE
+==================================================
+
+Inspect why the "اشترك الآن" button is not clickable.
+
+Check all possible causes:
+
+1. button has disabled={true}
+2. parent container has pointer-events: none
+3. overlay element is covering the button
+4. z-index issue
+5. onClick handler is missing
+6. onClick handler exists but never fires
+7. href / router.push is not attached
+8. conditional logic prevents interaction
+9. loading state is stuck
+10. current-plan detection is incorrectly marking this card as unavailable
+
+==================================================
+TASK 2: VERIFY BUTTON STATE
+==================================================
+
+For each plan card, log:
+
+- plan id
+- plan name
+- isCurrentPlan
+- isDisabled
+- onClick action type
+- visible CTA label
+
+Example:
+console.log('[PlanCard CTA]', {
+  planId: plan.id,
+  planName: plan.name,
+  isCurrentPlan,
+  isDisabled,
+  ctaLabel,
+});
+
+==================================================
+TASK 3: FIX CLICKABILITY
+==================================================
+
+The "اشترك الآن" button must be clickable when:
+
+- the plan is NOT the current plan
+- the plan is allowed for this user type
+- no legitimate loading/processing state exists
+
+Ensure:
+- button is rendered as enabled
+- pointer events are active
+- onClick is attached
+- the correct action fires
+
+==================================================
+TASK 4: FIX ACTION BEHAVIOR
+==================================================
+
+When user clicks "اشترك الآن":
+
+IF plan.isFree:
+  → activate free plan flow
+
+ELSE IF plan.requiresPayment:
+  → navigate to payment flow / payment page
+
+ELSE IF plan.requiresApproval:
+  → navigate to subscription request / approval flow
+
+At minimum, make sure the click works and triggers the intended handler.
+
+==================================================
+TASK 5: CHECK FOR OVERLAY / CSS BLOCKING
+==================================================
+
+Inspect the DOM and CSS for:
+
+- overlapping badge
+- absolute positioned layer
+- invisible div over the card
+- pointer-events: none
+- z-index conflict
+
+If any overlay blocks the button, fix it safely without changing the design.
+
+==================================================
+TASK 6: DO NOT BREAK CURRENT PLAN CARD
+==================================================
+
+Keep the current plan card non-clickable only where appropriate.
+
+But DO NOT accidentally apply the same disabled state to upgrade plan cards.
+
+==================================================
+TASK 7: OUTPUT REQUIRED
+==================================================
+
+After fixing, explain exactly:
+
+1. Why "اشترك الآن" was not clickable
+2. Whether the cause was CSS, disabled state, overlay, or missing handler
+3. What file(s) were modified
+4. Confirm that the button now responds to click
+5. Confirm that no UI/design changes were made

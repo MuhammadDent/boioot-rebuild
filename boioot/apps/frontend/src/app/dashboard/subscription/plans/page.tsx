@@ -239,13 +239,30 @@ function PlanCard({
         {/* Main CTA */}
         <button
           onClick={() => {
+            console.log("[PlanCard CTA click]", {
+              planId:          plan.planId,
+              planName:        plan.displayNameAr,
+              billingType:     plan.billingType,
+              isCurrent,
+              isActivatableFree,
+              isActivatingFree,
+              hasPricing:      !!pricing,
+              pricingAmount:   pricing?.priceAmount,
+              pricingCycle:    pricing?.billingCycle,
+            });
             if (isCurrent || isActivatingFree) return;
             // Only truly free plans (free_default billing type) go to activate-free API
             if (isActivatableFree) {
               onActivateFree(plan.planId);
-            } else if (pricing) {
-              // Paid plans (even price=0 if not free_default) → checkout flow
-              onChoose(plan, pricing);
+            } else {
+              // Paid plans → checkout flow.
+              // Prefer the cycle-matched pricing; fall back to first entry if cycle is unmatched.
+              const targetPricing = pricing ?? plan.pricing[0];
+              if (targetPricing) {
+                onChoose(plan, targetPricing);
+              } else {
+                console.warn("[PlanCard CTA] No pricing entries for plan:", plan.planId, plan.displayNameAr);
+              }
             }
           }}
           disabled={isCurrent || isActivatingFree}
@@ -1246,14 +1263,13 @@ export default function PlansPage() {
           isCurrent={detailPlan.planId === currentSub?.planId}
           defaultCycle={cycle}
           onClose={() => setDetailPlan(null)}
-          onChoose={(p, pricing) => {
+          onChoose={(p, pr) => {
             setDetailPlan(null);
-            const isFree = pricing.priceAmount === 0;
-            if (isFree) {
+            if (p.billingType === "free_default") {
               handleActivateFree(p.planId);
             } else {
               setCheckoutPlan(p);
-              setCheckoutPricing(pricing);
+              setCheckoutPricing(pr ?? p.pricing[0]);
               setSuccessMethod(null);
             }
           }}
