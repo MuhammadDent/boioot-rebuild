@@ -1,0 +1,201 @@
+You are a Senior Full-Stack Engineer fixing a broken subscription request flow.
+
+CRITICAL:
+This is a LOGIC + FLOW fix.
+Do NOT redesign existing pages.
+Do NOT remove elements.
+Do NOT change unrelated UI.
+Only fix the broken "New Request" flow and implement the correct request form page.
+
+==================================================
+BUG
+==================================================
+
+On:
+/dashboard/subscription/requests
+
+The button:
+"طلب جديد"
+
+currently sends the user back to the subscription plans page.
+
+This is WRONG.
+
+It should open a dedicated page/form for creating a NEW subscription request / upgrade request,
+with the ability to upload required documents and submit the request for review.
+
+==================================================
+GOAL
+==================================================
+
+Implement a proper subscription request creation flow:
+
+Requests page
+  -> click "طلب جديد"
+  -> open request creation page
+  -> choose target plan
+  -> upload required documents
+  -> submit request
+  -> save request as pending
+  -> return user to requests page or request details page
+
+==================================================
+REQUIRED FLOW
+==================================================
+
+1. From:
+/dashboard/subscription/requests
+
+Click:
+"طلب جديد"
+
+2. Navigate to a dedicated request creation route, for example:
+- /dashboard/subscription/requests/new
+OR
+- /dashboard/subscription/request/new
+
+Choose the route that best fits the project structure, but it must be a REAL creation page.
+
+3. The new request page must allow:
+- selecting the target subscription/upgrade plan
+- showing current plan
+- showing selected target plan
+- optional note/message
+- uploading required documents/files
+- submitting the request
+
+==================================================
+FORM REQUIREMENTS
+==================================================
+
+Create a request form with at least these fields:
+
+1. currentPlan (read-only display)
+2. targetPlanId (required)
+3. requestType
+   - upgrade
+   - plan change
+   - subscription request
+   choose the value that matches current backend model
+4. notes (optional textarea)
+5. attachments / documents upload
+   - allow one or more files
+   - show selected file names
+   - validate file type and size if backend already expects it
+
+If backend already has a request DTO, match it exactly.
+
+==================================================
+DOCUMENTS / FILE UPLOAD
+==================================================
+
+Implement upload support for required documents.
+
+If backend already has an upload endpoint:
+- use it
+
+If backend expects multipart form-data:
+- submit correctly as multipart
+
+If backend already stores uploaded files for requests:
+- integrate with existing logic
+
+At minimum:
+- user must be able to attach documents to the subscription request
+- request must persist with attachments linked to it
+
+==================================================
+BUTTON FIX
+==================================================
+
+Fix "طلب جديد" so it routes to the NEW REQUEST FORM page.
+
+It must NOT redirect back to plans page anymore.
+
+==================================================
+BACKEND INTEGRATION
+==================================================
+
+Inspect existing backend endpoints for subscription requests.
+
+Need one of these:
+- POST /api/dashboard/subscription/requests
+- POST /api/subscription/requests
+- equivalent existing endpoint
+
+Use the existing backend if present.
+
+If request creation endpoint is missing but request listing exists:
+- add the minimal backend endpoint required to create a request
+- do NOT break existing request listing
+
+==================================================
+AFTER SUBMIT
+==================================================
+
+After successful request submission:
+
+Option A:
+- redirect to /dashboard/subscription/requests
+- show success state/message
+
+Option B:
+- redirect to request details page if such page exists
+
+Preferred:
+redirect back to requests list with the new request visible as PENDING / UNDER REVIEW
+
+==================================================
+REQUEST STATUS
+==================================================
+
+Newly created request should have a clear status such as:
+- Pending
+- Under Review
+- Awaiting Approval
+
+Use the existing status model if available.
+
+==================================================
+DO NOT BREAK
+==================================================
+
+Do NOT break:
+- subscription plans page
+- current subscription display
+- payment flow
+- request listing page
+- sidebar navigation
+
+Only fix:
+- new request button behavior
+- request creation page/form
+- document upload integration
+- submit flow
+
+==================================================
+TEMP DEBUG LOGS
+==================================================
+
+Add temporary logs for:
+
+- current user
+- current plan
+- target plan selected
+- selected files
+- payload sent to backend
+- backend response
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+After implementation, explain exactly:
+
+1. Why "طلب جديد" was redirecting to plans page before
+2. What route is now opened when clicking "طلب جديد"
+3. What fields were added in the new request form
+4. How file/document upload works
+5. What backend endpoint handles request creation
+6. What files were modified
+7. Confirm that requests can now be created and submitted for review

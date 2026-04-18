@@ -395,7 +395,7 @@ function RequestCard({
       {/* Rejection: create new request CTA */}
       {req.status === "Rejected" && (
         <Link
-          href="/dashboard/subscription/plans"
+          href="/dashboard/subscription/requests/new"
           style={{
             display: "inline-block",
             padding: "0.55rem 1.25rem",
@@ -605,7 +605,7 @@ export default function MyRequestsPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/subscription/plans"
+          href="/dashboard/subscription/requests/new"
           style={{
             display: "inline-flex",
             alignItems: "center",
