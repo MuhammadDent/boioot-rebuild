@@ -126,7 +126,11 @@ export default function NewRequestPage() {
   // ── submit ───────────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedPlan || !selectedPricing) {
+
+    // ── SINGLE SOURCE OF TRUTH: only selectedPlan is required ─────────────────
+    // selectedPricing may be null for plans that have no pricing entries yet;
+    // pricingId is optional in CreatePaymentRequestDto.
+    if (!selectedPlan) {
       setSubmitError("يرجى اختيار الباقة المطلوبة أولاً.");
       return;
     }
@@ -135,10 +139,16 @@ export default function NewRequestPage() {
       return;
     }
 
+    // Derive billingCycle: prefer selectedPricing, then first entry, then fallback by billingType
+    const effectivePricing = selectedPricing ?? selectedPlan.pricing[0] ?? null;
+    const effectiveCycle: "Monthly" | "Yearly" | "OneTime" =
+      (effectivePricing?.billingCycle as "Monthly" | "Yearly" | "OneTime") ??
+      (selectedPlan.billingType === "one_time_fixed_term" ? "OneTime" : "Monthly");
+
     const payload = {
       planId:       selectedPlan.planId,
-      pricingId:    selectedPricing.pricingId,
-      billingCycle: selectedPricing.billingCycle,
+      ...(effectivePricing ? { pricingId: effectivePricing.pricingId } : {}),
+      billingCycle: effectiveCycle,
       paymentMethod,
       customerNote: customerNote.trim() || undefined,
       salesRepresentativeName:
@@ -147,12 +157,14 @@ export default function NewRequestPage() {
           : undefined,
     };
 
-    console.log("[NewRequest] user        :", user?.email, "| role:", user?.role);
-    console.log("[NewRequest] currentPlan :", currentSub?.planName ?? "لا يوجد");
-    console.log("[NewRequest] targetPlan  :", selectedPlan.displayNameAr, selectedPlan.planId);
-    console.log("[NewRequest] pricing     :", selectedPricing.billingCycle, selectedPricing.priceAmount, selectedPricing.currencyCode);
-    console.log("[NewRequest] proofFile   :", proofFile?.name ?? "none");
-    console.log("[NewRequest] payload →   :", payload);
+    console.log("[NewRequest] user          :", user?.email, "| role:", user?.role);
+    console.log("[NewRequest] currentPlan   :", currentSub?.planName ?? "لا يوجد");
+    console.log("[NewRequest] targetPlan    :", selectedPlan.displayNameAr, selectedPlan.planId);
+    console.log("[NewRequest] selectedPlan  :", selectedPlan);
+    console.log("[NewRequest] selectedPricing:", selectedPricing, "→ effectivePricing:", effectivePricing);
+    console.log("[NewRequest] billingCycle  :", effectiveCycle);
+    console.log("[NewRequest] proofFile     :", proofFile?.name ?? "none");
+    console.log("[NewRequest] payload →     :", payload);
 
     setSubmitting(true);
     setSubmitError(null);

@@ -1,0 +1,149 @@
+You are a Senior Next.js + React form debugging engineer.
+
+We have a BUG in the new subscription request page.
+
+==================================================
+BUG
+==================================================
+
+On the new subscription request form:
+
+- User selects a target subscription plan visually
+- The selected plan card shows as selected in the UI
+- BUT on submit, validation still says:
+  "يرجى اختيار الباقة المطلوبة أولاً"
+
+So the plan appears selected visually, but targetPlanId is not being recognized by validation/submission.
+
+==================================================
+ROOT PROBLEM TO DEBUG
+==================================================
+
+This is most likely a STATE SYNC bug.
+
+Possible causes:
+1. visual selection state is separate from form submit state
+2. selected card updates UI only, but not form.targetPlanId
+3. targetPlanId is reset on re-render
+4. validation reads a different state source than the selected card
+5. string / GUID / null mismatch
+6. selectedPlan object exists, but targetPlanId is empty
+7. form library value is not synced with component state
+
+==================================================
+GOAL
+==================================================
+
+When user selects a plan, the form must store the targetPlanId correctly.
+
+On submit:
+- validation must pass
+- selected target plan must be included in payload
+
+==================================================
+TASK 1: TRACE THE STATE
+==================================================
+
+Inspect:
+- selected plan card state
+- targetPlanId form field
+- submit payload
+- validation logic
+
+Log all of these:
+
+console.log('[SubscriptionRequest] selectedPlan:', selectedPlan);
+console.log('[SubscriptionRequest] targetPlanId:', form.targetPlanId);
+console.log('[SubscriptionRequest] submit payload:', payload);
+
+We need to confirm whether the UI and form state are out of sync.
+
+==================================================
+TASK 2: FIX PLAN SELECTION BINDING
+==================================================
+
+When user clicks a plan card or radio option:
+
+MUST update BOTH:
+1. visual selected state
+2. form targetPlanId
+
+Example conceptually:
+
+setSelectedPlan(plan);
+setFormData(prev => ({
+  ...prev,
+  targetPlanId: plan.id
+}));
+
+If using react-hook-form or similar:
+- call setValue('targetPlanId', plan.id, { shouldValidate: true })
+
+==================================================
+TASK 3: VALIDATION MUST USE SAME SOURCE OF TRUTH
+==================================================
+
+Validation must read from the SAME targetPlanId that selection updates.
+
+Do NOT validate using a different variable than the one bound to UI selection.
+
+Use one source of truth only.
+
+==================================================
+TASK 4: PRESERVE SELECTION AFTER RE-RENDER
+==================================================
+
+If the page re-renders after selecting payment method or uploading file,
+the selected target plan must remain selected.
+
+Do NOT reset targetPlanId accidentally.
+
+==================================================
+TASK 5: SUBMIT PAYLOAD
+==================================================
+
+Ensure submit payload includes:
+
+- targetPlanId
+- currentPlan if needed
+- paymentMethod
+- note
+- attachment(s)
+
+And confirm targetPlanId is not null/empty.
+
+==================================================
+TASK 6: RADIO / CARD CLICK SAFETY
+==================================================
+
+If there is a custom card UI plus a radio input:
+
+- clicking the card must update the radio
+- clicking the radio must update the card
+- both must update targetPlanId
+
+No visual-only selection allowed.
+
+==================================================
+TASK 7: DO NOT CHANGE UI DESIGN
+==================================================
+
+Do NOT redesign the page.
+Do NOT change layout.
+Do NOT remove elements.
+Do NOT change colors.
+
+Only fix the selection/state/validation bug.
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+After fixing, explain exactly:
+
+1. Why the selected plan was not recognized
+2. Which state variable was showing selection visually
+3. Which state variable validation was reading
+4. What file(s) were modified
+5. Confirm that selecting a plan now sets targetPlanId correctly
+6. Confirm that submit now works without the false validation error
