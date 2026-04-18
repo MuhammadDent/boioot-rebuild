@@ -568,17 +568,70 @@ public class PropertyService : IPropertyService
     {
         var ownerIdStr = userId.ToString();
 
-        // ── Free-trial tier (User role) ────────────────────────────────────────
+        // ── SINGLE SOURCE OF TRUTH: active subscription takes priority ─────────
+        // When the user has an account with an active subscription plan, use
+        // the plan's max_active_listings limit and count from the subscription
+        // period start — exactly matching GetCurrentPlanCapabilitiesAsync and
+        // CreateUserListingAsync enforcement.  This eliminates the role-vs-plan
+        // mismatch that previously caused the subscription page and post-ad page
+        // to show different quota numbers.
+        var acctId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (acctId.HasValue)
+        {
+            var subLimit = (int)await _entitlement.GetLimitAsync(
+                acctId.Value, SubscriptionKeys.MaxActiveListings, ct);
+
+            // subLimit == 0 → "not available in this plan" (treat as 0 quota)
+            // subLimit == -1 → unlimited (show as -1 downstream)
+            // Any other positive value → plan limit
+
+            // Find the period start from the active subscription (same logic as GetCurrentPlanCapabilitiesAsync)
+            var now = DateTime.UtcNow;
+            var activeSub = await _context.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.AccountId == acctId.Value &&
+                    s.IsActive &&
+                    (s.Status == SubscriptionStatus.Trial ||
+                     s.Status == SubscriptionStatus.Active ||
+                     s.Status == SubscriptionStatus.Pending) &&
+                    (s.EndDate == null || s.EndDate > now))
+                .OrderByDescending(s => s.StartDate)
+                .Select(s => new { s.CurrentPeriodStart, s.StartDate })
+                .FirstOrDefaultAsync(ct);
+
+            var periodStart = activeSub != null
+                ? (activeSub.CurrentPeriodStart ?? activeSub.StartDate)
+                : new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            var subUsed = await _context.Properties
+                .AsNoTracking()
+                .CountAsync(p => p.AccountId == acctId.Value && p.CreatedAt >= periodStart, ct);
+
+            _logger.LogInformation(
+                "[Quota/Stats] userId={UserId} role={Role} acctId={AcctId} | " +
+                "planLimit={Limit} periodStart={PeriodStart:u} used={Used}",
+                userId, userRole, acctId.Value, subLimit, periodStart, subUsed);
+
+            return (subUsed, subLimit, false);
+        }
+
+        // ── No account: legacy quota logic ────────────────────────────────────
+
+        // Free-trial tier (User role)
         // Counting rule: User.TrialListingsUsed — incremented on each creation,
         // never decremented. Deletion does not restore trial quota.
         if (userRole == RoleNames.User)
         {
             var trialUser = await _context.Users.FindAsync([userId]);
             var used = trialUser?.TrialListingsUsed ?? 0;
+            _logger.LogInformation(
+                "[Quota/Stats] userId={UserId} role={Role} no account → trial quota used={Used} limit=2",
+                userId, userRole, used);
             return (used, 2, true);
         }
 
-        // ── Standard monthly limit (Owner, Broker, CompanyOwner, Admin, etc.) ──
+        // Standard monthly limit (Owner, Broker, CompanyOwner, Admin, etc.)
         var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var userCompanyIds = await _context.Agents
@@ -593,7 +646,12 @@ public class PropertyService : IPropertyService
                 userCompanyIds.Contains(p.CompanyId)
             ), ct);
 
-        return (monthlyUsed, GetMonthlyLimit(userRole), false);
+        var monthlyLimit = GetMonthlyLimit(userRole);
+        _logger.LogInformation(
+            "[Quota/Stats] userId={UserId} role={Role} no account → role-based quota used={Used} limit={Limit}",
+            userId, userRole, monthlyUsed, monthlyLimit);
+
+        return (monthlyUsed, monthlyLimit, false);
     }
 
     public async Task<PropertyResponse> CreateUserListingAsync(

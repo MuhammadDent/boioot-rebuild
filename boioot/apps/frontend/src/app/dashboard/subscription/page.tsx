@@ -637,6 +637,18 @@ export default function SubscriptionPage() {
       ]);
       setSub(subRes);
       setHistory(histRes);
+      if (subRes) {
+        console.log("════════ [SubscriptionPage] Quota Debug (source: /dashboard/subscription/current) ════════");
+        console.log("  planName         :", subRes.planName);
+        console.log("  planCode         :", subRes.planCode);
+        console.log("  status           :", subRes.status);
+        console.log("  listingQuotaUsed :", subRes.listingQuotaUsed);
+        console.log("  listingLimit     :", subRes.listingLimit, subRes.listingLimit === -1 ? "(unlimited)" : "");
+        console.log("  remaining        :", subRes.listingLimit === -1 ? "unlimited" : Math.max(0, subRes.listingLimit - subRes.listingQuotaUsed));
+        console.log("  isQuotaExhausted :", subRes.isQuotaExhausted);
+        console.log("  planBillingType  :", subRes.planBillingType);
+        console.log("═══════════════════════════════════════════════════════════════════════════════════════════");
+      }
     } catch (err) {
       setError(normalizeError(err));
     } finally {

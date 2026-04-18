@@ -46,8 +46,16 @@ export default function PostAdPage() {
     if (!user) return;
 
     api
-      .get<{ used: number; limit: number }>("/properties/my-listings/stats")
-      .then((data) => setStats(data))
+      .get<{ used: number; limit: number; isFreeTrial?: boolean }>("/properties/my-listings/stats")
+      .then((data) => {
+        setStats(data);
+        console.log("════════ [PostAdPage] Quota Debug (source: /properties/my-listings/stats) ════════");
+        console.log("  used        :", data.used);
+        console.log("  limit       :", data.limit, data.limit === -1 ? "(unlimited)" : "");
+        console.log("  remaining   :", data.limit === -1 ? "unlimited" : Math.max(0, data.limit - data.used));
+        console.log("  isFreeTrial :", data.isFreeTrial);
+        console.log("═══════════════════════════════════════════════════════════════════════════════════");
+      })
       .catch(() => {})
       .finally(() => setStatsLoading(false));
 

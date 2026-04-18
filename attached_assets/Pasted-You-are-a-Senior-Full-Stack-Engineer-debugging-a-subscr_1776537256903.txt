@@ -1,0 +1,174 @@
+You are a Senior Full-Stack Engineer debugging a subscription/quota inconsistency and a property posting failure.
+
+We currently have TWO SEPARATE ISSUES and you must treat them separately.
+
+==================================================
+ISSUE A — SUBSCRIPTION / QUOTA INCONSISTENCY
+==================================================
+
+Observed behavior:
+
+1) In subscription page:
+- Current package appears as free / owner free
+- Used ads shows: 2 / 2
+
+2) In post-ad page:
+- Banner says: remaining 3 ads this month
+- Used 2 out of 5 monthly
+- Current membership appears to allow 5 ads
+
+This is inconsistent and unacceptable.
+
+We need to find the SINGLE source of truth for ad quota.
+
+--------------------------------------------------
+TASK A1: Trace quota source end-to-end
+--------------------------------------------------
+
+Inspect:
+
+- frontend subscription page
+- frontend post-ad page banner
+- backend endpoint(s) returning subscription / quota / membership
+- backend logic enforcing posting eligibility
+
+Identify:
+
+1. What endpoint or state is used by subscription page?
+2. What endpoint or state is used by post-ad page?
+3. What backend logic determines max allowed ads?
+4. Is there a fallback defaulting to free plan (2 ads)?
+5. Is there stale cached data or duplicated quota logic?
+
+--------------------------------------------------
+TASK A2: Unify quota source of truth
+--------------------------------------------------
+
+Implement this rule:
+
+- subscription page
+- post-ad page banner
+- backend posting permission check
+
+must all use the SAME effective quota source.
+
+No duplicated logic.
+No frontend hardcoded fallback.
+No separate free-plan assumptions.
+
+If there is an "effectiveMembership" or "effectiveQuota" object, use it everywhere.
+
+--------------------------------------------------
+TASK A3: Add temporary debug logs
+--------------------------------------------------
+
+Add logs in frontend and backend to print:
+
+- current plan name
+- max ads allowed
+- ads used
+- ads remaining
+- source object / endpoint used
+
+We want to clearly see why one page says 2 and another says 5.
+
+==================================================
+ISSUE B — POST /api/properties/post RETURNS 400
+==================================================
+
+Current console shows:
+- POST /api/properties/post
+- 400 Bad Request
+- "One or more validation errors occurred"
+
+This may be unrelated to quota.
+We must reveal the REAL validation error details.
+
+--------------------------------------------------
+TASK B1: Expose full validation errors in frontend
+--------------------------------------------------
+
+Right now frontend only shows generic message.
+
+Fix frontend error handling so it logs and displays:
+
+- response.errors
+- each field name
+- each validation message
+
+Example desired debug output:
+{
+  title: "...",
+  status: 400,
+  errors: {
+    fieldName1: ["message 1"],
+    fieldName2: ["message 2"]
+  }
+}
+
+--------------------------------------------------
+TASK B2: Inspect backend DTO / validation
+--------------------------------------------------
+
+Inspect the POST /api/properties/post action and its request DTO.
+
+Find which exact field is failing validation.
+
+Possible examples:
+- missing required property type field
+- invalid enum
+- null location field
+- wrong image attachment timing
+- hidden step state not mapped correctly
+- stale wizard state
+
+--------------------------------------------------
+TASK B3: Distinguish quota errors from validation errors
+--------------------------------------------------
+
+If the user exceeded quota:
+- return a clear quota/business error
+- not generic validation error
+
+If it is DTO validation:
+- return the actual invalid fields clearly
+
+Do NOT mix quota failure with validation failure.
+
+==================================================
+REQUIRED FIX
+==================================================
+
+1. Fix the inconsistency so all pages show the same quota:
+   - either 2/2 OR 2/5
+   - but never both
+
+2. Fix post-ad failure:
+   - reveal exact invalid fields
+   - resolve the underlying DTO/backend/frontend mapping issue
+
+3. Ensure quota check and validation are separate and clear
+
+==================================================
+DO NOT BREAK
+==================================================
+
+Do NOT change unrelated UI.
+Do NOT touch gallery/contact work.
+Focus only on:
+- subscription / quota logic
+- post-ad validation diagnostics and fix
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+After debugging, explain clearly:
+
+1. Why subscription page says 2/2
+2. Why post-ad page says 2/5
+3. What is the real source of truth
+4. Whether post failure is quota-related or validation-related
+5. Which exact field(s) failed validation
+6. What files were modified
+7. Confirm the final consistent quota shown across pages

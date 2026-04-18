@@ -237,11 +237,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       throw new PlanLimitError(planPayload);
     }
 
-    const message =
-      (payload?.error as string | undefined) ??
-      (payload?.message as string | undefined) ??
-      (payload?.title as string | undefined) ??
-      `خطأ من الخادم (${res.status})`;
+    // ── ASP.NET Core 400 DataAnnotations: extract field-level errors ──────────
+    // Shape: { title: "One or more validation errors occurred.", errors: { Field: ["msg"] } }
+    let message: string;
+    if (payload?.errors && typeof payload.errors === "object") {
+      const fieldErrors = payload.errors as Record<string, string[]>;
+      console.error(`[api] ✗ Validation errors (${method} ${fullUrl}):`, JSON.stringify(fieldErrors, null, 2));
+      const joined = Object.entries(fieldErrors)
+        .flatMap(([field, msgs]) =>
+          (msgs ?? []).map((m: string) => m ? `[${field}] ${m}` : null)
+        )
+        .filter(Boolean)
+        .join(" | ");
+      message = joined ||
+        (payload?.title as string | undefined) ||
+        `خطأ في البيانات المُرسَلة (${res.status})`;
+    } else {
+      message =
+        (payload?.error as string | undefined) ??
+        (payload?.message as string | undefined) ??
+        (payload?.title as string | undefined) ??
+        `خطأ من الخادم (${res.status})`;
+    }
 
     console.error(`[api] Error ${res.status} for ${method} ${fullUrl}:`, message, payload);
     throw new ApiError(message, res.status, payload);
