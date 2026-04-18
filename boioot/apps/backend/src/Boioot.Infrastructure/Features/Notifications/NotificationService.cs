@@ -70,20 +70,11 @@ public class NotificationService : IUserNotificationService
             .Where(n => n.UserId == userId)
             .OrderByDescending(n => n.CreatedAt);
 
-        // Combine total + unread into a single GROUP BY round-trip
-        var counts = await _db.Notifications
-            .AsNoTracking()
-            .Where(n => n.UserId == userId)
-            .GroupBy(_ => 1)
-            .Select(g => new
-            {
-                Total  = g.Count(),
-                Unread = g.Count(n => !n.IsRead)
-            })
-            .FirstOrDefaultAsync(ct);
+        // Two simple COUNT queries — avoids GroupBy(_ => 1) which fails on PostgreSQL with EF Core 8
+        var total  = await _db.Notifications.CountAsync(n => n.UserId == userId, ct);
+        var unread = await _db.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead, ct);
 
-        var total  = counts?.Total  ?? 0;
-        var unread = counts?.Unread ?? 0;
+        Console.WriteLine($"[NotificationService] userId={userId} total={total} unread={unread}");
 
         var items = await query
             .Skip((page - 1) * pageSize)

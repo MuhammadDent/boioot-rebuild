@@ -135,6 +135,7 @@ export default function NotificationsPage() {
 
   const [items,      setItems]      = useState<NotificationItem[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState<string | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
   const [filter,     setFilter]     = useState<Filter>("all");
   const [page,       setPage]       = useState(1);
@@ -147,11 +148,18 @@ export default function NotificationsPage() {
 
   const load = useCallback(async (p: number) => {
     setLoading(true);
+    setError(null);
     try {
       const result = await notificationsApi.getList(p, PAGE_SIZE);
+      console.log("[Notifications] listResponse:", result);
       setItems(result.items);
       setTotal(result.total);
       setUnread(result.unread);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "تعذّر تحميل الإشعارات";
+      console.error("[Notifications] listError:", err);
+      setError(msg);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -248,6 +256,20 @@ export default function NotificationsPage() {
       {loading ? (
         <div style={{ padding: "60px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>
           جاري التحميل...
+        </div>
+      ) : error ? (
+        <div style={{ padding: "48px 24px", textAlign: "center", background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: "12px" }}>
+          <p style={{ margin: "0 0 12px", fontSize: "14px", color: "#be123c", fontWeight: 600 }}>
+            تعذّر تحميل الإشعارات
+          </p>
+          <p style={{ margin: "0 0 16px", fontSize: "13px", color: "#9f1239" }}>{error}</p>
+          <button
+            type="button"
+            onClick={() => load(page)}
+            style={{ padding: "8px 20px", borderRadius: "8px", border: "none", background: "#be123c", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+          >
+            إعادة المحاولة
+          </button>
         </div>
       ) : displayed.length === 0 ? (
         <div style={{ padding: "60px 24px", textAlign: "center", color: "#9ca3af", fontSize: "14px", background: "#f9fafb", borderRadius: "12px" }}>

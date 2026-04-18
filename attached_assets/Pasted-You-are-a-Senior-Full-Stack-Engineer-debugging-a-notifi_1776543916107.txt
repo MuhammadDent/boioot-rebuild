@@ -1,0 +1,159 @@
+You are a Senior Full-Stack Engineer debugging a notifications inconsistency bug.
+
+CRITICAL:
+Do NOT redesign the notifications page.
+Do NOT remove any UI elements.
+Only fix the data / API / rendering logic.
+
+==================================================
+BUG
+==================================================
+
+Observed behavior:
+
+- Notification badge on the bell icon shows unread count (example: 1)
+- But the notifications page says:
+  "لا توجد إشعارات بعد"
+- In Network tab, some notification-related requests return 500
+- Other notification requests return 200
+
+This means the unread-count flow and the notifications list flow are inconsistent.
+
+==================================================
+GOAL
+==================================================
+
+Make notifications page correctly show the actual notifications that exist.
+
+If unread badge says there are unread notifications,
+the notifications list must load and display them correctly.
+
+==================================================
+TASK 1: TRACE ALL NOTIFICATION ENDPOINTS
+==================================================
+
+Inspect all frontend API calls related to notifications, for example:
+- unread count endpoint
+- notifications list endpoint
+- mark-as-read endpoint
+- any filtering endpoint
+
+Identify exactly:
+1. which endpoint provides the badge count
+2. which endpoint provides the notifications list
+3. which one is failing with 500
+4. whether request params are wrong
+5. whether the backend is throwing due to null mapping / paging / filtering / user context
+
+==================================================
+TASK 2: FIX THE 500 ERROR
+==================================================
+
+Inspect backend notifications controller/service/repository.
+
+Find the real exception causing 500.
+
+Common possibilities:
+- null reference when mapping notifications
+- invalid current user id
+- bad pagination/filter params
+- serialization issue
+- notification DTO mismatch
+- notification type payload null
+- unread filter bug
+
+Fix the real backend error safely.
+
+==================================================
+TASK 3: VERIFY FRONTEND LIST RENDERING
+==================================================
+
+Even after backend fix, verify frontend mapping.
+
+Check whether frontend expects fields like:
+- id
+- title
+- message
+- createdAt
+- isRead
+- type
+- link/url
+
+If backend returns different field names, adapt mapping safely.
+
+==================================================
+TASK 4: KEEP BADGE + LIST IN SYNC
+==================================================
+
+Ensure these two use consistent data logic:
+
+- Bell badge count
+- Notifications page list
+
+If unread count > 0 and list fetch succeeds,
+page must not show "لا توجد إشعارات بعد".
+
+If list is empty, unread badge should not incorrectly show unread count unless truly justified.
+
+==================================================
+TASK 5: ADD TEMP DEBUG LOGS
+==================================================
+
+Add temporary logs in frontend and backend:
+
+Frontend:
+- unread count response
+- notifications list response
+
+Backend:
+- current user id
+- notifications query result count
+- exception details if any
+
+Example:
+console.log('[Notifications] unreadCount:', unreadCount);
+console.log('[Notifications] listResponse:', data);
+
+==================================================
+TASK 6: EMPTY STATE LOGIC
+==================================================
+
+Only show empty state:
+"لا توجد إشعارات بعد"
+
+when:
+- request succeeded
+- and returned zero notifications
+
+Do NOT show empty state if request actually failed.
+
+If request failed:
+show proper error state or retry message.
+
+==================================================
+TASK 7: DO NOT BREAK ANYTHING
+==================================================
+
+Do NOT change:
+- sidebar
+- bell icon design
+- badge design
+- unrelated dashboard pages
+
+Only fix:
+- notifications fetch
+- backend endpoint failure
+- list rendering / empty state logic
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+After fixing, explain exactly:
+
+1. Why the badge count was showing while the page was empty
+2. Which notification endpoint was failing
+3. What caused the 500 error
+4. What files were modified
+5. Confirm that notifications now appear correctly in the page
+6. Confirm that empty state only appears when there are truly no notifications
