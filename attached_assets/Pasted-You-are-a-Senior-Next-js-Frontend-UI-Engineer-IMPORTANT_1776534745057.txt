@@ -1,0 +1,246 @@
+You are a Senior Next.js + Frontend UI Engineer.
+
+IMPORTANT:
+Do NOT improvise.
+Do NOT choose your own dimensions.
+Do NOT change the requested layout.
+Implement EXACTLY the dimensions, button colors, and structure below.
+
+We are redesigning the property details page image/gallery section and contact actions.
+
+==================================================
+1) STRICT IMAGE GALLERY LAYOUT
+==================================================
+
+Replace the current image section with this EXACT desktop layout:
+
+- Main displayed image:
+  width: 720px
+  height: 720px
+  aspect-ratio: 1 / 1
+  object-fit: cover
+  border-radius: 18px
+
+- Right-side thumbnails column:
+  width: 220px
+  each thumbnail:
+    width: 220px
+    height: 220px
+    object-fit: cover
+    border-radius: 14px
+  vertical gap between thumbnails: 16px
+
+- Gap between main image and thumbnails column:
+  20px
+
+- The gallery wrapper on desktop:
+  display: grid
+  grid-template-columns: 720px 220px
+  gap: 20px
+  align-items: start
+  justify-content: center
+
+- Maximum visible thumbnails on desktop:
+  3 only
+  If more than 3 images exist, keep slider navigation for the main image and allow thumbnail scrolling if needed
+
+==================================================
+2) MOBILE LAYOUT
+==================================================
+
+On mobile (< 768px):
+
+- Main image:
+  width: 100%
+  aspect-ratio: 1 / 1
+  border-radius: 14px
+
+- Thumbnails:
+  horizontal strip below main image
+  each thumbnail:
+    width: 72px
+    height: 72px
+    border-radius: 10px
+    object-fit: cover
+
+- Gap between mobile thumbnails:
+  8px
+
+==================================================
+3) IMAGE QUALITY RULES
+==================================================
+
+STRICT RULES:
+
+- Main displayed image MUST use:
+  imageUrl
+  (full resolution / original image)
+
+- Thumbnails MUST use:
+  thumbnailUrl
+
+- NEVER use thumbnailUrl in the main displayed slider image
+- NEVER stretch low-resolution images beyond their container logic
+- Use Next.js <Image> correctly
+
+Main image example:
+<Image
+  src={images[currentIndex].imageUrl}
+  alt={`property-image-${currentIndex}`}
+  fill
+  priority
+  sizes="(max-width: 768px) 100vw, 720px"
+  style={{ objectFit: 'cover' }}
+/>
+
+Thumbnail example:
+<Image
+  src={img.thumbnailUrl ?? img.imageUrl}
+  alt={`thumbnail-${index}`}
+  fill
+  sizes="220px"
+  style={{ objectFit: 'cover' }}
+/>
+
+==================================================
+4) SLIDER BEHAVIOR
+==================================================
+
+Implement a professional slider:
+
+- One main image shown at a time
+- Next / previous arrows on the main image
+- currentIndex state
+- Click thumbnail => update main image
+- Optional swipe on mobile
+- Add counter:
+  current / total
+  Example: 2 / 6
+
+IMPORTANT:
+Do NOT return to “hero cover article style”.
+This is a property gallery, not a blog cover.
+
+==================================================
+5) STRICT CONTACT BUTTONS
+==================================================
+
+Under or beside the property info/contact card, restore and display BOTH buttons clearly:
+
+A) "المراسلة عبر التطبيق"
+- Background color: BLUE
+- Use a clear modern blue:
+  #1D4ED8
+- Text color: white
+- Full width
+- Height: 52px
+- Border radius: 12px
+- Font weight: 700
+
+B) "التواصل عبر واتساب"
+- Background color: GREEN
+- Use WhatsApp-like green:
+  #16A34A
+- Text color: white
+- Full width
+- Height: 52px
+- Border radius: 12px
+- Font weight: 700
+
+- Vertical gap between the two buttons:
+  12px
+
+- Add icons if easy:
+  app message icon for app button
+  WhatsApp icon for WhatsApp button
+
+==================================================
+6) DO NOT HIDE OR REMOVE BUTTONS
+==================================================
+
+CRITICAL:
+
+- Do NOT let the gallery layout hide the contact buttons
+- Do NOT let overflow or z-index issues hide them
+- Do NOT remove the existing contact section
+- Do NOT break any existing actions
+
+Add/fix CSS defensively:
+
+.contact-section {
+  position: relative;
+  z-index: 20;
+}
+
+.gallery-section {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+}
+
+==================================================
+7) IMPLEMENT EXACT BUTTON STYLES
+==================================================
+
+Use exact classes or equivalent CSS:
+
+.app-message-btn {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 12px;
+  background: #1D4ED8;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.whatsapp-btn {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 12px;
+  background: #16A34A;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+==================================================
+8) DO NOT CHANGE OTHER PAGE PARTS
+==================================================
+
+Only refactor:
+- property image gallery section
+- contact buttons section
+
+Do NOT break:
+- title
+- property info
+- price
+- location
+- details cards
+- favorite/share/report actions
+
+==================================================
+9) REQUIRED OUTPUT FROM YOU
+==================================================
+
+After implementation, explain exactly:
+
+1. Which files were modified
+2. Exact dimensions used for desktop and mobile
+3. Confirm main image uses imageUrl
+4. Confirm thumbnails use thumbnailUrl
+5. Confirm both buttons exist:
+   - المراسلة عبر التطبيق (blue)
+   - التواصل عبر واتساب (green)
+6. Confirm no existing actions were removed

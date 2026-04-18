@@ -8,6 +8,8 @@ interface Props {
   images: PropertyImageResponse[];
 }
 
+const MAX_VISIBLE_THUMBS = 3;
+
 export default function ImageSlider({ images }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -15,17 +17,13 @@ export default function ImageSlider({ images }: Props) {
   const touchEndX   = useRef<number | null>(null);
   const SWIPE_THRESHOLD = 50;
 
-  const clamp = (n: number) => Math.max(0, Math.min(n, images.length - 1));
+  const prev = useCallback(() =>
+    setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1)),
+  [images.length]);
 
-  const prev = useCallback(() => setCurrentIndex((i) => {
-    if (i === 0) return images.length - 1;
-    return clamp(i - 1);
-  }), [images.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const next = useCallback(() => setCurrentIndex((i) => {
-    if (i === images.length - 1) return 0;
-    return clamp(i + 1);
-  }), [images.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const next = useCallback(() =>
+    setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1)),
+  [images.length]);
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.changedTouches[0].clientX;
@@ -43,87 +41,97 @@ export default function ImageSlider({ images }: Props) {
   }
 
   if (!images || images.length === 0) {
-    return <div className="img-slider__empty">🏠</div>;
+    return <div className="gallery-empty">🏠</div>;
   }
 
-  const active = images[currentIndex];
+  const visibleThumbs = images.slice(0, MAX_VISIBLE_THUMBS);
 
   return (
-    <div className="img-slider">
+    <div className="gallery-section">
 
-      {/* ── Main frame + thumbnails side-by-side ── */}
-      <div className="img-slider__layout">
+      {/* ── Desktop: grid layout ── */}
+      <div className="gallery-grid">
 
-        {/* Main image */}
+        {/* Main image — 720 × 720 — uses imageUrl (full-res) */}
         <div
-          className="img-slider__frame"
+          className="gallery-main"
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
           <Image
-            src={active.imageUrl}
-            alt={`صورة العقار ${currentIndex + 1}`}
+            src={images[currentIndex].imageUrl}
+            alt={`property-image-${currentIndex}`}
             fill
             priority={currentIndex === 0}
-            sizes="(max-width: 768px) 100vw, 660px"
-            style={{ objectFit: "cover", objectPosition: "center" }}
+            sizes="(max-width: 768px) 100vw, 720px"
+            style={{ objectFit: "cover" }}
           />
 
-          {/* Counter — top-start (RTL: top-right) */}
-          <span className="img-slider__counter">
+          {/* Counter */}
+          <span className="gallery-counter" dir="ltr">
             {currentIndex + 1} / {images.length}
           </span>
 
-          {/* Prev arrow — RTL: right side */}
+          {/* Prev arrow */}
           <button
             type="button"
             aria-label="الصورة السابقة"
-            className="img-slider__arrow img-slider__arrow--prev"
+            className="gallery-arrow gallery-arrow--prev"
             onClick={prev}
           >
             ›
           </button>
 
-          {/* Next arrow — RTL: left side */}
+          {/* Next arrow */}
           <button
             type="button"
             aria-label="الصورة التالية"
-            className="img-slider__arrow img-slider__arrow--next"
+            className="gallery-arrow gallery-arrow--next"
             onClick={next}
           >
             ‹
           </button>
         </div>
 
-        {/* Vertical thumbnail strip — right side */}
+        {/* Thumbnails column — desktop: right side, max 3 — use thumbnailUrl */}
         {images.length > 1 && (
-          <div className="img-slider__thumbs">
-            {images.map((img, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+          <div className="gallery-thumbs-col">
+            {visibleThumbs.map((img, i) => (
+              <div
                 key={img.id}
-                src={img.thumbnailUrl ?? img.imageUrl}
-                alt={`معاينة ${i + 1}`}
-                className={`img-slider__thumb${i === currentIndex ? " img-slider__thumb--active" : ""}`}
+                className={`gallery-thumb-wrap${i === currentIndex ? " gallery-thumb-wrap--active" : ""}`}
                 onClick={() => setCurrentIndex(i)}
-              />
+              >
+                <Image
+                  src={img.thumbnailUrl ?? img.imageUrl}
+                  alt={`thumbnail-${i}`}
+                  fill
+                  sizes="220px"
+                  style={{ objectFit: "cover" }}
+                />
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* ── Dots — centered below main image ── */}
+      {/* ── Mobile: horizontal thumbnail strip — use thumbnailUrl ── */}
       {images.length > 1 && (
-        <div className="img-slider__dots">
-          {images.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              aria-label={`انتقل إلى الصورة ${i + 1}`}
-              className={`img-slider__dot${i === currentIndex ? " img-slider__dot--active" : ""}`}
+        <div className="gallery-thumbs-strip">
+          {images.map((img, i) => (
+            <div
+              key={img.id}
+              className={`gallery-strip-thumb${i === currentIndex ? " gallery-strip-thumb--active" : ""}`}
               onClick={() => setCurrentIndex(i)}
-            />
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={img.thumbnailUrl ?? img.imageUrl}
+                alt={`thumbnail-${i}`}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </div>
           ))}
         </div>
       )}
