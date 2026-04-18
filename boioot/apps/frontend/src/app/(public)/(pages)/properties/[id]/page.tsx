@@ -186,11 +186,17 @@ export default function PropertyDetailPage() {
   const activeImage  = sortedImages[selectedImageIdx] ?? sortedImages[0];
   const shares       = shareUrls(pageUrl, property.title);
 
-  // ── Debug: log the active cover image URL so we can confirm it's full-res ──
+  // ── COVER image URL — ALWAYS use imageUrl (1600px WebP / legacy full-res)
+  // NEVER use thumbnailUrl here — thumbnail (480px) is only for the strip below.
+  const heroSrc = activeImage?.imageUrl ?? null;
+
+  // ── Debug logs — check browser console to confirm correct URL ──
   if (activeImage) {
-    console.log("[PropertyDetail] Cover Image URL:", activeImage.imageUrl);
-    if (activeImage.thumbnailUrl) {
-      console.log("[PropertyDetail] Thumbnail URL (used in strip):", activeImage.thumbnailUrl);
+    console.log("[PropertyDetail] ✅ HERO  src (imageUrl / full-res):", heroSrc);
+    console.log("[PropertyDetail] 🔵 THUMB src (thumbnailUrl / 480px):", activeImage.thumbnailUrl ?? "(none — legacy image)");
+    const isWrongUrl = heroSrc?.includes("thumbs") || heroSrc?.includes("thumb_");
+    if (isWrongUrl) {
+      console.error("[PropertyDetail] ❌ BUG: heroSrc appears to be a thumbnail! Fix required.");
     }
   }
   // ── Advertiser fallback chain ──────────────────────────────────────
@@ -217,11 +223,11 @@ export default function PropertyDetailPage() {
           ← العودة إلى الرئيسية
         </Link>
 
-        {/* ── Hero image — full-resolution via Next.js <Image fill> ── */}
-        {activeImage ? (
+        {/* ── Hero image — ALWAYS uses imageUrl (1600px full-res), never thumbnailUrl ── */}
+        {heroSrc ? (
           <div className="detail-hero-wrap">
             <Image
-              src={activeImage.imageUrl}
+              src={heroSrc}
               alt={property.title}
               fill
               priority
