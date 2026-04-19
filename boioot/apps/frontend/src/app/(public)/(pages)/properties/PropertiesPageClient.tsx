@@ -90,6 +90,11 @@ export default function PropertiesPageClient({
   // Subsequent runs (filter changes, page changes, retry) should fetch normally.
   const isFirstFetch = useRef(true);
 
+  // Prevents hydration mismatch: dynamic select options (provinces/cities/neighborhoods)
+  // are empty on SSR. We hide them until after hydration so server and client agree.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   // Sync draft form when URL changes externally (browser back/forward)
   useEffect(() => {
     setForm({
@@ -290,7 +295,7 @@ export default function PropertiesPageClient({
                 onChange={(e) => handleProvinceChange(e.target.value)}
               >
                 <option value="">الكل</option>
-                {provinces.map((p) => (
+                {mounted && provinces.map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
@@ -306,7 +311,7 @@ export default function PropertiesPageClient({
                 onChange={(e) => handleCityChange(e.target.value)}
               >
                 <option value="">الكل</option>
-                {cities.map((c) => (
+                {mounted && cities.map((c) => (
                   <option key={c.name} value={c.name}>{c.name}</option>
                 ))}
               </select>
@@ -323,7 +328,7 @@ export default function PropertiesPageClient({
                 disabled={neighborhoods.length === 0}
               >
                 <option value="">الكل</option>
-                {neighborhoods.map((n) => (
+                {mounted && neighborhoods.map((n) => (
                   <option key={n.name} value={n.name}>{n.name}</option>
                 ))}
               </select>
