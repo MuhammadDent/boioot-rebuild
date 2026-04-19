@@ -288,14 +288,35 @@ function EmptyState({ activeSlug, onReset }: { activeSlug: string | null; onRese
         style={{ opacity: 0.3, marginBottom: "1rem" }}>
         <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
       </svg>
-      <p style={{ fontSize: "1.1rem", margin: "0 0 0.5rem" }}>لا توجد مقالات بعد</p>
-      {activeSlug && (
+      <p style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0 0 0.4rem", color: "var(--color-text-primary)" }}>
+        لا توجد مقالات متاحة حالياً
+      </p>
+      <p style={{ fontSize: "0.88rem", margin: "0 0 1.5rem" }}>
+        سيتم إضافة محتوى جديد قريباً — تابعنا
+      </p>
+      {activeSlug ? (
         <button
           onClick={onReset}
           style={{ color: "var(--color-primary)", background: "none", border: "none", cursor: "pointer", fontSize: "0.9rem" }}
         >
           عرض جميع المقالات
         </button>
+      ) : (
+        <Link
+          href="/properties"
+          style={{
+            display: "inline-block",
+            padding: "0.55rem 1.4rem",
+            background: "var(--color-primary)",
+            color: "#fff",
+            borderRadius: 8,
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          تصفح العقارات
+        </Link>
       )}
     </div>
   );
