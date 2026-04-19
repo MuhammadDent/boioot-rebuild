@@ -147,11 +147,10 @@ export const VERIFICATION_STATUS_BADGE: Record<string, string> = {
 };
 
 export const VERIFICATION_LEVEL_LABELS: Record<number, string> = {
-  0: "لا يوجد",
-  1: "أساسي",
-  2: "هوية",
-  3: "أعمال",
-  4: "موثوق",
+  0: "غير موثق",
+  1: "موثق هوية",
+  2: "موثق ملكية",
+  3: "موثق نشاط تجاري",
 };
 
 export const IDENTITY_VERIFICATION_STATUS_LABELS: Record<string, string> = {

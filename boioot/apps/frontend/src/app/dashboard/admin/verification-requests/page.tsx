@@ -111,11 +111,11 @@ const VERIFICATION_STATUS_OPTIONS = [
 ];
 
 const VERIFICATION_LEVEL_OPTIONS = [
-  { value: "",  label: "— بدون تغيير —" },
-  { value: "0", label: "0 — لا يوجد" },
-  { value: "1", label: "1 — أساسي" },
-  { value: "2", label: "2 — متقدم" },
-  { value: "3", label: "3 — موثوق" },
+  { value: "",  label: "— بدون تغيير —",           title: "" },
+  { value: "0", label: "0 — غير موثق",              title: "لم يتم التحقق من هوية المستخدم بعد" },
+  { value: "1", label: "1 — موثق هوية",             title: "هوية وطنية / جواز سفر / إقامة" },
+  { value: "2", label: "2 — موثق ملكية",            title: "إثبات ملكية أو صفة مرتبطة بالعقار" },
+  { value: "3", label: "3 — موثق نشاط تجاري",      title: "سجل تجاري / رخصة وساطة / رخصة مكتب" },
 ];
 
 const PAGE_SIZE = 20;
@@ -348,9 +348,17 @@ function DetailPanel({
                     }}
                   >
                     {VERIFICATION_LEVEL_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
+                      <option key={o.value} value={o.value} title={o.title}>{o.label}</option>
                     ))}
                   </select>
+                  {verificationLevel !== "" && (() => {
+                    const hint = VERIFICATION_LEVEL_OPTIONS.find(o => o.value === verificationLevel)?.title;
+                    return hint ? (
+                      <p style={{ margin: "4px 0 0", fontSize: "0.71rem", color: "#9ca3af", lineHeight: 1.4 }}>
+                        {hint}
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
               )}
             </div>
