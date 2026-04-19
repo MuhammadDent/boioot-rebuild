@@ -67,13 +67,13 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const DOC_TYPE_OPTIONS = [
-  { value: "NationalId",       label: "الهوية الوطنية" },
-  { value: "Passport",         label: "جواز السفر" },
-  { value: "DriverLicense",    label: "رخصة القيادة" },
-  { value: "CommercialRecord", label: "السجل التجاري" },
-  { value: "TaxCertificate",  label: "الشهادة الضريبية" },
-  { value: "PropertyDeed",    label: "سند الملكية" },
-  { value: "Other",            label: "مستند آخر" },
+  { value: "NationalId",             label: "الهوية الوطنية" },
+  { value: "Passport",               label: "جواز السفر" },
+  { value: "Other",                  label: "رخصة القيادة" },
+  { value: "CommercialRegistration", label: "السجل التجاري" },
+  { value: "Other",                  label: "الشهادة الضريبية" },
+  { value: "OwnershipProof",         label: "سند الملكية" },
+  { value: "Other",                  label: "مستند آخر" },
 ];
 
 function fmtDate(s?: string | null) {

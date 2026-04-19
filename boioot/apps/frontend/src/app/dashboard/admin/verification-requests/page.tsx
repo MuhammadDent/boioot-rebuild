@@ -87,13 +87,14 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const DOC_TYPE_LABELS: Record<string, string> = {
-  NationalId:       "الهوية الوطنية",
-  Passport:         "جواز السفر",
-  DriverLicense:    "رخصة القيادة",
-  CommercialRecord: "السجل التجاري",
-  TaxCertificate:   "الشهادة الضريبية",
-  PropertyDeed:     "سند الملكية",
-  Other:            "مستند آخر",
+  NationalId:             "الهوية الوطنية",
+  Passport:               "جواز السفر",
+  ResidencePermit:        "تصريح إقامة",
+  CommercialRegistration: "السجل التجاري",
+  BrokerageLicense:       "رخصة وساطة",
+  OfficeLicense:          "رخصة مكتب",
+  OwnershipProof:         "سند الملكية",
+  Other:                  "مستند آخر",
 };
 
 const DOC_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
