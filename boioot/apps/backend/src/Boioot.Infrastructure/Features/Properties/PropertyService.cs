@@ -60,9 +60,16 @@ public class PropertyService : IPropertyService
             .Take(pageSize)
             .ToListAsync(ct);
 
-        return new PagedResult<PropertyResponse>(
-            items.Select(MapToResponse).ToList(),
-            page, pageSize, total);
+        // Truncate description for list cards — full text only needed on detail page
+        const int listDescLimit = 150;
+        var mapped = items.Select(MapToResponse).ToList();
+        foreach (var r in mapped)
+        {
+            if (r.Description != null && r.Description.Length > listDescLimit)
+                r.Description = r.Description[..listDescLimit] + "…";
+        }
+
+        return new PagedResult<PropertyResponse>(mapped, page, pageSize, total);
     }
 
     public async Task<PropertyResponse> GetByIdPublicAsync(Guid id, CancellationToken ct = default)

@@ -23,6 +23,8 @@ public class PropertiesController : BaseController
     [HttpGet]
     public async Task<IActionResult> GetList([FromQuery] PropertyFilters filters, CancellationToken ct)
     {
+        // Short-lived public cache — safe because list is non-personalised (auth is separate)
+        Response.Headers.Append("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
         var result = await _propertyService.GetPublicListAsync(filters, ct);
         return Ok(result);
     }
@@ -30,6 +32,8 @@ public class PropertiesController : BaseController
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
+        // Detail page: shorter cache — view counter increments on every hit
+        Response.Headers.Append("Cache-Control", "public, max-age=10, stale-while-revalidate=30");
         var result = await _propertyService.GetByIdPublicAsync(id, ct);
         return Ok(result);
     }
