@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import MainHeader from "@/components/layout/MainHeader";
 import PropertyCard from "@/components/properties/PropertyCard";
@@ -166,12 +167,6 @@ export default function HomePage() {
     const cfg = loadPageSections();
     setShowHero(cfg.showHero);
   }, []);
-
-  // Hero background images are applied ONLY after hydration.
-  // On SSR/first-paint the hero shows a solid dark colour → LCP = <h1> text (instant).
-  // Background photos load after hydration so they never block LCP.
-  const [heroBgVisible, setHeroBgVisible] = useState(false);
-  useEffect(() => { setHeroBgVisible(true); }, []);
 
   // ── Auto-advance slider ─────────────────────────────────────────────────────
 
@@ -450,15 +445,18 @@ export default function HomePage() {
               position: "relative",
               flexShrink: 0,
               overflow: "hidden",
-              // Dark background renders immediately from SSR with no network request.
-              // backgroundImage is only applied client-side after hydration so it
-              // never blocks LCP — the <h1> title text becomes the LCP element instead.
-              backgroundColor: "#1a2e1a",
-              backgroundImage: heroBgVisible ? `url(${slide.image})` : undefined,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
             }}>
-              {/* Background: deferred to post-hydration — LCP = <h1> text (SSR, instant) */}
+              {/* Next.js <Image fill> — discovered immediately by preload scanner.
+                  Slide 0: priority (Next.js generates <link rel="preload"> + eager).
+                  Other slides: lazy loading, no network cost until visible. */}
+              <Image
+                src={slide.image}
+                alt=""
+                fill
+                priority={i === 0}
+                sizes="100vw"
+                style={{ objectFit: "cover", objectPosition: "center" }}
+              />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.6) 100%)" }} />
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "2rem 3rem", maxWidth: 700 }}>
                 <h1 style={{ color: "#fff", fontSize: "clamp(1.6rem, 4vw, 2.4rem)", fontWeight: 800, lineHeight: 1.35, marginBottom: "0.75rem", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
