@@ -1,0 +1,134 @@
+You are a Senior Frontend + Full-Stack Engineer.
+
+CRITICAL:
+This is a SMALL, SAFE, ISOLATED UX improvement.
+
+Do NOT refactor broadly.
+Do NOT change unrelated logic.
+Do NOT modify routing structure except using an existing subscription/upgrade route already present in the project.
+Do NOT redesign the property page.
+Do NOT touch gallery, WhatsApp button, phone button, notifications, verification, or subscriptions logic.
+Do NOT change the conversation limit logic itself.
+Only improve the user-facing message and add a safe upgrade CTA.
+
+==================================================
+GOAL
+==================================================
+
+When the user clicks "المراسلة عبر التطبيق" and the backend returns the plan limit error for max_conversations,
+show a clearer Arabic message and a direct "Upgrade Plan" button.
+
+==================================================
+CURRENT PROBLEM
+==================================================
+
+Current message is too generic / technical:
+"لقد وصلت إلى الحد الأقصى من المحادثات..."
+
+We want a clearer UX message.
+
+==================================================
+REQUIRED NEW MESSAGE
+==================================================
+
+Replace the current user-facing message for the conversation plan limit with this exact Arabic text:
+
+"يمكنك فتح محادثة واحدة فقط ضمن باقتك الحالية. للتواصل مع المزيد من المعلنين، يرجى ترقية الباقة."
+
+If the current plan limit is not 1 in future, keep backend logic unchanged.
+This frontend improvement is only for the current max_conversations limit error case.
+
+==================================================
+REQUIRED CTA BUTTON
+==================================================
+
+Add a direct button under the message:
+
+Label:
+"ترقية الباقة"
+
+Behavior:
+- navigate to the existing subscription plans / upgrade page already used in the project
+- use the CURRENT existing route, do not invent a new one if one already exists
+
+Likely route examples:
+- /dashboard/subscription/plans
+OR existing project equivalent
+
+Use the actual existing route in the project.
+
+==================================================
+STRICT SCOPE
+==================================================
+
+Only modify the minimal code that handles the app-message limit error display on the property details page.
+
+Do NOT change:
+- messaging backend logic
+- conversation counting
+- button colors unless already using existing design tokens
+- property page layout
+- any other error handling outside this specific plan-limit case
+
+==================================================
+UI REQUIREMENTS
+==================================================
+
+1. Keep the existing app message button as-is
+2. When limit error occurs, show:
+   - the new Arabic text above
+   - the "ترقية الباقة" button below it
+3. Style the upgrade button using existing project button styles/components if available
+4. Do NOT create a new custom design system
+5. Do NOT shift layout dramatically
+
+==================================================
+ERROR HANDLING RULE
+==================================================
+
+Apply this only when backend returns the conversation plan-limit error, such as:
+- code = PLAN_LIMIT_EXCEEDED
+- limitKey = max_conversations
+
+Do NOT replace other unrelated errors with this message.
+
+==================================================
+SAFE IMPLEMENTATION DETAILS
+==================================================
+
+Frontend should:
+- detect the specific limit error response
+- map it to the clearer Arabic message
+- render upgrade CTA
+
+Pseudo behavior:
+if error.code === 'PLAN_LIMIT_EXCEEDED' && error.limitKey === 'max_conversations'
+  -> show custom friendly message
+  -> show upgrade button
+else
+  -> keep existing generic error handling unchanged
+
+==================================================
+DO NOT BREAK ANYTHING
+==================================================
+
+Must NOT break:
+- existing property page routes
+- existing messaging flow
+- existing subscription pages
+- any other buttons
+- existing CSS/layout structure
+
+Keep the patch minimal and isolated.
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+After implementation, explain exactly:
+
+1. Which minimal file(s) were modified
+2. How the specific max_conversations error is detected
+3. What existing route the "ترقية الباقة" button uses
+4. Confirm that no unrelated logic/routes/design were changed
+5. Confirm that only this specific limit error got the improved message

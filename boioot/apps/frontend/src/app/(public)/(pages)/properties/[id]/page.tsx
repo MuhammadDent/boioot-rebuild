@@ -8,7 +8,7 @@ import ImageSlider from "@/components/properties/ImageSlider";
 import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
-import { normalizeError } from "@/lib/api";
+import { normalizeError, PlanLimitError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
 import {
@@ -136,8 +136,9 @@ export default function PropertyDetailPage() {
   const [isFav, setIsFav]           = useState(false);
   const [favLoading, setFavLoading] = useState(false);
 
-  const [msgLoading, setMsgLoading] = useState(false);
-  const [msgError, setMsgError]     = useState("");
+  const [msgLoading, setMsgLoading]     = useState(false);
+  const [msgError, setMsgError]         = useState("");
+  const [msgIsConvLimit, setMsgIsConvLimit] = useState(false);
 
   const [pageUrl, setPageUrl]       = useState("");
 
@@ -200,14 +201,20 @@ export default function PropertyDetailPage() {
     console.log("[PropertyMessage] click", { propertyId: id, recipientId, currentUserId: usr.id });
     setMsgLoading(true);
     setMsgError("");
+    setMsgIsConvLimit(false);
     try {
       const conv = await messagingApi.getOrCreateConversation({ recipientId, propertyId: id });
       console.log("[PropertyMessage] API response", conv);
       router.push(`/dashboard/messages/${conv.id}`);
     } catch (err) {
-      const msg = normalizeError(err);
-      console.error("[PropertyMessage] conversation error", msg, err);
-      setMsgError(msg || "تعذّر فتح المحادثة، حاول مجدداً.");
+      console.error("[PropertyMessage] conversation error", err);
+      if (err instanceof PlanLimitError && err.planPayload.limitKey === "max_conversations") {
+        setMsgIsConvLimit(true);
+        setMsgError("يمكنك فتح محادثة واحدة فقط ضمن باقتك الحالية. للتواصل مع المزيد من المعلنين، يرجى ترقية الباقة.");
+      } else {
+        setMsgIsConvLimit(false);
+        setMsgError(normalizeError(err) || "تعذّر فتح المحادثة، حاول مجدداً.");
+      }
     } finally { setMsgLoading(false); }
   }, [id, router]);
 
@@ -441,9 +448,28 @@ export default function PropertyDetailPage() {
               </div>
 
               {msgError && (
-                <p style={{ margin: "0 0 0.5rem", color: "#dc2626", fontSize: "0.82rem" }}>
-                  {msgError}
-                </p>
+                <div style={{ marginBottom: "0.5rem" }}>
+                  <p style={{ margin: "0 0 0.4rem", color: "#dc2626", fontSize: "0.82rem" }}>
+                    {msgError}
+                  </p>
+                  {msgIsConvLimit && (
+                    <Link
+                      href="/dashboard/subscription/plans"
+                      style={{
+                        display: "inline-block",
+                        padding: "0.35rem 1rem",
+                        background: "var(--color-primary)",
+                        color: "#fff",
+                        borderRadius: 7,
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                      }}
+                    >
+                      ترقية الباقة
+                    </Link>
+                  )}
+                </div>
               )}
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
