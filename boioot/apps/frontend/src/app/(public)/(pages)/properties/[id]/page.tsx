@@ -8,6 +8,7 @@ import ImageSlider from "@/components/properties/ImageSlider";
 import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
+import { normalizeError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
 import {
@@ -188,15 +189,25 @@ export default function PropertyDetailPage() {
     if (!prop || !usr) return;
     // Use the backend-resolved recipientId (backfill: OwnerId → Agent.UserId → company agent)
     const recipientId = prop.recipientId ?? prop.ownerId ?? prop.agentId?.toString();
-    if (!recipientId) return;
-    if (recipientId === usr.id) return; // can't message yourself
+    if (!recipientId) {
+      console.warn("[PropertyMessage] no recipientId on property", prop.id);
+      return;
+    }
+    if (recipientId === usr.id) {
+      setMsgError("لا يمكنك مراسلة نفسك");
+      return;
+    }
+    console.log("[PropertyMessage] click", { propertyId: id, recipientId, currentUserId: usr.id });
     setMsgLoading(true);
     setMsgError("");
     try {
       const conv = await messagingApi.getOrCreateConversation({ recipientId, propertyId: id });
+      console.log("[PropertyMessage] API response", conv);
       router.push(`/dashboard/messages/${conv.id}`);
-    } catch {
-      setMsgError("تعذّر فتح المحادثة، حاول مجدداً.");
+    } catch (err) {
+      const msg = normalizeError(err);
+      console.error("[PropertyMessage] conversation error", msg, err);
+      setMsgError(msg || "تعذّر فتح المحادثة، حاول مجدداً.");
     } finally { setMsgLoading(false); }
   }, [id, router]);
 

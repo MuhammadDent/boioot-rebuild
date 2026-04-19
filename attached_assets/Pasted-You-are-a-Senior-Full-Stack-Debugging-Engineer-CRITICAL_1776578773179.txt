@@ -1,0 +1,212 @@
+You are a Senior Full-Stack Debugging Engineer.
+
+CRITICAL INSTRUCTIONS:
+This is a STRICT, ISOLATED bug fix.
+
+You must fix ONLY the "message via app" conversation opening flow on the property details page.
+
+DO NOT redesign anything.
+DO NOT refactor unrelated code.
+DO NOT touch gallery, subscription, notifications, verification, or contact button styling.
+DO NOT modify any unrelated layout or UI.
+DO NOT make broad changes.
+ONLY fix the broken conversation-opening logic.
+
+==================================================
+BUG
+==================================================
+
+On the property details page, clicking:
+
+"المراسلة عبر التطبيق"
+
+does NOT successfully open/create the conversation.
+
+The button exists visually, but the chat flow is failing.
+
+In Network/Console there is a conversation-related failure (422 or similar).
+
+==================================================
+GOAL
+==================================================
+
+Fix the app messaging button so that:
+
+1. Clicking "المراسلة عبر التطبيق" successfully opens an existing conversation
+OR
+2. Creates a new conversation if none exists
+THEN
+3. Redirects the user to the messages/chat page correctly
+
+==================================================
+STRICT SCOPE
+==================================================
+
+You may inspect only the minimum necessary files related to:
+
+- property details contact action
+- messaging/conversation creation API call
+- chat redirect logic
+- conversation lookup logic
+
+Do NOT modify unrelated modules.
+
+==================================================
+TASK 1: TRACE THE EXACT FLOW
+==================================================
+
+Inspect the exact flow triggered by the app message button:
+
+- Which frontend function runs on click?
+- Which API endpoint is called?
+- What payload is sent?
+- What response/status is returned?
+- Why is it failing with 422 (or current error)?
+
+We need the precise root cause.
+
+==================================================
+TASK 2: CHECK COMMON ROOT CAUSES
+==================================================
+
+Verify these likely causes:
+
+1. Missing recipient userId / advertiserId
+2. Wrong propertyId being sent
+3. API expects participantId but frontend sends ownerId
+4. Null/undefined target user
+5. Current user trying to message themselves
+6. Backend validation requires a field frontend is not sending
+7. Existing conversation lookup fails because of bad query params
+8. Redirect expects conversationId but API returns different shape
+
+==================================================
+TASK 3: FIX ONLY THE MESSAGING ACTION
+==================================================
+
+Fix the button action so this exact flow works:
+
+A. Read advertiser/owner user id correctly
+B. If current user is same as advertiser:
+   - prevent opening self-chat
+   - show safe message like "لا يمكنك مراسلة نفسك"
+C. Else:
+   - call conversation create/find endpoint with correct payload
+D. If successful:
+   - get conversation id
+   - redirect to messages page using correct route
+
+==================================================
+TASK 4: DEFENSIVE FRONTEND HANDLING
+==================================================
+
+Implement safe handling:
+
+- If API returns existing conversation → open it
+- If API creates new conversation → open it
+- If API fails validation → log exact reason
+- Do NOT fail silently
+- Show a small user-friendly error if needed
+
+Example only if needed:
+- "تعذر فتح المحادثة، حاول مرة أخرى"
+
+==================================================
+TASK 5: BACKEND VALIDATION
+==================================================
+
+Inspect the backend endpoint for conversation creation/find.
+
+Find why it returns 422.
+
+Fix ONLY the minimum necessary issue:
+- DTO mismatch
+- validation attribute mismatch
+- null recipient guard
+- wrong property reference
+- duplicate conversation handling
+
+Do NOT rewrite the entire messaging system.
+
+==================================================
+TASK 6: REDIRECT LOGIC
+==================================================
+
+After success, redirect correctly to the chat/messages page.
+
+Use the existing project route for messages.
+
+Examples:
+- /dashboard/messages/{conversationId}
+OR
+- /messages?conversationId=...
+
+Use the route already used in the project.
+
+==================================================
+TASK 7: ADD TEMP DEBUG LOGS
+==================================================
+
+Add temporary logs to identify the exact issue:
+
+Frontend:
+console.log('[PropertyMessage] click', {
+  propertyId,
+  advertiserId,
+  currentUserId
+});
+
+console.log('[PropertyMessage] API response', response);
+
+Backend:
+log recipientUserId
+log senderUserId
+log propertyId
+log validation failure reason
+
+==================================================
+TASK 8: DO NOT TOUCH THESE
+==================================================
+
+Do NOT change:
+- button color
+- button text
+- WhatsApp button
+- phone button
+- property page layout
+- image gallery
+- contact card design
+- notifications
+- subscriptions
+- verification pages
+
+Only fix the messaging open/create conversation action.
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+Clicking "المراسلة عبر التطبيق" must:
+
+- open existing conversation if available
+OR
+- create one if needed
+OR
+- show clear message if user is messaging themselves
+
+No 422 failure.
+No silent failure.
+No unrelated code changes.
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+After fixing, explain exactly:
+
+1. What was the root cause
+2. Why the conversation was not opening
+3. Which minimal file(s) were changed
+4. What payload is now sent correctly
+5. How redirect works after success
+6. Confirm that no unrelated UI/design/code was changed

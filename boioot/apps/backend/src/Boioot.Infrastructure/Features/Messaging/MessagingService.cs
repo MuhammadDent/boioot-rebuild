@@ -70,8 +70,46 @@ public class MessagingService : IMessagingService
         // Gate only on the initiator's plan. If no account → allow (open users).
         await EnforceChatFeatureAsync(userId, ct);
 
+        // ── Basic input validation ─────────────────────────────────────────
+        var recipientId = request.RecipientId!.Value;
+
+        if (recipientId == userId)
+            throw new BoiootException("لا يمكنك بدء محادثة مع نفسك", 400);
+
+        if (request.PropertyId.HasValue && request.ProjectId.HasValue)
+            throw new BoiootException("لا يمكن ربط المحادثة بعقار ومشروع في نفس الوقت", 400);
+
+        var recipientExists = await _context.Users
+            .AnyAsync(u => u.Id == recipientId && !u.IsDeleted, ct);
+
+        if (!recipientExists)
+            throw new BoiootException("المستخدم غير موجود", 404);
+
+        // ── Return existing conversation immediately (bypass limit check) ──
+        // max_conversations limits CREATION of new conversations only.
+        // An existing conversation must always be re-openable regardless of plan.
+        var existing = await _context.Conversations
+            .Include(c => c.User1)
+            .Include(c => c.User2)
+            .Include(c => c.Property)
+            .Include(c => c.Project)
+            .FirstOrDefaultAsync(c =>
+                ((c.User1Id == userId && c.User2Id == recipientId) ||
+                 (c.User1Id == recipientId && c.User2Id == userId))
+                && c.PropertyId == request.PropertyId
+                && c.ProjectId == request.ProjectId, ct);
+
+        if (existing is not null)
+        {
+            _logger.LogInformation(
+                "[Messaging] Returning existing conversation {ConversationId} for userId={UserId} recipientId={RecipientId}",
+                existing.Id, userId, recipientId);
+            var existingUnread = await GetUnreadCountAsync(userId, existing.Id, ct);
+            return MapToSummary(existing, userId, existingUnread);
+        }
+
         // ── Subscription enforcement: max_conversations limit ─────────────
-        // Only enforce when the user has an account. Unlinked/free users are open.
+        // Only enforce when creating a NEW conversation and user has an account.
         var acctIdForLimit = await _accountResolver.ResolveAccountIdAsync(userId, ct);
         if (acctIdForLimit.HasValue)
         {
@@ -94,37 +132,6 @@ public class MessagingService : IMessagingService
                         suggestedPlanCode: SubscriptionKeys.GetOfficeSuggestedUpgrade(planCode));
                 }
             }
-        }
-
-        var recipientId = request.RecipientId!.Value;
-
-        if (recipientId == userId)
-            throw new BoiootException("لا يمكنك بدء محادثة مع نفسك", 400);
-
-        if (request.PropertyId.HasValue && request.ProjectId.HasValue)
-            throw new BoiootException("لا يمكن ربط المحادثة بعقار ومشروع في نفس الوقت", 400);
-
-        var recipientExists = await _context.Users
-            .AnyAsync(u => u.Id == recipientId && !u.IsDeleted, ct);
-
-        if (!recipientExists)
-            throw new BoiootException("المستخدم غير موجود", 404);
-
-        var existing = await _context.Conversations
-            .Include(c => c.User1)
-            .Include(c => c.User2)
-            .Include(c => c.Property)
-            .Include(c => c.Project)
-            .FirstOrDefaultAsync(c =>
-                ((c.User1Id == userId && c.User2Id == recipientId) ||
-                 (c.User1Id == recipientId && c.User2Id == userId))
-                && c.PropertyId == request.PropertyId
-                && c.ProjectId == request.ProjectId, ct);
-
-        if (existing is not null)
-        {
-            var existingUnread = await GetUnreadCountAsync(userId, existing.Id, ct);
-            return MapToSummary(existing, userId, existingUnread);
         }
 
         var conversation = new Conversation
