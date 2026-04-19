@@ -83,13 +83,13 @@ const TYPE_OPTIONS = [
 ];
 
 const DOC_TYPE_OPTIONS = [
-  { value: "NationalId",       label: "الهوية الوطنية" },
-  { value: "Passport",         label: "جواز السفر" },
-  { value: "DriverLicense",    label: "رخصة القيادة" },
-  { value: "CommercialRecord", label: "السجل التجاري" },
-  { value: "TaxCertificate",  label: "الشهادة الضريبية" },
-  { value: "PropertyDeed",    label: "سند الملكية" },
-  { value: "Other",            label: "مستند آخر" },
+  { value: "NationalId",             label: "الهوية الوطنية" },
+  { value: "Passport",               label: "جواز السفر" },
+  { value: "Other",                  label: "رخصة القيادة" },
+  { value: "CommercialRegistration", label: "السجل التجاري" },
+  { value: "Other",                  label: "الشهادة الضريبية" },
+  { value: "OwnershipProof",         label: "سند الملكية" },
+  { value: "Other",                  label: "مستند آخر" },
 ];
 
 function fmtDate(s?: string | null) {
@@ -165,6 +165,7 @@ function AddDocumentForm({
       const formData = new FormData();
       formData.append("file", file);
       const uploadRes = await api.upload<{ url: string }>("/upload/document", formData);
+      console.log("Sending documentType:", docType);
       await api.post(`/verification/requests/${requestId}/documents`, {
         documentType: docType,
         fileName: file.name,
@@ -938,7 +939,7 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
   const [identityFile, setIdentityFile]           = useState<File | null>(null);
   const [identityFileErr, setIdentityFileErr]     = useState("");
 
-  const [businessDocType, setBusinessDocType]     = useState("CommercialRecord");
+  const [businessDocType, setBusinessDocType]     = useState("CommercialRegistration");
   const [businessFile, setBusinessFile]           = useState<File | null>(null);
   const [businessFileErr, setBusinessFileErr]     = useState("");
 
@@ -947,15 +948,15 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
 
   // Identity doc type options
   const IDENTITY_DOC_TYPES = [
-    { value: "NationalId",    label: "الهوية الوطنية" },
-    { value: "Passport",      label: "جواز السفر" },
-    { value: "DriverLicense", label: "رخصة القيادة" },
+    { value: "NationalId", label: "الهوية الوطنية" },
+    { value: "Passport",   label: "جواز السفر" },
+    { value: "Other",      label: "رخصة القيادة" },
   ];
 
   // Business doc type options
   const BUSINESS_DOC_TYPES = [
-    { value: "CommercialRecord", label: "السجل التجاري" },
-    { value: "TaxCertificate",  label: "الشهادة الضريبية" },
+    { value: "CommercialRegistration", label: "السجل التجاري" },
+    { value: "Other",                  label: "الشهادة الضريبية" },
   ];
 
   function getSavePhaseLabel() {
@@ -968,6 +969,7 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
     const formData = new FormData();
     formData.append("file", file);
     const { url } = await api.upload<{ url: string }>("/upload/document", formData);
+    console.log("Sending documentType:", docType);
     await api.post(`/verification/requests/${requestId}/documents`, {
       documentType: docType,
       fileName:     file.name,
