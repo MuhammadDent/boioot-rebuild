@@ -17,9 +17,10 @@ import { useAuthGate } from "@/context/AuthGateContext";
 interface PropertyCardProps {
   property: PropertyResponse;
   initialIsFavorited?: boolean;
+  priority?: boolean;
 }
 
-function PropertyCardInner({ property, initialIsFavorited = false }: PropertyCardProps) {
+function PropertyCardInner({ property, initialIsFavorited = false, priority = false }: PropertyCardProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { openAuthModal } = useAuthGate();
@@ -74,10 +75,11 @@ function PropertyCardInner({ property, initialIsFavorited = false }: PropertyCar
                 src={mainImage.thumbnailUrl ?? mainImage.imageUrl}
                 alt={property.title}
                 className="property-card__img"
-                loading="lazy"
+                loading={priority ? "eager" : "lazy"}
+                fetchPriority={priority ? "high" : "auto"}
+                decoding={priority ? "sync" : "async"}
                 width={400}
                 height={200}
-                decoding="async"
                 style={{ display: "block" }}
               />
             ) : (

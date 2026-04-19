@@ -21,14 +21,14 @@ import { loadPageSections, PAGE_SECTIONS_DEFAULTS } from "@/lib/page-sections";
 
 const STATIC_SLIDES = [
   {
-    image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1600&q=80",
+    image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=75&fm=webp",
     title: "شارك طلبك... وحلي العروض تجي لعندك",
     subtitle: "انشر طلبك في قسم الطلبات الخاصة وحلي الملاك والمكاتب بتواصلوا معك.",
     btnText: "ابدأ الآن",
     btnHref: "/properties",
   },
   {
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1600&q=80",
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200&q=75&fm=webp",
     title: "لأن العقار رحلة... شاركها مع الآخرين",
     subtitle: "في مجتمع بيوت... تواصل مع الآخرين واستفد من تجارياهم.",
     btnText: "اكتشف المجتمع",
@@ -105,7 +105,7 @@ export default function HomePage() {
   const heroSubtitle = useContent("home.hero.subtitle",       "آلاف العقارات المتاحة للبيع والإيجار في مختلف المحافظات السورية.");
   const heroCtaText  = useContent("home.hero.primaryCtaText", "تصفّح العقارات");
   const heroCtaUrl   = useContent("home.hero.primaryCtaUrl",  "/properties");
-  const heroImage    = useContent("home.hero.image",          "https://images.unsplash.com/photo-1613977257592-4871e5fcd7c4?w=1600&q=80");
+  const heroImage    = useContent("home.hero.image",          "https://images.unsplash.com/photo-1613977257592-4871e5fcd7c4?w=1200&q=75&fm=webp");
 
   const srHomepageShow  = useContent("special_requests.homepage_show",  "true");
   const srHomepageTitle = useContent("special_requests.homepage_title", "هل تبحث عن عقار بمواصفات خاصة؟");
@@ -423,10 +423,19 @@ export default function HomePage() {
               height: "100%",
               position: "relative",
               flexShrink: 0,
-              backgroundImage: `url(${slide.image})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
+              overflow: "hidden",
             }}>
+              {/* Real <img> — allows browser preload scanner to discover LCP image immediately */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={slide.image}
+                alt=""
+                aria-hidden="true"
+                loading={i === 0 ? "eager" : "lazy"}
+                fetchPriority={i === 0 ? "high" : "auto"}
+                decoding={i === 0 ? "sync" : "async"}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+              />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.6) 100%)" }} />
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "2rem 3rem", maxWidth: 700 }}>
                 <h1 style={{ color: "#fff", fontSize: "clamp(1.6rem, 4vw, 2.4rem)", fontWeight: 800, lineHeight: 1.35, marginBottom: "0.75rem", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
@@ -519,11 +528,12 @@ export default function HomePage() {
           {!loading && displayed.length > 0 && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem", marginBottom: "1.25rem" }}>
-                {displayed.map((p) => (
+                {displayed.map((p, i) => (
                   <PropertyCard
                     key={p.id}
                     property={p}
                     initialIsFavorited={favoriteIds.has(p.id)}
+                    priority={i === 0}
                   />
                 ))}
               </div>
