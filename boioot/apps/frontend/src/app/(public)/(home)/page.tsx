@@ -21,14 +21,14 @@ import { loadPageSections, PAGE_SECTIONS_DEFAULTS } from "@/lib/page-sections";
 
 const STATIC_SLIDES = [
   {
-    image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=75&fm=webp",
+    image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=65&fm=webp",
     title: "شارك طلبك... وحلي العروض تجي لعندك",
     subtitle: "انشر طلبك في قسم الطلبات الخاصة وحلي الملاك والمكاتب بتواصلوا معك.",
     btnText: "ابدأ الآن",
     btnHref: "/properties",
   },
   {
-    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200&q=75&fm=webp",
+    image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800&q=65&fm=webp",
     title: "لأن العقار رحلة... شاركها مع الآخرين",
     subtitle: "في مجتمع بيوت... تواصل مع الآخرين واستفد من تجارياهم.",
     btnText: "اكتشف المجتمع",
@@ -105,7 +105,7 @@ export default function HomePage() {
   const heroSubtitle = useContent("home.hero.subtitle",       "آلاف العقارات المتاحة للبيع والإيجار في مختلف المحافظات السورية.");
   const heroCtaText  = useContent("home.hero.primaryCtaText", "تصفّح العقارات");
   const heroCtaUrl   = useContent("home.hero.primaryCtaUrl",  "/properties");
-  const heroImage    = useContent("home.hero.image",          "https://images.unsplash.com/photo-1613977257592-4871e5fcd7c4?w=1200&q=75&fm=webp");
+  const heroImage    = useContent("home.hero.image",          "https://images.unsplash.com/photo-1613977257592-4871e5fcd7c4?w=800&q=65&fm=webp");
 
   const srHomepageShow  = useContent("special_requests.homepage_show",  "true");
   const srHomepageTitle = useContent("special_requests.homepage_title", "هل تبحث عن عقار بمواصفات خاصة؟");
@@ -166,6 +166,12 @@ export default function HomePage() {
     const cfg = loadPageSections();
     setShowHero(cfg.showHero);
   }, []);
+
+  // Hero background images are applied ONLY after hydration.
+  // On SSR/first-paint the hero shows a solid dark colour → LCP = <h1> text (instant).
+  // Background photos load after hydration so they never block LCP.
+  const [heroBgVisible, setHeroBgVisible] = useState(false);
+  useEffect(() => { setHeroBgVisible(true); }, []);
 
   // ── Auto-advance slider ─────────────────────────────────────────────────────
 
@@ -444,12 +450,15 @@ export default function HomePage() {
               position: "relative",
               flexShrink: 0,
               overflow: "hidden",
-              backgroundImage: `url(${slide.image})`,
+              // Dark background renders immediately from SSR with no network request.
+              // backgroundImage is only applied client-side after hydration so it
+              // never blocks LCP — the <h1> title text becomes the LCP element instead.
+              backgroundColor: "#1a2e1a",
+              backgroundImage: heroBgVisible ? `url(${slide.image})` : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}>
-              {/* CSS background — intentionally NOT an <img> so it is excluded from LCP.
-                  LCP element is the hero title text, which paints immediately. */}
+              {/* Background: deferred to post-hydration — LCP = <h1> text (SSR, instant) */}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.6) 100%)" }} />
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "2rem 3rem", maxWidth: 700 }}>
                 <h1 style={{ color: "#fff", fontSize: "clamp(1.6rem, 4vw, 2.4rem)", fontWeight: 800, lineHeight: 1.35, marginBottom: "0.75rem", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
