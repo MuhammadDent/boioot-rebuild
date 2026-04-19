@@ -1,0 +1,149 @@
+You are a Senior Full-Stack + UX Engineer.
+
+CRITICAL:
+This is a STRICT, MINIMAL, SAFE flow cleanup for the verification request feature.
+
+Do NOT redesign the whole page.
+Do NOT refactor unrelated modules.
+Do NOT change routing structure unless reusing existing routes.
+Do NOT break existing upload logic, request IDs, or verification APIs.
+Do NOT touch subscriptions, messaging, notifications, gallery, or property pages.
+Only improve the verification request flow with minimal isolated changes.
+
+==================================================
+PROBLEM
+==================================================
+
+Current verification flow is confusing and not professional:
+
+1. Button label says "إنشاء طلب"
+   but clicking it actually creates a DRAFT, not a submitted request.
+
+2. After uploading documents, user is redirected to the draft/request page,
+   while a message like "جاري رفع المستندات" appears, causing confusion.
+
+3. On the draft page, there is no sufficiently clear primary action for final submission.
+
+4. There is a button labeled "سريع" which is unnecessary/confusing,
+   because there is already a clear "view/open request" action.
+
+==================================================
+GOAL
+==================================================
+
+Make the verification flow clear and professional WITHOUT breaking existing logic.
+
+Desired user flow:
+
+1. User clicks "طلب جديد"
+2. User fills verification type + uploads documents + notes
+3. User clicks a clearly named button to create/save the draft if needed
+   OR directly proceed to request page
+4. On the request page, the primary clear CTA must be:
+   "تقديم الطلب للمراجعة"
+5. No confusing "سريع" button
+6. No misleading wording that says request was created when it is only a draft
+
+==================================================
+REQUIRED CHANGES
+==================================================
+
+1. Rename misleading actions/labels appropriately:
+
+- If the first page only creates a draft, DO NOT call it "إنشاء طلب" in a way that implies final submission.
+- Use wording that matches the actual action, such as:
+  "متابعة الطلب"
+  or
+  "حفظ ومتابعة"
+  or equivalent safe wording
+
+Choose the wording that best matches current implementation,
+but it must NOT falsely imply that the request is already submitted for review.
+
+2. On the draft/request details page:
+- make the primary CTA visually and textually clear:
+  "تقديم الطلب للمراجعة"
+
+3. Remove or hide the confusing "سريع" button if it duplicates existing functionality
+- If it is only a duplicate/shortcut, remove it from the UI
+- Do NOT break any underlying route or functionality behind it
+- Only remove its visible button if unnecessary
+
+4. Keep the "فتح الطلب" / "عرض الطلب" action only if still useful and clear,
+but do not duplicate actions unnecessarily.
+
+==================================================
+FLOW RULES
+==================================================
+
+The final flow should be:
+
+A. New verification page:
+- user selects type
+- uploads docs
+- adds notes
+- clicks clear progression button
+
+B. Draft/details page:
+- user sees uploaded documents
+- user sees request status = Draft / مسودة
+- primary action = "تقديم الطلب للمراجعة"
+
+C. After submitting for review:
+- status changes appropriately
+- show success confirmation
+
+==================================================
+IMPORTANT UX RULE
+==================================================
+
+Never show text that implies:
+"request submitted"
+when the system only created a draft.
+
+Wording must match the real backend state.
+
+==================================================
+SAFE IMPLEMENTATION CONSTRAINTS
+==================================================
+
+- Do NOT change backend request state model unless necessary
+- Do NOT break existing request IDs or document associations
+- Do NOT break upload endpoints
+- Do NOT change unrelated styles or navigation
+- Keep all patch changes minimal and isolated to verification flow UI/labels/actions
+
+==================================================
+FILES / SCOPE
+==================================================
+
+Inspect and modify only the minimal files related to:
+- verification new request page
+- verification draft/details page
+- verification request action buttons / labels
+
+Do NOT touch unrelated files.
+
+==================================================
+EXPECTED RESULT
+==================================================
+
+After fix, user experience should be:
+
+- clear first step
+- clear draft state
+- clear final submission action
+- no confusing duplicate "سريع" button
+- no misleading label like "إنشاء طلب" when it is only creating a draft
+
+==================================================
+OUTPUT REQUIRED
+==================================================
+
+After implementation, explain exactly:
+
+1. Which labels/buttons were changed
+2. Which file(s) were minimally modified
+3. Whether "سريع" was removed/hidden and why
+4. What the new flow is from start to finish
+5. Confirm that upload logic, routes, and existing request links were not broken

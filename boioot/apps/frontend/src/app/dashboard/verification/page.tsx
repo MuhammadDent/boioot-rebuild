@@ -624,28 +624,6 @@ function RequestCard({
                 <polyline points="12 5 19 12 12 19" />
               </svg>
             </Link>
-            <button
-              onClick={loadDetail}
-              style={{
-                padding: "5px 10px",
-                border: "1px solid #e2e8f0",
-                borderRadius: 7,
-                background: "#f8fafc",
-                color: "#475569",
-                fontSize: "0.77rem",
-                cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 3,
-              }}
-            >
-              {expanded ? "إخفاء" : "سريع"}
-              <svg
-                width={12} height={12} viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
           </div>
         </div>
 
@@ -948,9 +926,9 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
   ];
 
   function getSavePhaseLabel() {
-    if (savePhase === "creating")  return "جاري إنشاء الطلب…";
+    if (savePhase === "creating")  return "جاري الحفظ…";
     if (savePhase === "uploading") return "جاري رفع المستندات…";
-    return "إنشاء الطلب";
+    return "حفظ ومتابعة";
   }
 
   async function uploadAndAddDocument(requestId: string, file: File, docType: string) {
@@ -1208,7 +1186,7 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
             opacity: saving ? 0.7 : 1,
           }}
         >
-          {saving ? getSavePhaseLabel() : "إنشاء الطلب"}
+          {saving ? getSavePhaseLabel() : "حفظ ومتابعة"}
         </button>
       </div>
     </div>
