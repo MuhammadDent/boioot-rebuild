@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { PropertyDetailSkeleton } from "@/components/properties/PropertyDetailSkeleton";
-import ImageSlider from "@/components/properties/ImageSlider";
 import VerificationBadge from "@/components/properties/VerificationBadge";
 import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
@@ -20,6 +20,13 @@ import {
   formatPrice,
 } from "@/features/properties/constants";
 import type { PropertyResponse } from "@/types";
+
+const ImageSlider = dynamic(() => import("@/components/properties/ImageSlider"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ width: "100%", aspectRatio: "16/9", background: "#f0f2f0", borderRadius: "12px" }} />
+  ),
+});
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 

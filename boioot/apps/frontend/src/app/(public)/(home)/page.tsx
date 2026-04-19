@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import MainHeader from "@/components/layout/MainHeader";
@@ -112,10 +112,10 @@ export default function HomePage() {
   const srHomepageDesc  = useContent("special_requests.homepage_desc",  "أرسل طلبك الآن وسنساعدك في العثور على العقار المناسب بأسرع وقت ممكن");
   const srCtaText       = useContent("special_requests.cta_text",       "أضف طلبك الآن");
 
-  const slides = [
+  const slides = useMemo(() => [
     { image: heroImage, title: heroTitle, subtitle: heroSubtitle, btnText: heroCtaText, btnHref: heroCtaUrl },
     ...STATIC_SLIDES,
-  ];
+  ], [heroImage, heroTitle, heroSubtitle, heroCtaText, heroCtaUrl]);
 
   // Slider
   const [slideIndex, setSlideIndex] = useState(0);
@@ -169,17 +169,35 @@ export default function HomePage() {
 
   // ── Auto-advance slider ─────────────────────────────────────────────────────
 
+  const slidesLen = slides.length;
+
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setSlideIndex((i) => (i + 1) % slides.length);
+      setSlideIndex((i) => (i + 1) % slidesLen);
     }, 5000);
+  }, [slidesLen]);
+
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   }, []);
 
   useEffect(() => {
-    startTimer();
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [startTimer]);
+    // Defer autoplay by 2 s so initial hydration isn't blocked.
+    const boot = setTimeout(startTimer, 2000);
+
+    // Pause when tab is hidden, resume when visible.
+    const onVisibilityChange = () => {
+      if (document.hidden) stopTimer(); else startTimer();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearTimeout(boot);
+      stopTimer();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [startTimer, stopTimer]);
 
   function goSlide(idx: number) { setSlideIndex(idx); startTimer(); }
 
@@ -301,15 +319,17 @@ export default function HomePage() {
     setDraft((prev) => ({ ...prev, [k]: v }));
   }
 
-  // Client-side search
-  const displayed = search.trim()
-    ? properties.filter(
-        (p) =>
-          p.title.includes(search) ||
-          p.city?.includes(search) ||
-          p.description?.includes(search)
-      )
-    : properties;
+  // Client-side search (memoised — only recomputes when search or properties change)
+  const displayed = useMemo(() => {
+    const s = search.trim();
+    if (!s) return properties;
+    return properties.filter(
+      (p) =>
+        p.title.includes(s) ||
+        p.city?.includes(s) ||
+        p.description?.includes(s)
+    );
+  }, [search, properties]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
 

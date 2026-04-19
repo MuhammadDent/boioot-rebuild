@@ -1,0 +1,120 @@
+أريد تنفيذ مرحلة Advanced Performance Optimization (Level 2) لرفع PageSpeed Mobile إلى 90–95+.
+
+🔹 ملاحظة:
+المرحلة الأولى (LCP + الصور + loading) تم تنفيذها بالفعل.
+الآن نريد تحسينات أعمق بدون كسر أي functionality.
+
+---
+
+🔹 المطلوب:
+
+### 1️⃣ Dynamic Import (مهم جدًا)
+- حدد أي components ثقيلة في الصفحة الرئيسية:
+  - Hero Slider
+  - ImageSlider
+  - Maps
+  - أي carousel أو widgets
+
+- استخدم:
+  dynamic(() => import(...), { ssr: false })
+
+- لا يتم تحميل هذه المكونات إلا عند الحاجة أو بعد render
+
+---
+
+### 2️⃣ تقليل JavaScript في الصفحة الرئيسية
+- افحص:
+  bundle size
+
+- قم بـ:
+  - إزالة أي مكتبات غير مستخدمة
+  - نقل أي logic غير ضروري خارج الصفحة الرئيسية
+  - عدم تحميل features غير مستخدمة في home
+
+---
+
+### 3️⃣ تحسين hydration (Next.js)
+- تأكد أن:
+  - لا يوجد over-rendering
+  - استخدام React.memo في:
+    PropertyCard
+    Lists
+
+- تجنب:
+  re-renders غير ضرورية عند scroll أو hover
+
+---
+
+### 4️⃣ تحسين rendering Above the Fold
+- اجعل أول شاشة:
+  - بسيطة جدًا
+  - بدون sliders ثقيلة
+  - بدون API calls بطيئة
+
+- اعرض:
+  skeleton أو placeholder سريع
+  ثم حمّل باقي المحتوى بعد ذلك
+
+---
+
+### 5️⃣ تحسين Fonts (Advanced)
+- تأكد:
+  - تحميل خط واحد فقط في البداية
+  - إزالة الأوزان غير المستخدمة (مثلاً 400 و 700 فقط)
+  - استخدام:
+    display: swap
+
+---
+
+### 6️⃣ تحسين Layout Stability (CLS)
+- تأكد أن:
+  - جميع الصور لها width و height
+  - لا يوجد shifting عند loading
+
+---
+
+### 7️⃣ Preload / Prefetch ذكي
+- لا تستخدم preload بشكل عشوائي
+- استخدم فقط:
+  - hero image (إذا لم يكن Next Image priority)
+- استخدم:
+  router.prefetch للصفحات المهمة
+
+---
+
+### 8️⃣ تقليل عدد requests
+- دمج الصور الصغيرة إن أمكن
+- إزالة requests غير ضرورية
+
+---
+
+### 9️⃣ تحسين Speed Index
+- الهدف:
+  عرض محتوى بصري أسرع
+
+- لذلك:
+  - لا تنتظر API لعرض الصفحة
+  - اعرض UI سريع ثم hydrate لاحقًا
+
+---
+
+### 🔟 قياس الأداء بعد التعديل
+- أعطني:
+  - LCP الجديد
+  - Speed Index الجديد
+  - Performance score
+
+---
+
+🔹 مهم جدًا:
+❌ لا تكسر رفع الصور
+❌ لا تغير backend
+❌ لا تغير UI بشكل واضح
+❌ لا تؤثر على SEO
+
+---
+
+🔹 الهدف النهائي:
+- LCP < 2.5s
+- Speed Index < 3.5s
+- Performance 90+
