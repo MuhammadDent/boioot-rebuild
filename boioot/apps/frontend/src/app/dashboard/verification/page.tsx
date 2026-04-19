@@ -6,6 +6,7 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { api, normalizeError } from "@/lib/api";
+import VerificationBadge from "@/components/properties/VerificationBadge";
 import {
   DOCUMENT_TYPE_OPTIONS,
   DOCUMENT_TYPE_LABELS,
@@ -88,6 +89,14 @@ const TYPE_OPTIONS = [
   { value: "Business", label: "توثيق السجل التجاري",    desc: "سجل تجاري أو شهادة ضريبية" },
   { value: "Both",     label: "هوية + سجل تجاري معاً",  desc: "التوثيق الكامل للأفراد والشركات" },
 ];
+
+/** Maps verificationType → ownerVerificationLevel (1=هوية, 2=ملكية, 3=تجاري) */
+const TYPE_TO_LEVEL: Record<string, number> = {
+  Identity: 1,
+  Property: 2,
+  Business: 3,
+  Both:     3,
+};
 
 
 function fmtDate(s?: string | null) {
@@ -578,7 +587,12 @@ function RequestCard({
           >
             <StatusBadge status={summary.status} />
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1e293b" }}>{typeLabel}</div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#1e293b", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                {typeLabel}
+                {summary.status === "Approved" && (
+                  <VerificationBadge level={TYPE_TO_LEVEL[summary.verificationType] ?? 1} size="sm" />
+                )}
+              </div>
               <div style={{ fontSize: "0.73rem", color: "#94a3b8", marginTop: 1 }}>
                 {summary.submittedAt
                   ? `تاريخ التقديم: ${fmtDate(summary.submittedAt)}`

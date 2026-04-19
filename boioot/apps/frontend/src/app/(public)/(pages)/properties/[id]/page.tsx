@@ -390,13 +390,11 @@ export default function PropertyDetailPage() {
                 <div>
                   {/* Name: ownerName → companyName → "المعلن" */}
                   <p style={{ margin: 0, fontWeight: 700, fontSize: "0.95rem" }}>{advertiserName}</p>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap", marginTop: "0.2rem" }}>
-                    <VerificationBadge
-                      level={property.ownerVerificationLevel}
-                      isVerified={property.ownerIsVerified}
-                      size="md"
-                    />
-                  </div>
+                  <VerificationBadge
+                    level={property.ownerVerificationLevel}
+                    isVerified={property.ownerIsVerified}
+                    size="md"
+                  />
                   {property.ownerPhone && (
                     <p style={{ margin: "0.15rem 0 0", color: "var(--color-text-secondary)", fontSize: "0.85rem", direction: "ltr", textAlign: "right" }}>
                       {property.ownerPhone}

@@ -54,6 +54,7 @@ export default function VerificationBadge({ level = 0, isVerified = false, size 
     padding: "0.2rem 0.65rem",
     whiteSpace: "nowrap",
     lineHeight: 1.4,
+    marginTop: "0.25rem",
   };
 
   return (
