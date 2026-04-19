@@ -173,6 +173,9 @@ export interface PropertyResponse {
   ownerName?: string;
   ownerPhone?: string;
   ownerPhoto?: string;
+  // Advertiser verification — level from user (detail) or company.IsVerified (list)
+  ownerVerificationLevel?: number;
+  ownerIsVerified?: boolean;
   // Resolved chat recipient user ID (backfill: OwnerId → Agent.UserId → company agent)
   recipientId?: string;
   // Analytics

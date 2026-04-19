@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PropertyDetailSkeleton } from "@/components/properties/PropertyDetailSkeleton";
 import ImageSlider from "@/components/properties/ImageSlider";
+import VerificationBadge from "@/components/properties/VerificationBadge";
 import { propertiesApi } from "@/features/properties/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
@@ -389,6 +390,13 @@ export default function PropertyDetailPage() {
                 <div>
                   {/* Name: ownerName → companyName → "المعلن" */}
                   <p style={{ margin: 0, fontWeight: 700, fontSize: "0.95rem" }}>{advertiserName}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap", marginTop: "0.2rem" }}>
+                    <VerificationBadge
+                      level={property.ownerVerificationLevel}
+                      isVerified={property.ownerIsVerified}
+                      size="md"
+                    />
+                  </div>
                   {property.ownerPhone && (
                     <p style={{ margin: "0.15rem 0 0", color: "var(--color-text-secondary)", fontSize: "0.85rem", direction: "ltr", textAlign: "right" }}>
                       {property.ownerPhone}

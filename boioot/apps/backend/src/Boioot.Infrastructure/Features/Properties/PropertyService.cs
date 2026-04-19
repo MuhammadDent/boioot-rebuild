@@ -95,16 +95,18 @@ public class PropertyService : IPropertyService
             // Case 1: personal listing — owner is a registered user
             var user = await _context.Users
                 .AsNoTracking()
-                .Select(u => new { u.Id, u.FullName, u.Phone, u.ProfileImageUrl })
+                .Select(u => new { u.Id, u.FullName, u.Phone, u.ProfileImageUrl, u.VerificationLevel, u.IsVerified })
                 .FirstOrDefaultAsync(u => u.Id == ownerGuid, ct);
             if (user != null)
             {
-                resolvedRecipientId = user.Id.ToString();
-                response.OwnerName  = user.FullName;
-                response.OwnerPhone = !string.IsNullOrEmpty(user.Phone) ? user.Phone : property.Company?.Phone;
-                response.OwnerPhoto = !string.IsNullOrEmpty(user.ProfileImageUrl)
+                resolvedRecipientId          = user.Id.ToString();
+                response.OwnerName           = user.FullName;
+                response.OwnerPhone          = !string.IsNullOrEmpty(user.Phone) ? user.Phone : property.Company?.Phone;
+                response.OwnerPhoto          = !string.IsNullOrEmpty(user.ProfileImageUrl)
                     ? user.ProfileImageUrl
                     : property.Company?.LogoUrl;
+                response.OwnerVerificationLevel = user.VerificationLevel;
+                response.OwnerIsVerified        = user.IsVerified;
             }
         }
         else if (property.AgentId.HasValue)
@@ -113,22 +115,25 @@ public class PropertyService : IPropertyService
             var agent = await _context.Set<Agent>()
                 .AsNoTracking()
                 .Where(a => a.Id == property.AgentId.Value)
-                .Select(a => new { a.UserId, a.User.FullName, a.User.Phone, a.User.ProfileImageUrl })
+                .Select(a => new { a.UserId, a.User.FullName, a.User.Phone, a.User.ProfileImageUrl, a.User.VerificationLevel, a.User.IsVerified })
                 .FirstOrDefaultAsync(ct);
             if (agent != null)
             {
-                resolvedRecipientId = agent.UserId.ToString();
-                response.OwnerName  = agent.FullName;
-                response.OwnerPhone = !string.IsNullOrEmpty(agent.Phone) ? agent.Phone : property.Company?.Phone;
-                response.OwnerPhoto = !string.IsNullOrEmpty(agent.ProfileImageUrl)
+                resolvedRecipientId          = agent.UserId.ToString();
+                response.OwnerName           = agent.FullName;
+                response.OwnerPhone          = !string.IsNullOrEmpty(agent.Phone) ? agent.Phone : property.Company?.Phone;
+                response.OwnerPhoto          = !string.IsNullOrEmpty(agent.ProfileImageUrl)
                     ? agent.ProfileImageUrl
                     : property.Company?.LogoUrl;
+                response.OwnerVerificationLevel = agent.VerificationLevel;
+                response.OwnerIsVerified        = agent.IsVerified;
             }
             else
             {
-                response.OwnerName  = property.Company?.Name;
-                response.OwnerPhone = property.Company?.Phone;
-                response.OwnerPhoto = property.Company?.LogoUrl;
+                response.OwnerName      = property.Company?.Name;
+                response.OwnerPhone     = property.Company?.Phone;
+                response.OwnerPhoto     = property.Company?.LogoUrl;
+                response.OwnerIsVerified = property.Company?.IsVerified ?? false;
             }
         }
         else
@@ -144,21 +149,23 @@ public class PropertyService : IPropertyService
 
             if (companyAgent != null)
             {
-                resolvedRecipientId = companyAgent.UserId.ToString();
-                response.OwnerName  = property.Company?.Name ?? companyAgent.FullName;
-                response.OwnerPhone = !string.IsNullOrEmpty(property.Company?.Phone)
+                resolvedRecipientId  = companyAgent.UserId.ToString();
+                response.OwnerName   = property.Company?.Name ?? companyAgent.FullName;
+                response.OwnerPhone  = !string.IsNullOrEmpty(property.Company?.Phone)
                     ? property.Company.Phone
                     : companyAgent.Phone;
-                response.OwnerPhoto = !string.IsNullOrEmpty(property.Company?.LogoUrl)
+                response.OwnerPhoto  = !string.IsNullOrEmpty(property.Company?.LogoUrl)
                     ? property.Company.LogoUrl
                     : companyAgent.ProfileImageUrl;
+                response.OwnerIsVerified = property.Company?.IsVerified ?? false;
             }
             else
             {
                 // Absolute last resort: only company data, no chat recipient
-                response.OwnerName  = property.Company?.Name;
-                response.OwnerPhone = property.Company?.Phone;
-                response.OwnerPhoto = property.Company?.LogoUrl;
+                response.OwnerName       = property.Company?.Name;
+                response.OwnerPhone      = property.Company?.Phone;
+                response.OwnerPhoto      = property.Company?.LogoUrl;
+                response.OwnerIsVerified = property.Company?.IsVerified ?? false;
             }
         }
 
@@ -1159,6 +1166,7 @@ public class PropertyService : IPropertyService
         CompanyId = p.CompanyId,
         CompanyName = p.Company?.Name ?? string.Empty,
         CompanyLogoUrl = p.Company?.LogoUrl,
+        OwnerIsVerified = p.Company?.IsVerified ?? false,
         AgentId = p.AgentId,
         OwnerId = p.OwnerId,
         IsPersonalListing = p.OwnerId != null,

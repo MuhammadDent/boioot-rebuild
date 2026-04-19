@@ -9,6 +9,7 @@ import {
   LISTING_TYPE_LABELS,
   formatPrice,
 } from "@/features/properties/constants";
+import VerificationBadge from "@/components/properties/VerificationBadge";
 import { favoritesApi } from "@/features/favorites/api";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
@@ -103,6 +104,11 @@ function PropertyCardInner({ property, initialIsFavorited = false }: PropertyCar
               {property.area > 0 && (
                 <span className="badge badge-blue">{property.area} م²</span>
               )}
+              <VerificationBadge
+                level={property.ownerVerificationLevel}
+                isVerified={property.ownerIsVerified}
+                size="sm"
+              />
             </div>
           </div>
         </article>
