@@ -6,6 +6,7 @@ import type { CurrentSubscriptionResponse } from "@/features/subscription/types"
 import type { UpgradeIntentResponse } from "@/features/subscription/types";
 import { pricingApi } from "@/features/pricing/api";
 import { subscriptionApi } from "@/features/subscription/api";
+import { useAuth } from "@/context/AuthContext";
 import { normalizeError } from "@/lib/api";
 import {
   getAudienceTypeForUser,
@@ -194,6 +195,8 @@ function PlansGrid({ plans, cycle, currentSubscription, onUpgradeIntent, isLoadi
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+
   const [plans,         setPlans]         = useState<PublicPricingItem[]>([]);
   const [plansLoading,  setPlansLoading]  = useState(true);
   const [plansError,    setPlansError]    = useState("");
@@ -219,10 +222,11 @@ export default function PricingPage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     subscriptionApi.getCurrent()
       .then(setCurrentSub)
       .catch(() => setCurrentSub(null));
-  }, []);
+  }, [isAuthenticated, authLoading]);
 
   // ── Handle upgrade-intent click ─────────────────────────────────────────────
 
