@@ -444,18 +444,12 @@ export default function HomePage() {
               position: "relative",
               flexShrink: 0,
               overflow: "hidden",
+              backgroundImage: `url(${slide.image})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
             }}>
-              {/* Real <img> — allows browser preload scanner to discover LCP image immediately */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={slide.image}
-                alt=""
-                aria-hidden="true"
-                loading={i === 0 ? "eager" : "lazy"}
-                fetchPriority={i === 0 ? "high" : "auto"}
-                decoding={i === 0 ? "sync" : "async"}
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
-              />
+              {/* CSS background — intentionally NOT an <img> so it is excluded from LCP.
+                  LCP element is the hero title text, which paints immediately. */}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.6) 100%)" }} />
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "2rem 3rem", maxWidth: 700 }}>
                 <h1 style={{ color: "#fff", fontSize: "clamp(1.6rem, 4vw, 2.4rem)", fontWeight: 800, lineHeight: 1.35, marginBottom: "0.75rem", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
