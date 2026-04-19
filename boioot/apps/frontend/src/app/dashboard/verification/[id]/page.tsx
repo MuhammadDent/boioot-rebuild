@@ -7,6 +7,11 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { api, normalizeError } from "@/lib/api";
+import {
+  DOCUMENT_TYPE_OPTIONS,
+  DOCUMENT_TYPE_LABELS,
+  isValidDocumentType,
+} from "@/lib/document-types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -66,15 +71,6 @@ const TYPE_LABELS: Record<string, string> = {
   Both:     "هوية + سجل تجاري معاً",
 };
 
-const DOC_TYPE_OPTIONS = [
-  { value: "NationalId",             label: "الهوية الوطنية" },
-  { value: "Passport",               label: "جواز السفر" },
-  { value: "Other",                  label: "رخصة القيادة" },
-  { value: "CommercialRegistration", label: "السجل التجاري" },
-  { value: "Other",                  label: "الشهادة الضريبية" },
-  { value: "OwnershipProof",         label: "سند الملكية" },
-  { value: "Other",                  label: "مستند آخر" },
-];
 
 function fmtDate(s?: string | null) {
   if (!s) return "—";
@@ -120,7 +116,7 @@ function DocRow({
   onRemove: (id: string) => void;
   removing: boolean;
 }) {
-  const docLabel = DOC_TYPE_OPTIONS.find((o) => o.value === doc.documentType)?.label ?? doc.documentType;
+  const docLabel = DOCUMENT_TYPE_LABELS[doc.documentType] ?? doc.documentType;
   const isPdf    = doc.mimeType === "application/pdf" || doc.fileUrl?.endsWith(".pdf");
   const fileUrl  = getFileUrl(doc.fileUrl);
 
@@ -234,6 +230,7 @@ function AddDocumentForm({
 
   async function handleUploadAndAdd() {
     if (!file) { setError("يرجى اختيار ملف أولاً"); return; }
+    if (!isValidDocumentType(docType)) { setError("نوع المستند غير صالح"); return; }
     setUploading(true); setError("");
     try {
       const formData = new FormData();
@@ -276,7 +273,7 @@ function AddDocumentForm({
             padding: "0.45rem 0.75rem", fontSize: "0.85rem", color: "#1e293b", background: "#fff",
           }}
         >
-          {DOC_TYPE_OPTIONS.map((o) => (
+          {DOCUMENT_TYPE_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>

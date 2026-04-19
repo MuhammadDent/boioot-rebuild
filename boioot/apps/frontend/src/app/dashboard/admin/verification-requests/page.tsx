@@ -6,6 +6,7 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { api, normalizeError } from "@/lib/api";
+import { DOCUMENT_TYPE_LABELS } from "@/lib/document-types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -86,16 +87,6 @@ const TYPE_LABELS: Record<string, string> = {
   Both:     "هوية + سجل",
 };
 
-const DOC_TYPE_LABELS: Record<string, string> = {
-  NationalId:             "الهوية الوطنية",
-  Passport:               "جواز السفر",
-  ResidencePermit:        "تصريح إقامة",
-  CommercialRegistration: "السجل التجاري",
-  BrokerageLicense:       "رخصة وساطة",
-  OfficeLicense:          "رخصة مكتب",
-  OwnershipProof:         "سند الملكية",
-  Other:                  "مستند آخر",
-};
 
 const DOC_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   Pending:  { bg: "#1e3a5f", text: "#60a5fa" },
@@ -284,7 +275,7 @@ function DetailPanel({
                       </span>
                       <div>
                         <div style={{ fontSize: "0.8rem", color: "#d1d5db" }}>
-                          {DOC_TYPE_LABELS[doc.documentType] ?? doc.documentType}
+                          {DOCUMENT_TYPE_LABELS[doc.documentType] ?? doc.documentType}
                         </div>
                         <div style={{ fontSize: "0.7rem", color: "#6b7280" }}>{doc.fileName}</div>
                       </div>

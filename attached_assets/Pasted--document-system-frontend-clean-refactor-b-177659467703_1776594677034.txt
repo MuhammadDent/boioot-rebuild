@@ -1,0 +1,81 @@
+أريد إغلاق ملف document system في frontend بشكل clean وآمن جدًا، بدون أي refactor كبير وبدون تغيير backend أو UI أو routes.
+
+السياق:
+
+* Backend enum values هي source of truth ويجب الالتزام بها حرفيًا:
+  NationalId
+  Passport
+  ResidencePermit
+  CommercialRegistration
+  BrokerageLicense
+  OfficeLicense
+  OwnershipProof
+  Other
+
+المشكلة السابقة كانت بسبب mismatch مثل:
+CommercialRecord
+بدل:
+CommercialRegistration
+
+المطلوب تنفيذ minimal safe hardening للـ document system كله في frontend فقط.
+
+نفّذ الخطوات التالية بالترتيب:
+
+1. أنشئ ملفًا مركزيًا واحدًا لأنواع المستندات في frontend مثل:
+   src/constants/document-types.ts
+   أو أقرب مسار مناسب موجود بالفعل في المشروع
+
+2. داخل الملف أنشئ فقط:
+
+* DOCUMENT_TYPES
+* DocumentType
+* DOCUMENT_TYPE_LABELS
+* DOCUMENT_TYPE_OPTIONS
+* isValidDocumentType
+
+3. استخدم هذا الملف المركزي في جميع flows المرتبطة بالمستندات، خصوصًا:
+
+* verification document upload
+* verification document type select
+* أي subscription/request flow يستخدم documentType
+* أي helper يبني payload للمستندات
+
+4. ابحث عن أي hardcoded strings أو arrays أو mappings قديمة مرتبطة بأنواع المستندات واستبدلها بالاستيراد من الملف المركزي
+
+5. احذف أي استخدام لأسماء خاطئة أو legacy values مثل:
+
+* CommercialRecord
+* أي variant غير مطابق 100% لقيم backend
+
+6. تأكد أن كل select/dropdown يستخدم:
+
+* label للعرض فقط
+* value للإرسال فقط
+
+7. أضف validation بسيط قبل إرسال documentType إلى الـ API باستخدام isValidDocumentType
+   بدون overengineering
+
+8. لا تغيّر:
+
+* backend
+* API contracts
+* routes
+* styling
+* JSX structure إلا عند الضرورة القصوى لربط المصدر المركزي
+
+9. بعد التنفيذ أعطني:
+
+* قائمة الملفات المعدلة فقط
+* أي legacy values تم حذفها
+* هل بقي أي مكان في frontend ما زال يكرر document types خارج الملف المركزي
+
+10. في النهاية نفّذ بحثًا نهائيًا وتأكد أن القيمة:
+    CommercialRecord
+    لم تعد موجودة في المشروع
+
+مهم:
+
+* هذا cleanup hardening وليس feature work
+* لا أريد إعادة هيكلة كبيرة
+* لا أريد تغييرات unrelated
+* أريد minimal safe refactor فقط

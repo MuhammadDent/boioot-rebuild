@@ -6,6 +6,13 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { api, normalizeError } from "@/lib/api";
+import {
+  DOCUMENT_TYPE_OPTIONS,
+  DOCUMENT_TYPE_LABELS,
+  IDENTITY_DOC_TYPE_OPTIONS,
+  BUSINESS_DOC_TYPE_OPTIONS,
+  isValidDocumentType,
+} from "@/lib/document-types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -82,15 +89,6 @@ const TYPE_OPTIONS = [
   { value: "Both",     label: "هوية + سجل تجاري معاً",  desc: "التوثيق الكامل للأفراد والشركات" },
 ];
 
-const DOC_TYPE_OPTIONS = [
-  { value: "NationalId",             label: "الهوية الوطنية" },
-  { value: "Passport",               label: "جواز السفر" },
-  { value: "Other",                  label: "رخصة القيادة" },
-  { value: "CommercialRegistration", label: "السجل التجاري" },
-  { value: "Other",                  label: "الشهادة الضريبية" },
-  { value: "OwnershipProof",         label: "سند الملكية" },
-  { value: "Other",                  label: "مستند آخر" },
-];
 
 function fmtDate(s?: string | null) {
   if (!s) return "—";
@@ -159,6 +157,7 @@ function AddDocumentForm({
 
   async function handleUploadAndAdd() {
     if (!file) { setError("يرجى اختيار ملف أولاً"); return; }
+    if (!isValidDocumentType(docType)) { setError("نوع المستند غير صالح"); return; }
     setUploading(true);
     setError("");
     try {
@@ -211,7 +210,7 @@ function AddDocumentForm({
             outline: "none",
           }}
         >
-          {DOC_TYPE_OPTIONS.map((o) => (
+          {DOCUMENT_TYPE_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
@@ -400,7 +399,7 @@ function ConfirmModal({
 // ── Document row (light) ───────────────────────────────────────────────────────
 
 function DocRow({ doc }: { doc: VDocResponse }) {
-  const docLabel = DOC_TYPE_OPTIONS.find((o) => o.value === doc.documentType)?.label ?? doc.documentType;
+  const docLabel = DOCUMENT_TYPE_LABELS[doc.documentType] ?? doc.documentType;
   const isPdf    = doc.mimeType === "application/pdf" || doc.fileUrl?.endsWith(".pdf");
 
   return (
@@ -946,18 +945,6 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
   const needsIdentity = type === "Identity" || type === "Both";
   const needsBusiness = type === "Business" || type === "Both";
 
-  // Identity doc type options
-  const IDENTITY_DOC_TYPES = [
-    { value: "NationalId", label: "الهوية الوطنية" },
-    { value: "Passport",   label: "جواز السفر" },
-    { value: "Other",      label: "رخصة القيادة" },
-  ];
-
-  // Business doc type options
-  const BUSINESS_DOC_TYPES = [
-    { value: "CommercialRegistration", label: "السجل التجاري" },
-    { value: "Other",                  label: "الشهادة الضريبية" },
-  ];
 
   function getSavePhaseLabel() {
     if (savePhase === "creating")  return "جاري الحفظ…";
@@ -1106,7 +1093,7 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
                 background: "#fff", outline: "none",
               }}
             >
-              {IDENTITY_DOC_TYPES.map(o => (
+              {IDENTITY_DOC_TYPE_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
@@ -1150,7 +1137,7 @@ function NewRequestForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
                 background: "#fff", outline: "none",
               }}
             >
-              {BUSINESS_DOC_TYPES.map(o => (
+              {BUSINESS_DOC_TYPE_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
