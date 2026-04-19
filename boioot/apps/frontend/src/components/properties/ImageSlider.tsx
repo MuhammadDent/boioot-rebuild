@@ -129,6 +129,10 @@ export default function ImageSlider({ images }: Props) {
               <img
                 src={img.thumbnailUrl ?? img.imageUrl}
                 alt={`thumbnail-${i}`}
+                loading="lazy"
+                decoding="async"
+                width={80}
+                height={60}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             </div>

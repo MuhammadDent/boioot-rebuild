@@ -47,7 +47,8 @@ public class PropertyService : IPropertyService
             .Include(p => p.Company)
             .Include(p => p.Images.Where(i => i.IsCover || i.IsPrimary || i.Order == 0))  // cover (+ fallback) for cards
                 .ThenInclude(i => i.UserImage)              // bridge: prefer R2 URL when available
-            .Where(p => p.Status == PropertyStatus.Available);
+            .Where(p => p.Status == PropertyStatus.Available
+                     && p.ModerationStatus == ModerationStatus.Active);
 
         query = ApplyFilters(query, filters);
 
