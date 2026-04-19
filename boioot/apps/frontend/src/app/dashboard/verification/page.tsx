@@ -504,6 +504,10 @@ function RequestCard({
   }
 
   async function handleSubmit() {
+    if (detail && detail.documents.length === 0) {
+      setError("لا يمكن إرسال الطلب بدون إرفاق مستندات");
+      return;
+    }
     setSubmitting(true); setError(""); setSuccess("");
     try {
       const res: VRequestResponse = await api.post(`/verification/requests/${summary.id}/submit`, {});
@@ -643,6 +647,22 @@ function RequestCard({
 
             {detail && (
               <>
+                {/* Draft status badge */}
+                {isDraft && (
+                  <div style={{
+                    background: "#fffbeb",
+                    border: "1px solid #fde68a",
+                    borderRadius: 8,
+                    padding: "0.65rem 1rem",
+                    marginBottom: "0.85rem",
+                    fontSize: "0.83rem",
+                    color: "#92400e",
+                    fontWeight: 600,
+                  }}>
+                    🟡 حالة الطلب: مسودة (لم يتم إرساله بعد)
+                  </div>
+                )}
+
                 {/* Rejection reason */}
                 {detail.rejectionReason && (
                   <div style={{
@@ -739,32 +759,45 @@ function RequestCard({
                 {/* Submit */}
                 {canSubmit && !showAddDoc && (
                   <div style={{
-                    borderTop: "1px solid #e2e8f0",
-                    paddingTop: "0.85rem",
-                    display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap",
+                    borderTop: "2px solid #e2e8f0",
+                    paddingTop: "1rem",
+                    marginTop: "0.25rem",
+                    display: "flex", flexDirection: "column", gap: "0.6rem",
                   }}>
+                    {detail.documents.length === 0 && (
+                      <div style={{
+                        background: "#fef3c7",
+                        border: "1px solid #fcd34d",
+                        borderRadius: 8,
+                        padding: "0.6rem 0.9rem",
+                        fontSize: "0.82rem",
+                        color: "#92400e",
+                        fontWeight: 500,
+                      }}>
+                        ⚠️ لا يمكن إرسال الطلب بدون إرفاق مستندات — أضف مستنداً واحداً على الأقل أولاً
+                      </div>
+                    )}
                     <button
                       onClick={handleSubmit}
                       disabled={submitting || detail.documents.length === 0}
                       style={{
-                        padding: "0.5rem 1.5rem",
+                        padding: "0.75rem 2rem",
                         background: "var(--color-primary)",
                         color: "#fff",
                         border: "none",
-                        borderRadius: 8,
-                        fontSize: "0.85rem",
+                        borderRadius: 10,
+                        fontSize: "0.98rem",
                         fontWeight: 700,
                         cursor: (submitting || detail.documents.length === 0) ? "not-allowed" : "pointer",
-                        opacity: (submitting || detail.documents.length === 0) ? 0.6 : 1,
+                        opacity: (submitting || detail.documents.length === 0) ? 0.55 : 1,
+                        boxShadow: detail.documents.length > 0 ? "0 3px 10px rgba(0,114,188,0.25)" : "none",
+                        display: "flex", alignItems: "center", gap: "0.5rem",
+                        alignSelf: "flex-start",
+                        transition: "opacity 0.15s",
                       }}
                     >
-                      {submitting ? "جاري التقديم…" : "تقديم الطلب للمراجعة"}
+                      {submitting ? "جاري التقديم…" : "📤 تقديم الطلب للمراجعة"}
                     </button>
-                    {detail.documents.length === 0 && (
-                      <div style={{ fontSize: "0.76rem", color: "#94a3b8" }}>
-                        أرفق مستنداً واحداً على الأقل أولاً
-                      </div>
-                    )}
                   </div>
                 )}
               </>
@@ -1202,6 +1235,7 @@ export default function UserVerificationPage() {
   const [fetching, setFetching]   = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [showNew, setShowNew]     = useState(false);
+  const [savedBanner, setSavedBanner] = useState("");
 
   const load = useCallback(async () => {
     setFetching(true); setFetchError("");
@@ -1217,7 +1251,12 @@ export default function UserVerificationPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  function handleCreated() { setShowNew(false); load(); }
+  function handleCreated() {
+    setShowNew(false);
+    load();
+    setSavedBanner("تم حفظ الطلب كمسودة بنجاح ✅  يمكنك الآن مراجعة الطلب وإرساله للمراجعة");
+    setTimeout(() => setSavedBanner(""), 7000);
+  }
 
   // Business rule: only block new request if there's already a Draft (can't have two drafts)
   const hasActiveDraft = requests.some((r) => r.status === "Draft");
@@ -1300,6 +1339,22 @@ export default function UserVerificationPage() {
       </div>
 
       {fetchError && <InlineBanner message={fetchError} />}
+
+      {savedBanner && (
+        <div style={{
+          background: "#f0fdf4",
+          border: "1px solid #86efac",
+          borderRadius: 10,
+          padding: "0.85rem 1.1rem",
+          marginBottom: "1.1rem",
+          fontSize: "0.88rem",
+          color: "#166534",
+          fontWeight: 500,
+          lineHeight: 1.6,
+        }}>
+          {savedBanner}
+        </div>
+      )}
 
       {/* New request form */}
       {showNew && (
