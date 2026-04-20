@@ -871,6 +871,21 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [badgeText, setBadgeText]                 = useState(plan?.badgeText ?? "");
   const [planColor, setPlanColor]                 = useState(plan?.planColor ?? "");
 
+  // Auto-derive applicableAccountType and planCategory from audienceType
+  useEffect(() => {
+    const map: Record<string, { accountType: string; category: string }> = {
+      seeker:  { accountType: "Individual", category: "Individual" },
+      owner:   { accountType: "Individual", category: "Individual" },
+      broker:  { accountType: "Individual", category: "Individual" },
+      office:  { accountType: "Office",     category: "Business"   },
+      company: { accountType: "Company",    category: "Business"   },
+    };
+    if (audienceType && map[audienceType]) {
+      setApplicableAccountType(map[audienceType].accountType);
+      setPlanCategory(map[audienceType].category);
+    }
+  }, [audienceType]);
+
   const [limits, setLimits]     = useState<PlanLimitItem[]>(plan?.limits ?? []);
   const [features, setFeatures] = useState<PlanFeatureItem[]>(plan?.features ?? []);
 
@@ -1216,6 +1231,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     <option value="office">🏢 مكتب (office)</option>
                     <option value="company">🏗 شركة (company)</option>
                   </select>
+                  <span style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: "0.25rem", display: "block" }}>
+                    حدد لمن هذه الخطة (مالك، مكتب، شركة...)
+                  </span>
                 </div>
                 <div>
                   <label style={labelStyle}>المستوى (Tier)</label>
@@ -1225,25 +1243,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     <option value="basic">أساسي</option>
                     <option value="advanced">متقدم</option>
                     <option value="enterprise">مؤسسي</option>
-                  </select>
-                </div>
-
-                {/* Row: planCategory + applicableAccountType */}
-                <div>
-                  <label style={labelStyle}>فئة الخطة</label>
-                  <select value={planCategory} onChange={e => setPlanCategory(e.target.value)} style={selectStyle}>
-                    <option value="">— بدون فئة —</option>
-                    <option value="Individual">أفراد</option>
-                    <option value="Business">أعمال</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>نوع الحساب المستهدف</label>
-                  <select value={applicableAccountType} onChange={e => setApplicableAccountType(e.target.value)} style={selectStyle}>
-                    <option value="">— للجميع —</option>
-                    <option value="Individual">فرد (Individual)</option>
-                    <option value="Office">مكتب (Office)</option>
-                    <option value="Company">شركة (Company)</option>
                   </select>
                 </div>
 
