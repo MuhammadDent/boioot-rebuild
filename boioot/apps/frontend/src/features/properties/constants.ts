@@ -91,6 +91,30 @@ export const FEATURE_LABEL: Record<string, string> = Object.fromEntries(
   FEATURES_LIST.map(({ key, label }) => [key, label])
 );
 
+/** Floor level labels — match backend enum values exactly. */
+export const FLOOR_LABELS: Record<string, string> = {
+  Ground:      "الأرضي",
+  First:       "الأول",
+  Second:      "الثاني",
+  Third:       "الثالث",
+  Fourth:      "الرابع",
+  Fifth:       "الخامس",
+  Sixth:       "السادس",
+  SeventhPlus: "سابع فما فوق",
+  Penthouse:   "بنتهاوس",
+  SingleFloor: "طابق واحد",
+  Basement:    "الطابق السفلي",
+};
+
+/** Ownership type labels — common values used in Syria. */
+export const OWNERSHIP_TYPE_LABELS: Record<string, string> = {
+  Customary:       "عادي (عرفي)",
+  Freehold:        "ملكية حرة",
+  Leasehold:       "حق انتفاع",
+  Waqf:            "وقف",
+  RegisteredDeed:  "سند مسجل",
+};
+
 /** Formats a numeric price with currency suffix. */
 export function formatPrice(price: number, currency = "SYP"): string {
   if (currency === "USD") {

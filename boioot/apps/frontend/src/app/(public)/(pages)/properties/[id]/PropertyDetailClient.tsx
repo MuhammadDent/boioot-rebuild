@@ -15,6 +15,8 @@ import {
   LISTING_TYPE_LABELS,
   PROPERTY_STATUS_LABELS,
   FEATURE_LABEL,
+  FLOOR_LABELS,
+  OWNERSHIP_TYPE_LABELS,
   formatPrice,
 } from "@/features/properties/constants";
 import type { PropertyResponse } from "@/types";
@@ -483,9 +485,9 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
               {property.bedrooms  != null && <DetailRow label="غرف النوم"    value={String(property.bedrooms)} />}
               {property.bathrooms != null && <DetailRow label="دورات المياه" value={String(property.bathrooms)} />}
               {property.hallsCount != null && <DetailRow label="صالات"       value={String(property.hallsCount)} />}
-              {property.floor && <DetailRow label="الطابق"       value={property.floor} />}
+              {property.floor && <DetailRow label="الطابق"       value={FLOOR_LABELS[property.floor] ?? property.floor} />}
               {property.propertyAge != null && <DetailRow label="عمر العقار" value={`${property.propertyAge} سنة`} />}
-              {property.ownershipType && <DetailRow label="نوع الملكية" value={property.ownershipType} />}
+              {property.ownershipType && <DetailRow label="نوع الملكية" value={OWNERSHIP_TYPE_LABELS[property.ownershipType] ?? property.ownershipType} />}
               <DetailRow label="المدينة"  value={`${property.province ? property.province + " — " : ""}${property.city}`} />
             </div>
 
