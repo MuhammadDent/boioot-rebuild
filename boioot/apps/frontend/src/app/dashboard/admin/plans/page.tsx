@@ -538,6 +538,40 @@ function AddPricingForm({ planId, planBillingType, onCreated, onCancel }: AddPri
   );
 }
 
+// ── SectionCard ────────────────────────────────────────────────────────────────
+
+function SectionCard({
+  title, icon, children, accent,
+}: {
+  title: string;
+  icon: string;
+  children: React.ReactNode;
+  accent?: string;
+}) {
+  return (
+    <div style={{
+      border: "1px solid #e5e7eb",
+      borderRadius: 12,
+      marginBottom: "1rem",
+      overflow: "hidden",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: "0.5rem",
+        padding: "0.7rem 1.1rem",
+        background: accent ? accent + "08" : "#f8fafc",
+        borderBottom: "1px solid #e5e7eb",
+      }}>
+        <span style={{ fontSize: "1rem" }}>{icon}</span>
+        <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b" }}>{title}</span>
+      </div>
+      <div style={{ padding: "1rem 1.1rem" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ── CollapsibleSection ─────────────────────────────────────────────────────────
 
 function CollapsibleSection({
@@ -1064,27 +1098,37 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
 
   const enabledCount = features.filter(f => f.isEnabled).length;
 
+  // ── Derived helpers for summary bar ────────────────────────────────────────
+  const summaryPriceLabel = (() => {
+    if (planBillingType === "free_default") return "🎁 مجاني";
+    const p = parseFloat(priceMonthly) || 0;
+    if (planBillingType === "one_time_fixed_term") return p ? `💳 ${p.toLocaleString("ar-SY")} ل.س` : "💳 —";
+    return p ? `🔄 ${p.toLocaleString("ar-SY")} ل.س/شهر` : "🔄 —";
+  })();
+  const summaryListings = limitValues["max_active_listings"];
+  const summaryListingsLabel = summaryListings === "-1" ? "∞ إعلان" : summaryListings ? `${summaryListings} إعلان` : null;
+
   const modalContent = (
     <div
       style={{ position: "fixed", inset: 0, zIndex: 3000, backgroundColor: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
       onClick={(e) => e.target === e.currentTarget && handleCloseModal()}
     >
-      <div style={{ backgroundColor: "#ffffff", borderRadius: 14, width: "100%", maxWidth: 780, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "hidden" }}>
+      <div style={{ backgroundColor: "#ffffff", borderRadius: 14, width: "100%", maxWidth: 800, maxHeight: "92vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "hidden" }}>
 
         {/* ── Sticky Header ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.5rem", borderBottom: "1px solid var(--color-border, #e5e7eb)", flexShrink: 0, backgroundColor: "#ffffff" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem 1.4rem", borderBottom: "1px solid #e5e7eb", flexShrink: 0, backgroundColor: "#ffffff" }}>
           <button
             onClick={handleCloseModal}
-            style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1, color: "var(--color-text-secondary)", padding: "0.15rem 0.5rem", borderRadius: 6 }}
+            style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1, color: "#94a3b8", padding: "0.15rem 0.5rem", borderRadius: 6 }}
           >
             ×
           </button>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.2rem" }}>
-            <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.15rem" }}>
+            <h2 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#1e293b" }}>
               {isNew ? "✦ إنشاء خطة جديدة" : `تعديل: ${getPlanVisibleName(displayNameAr, displayNameEn, plan!.name)}`}
             </h2>
             {!isNew && isDirty && (
-              <span style={{ fontSize: "0.72rem", color: "#b45309", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.3rem" }}>
+              <span style={{ fontSize: "0.7rem", color: "#b45309", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.3rem" }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#b45309", display: "inline-block" }} />
                 لديك تغييرات غير محفوظة
               </span>
@@ -1093,7 +1137,37 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         </div>
 
         {/* ── Scrollable Body ── */}
-        <div style={{ overflowY: "auto", flex: 1, padding: "1.25rem 1.5rem" }}>
+        <div style={{ overflowY: "auto", flex: 1, padding: "1.1rem 1.25rem" }}>
+
+          {/* ── Summary Bar ── */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap",
+            padding: "0.65rem 1rem", marginBottom: "1rem",
+            background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10,
+          }}>
+            <span style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 700, flexShrink: 0 }}>ملخص</span>
+            <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#1e293b", flexShrink: 0 }}>
+              {displayNameAr || displayNameEn || name || "—"}
+            </span>
+            <span style={{ fontSize: "0.72rem", color: "#475569", padding: "0.1rem 0.55rem", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 20, flexShrink: 0 }}>
+              {summaryPriceLabel}
+            </span>
+            {summaryListingsLabel && (
+              <span style={{ fontSize: "0.72rem", color: "#475569", padding: "0.1rem 0.55rem", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 20, flexShrink: 0 }}>
+                🏠 {summaryListingsLabel}
+              </span>
+            )}
+            {audienceType && (
+              <span style={{ fontSize: "0.72rem", padding: "0.1rem 0.55rem", background: (AUDIENCE_BG[audienceType] ?? "#475569") + "18", color: AUDIENCE_BG[audienceType] ?? "#475569", border: `1px solid ${(AUDIENCE_BG[audienceType] ?? "#475569")}33`, borderRadius: 20, flexShrink: 0 }}>
+                {AUDIENCE_AR_LABEL[audienceType] ?? audienceType}
+              </span>
+            )}
+            {tier && (
+              <span style={{ fontSize: "0.72rem", padding: "0.1rem 0.55rem", background: (TIER_BG[tier] ?? "#374151") + "18", color: TIER_BG[tier] ?? "#374151", border: `1px solid ${(TIER_BG[tier] ?? "#374151")}33`, borderRadius: 20, flexShrink: 0 }}>
+                {TIER_AR_LABEL[tier] ?? tier}
+              </span>
+            )}
+          </div>
 
           {error && (
             <div style={{ background: "#fef2f2", color: "var(--color-error)", padding: "0.75rem 1rem", borderRadius: 8, marginBottom: "1rem", fontSize: "0.88rem" }}>
@@ -1103,498 +1177,333 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
 
           <form ref={formRef} onSubmit={handleSavePlan}>
 
-            {/* ── Section 1: Basic Info ── */}
-            <CollapsibleSection title="المعلومات الأساسية" icon="📋" defaultOpen={true}>
+            {/* ═══════════════════════════════════════════════
+                1. المعلومات الأساسية
+            ═══════════════════════════════════════════════ */}
+            <SectionCard title="المعلومات الأساسية" icon="📋">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
+
+                {/* Row: internal name full width */}
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={labelStyle}>اسم الخطة *</label>
-                  <input
-                    required
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    style={inputStyle}
-                    placeholder="مثال: AgentPro"
-                  />
+                  <label style={labelStyle}>اسم الخطة الداخلي *</label>
+                  <input required value={name} onChange={e => setName(e.target.value)} style={inputStyle} placeholder="مثال: owner_advanced" />
                 </div>
+
+                {/* Row: Arabic + English display names */}
+                <div>
+                  <label style={labelStyle}>الاسم العربي للعرض</label>
+                  <input value={displayNameAr} onChange={e => setDisplayNameAr(e.target.value)} style={inputStyle} placeholder="مثال: متقدم للمالك" maxLength={120} />
+                </div>
+                <div>
+                  <label style={labelStyle}>الاسم الإنجليزي للعرض</label>
+                  <input value={displayNameEn} onChange={e => setDisplayNameEn(e.target.value)} style={inputStyle} placeholder="e.g. Owner Advanced" maxLength={120} dir="ltr" />
+                </div>
+
+                {/* Row: description full width */}
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={labelStyle}>الوصف</label>
-                  <textarea
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    style={{ ...inputStyle, minHeight: 72, resize: "vertical" }}
-                    placeholder="وصف مختصر للخطة..."
-                  />
+                  <textarea value={description} onChange={e => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 62, resize: "vertical" }} placeholder="وصف مختصر يظهر للمستخدم..." />
+                </div>
+
+                {/* Row: audience + tier */}
+                <div>
+                  <label style={labelStyle}>الجمهور المستهدف</label>
+                  <select value={audienceType} onChange={e => setAudienceType(e.target.value)} style={selectStyle}>
+                    <option value="">— بدون تحديد —</option>
+                    <option value="seeker">🔍 باحث (seeker)</option>
+                    <option value="owner">🏠 مالك (owner)</option>
+                    <option value="broker">🤝 وسيط (broker)</option>
+                    <option value="office">🏢 مكتب (office)</option>
+                    <option value="company">🏗 شركة (company)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>المستوى (Tier)</label>
+                  <select value={tier} onChange={e => setTier(e.target.value)} style={selectStyle}>
+                    <option value="">— بدون تحديد —</option>
+                    <option value="free">مجاني</option>
+                    <option value="basic">أساسي</option>
+                    <option value="advanced">متقدم</option>
+                    <option value="enterprise">مؤسسي</option>
+                  </select>
+                </div>
+
+                {/* Row: planCategory + applicableAccountType */}
+                <div>
+                  <label style={labelStyle}>فئة الخطة</label>
+                  <select value={planCategory} onChange={e => setPlanCategory(e.target.value)} style={selectStyle}>
+                    <option value="">— بدون فئة —</option>
+                    <option value="Individual">أفراد</option>
+                    <option value="Business">أعمال</option>
+                  </select>
                 </div>
                 <div>
                   <label style={labelStyle}>نوع الحساب المستهدف</label>
-                  <select
-                    value={applicableAccountType}
-                    onChange={e => setApplicableAccountType(e.target.value)}
-                    style={selectStyle}
-                  >
+                  <select value={applicableAccountType} onChange={e => setApplicableAccountType(e.target.value)} style={selectStyle}>
                     <option value="">— للجميع —</option>
                     <option value="Individual">فرد (Individual)</option>
                     <option value="Office">مكتب (Office)</option>
                     <option value="Company">شركة (Company)</option>
                   </select>
                 </div>
-                <div>
-                  <label style={labelStyle}>فئة الخطة</label>
-                  <select
-                    value={planCategory}
-                    onChange={e => setPlanCategory(e.target.value)}
-                    style={selectStyle}
-                  >
-                    <option value="">— بدون فئة —</option>
-                    <option value="Individual">أفراد (Individual)</option>
-                    <option value="Business">أعمال (Business)</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>الاسم العربي للعرض (DisplayNameAr)</label>
-                  <input
-                    value={displayNameAr}
-                    onChange={e => setDisplayNameAr(e.target.value)}
-                    style={inputStyle}
-                    placeholder="مثال: الباقة المتقدمة لملاك العقارات"
-                    maxLength={120}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>الاسم الإنجليزي للعرض (DisplayNameEn)</label>
-                  <input
-                    value={displayNameEn}
-                    onChange={e => setDisplayNameEn(e.target.value)}
-                    style={inputStyle}
-                    placeholder="e.g. Advanced Owner Plan"
-                    maxLength={120}
-                    dir="ltr"
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>جمهور الخطة (Audience)</label>
-                  <select
-                    value={audienceType}
-                    onChange={e => setAudienceType(e.target.value)}
-                    style={selectStyle}
-                  >
-                    <option value="">— بدون تحديد —</option>
-                    <option value="seeker">باحث (seeker)</option>
-                    <option value="owner">مالك (owner)</option>
-                    <option value="broker">وسيط (broker)</option>
-                    <option value="office">مكتب (office)</option>
-                    <option value="company">شركة (company)</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>مستوى الخطة (Tier)</label>
-                  <select
-                    value={tier}
-                    onChange={e => setTier(e.target.value)}
-                    style={selectStyle}
-                  >
-                    <option value="">— بدون تحديد —</option>
-                    <option value="free">مجاني (free)</option>
-                    <option value="basic">أساسي (basic)</option>
-                    <option value="advanced">متقدم (advanced)</option>
-                    <option value="enterprise">مؤسسي (enterprise)</option>
-                  </select>
-                </div>
+
+                {/* Row: badge + color */}
                 <div>
                   <label style={labelStyle}>نص الشارة (Badge)</label>
-                  <input
-                    value={badgeText}
-                    onChange={e => setBadgeText(e.target.value)}
-                    style={inputStyle}
-                    placeholder="مثال: الأكثر مبيعاً"
-                    maxLength={80}
-                  />
+                  <input value={badgeText} onChange={e => setBadgeText(e.target.value)} style={inputStyle} placeholder="مثال: الأكثر مبيعاً" maxLength={80} />
                 </div>
                 <div>
                   <label style={labelStyle}>لون الخطة</label>
                   <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <input
-                      type="color"
-                      value={planColor || "#2e7d32"}
-                      onChange={e => setPlanColor(e.target.value)}
-                      style={{ width: 44, height: 36, borderRadius: 6, border: "1.5px solid var(--color-border, #e5e7eb)", cursor: "pointer", padding: 2, flexShrink: 0 }}
-                    />
-                    <input
-                      value={planColor}
-                      onChange={e => setPlanColor(e.target.value)}
-                      style={{ ...inputStyle, flex: 1 }}
-                      placeholder="#2e7d32"
-                      maxLength={20}
-                    />
+                    <input type="color" value={planColor || "#2e7d32"} onChange={e => setPlanColor(e.target.value)} style={{ width: 40, height: 34, borderRadius: 6, border: "1.5px solid #e5e7eb", cursor: "pointer", padding: 2, flexShrink: 0 }} />
+                    <input value={planColor} onChange={e => setPlanColor(e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="#2e7d32" maxLength={20} />
                   </div>
                 </div>
+
+                {/* Row: display order */}
                 <div>
                   <label style={labelStyle}>ترتيب العرض</label>
-                  <input
-                    type="number"
-                    value={displayOrder}
-                    onChange={e => setDisplayOrder(e.target.value)}
-                    style={inputStyle}
-                    min={0}
-                  />
+                  <input type="number" value={displayOrder} onChange={e => setDisplayOrder(e.target.value)} style={inputStyle} min={0} />
                 </div>
               </div>
-            </CollapsibleSection>
+            </SectionCard>
 
-            {/* ── Section 2: Pricing & Billing Model ── */}
-            <CollapsibleSection title="التسعير ونمط الفوترة" icon="💰" defaultOpen={true}>
+            {/* ═══════════════════════════════════════════════
+                2. التسعير
+            ═══════════════════════════════════════════════ */}
+            <SectionCard title="التسعير" icon="💰">
 
-              {/* Step 1 — choose billing model */}
-              <div style={{ marginBottom: "1.25rem" }}>
-                <label style={labelStyle}>نمط الفوترة</label>
-                <select
-                  value={planBillingType}
-                  onChange={e => setPlanBillingType(e.target.value)}
-                  style={selectStyle}
-                  disabled={saving}
-                >
-                  <option value="free_default">مجاني دائم</option>
-                  <option value="recurring">اشتراك متكرر (شهري / سنوي)</option>
-                  <option value="one_time_fixed_term">شراء مرة واحدة</option>
-                </select>
+              {/* Plan Type 3-way selector */}
+              <p style={{ margin: "0 0 0.6rem", fontSize: "0.82rem", fontWeight: 700, color: "#374151" }}>نوع الخطة</p>
+              <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+                {([
+                  { val: "free_default",        icon: "🎁", label: "مجاني تماماً",    desc: "بدون دفع" },
+                  { val: "one_time_fixed_term",  icon: "💳", label: "دفعة واحدة",     desc: "شراء مرة" },
+                  { val: "recurring",            icon: "🔄", label: "اشتراك دوري",    desc: "شهري / سنوي" },
+                ] as { val: string; icon: string; label: string; desc: string }[]).map(opt => {
+                  const active = planBillingType === opt.val;
+                  return (
+                    <button
+                      key={opt.val}
+                      type="button"
+                      disabled={saving}
+                      onClick={() => setPlanBillingType(opt.val)}
+                      style={{
+                        flex: 1, minWidth: 110, padding: "0.65rem 0.75rem",
+                        borderRadius: 10,
+                        border: active ? "2px solid #059669" : "1.5px solid #e2e8f0",
+                        background: active ? "#f0fdf4" : "#f8fafc",
+                        cursor: saving ? "default" : "pointer",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ fontSize: "1.2rem", marginBottom: "0.15rem" }}>{opt.icon}</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: active ? 700 : 500, color: active ? "#065f46" : "#374151" }}>{opt.label}</div>
+                      <div style={{ fontSize: "0.68rem", color: "#94a3b8" }}>{opt.desc}</div>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Step 2 — recurring: pick cycle then show matching price */}
-              {planBillingType === "recurring" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  <div style={{ maxWidth: 260 }}>
-                    <label style={labelStyle}>دورة التجديد</label>
-                    <select
-                      value={recurringCycle}
-                      onChange={e => setRecurringCycle(e.target.value)}
-                      style={selectStyle}
-                      disabled={saving}
-                    >
-                      <option value="monthly">شهري</option>
-                      <option value="yearly">سنوي</option>
-                    </select>
-                  </div>
-                  {recurringCycle === "monthly" && (
-                    <div style={{ maxWidth: 260 }}>
-                      <label style={labelStyle}>السعر الشهري (ل.س)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={priceMonthly}
-                        onChange={e => setPriceMonthly(e.target.value)}
-                        style={inputStyle}
-                      />
-                    </div>
-                  )}
-                  {recurringCycle === "yearly" && (
-                    <div style={{ maxWidth: 260 }}>
-                      <label style={labelStyle}>السعر السنوي (ل.س)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={priceYearly}
-                        onChange={e => setPriceYearly(e.target.value)}
-                        style={inputStyle}
-                      />
-                    </div>
-                  )}
+              {/* Free plan */}
+              {planBillingType === "free_default" && (
+                <div style={{ padding: "0.75rem 1rem", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
+                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#166534", fontWeight: 600 }}>🎁 الخطة المجانية — لا تحتاج إلى تحديد سعر.</p>
                 </div>
               )}
 
-              {/* Step 2 — one-time: single price field */}
+              {/* One-time price */}
               {planBillingType === "one_time_fixed_term" && (
                 <div style={{ maxWidth: 260 }}>
                   <label style={labelStyle}>سعر الشراء (ل.س)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={priceMonthly}
-                    onChange={e => setPriceMonthly(e.target.value)}
-                    style={inputStyle}
-                  />
-                  <p style={{ margin: "0.35rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                    السعر المدفوع مرة واحدة فقط عند شراء هذه الخطة.
-                  </p>
+                  <input type="number" min={0} value={priceMonthly} onChange={e => setPriceMonthly(e.target.value)} style={inputStyle} placeholder="مثال: 5000" />
+                  <p style={{ margin: "0.3rem 0 0", fontSize: "0.75rem", color: "#64748b" }}>السعر المدفوع مرة واحدة فقط عند الشراء.</p>
                 </div>
               )}
 
-              {/* Step 2 — free plan: informational message */}
-              {planBillingType === "free_default" && (
-                <div style={{
-                  padding: "0.75rem 1rem",
-                  background: "#f0fdf4",
-                  borderRadius: "8px",
-                  border: "1px solid #bbf7d0",
-                }}>
-                  <p style={{ margin: 0, fontSize: "0.85rem", color: "#166534", fontWeight: 600 }}>
-                    الخطة المجانية لا تحتاج إلى تحديد سعر.
-                  </p>
+              {/* Subscription: monthly + yearly side by side */}
+              {planBillingType === "recurring" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", maxWidth: 420 }}>
+                  <div>
+                    <label style={labelStyle}>السعر الشهري (ل.س)</label>
+                    <input type="number" min={0} value={priceMonthly} onChange={e => setPriceMonthly(e.target.value)} style={inputStyle} placeholder="مثال: 500" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>السعر السنوي (ل.س)</label>
+                    <input type="number" min={0} value={priceYearly} onChange={e => setPriceYearly(e.target.value)} style={inputStyle} placeholder="مثال: 5000" />
+                  </div>
                 </div>
               )}
 
-              <p style={{ margin: "0.75rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                أسعار تفصيلية بعملات متعددة تُضاف في قسم &quot;أسعار الاشتراك&quot; بعد الحفظ.
-              </p>
-            </CollapsibleSection>
+              {planBillingType !== "free_default" && (
+                <p style={{ margin: "0.75rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
+                  💡 أسعار بعملات متعددة تُضاف في قسم &quot;أسعار الاشتراك&quot; بعد الحفظ.
+                </p>
+              )}
 
-            {/* ── Section 3: Status & Visibility (existing plans only) ── */}
-            {!isNew && (
-              <CollapsibleSection title="الحالة والظهور" icon="👁" defaultOpen={true}>
-                <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <label style={{ ...labelStyle, marginBottom: 0 }}>نشطة</label>
-                    <ToggleSwitch checked={isActive} onChange={setIsActive} disabled={saving} />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <label style={{ ...labelStyle, marginBottom: 0 }}>مرئية للعموم</label>
-                    <ToggleSwitch checked={isPublic} onChange={setIsPublic} disabled={saving} />
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <label style={{ ...labelStyle, marginBottom: 0 }}>موصى بها ⭐</label>
-                    <ToggleSwitch checked={isRecommended} onChange={setIsRecommended} disabled={saving} />
+              {/* Status & Visibility (existing plans only) */}
+              {!isNew && (
+                <div style={{ marginTop: "1.1rem", paddingTop: "1rem", borderTop: "1px solid #f1f5f9" }}>
+                  <p style={{ margin: "0 0 0.6rem", fontSize: "0.82rem", fontWeight: 700, color: "#374151" }}>الحالة والظهور</p>
+                  <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <ToggleSwitch checked={isActive} onChange={setIsActive} disabled={saving} />
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>نشطة</label>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <ToggleSwitch checked={isPublic} onChange={setIsPublic} disabled={saving} />
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>مرئية للعموم</label>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <ToggleSwitch checked={isRecommended} onChange={setIsRecommended} disabled={saving} />
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>موصى بها ⭐</label>
+                    </div>
                   </div>
                 </div>
-                <div>
+              )}
+            </SectionCard>
+
+            {/* ═══════════════════════════════════════════════
+                5. الإعدادات المتقدمة (مطوية افتراضياً)
+            ═══════════════════════════════════════════════ */}
+            <CollapsibleSection title="الإعدادات المتقدمة" icon="⚙️" defaultOpen={false}>
+
+              {/* Billing mode */}
+              {!isNew && (
+                <div style={{ marginBottom: "1rem" }}>
                   <label style={labelStyle}>وضع الفوترة</label>
-                  <select
-                    value={billingMode}
-                    onChange={e => setBillingMode(e.target.value)}
-                    style={selectStyle}
-                  >
+                  <select value={billingMode} onChange={e => setBillingMode(e.target.value)} style={selectStyle}>
                     <option value="InternalOnly">داخلي فقط (تحويل بنكي)</option>
                     <option value="StripeOnly">Stripe فقط</option>
                     <option value="Hybrid">هجين (داخلي + Stripe)</option>
                   </select>
                 </div>
-              </CollapsibleSection>
-            )}
+              )}
 
-            {/* ── Section 3b: Lifecycle Settings (one_time_fixed_term specific) ── */}
-            {planBillingType === "one_time_fixed_term" && (
-              <CollapsibleSection title="إعدادات دورة الحياة" icon="♻️" defaultOpen={true}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-
-                  {/* DurationDays */}
-                  <div>
-                    <label style={labelStyle}>مدة الصلاحية (أيام)</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={durationDays}
-                      onChange={e => setDurationDays(e.target.value)}
-                      style={inputStyle}
-                      placeholder="مثال: 90"
-                      disabled={saving}
-                    />
-                  </div>
-
-                  {/* ConsumptionPolicy */}
-                  <div>
-                    <label style={labelStyle}>سياسة الاستهلاك</label>
-                    <select
-                      value={consumptionPolicy}
-                      onChange={e => setConsumptionPolicy(e.target.value)}
-                      style={selectStyle}
-                      disabled={saving}
-                    >
-                      <option value="none">لا يوجد (none)</option>
-                      <option value="listing_quota">حصة إعلانات (listing_quota)</option>
-                    </select>
-                  </div>
-
-                  {/* ExpiryRule */}
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={labelStyle}>قاعدة الانتهاء</label>
-                    <select
-                      value={expiryRule}
-                      onChange={e => setExpiryRule(e.target.value)}
-                      style={selectStyle}
-                      disabled={saving}
-                    >
-                      <option value="expire_by_date">بالتاريخ فقط</option>
-                      <option value="expire_by_consumption">بالاستهلاك فقط</option>
-                      <option value="expire_by_whichever_comes_first">الأسبق — تاريخ أو استهلاك</option>
-                    </select>
-                  </div>
-
-                  {/* DowngradePlanCode */}
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={labelStyle}>كود خطة التخفيض التلقائي عند الانتهاء</label>
-                    <input
-                      type="text"
-                      value={downgradePlanCode}
-                      onChange={e => setDowngradePlanCode(e.target.value)}
-                      style={inputStyle}
-                      placeholder='مثال: seeker_free — اتركه فارغاً إذا لا تريد تخفيضاً تلقائياً'
-                      disabled={saving}
-                    />
-                    <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                      عند تفعيل &quot;تخفيض تلقائي عند الانتهاء&quot;، سيتم الانتقال لهذه الخطة.
-                    </p>
+              {/* Lifecycle (one_time only) */}
+              {planBillingType === "one_time_fixed_term" && (
+                <div style={{ marginBottom: "1rem" }}>
+                  <p style={{ margin: "0 0 0.6rem", fontSize: "0.82rem", fontWeight: 700, color: "#374151" }}>دورة الحياة</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
+                    <div>
+                      <label style={labelStyle}>مدة الصلاحية (أيام)</label>
+                      <input type="number" min={1} value={durationDays} onChange={e => setDurationDays(e.target.value)} style={inputStyle} placeholder="مثال: 90" disabled={saving} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>سياسة الاستهلاك</label>
+                      <select value={consumptionPolicy} onChange={e => setConsumptionPolicy(e.target.value)} style={selectStyle} disabled={saving}>
+                        <option value="none">لا يوجد</option>
+                        <option value="listing_quota">حصة إعلانات</option>
+                      </select>
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>قاعدة الانتهاء</label>
+                      <select value={expiryRule} onChange={e => setExpiryRule(e.target.value)} style={selectStyle} disabled={saving}>
+                        <option value="expire_by_date">بالتاريخ فقط</option>
+                        <option value="expire_by_consumption">بالاستهلاك فقط</option>
+                        <option value="expire_by_whichever_comes_first">الأسبق — تاريخ أو استهلاك</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </CollapsibleSection>
-            )}
+              )}
 
-            {/* DowngradePlanCode for non-one_time plans */}
-            {planBillingType !== "one_time_fixed_term" && (
-              <CollapsibleSection title="إعدادات إضافية" icon="⚙️" defaultOpen={false}>
-                <div>
-                  <label style={labelStyle}>كود خطة التخفيض التلقائي عند الانتهاء</label>
-                  <input
-                    type="text"
-                    value={downgradePlanCode}
-                    onChange={e => setDowngradePlanCode(e.target.value)}
-                    style={inputStyle}
-                    placeholder='مثال: seeker_free — اتركه فارغاً إذا لا تريد تخفيضاً تلقائياً'
-                    disabled={saving}
-                  />
-                  <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                    عند تفعيل &quot;تخفيض تلقائي عند الانتهاء&quot;، سيتم الانتقال لهذه الخطة.
-                  </p>
-                </div>
-              </CollapsibleSection>
-            )}
+              {/* Downgrade plan code */}
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={labelStyle}>كود خطة التخفيض التلقائي عند الانتهاء</label>
+                <input type="text" value={downgradePlanCode} onChange={e => setDowngradePlanCode(e.target.value)} style={inputStyle} placeholder="مثال: seeker_free — اتركه فارغاً لإيقاف التخفيض" disabled={saving} />
+              </div>
 
-            {/* ── Section 4: Trial Settings ── */}
-            <CollapsibleSection title="إعدادات الفترة التجريبية" icon="🎁" defaultOpen={false}>
-              <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>يوفّر فترة تجريبية</label>
-                  <ToggleSwitch checked={hasTrial} onChange={setHasTrial} disabled={saving} />
+              {/* Trial settings */}
+              <div style={{ marginBottom: "1rem", paddingTop: "0.75rem", borderTop: "1px solid #f1f5f9" }}>
+                <p style={{ margin: "0 0 0.6rem", fontSize: "0.82rem", fontWeight: 700, color: "#374151" }}>🎁 الفترة التجريبية</p>
+                <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: hasTrial ? "0.75rem" : 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <ToggleSwitch checked={hasTrial} onChange={setHasTrial} disabled={saving} />
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>يوفّر فترة تجريبية</label>
+                  </div>
+                  {hasTrial && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <ToggleSwitch checked={requiresPaymentForTrial} onChange={setRequiresPaymentForTrial} disabled={saving} />
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>يتطلب طريقة دفع للتجربة</label>
+                    </div>
+                  )}
                 </div>
                 {hasTrial && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <label style={{ ...labelStyle, marginBottom: 0 }}>يتطلب طريقة دفع للتجربة</label>
-                    <ToggleSwitch checked={requiresPaymentForTrial} onChange={setRequiresPaymentForTrial} disabled={saving} />
+                  <div style={{ maxWidth: 200 }}>
+                    <label style={labelStyle}>عدد أيام التجربة</label>
+                    <input type="number" min={1} max={365} value={trialDays} onChange={e => setTrialDays(e.target.value)} style={inputStyle} placeholder="14" />
                   </div>
                 )}
               </div>
-              {hasTrial && (
-                <div style={{ maxWidth: 220 }}>
-                  <label style={labelStyle}>عدد أيام التجربة المجانية</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={365}
-                    value={trialDays}
-                    onChange={e => setTrialDays(e.target.value)}
-                    style={inputStyle}
-                    placeholder="مثال: 14"
-                  />
-                </div>
-              )}
-              {!hasTrial && (
-                <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>
-                  فعّل هذا الخيار لمنح المشتركين الجدد فترة تجريبية مجانية قبل الدفع.
-                </p>
-              )}
-            </CollapsibleSection>
 
-            {/* ── Section 5: Business Rules ── */}
-            <CollapsibleSection title="قواعد الاشتراك التجاري" icon="⚙️" defaultOpen={false}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem 2.5rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>الخطة الافتراضية للمستخدمين الجدد</label>
-                  <ToggleSwitch checked={isDefaultForNewUsers} onChange={setIsDefaultForNewUsers} disabled={saving} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>متاحة للتسجيل الذاتي</label>
-                  <ToggleSwitch checked={availableForSelfSignup} onChange={setAvailableForSelfSignup} disabled={saving} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>تتطلب موافقة الإدارة</label>
-                  <ToggleSwitch checked={requiresAdminApproval} onChange={setRequiresAdminApproval} disabled={saving} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>تسمح بالإضافات (Add-ons)</label>
-                  <ToggleSwitch checked={allowAddOns} onChange={setAllowAddOns} disabled={saving} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>تسمح بالترقية</label>
-                  <ToggleSwitch checked={allowUpgrade} onChange={setAllowUpgrade} disabled={saving} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>تسمح بالتخفيض</label>
-                  <ToggleSwitch checked={allowDowngrade} onChange={setAllowDowngrade} disabled={saving} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>تخفيض تلقائي عند الانتهاء</label>
-                  <ToggleSwitch checked={autoDowngradeOnExpiry} onChange={setAutoDowngradeOnExpiry} disabled={saving} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>إعادة الشراء عند استنزاف الحصة</label>
-                  <ToggleSwitch checked={allowRepurchaseOnConsumption} onChange={setAllowRepurchaseOnConsumption} disabled={saving} />
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>تجديد مبكر عند استنزاف الحصة</label>
-                  <ToggleSwitch checked={allowEarlyRenewalOnConsumption} onChange={setAllowEarlyRenewalOnConsumption} disabled={saving} />
+              {/* Business rules */}
+              <div style={{ paddingTop: "0.75rem", borderTop: "1px solid #f1f5f9" }}>
+                <p style={{ margin: "0 0 0.6rem", fontSize: "0.82rem", fontWeight: 700, color: "#374151" }}>قواعد الاشتراك التجاري</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem 2rem" }}>
+                  {([
+                    { label: "الخطة الافتراضية للمستخدمين الجدد", val: isDefaultForNewUsers, set: setIsDefaultForNewUsers },
+                    { label: "متاحة للتسجيل الذاتي", val: availableForSelfSignup, set: setAvailableForSelfSignup },
+                    { label: "تتطلب موافقة الإدارة", val: requiresAdminApproval, set: setRequiresAdminApproval },
+                    { label: "تسمح بالإضافات (Add-ons)", val: allowAddOns, set: setAllowAddOns },
+                    { label: "تسمح بالترقية", val: allowUpgrade, set: setAllowUpgrade },
+                    { label: "تسمح بالتخفيض", val: allowDowngrade, set: setAllowDowngrade },
+                    { label: "تخفيض تلقائي عند الانتهاء", val: autoDowngradeOnExpiry, set: setAutoDowngradeOnExpiry },
+                    { label: "إعادة الشراء عند استنزاف الحصة", val: allowRepurchaseOnConsumption, set: setAllowRepurchaseOnConsumption },
+                    { label: "تجديد مبكر عند استنزاف الحصة", val: allowEarlyRenewalOnConsumption, set: setAllowEarlyRenewalOnConsumption },
+                  ] as { label: string; val: boolean; set: (v: boolean) => void }[]).map(row => (
+                    <div key={row.label} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <ToggleSwitch checked={row.val} onChange={row.set} disabled={saving} />
+                      <label style={{ ...labelStyle, marginBottom: 0, fontSize: "0.8rem" }}>{row.label}</label>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <p style={{ margin: "0.75rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
-                هذه الإعدادات تحدد كيف تتصرف المنصة مع مشتركي هذه الخطة تجارياً.
-              </p>
+
             </CollapsibleSection>
 
           </form>
 
-          {/* ── Section 4: Pricing Entries (existing plans only) ── */}
+          {/* ═══════════════════════════════════════════════
+              أسعار الاشتراك (خارج الفورم — existing plans only)
+          ═══════════════════════════════════════════════ */}
           {!isNew && (() => {
-            // Only show pricing entries that are compatible with the current billing type.
             const visiblePricing = planBillingType === "one_time_fixed_term"
               ? pricing.filter(p => p.billingCycle === "OneTime")
               : planBillingType === "recurring"
                 ? pricing.filter(p => p.billingCycle !== "OneTime")
-                : pricing; // free_default: show all (typically empty)
+                : pricing;
             const hiddenCount = pricing.length - visiblePricing.length;
             return (
-              <CollapsibleSection
-                title="أسعار الاشتراك"
-                icon="🏷"
-                count={visiblePricing.length}
-                defaultOpen={false}
-              >
+              <CollapsibleSection title="أسعار الاشتراك" icon="🏷" count={visiblePricing.length} defaultOpen={visiblePricing.length === 0 && planBillingType !== "free_default"}>
                 {planBillingType === "free_default" && (
-                  <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem", margin: "0 0 0.75rem" }}>
-                    الخطط المجانية لا تحتاج إلى أسعار.
-                  </p>
+                  <p style={{ color: "#64748b", fontSize: "0.85rem", margin: 0 }}>الخطط المجانية لا تحتاج إلى أسعار.</p>
                 )}
                 {hiddenCount > 0 && (
                   <p style={{ color: "#b45309", background: "#fef9c3", borderRadius: 6, padding: "0.4rem 0.75rem", fontSize: "0.82rem", marginBottom: "0.75rem", border: "1px solid #fde68a" }}>
-                    ⚠ {hiddenCount} سعر غير متوافق مع نمط الفوترة الحالي (تم إيقافه تلقائياً عند الحفظ).
+                    ⚠ {hiddenCount} سعر غير متوافق مع نمط الفوترة الحالي.
                   </p>
                 )}
                 {planBillingType !== "free_default" && !showAddPricing && (
                   <div style={{ marginBottom: "0.75rem" }}>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      style={{ padding: "0.3rem 0.85rem", fontSize: "0.82rem" }}
-                      onClick={() => setShowAddPricing(true)}
-                    >
+                    <button type="button" className="btn btn-primary" style={{ padding: "0.3rem 0.85rem", fontSize: "0.82rem" }} onClick={() => setShowAddPricing(true)}>
                       + إضافة سعر
                     </button>
                   </div>
                 )}
-                {pricingLoading && <p style={{ color: "var(--color-text-secondary)", fontSize: "0.88rem" }}>جاري التحميل...</p>}
+                {pricingLoading && <p style={{ color: "#64748b", fontSize: "0.88rem" }}>جاري التحميل...</p>}
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   {visiblePricing.map(entry => (
-                    <PricingRow
-                      key={entry.id}
-                      entry={entry}
-                      planId={plan!.id}
-                      planBillingType={planBillingType}
+                    <PricingRow key={entry.id} entry={entry} planId={plan!.id} planBillingType={planBillingType}
                       onUpdated={updated => setPricing(prev => prev.map(p => p.id === updated.id ? updated : p))}
                       onDeleted={id => setPricing(prev => prev.filter(p => p.id !== id))}
                     />
                   ))}
                   {!pricingLoading && visiblePricing.length === 0 && !showAddPricing && planBillingType !== "free_default" && (
-                    <p style={{ color: "var(--color-text-secondary)", fontSize: "0.85rem", textAlign: "center", padding: "0.75rem 0" }}>لا توجد أسعار بعد.</p>
+                    <p style={{ color: "#94a3b8", fontSize: "0.85rem", textAlign: "center", padding: "0.75rem 0" }}>لا توجد أسعار بعد — أضف سعراً أولاً حتى تظهر الخطة للمستخدمين.</p>
                   )}
                   {showAddPricing && (
-                    <AddPricingForm
-                      planId={plan!.id}
-                      planBillingType={planBillingType}
+                    <AddPricingForm planId={plan!.id} planBillingType={planBillingType}
                       onCreated={entry => { setPricing(prev => [...prev, entry]); setShowAddPricing(false); }}
                       onCancel={() => setShowAddPricing(false)}
                     />
@@ -1604,104 +1513,62 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
             );
           })()}
 
-          {/* ── Section 5: حدود الباقة ── */}
+          {/* ═══════════════════════════════════════════════
+              3. الحدود (existing plans only)
+          ═══════════════════════════════════════════════ */}
           {!isNew && (
-            <CollapsibleSection
-              title="حدود الباقة"
-              icon="📦"
-              count={limits.length}
-              defaultOpen={true}
-            >
-              {/* Type legend */}
-              <div style={{ display: "flex", gap: "1rem", marginBottom: "0.75rem", padding: "0.5rem 0.75rem", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700 }}>شرح الشارات:</span>
-                <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", color: "#1d4ed8" }}>
-                  <TypeBadge kind="limit" /> = حد عددي قابل للتعديل (−1 = غير محدود)
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", color: "#7c3aed" }}>
-                  <TypeBadge kind="feature" /> = ميزة تشغيل/إيقاف (في قسم المميزات)
-                </span>
-                <span style={{ fontSize: "0.75rem", color: "#b45309", marginRight: "auto" }}>⚠ الحقول الصفراء تتوقف على تفعيل ميزة أخرى أولاً</span>
-              </div>
-              {/* Quick-fill preset row */}
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem", padding: "0.55rem 0.75rem", background: "#f8fafc", borderRadius: 8, alignItems: "center", border: "1px solid #e2e8f0" }}>
-                <span style={{ fontSize: "0.74rem", color: "#64748b", fontWeight: 700, flexShrink: 0 }}>⚡ تعبئة سريعة:</span>
+            <SectionCard title="الحدود" icon="📦">
+              {/* Quick-fill presets */}
+              <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap", marginBottom: "0.85rem", alignItems: "center" }}>
+                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700 }}>⚡ تعبئة سريعة:</span>
                 {(([
-                  { label: "Starter", vals: { max_active_listings: 2,  max_images_per_listing: 5,  max_featured_slots: 0,  max_agents: 1, max_projects: 0 } },
-                  { label: "Pro",     vals: { max_active_listings: 20, max_images_per_listing: 20, max_featured_slots: 3,  max_agents: 5, max_projects: 3 } },
+                  { label: "Starter", vals: { max_active_listings: 2,  max_images_per_listing: 5,  max_featured_slots: 0,  max_agents: 1,  max_projects: 0 } },
+                  { label: "Pro",     vals: { max_active_listings: 20, max_images_per_listing: 20, max_featured_slots: 3,  max_agents: 5,  max_projects: 3 } },
                   { label: "Premium", vals: { max_active_listings: -1, max_images_per_listing: 50, max_featured_slots: -1, max_agents: -1, max_projects: -1 } },
                 ]) as { label: string; vals: Record<string, number> }[]).map(preset => (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    style={{ padding: "0.25rem 0.7rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: "#ffffff", fontSize: "0.76rem", fontWeight: 600, cursor: "pointer", color: "#1e293b" }}
-                    onClick={() => { Object.entries(preset.vals).forEach(([k, v]) => handleLimitChange(k, String(v))); }}
+                  <button key={preset.label} type="button"
+                    style={{ padding: "0.2rem 0.65rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "0.74rem", fontWeight: 600, cursor: "pointer", color: "#1e293b" }}
+                    onClick={() => Object.entries(preset.vals).forEach(([k, v]) => handleLimitChange(k, String(v)))}
                   >
                     {preset.label}
                   </button>
                 ))}
-                <span style={{ fontSize: "0.7rem", color: "#94a3b8", marginRight: "auto" }}>القيمة ‑1 = غير محدود ∞</span>
+                <span style={{ fontSize: "0.68rem", color: "#94a3b8", marginRight: "auto" }}>−1 = غير محدود ∞</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {KNOWN_LIMITS.map(kl => (
-                  <NamedLimitField
-                    key={kl.key}
-                    icon={kl.icon}
-                    label={kl.label}
-                    limitKey={kl.key}
-                    limits={limits}
-                    value={limitValues[kl.key] ?? String(limits.find(l => l.key === kl.key)?.value ?? 0)}
+                  <NamedLimitField key={kl.key} icon={kl.icon} label={kl.label} limitKey={kl.key}
+                    limits={limits} value={limitValues[kl.key] ?? String(limits.find(l => l.key === kl.key)?.value ?? 0)}
                     onValueChange={handleLimitChange}
-                    dependsOnFeatureKey={kl.dependsOnFeatureKey}
-                    dependsOnFeatureLabel={kl.dependsOnFeatureLabel}
-                    features={features}
+                    dependsOnFeatureKey={kl.dependsOnFeatureKey} dependsOnFeatureLabel={kl.dependsOnFeatureLabel} features={features}
                   />
                 ))}
-                {/* Any limits not in KNOWN_LIMITS (fallback) */}
                 {limits.filter(l => !KNOWN_LIMITS.some(k => k.key === l.key)).map(lim => (
-                  <LimitRow
-                    key={lim.key}
-                    limit={lim}
-                    value={limitValues[lim.key] ?? String(lim.value)}
-                    onValueChange={handleLimitChange}
-                  />
+                  <LimitRow key={lim.key} limit={lim} value={limitValues[lim.key] ?? String(lim.value)} onValueChange={handleLimitChange} />
                 ))}
               </div>
               {limits.length === 0 && (
-                <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "1rem 0" }}>
-                  لم تُحدَّد حدود بعد — تأكد من تعريف الحدود في كتالوج الحدود أولاً.
+                <p style={{ fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "0.75rem 0", margin: 0 }}>
+                  لم تُحدَّد حدود بعد — أضفها من كتالوج الحدود أولاً.
                 </p>
               )}
-            </CollapsibleSection>
+            </SectionCard>
           )}
 
-          {/* ── Section 6: مميزات الباقة ── */}
+          {/* ═══════════════════════════════════════════════
+              4. المميزات (existing plans only)
+          ═══════════════════════════════════════════════ */}
           {!isNew && (
-            <CollapsibleSection
-              title="مميزات الباقة"
-              icon="✨"
-              count={enabledCount}
-              defaultOpen={true}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+            <SectionCard title={`المميزات ${enabledCount > 0 ? `(${enabledCount} مفعّل)` : ""}`} icon="✨">
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {KNOWN_FEATURES.map(kf => (
-                  <NamedFeatureToggle
-                    key={kf.key}
-                    icon={kf.icon}
-                    label={kf.label}
-                    description={kf.description}
-                    featureKey={kf.key}
-                    features={features}
-                    featureSaving={featureSaving}
-                    onToggle={handleFeatureToggle}
+                  <NamedFeatureToggle key={kf.key} icon={kf.icon} label={kf.label} description={kf.description}
+                    featureKey={kf.key} features={features} featureSaving={featureSaving} onToggle={handleFeatureToggle}
                   />
                 ))}
-                {/* Any features not in KNOWN_FEATURES (fallback) */}
                 {features.filter(f => !KNOWN_FEATURES.some(k => k.key === f.key)).map(feat => (
-                  <div
-                    key={feat.key}
-                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.75rem", borderRadius: 8, background: feat.isEnabled ? "#f0fdf4" : "#f9fafb", border: feat.isEnabled ? "1px solid #bbf7d0" : "1px solid #e2e8f0", opacity: featureSaving === feat.key ? 0.55 : 1, transition: "all 0.18s" }}
-                  >
+                  <div key={feat.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0.85rem", borderRadius: 8, background: feat.isEnabled ? "#f0fdf4" : "#f9fafb", border: feat.isEnabled ? "1px solid #bbf7d0" : "1px solid #e2e8f0", opacity: featureSaving === feat.key ? 0.55 : 1, transition: "all 0.18s" }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
                       {feat.icon && <span style={{ fontSize: "1rem", flexShrink: 0 }}>{feat.icon}</span>}
                       <div>
@@ -1709,41 +1576,25 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                         {feat.description && <p style={{ margin: 0, fontSize: "0.73rem", color: "#64748b" }}>{feat.description}</p>}
                       </div>
                     </div>
-                    <ToggleSwitch
-                      checked={feat.isEnabled}
-                      onChange={(val) => handleFeatureToggle(feat.key, val)}
-                      disabled={featureSaving === feat.key}
-                    />
+                    <ToggleSwitch checked={feat.isEnabled} onChange={(val) => handleFeatureToggle(feat.key, val)} disabled={featureSaving === feat.key} />
                   </div>
                 ))}
+                {features.length === 0 && (
+                  <p style={{ fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "0.75rem 0", margin: 0 }}>
+                    لم تُحدَّد ميزات بعد — أضفها من كتالوج الميزات أولاً.
+                  </p>
+                )}
               </div>
-              {features.length === 0 && (
-                <p style={{ margin: "0.25rem 0 0", fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "1rem 0" }}>
-                  لم تُحدَّد ميزات بعد — تأكد من تعريف الميزات في كتالوج الميزات أولاً.
-                </p>
-              )}
-            </CollapsibleSection>
+            </SectionCard>
           )}
 
-          {/* ── Section 7: القيمة التسويقية للباقة ── */}
-          {!isNew && (
-            <CollapsibleSection
-              title="القيمة التسويقية للباقة"
-              icon="📈"
-              defaultOpen={true}
-            >
-              <p style={{ margin: "0 0 0.75rem", fontSize: "0.8rem", color: "#64748b", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 6, padding: "0.5rem 0.75rem" }}>
-                هذه الحقول تتطلب تعريف مسبق في <strong>كتالوج الحدود</strong> بنفس المفاتيح المذكورة. الحقول الرمادية غير معرَّفة في الكتالوج بعد.
-              </p>
+          {/* القيمة التسويقية */}
+          {!isNew && limits.some(l => KNOWN_MARKETING.some(k => k.key === l.key)) && (
+            <CollapsibleSection title="القيمة التسويقية" icon="📈" defaultOpen={false}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
                 {KNOWN_MARKETING.map(km => (
-                  <NamedLimitField
-                    key={km.key}
-                    icon={km.icon}
-                    label={km.label}
-                    limitKey={km.key}
-                    limits={limits}
-                    value={limitValues[km.key] ?? String(limits.find(l => l.key === km.key)?.value ?? 0)}
+                  <NamedLimitField key={km.key} icon={km.icon} label={km.label} limitKey={km.key}
+                    limits={limits} value={limitValues[km.key] ?? String(limits.find(l => l.key === km.key)?.value ?? 0)}
                     onValueChange={handleLimitChange}
                   />
                 ))}
@@ -1751,23 +1602,15 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
             </CollapsibleSection>
           )}
 
-          {/* ── Section 7: Live Plan Preview (existing plans only) ── */}
+          {/* معاينة الخطة */}
           {!isNew && (
             <CollapsibleSection title="معاينة الخطة" icon="🔍" defaultOpen={false}>
-              <p style={{ margin: "0 0 0.9rem", fontSize: "0.82rem", color: "var(--color-text-secondary)" }}>
-                معاينة مباشرة لكيفية ظهور الخطة في صفحة التسعير.
-              </p>
+              <p style={{ margin: "0 0 0.75rem", fontSize: "0.8rem", color: "#64748b" }}>معاينة مباشرة لكيفية ظهور الخطة في صفحة التسعير.</p>
               <PlanPreviewCard
-                displayNameAr={displayNameAr}
-                displayNameEn={displayNameEn}
-                internalName={name}
-                badgeText={badgeText}
-                planColor={planColor}
-                isRecommended={isRecommended}
-                planCategory={planCategory}
-                basePriceMonthly={priceMonthly}
-                enabledFeatures={features}
-                limits={limits}
+                displayNameAr={displayNameAr} displayNameEn={displayNameEn} internalName={name}
+                badgeText={badgeText} planColor={planColor} isRecommended={isRecommended}
+                planCategory={planCategory} basePriceMonthly={priceMonthly}
+                enabledFeatures={features} limits={limits}
               />
             </CollapsibleSection>
           )}
@@ -1775,46 +1618,23 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         </div>
 
         {/* ── Sticky Save Footer ── */}
-        <div style={{
-          flexShrink: 0,
-          borderTop: "1px solid var(--color-border, #e5e7eb)",
-          backgroundColor: "#ffffff",
-          padding: "0.85rem 1.5rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "0.75rem",
-        }}>
-          {/* Save status text */}
-          <div style={{ fontSize: "0.82rem", color: "var(--color-text-secondary)", minWidth: 140 }}>
+        <div style={{ flexShrink: 0, borderTop: "1px solid #e5e7eb", backgroundColor: "#ffffff", padding: "0.85rem 1.4rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
+          <div style={{ fontSize: "0.82rem", color: "#64748b", minWidth: 130 }}>
             {saveStatus === "saving" && (
               <span style={{ color: "#2563eb", display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #2563eb", borderTop: "2px solid transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
                 جارٍ الحفظ...
               </span>
             )}
-            {saveStatus === "saved" && (
-              <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ تم الحفظ</span>
-            )}
-            {saveStatus === "dirty" && (
-              <span style={{ color: "#b45309" }}>لم يتم الحفظ بعد</span>
-            )}
+            {saveStatus === "saved"  && <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ تم الحفظ</span>}
+            {saveStatus === "dirty"  && <span style={{ color: "#b45309" }}>لم يتم الحفظ بعد</span>}
           </div>
-
-          {/* Buttons */}
           <div style={{ display: "flex", gap: "0.65rem", alignItems: "center" }}>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={handleCloseModal}
-              disabled={saving}
-              style={{ minWidth: 80 }}
-            >
+            <button type="button" className="btn btn-ghost" onClick={handleCloseModal} disabled={saving} style={{ minWidth: 80 }}>
               إلغاء
             </button>
             <button
-              type="button"
-              className="btn btn-primary"
+              type="button" className="btn btn-primary"
               onClick={() => { if (isNew) { formRef.current?.requestSubmit(); } else void doSave(); }}
               disabled={saving || (!isNew && !isDirty)}
               style={{ minWidth: 130 }}
