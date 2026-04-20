@@ -17,7 +17,35 @@ import PricingCard from "@/components/pricing/PricingCard";
 import PricingComparisonTable from "@/components/pricing/PricingComparisonTable";
 import UpgradeModal from "@/components/pricing/UpgradeModal";
 import PlanDetailsModal from "@/components/pricing/PlanDetailsModal";
-import Spinner from "@/components/ui/Spinner";
+
+// ── Plans skeleton (shown while public plans API loads) ───────────────────────
+
+function PlansSkeleton() {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: "1.5rem" }}>
+      {[1, 2, 3].map((i) => (
+        <div key={i} style={{
+          background: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "var(--radius-lg)",
+          padding: "2rem 1.6rem",
+          display: "flex", flexDirection: "column", gap: "1.25rem",
+        }}>
+          <div style={{ height: 14, width: "40%", background: "#f0f0f0", borderRadius: 6 }} />
+          <div style={{ height: 22, width: "60%", background: "#f0f0f0", borderRadius: 6 }} />
+          <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "1rem" }}>
+            <div style={{ height: 36, width: "50%", background: "#f0f0f0", borderRadius: 6, marginBottom: "0.5rem" }} />
+            <div style={{ height: 12, width: "30%", background: "#f0f0f0", borderRadius: 6 }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {[1,2,3].map(j => <div key={j} style={{ height: 12, background: "#f0f0f0", borderRadius: 6, width: j === 3 ? "70%" : "100%" }} />)}
+          </div>
+          <div style={{ height: 42, background: "#f0f0f0", borderRadius: "var(--radius-md)", marginTop: "auto" }} />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ── Plan grouping ─────────────────────────────────────────────────────────────
 
@@ -342,7 +370,7 @@ export default function PricingPage() {
         id="plans-section"
         style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "2.5rem 1.5rem 4rem" }}
       >
-        {plansLoading && <Spinner />}
+        {plansLoading && <PlansSkeleton />}
 
         {intentError && (
           <div style={{ textAlign: "center", padding: "0.75rem 1rem", marginBottom: "1rem", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b", fontWeight: 600, fontSize: "0.9rem" }}>

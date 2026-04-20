@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { yearlySaving } from "@/features/pricing/labels";
 import type { PublicPricingItem } from "@/features/pricing/types";
 import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
@@ -164,7 +165,7 @@ export default function PricingCard({
           letterSpacing: "0.04em",
           boxShadow:    "0 3px 12px rgba(4,120,87,0.45)",
         }}>
-          🏆 الأفضل
+          ⭐ الأكثر طلباً
         </div>
       )}
 
@@ -376,30 +377,54 @@ export default function PricingCard({
         )}
 
         {/* Main subscribe CTA */}
-        <button
-          suppressHydrationWarning
-          type="button"
-          onClick={handleClick}
-          disabled={isDisabled}
-          style={{
-            width:         "100%",
-            padding:       "0.8rem 1rem",
-            borderRadius:  "var(--radius-md)",
-            border:        ctaStyle.border ?? "none",
-            background:    isBest && !isCurrent ? "#047857" : ctaStyle.bg,
-            color:         isBest && !isCurrent ? "#fff"    : ctaStyle.color,
-            cursor:        isCurrent ? "default" : isLoadingIntent ? "wait" : "pointer",
-            fontFamily:    "inherit",
-            fontSize:      "0.97rem",
-            fontWeight:    700,
-            transition:    "opacity 0.2s, transform 0.15s",
-            opacity:       isLoadingIntent && !isCurrent ? 0.65 : 1,
-            letterSpacing: "0.01em",
-            boxShadow:     isBest && !isCurrent ? "0 4px 14px rgba(4,120,87,0.35)" : undefined,
-          }}
-        >
-          {isLoadingIntent && !isCurrent ? "جارٍ التحميل..." : CTA_LABEL[kind]}
-        </button>
+        {kind === "no_auth" ? (
+          <Link
+            href="/login"
+            style={{
+              display:       "block",
+              textAlign:     "center",
+              width:         "100%",
+              padding:       "0.8rem 1rem",
+              borderRadius:  "var(--radius-md)",
+              border:        isBest ? "none" : "1.5px solid var(--color-primary)",
+              background:    isBest ? "#047857" : "var(--color-primary)",
+              color:         "#fff",
+              fontSize:      "0.97rem",
+              fontWeight:    700,
+              letterSpacing: "0.01em",
+              textDecoration:"none",
+              boxShadow:     isBest ? "0 4px 14px rgba(4,120,87,0.35)" : undefined,
+              boxSizing:     "border-box",
+            }}
+          >
+            اشترك الآن
+          </Link>
+        ) : (
+          <button
+            suppressHydrationWarning
+            type="button"
+            onClick={handleClick}
+            disabled={isDisabled}
+            style={{
+              width:         "100%",
+              padding:       "0.8rem 1rem",
+              borderRadius:  "var(--radius-md)",
+              border:        ctaStyle.border ?? "none",
+              background:    isBest && !isCurrent ? "#047857" : ctaStyle.bg,
+              color:         isBest && !isCurrent ? "#fff"    : ctaStyle.color,
+              cursor:        isCurrent ? "default" : isLoadingIntent ? "wait" : "pointer",
+              fontFamily:    "inherit",
+              fontSize:      "0.97rem",
+              fontWeight:    700,
+              transition:    "opacity 0.2s, transform 0.15s",
+              opacity:       isLoadingIntent && !isCurrent ? 0.65 : 1,
+              letterSpacing: "0.01em",
+              boxShadow:     isBest && !isCurrent ? "0 4px 14px rgba(4,120,87,0.35)" : undefined,
+            }}
+          >
+            {isLoadingIntent && !isCurrent ? "جارٍ التحميل..." : CTA_LABEL[kind]}
+          </button>
+        )}
 
         {isUpgrade && (
           <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--color-text-muted)", margin: "0.25rem 0 0" }}>
