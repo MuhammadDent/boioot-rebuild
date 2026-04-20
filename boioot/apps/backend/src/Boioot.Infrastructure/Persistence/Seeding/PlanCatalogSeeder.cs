@@ -34,6 +34,7 @@ public sealed class PlanCatalogSeeder
         await SeedPlanPricingsAsync(ct);
         await ApplyPlanCorrectionsAsync(ct);
         await ApplyPlanNameNormalizationAsync(ct);
+        await CorrectPlanBillingDataAsync(ct);
         await CorrectMisassignedSubscriptionsAsync(ct);
         await SeedBlogSeoSettingsAsync(ct);
     }
@@ -953,6 +954,93 @@ public sealed class PlanCatalogSeeder
         {
             _log.LogDebug("CorrectMisassignedSubscriptions: no mis-assigned subscriptions found.");
         }
+    }
+
+    // ── Fix plan billing data mismatches (idempotent) ─────────────────────────
+    //
+    // Problems fixed:
+    // 1. owner_advanced (00000005) may have IsPublic=false after admin toggle → force visible.
+    // 2. seeker_advanced (00000002) and owner_basic (00000004) were set to
+    //    PlanBillingType="one_time_fixed_term" via admin but their only pricing entries
+    //    have BillingCycle="Monthly"/"Yearly" → IsCycleCompatible filters them out → empty
+    //    pricing array in the public API.  Fix: insert an "OneTime" pricing entry so the
+    //    plan shows up correctly.
+
+    private async Task CorrectPlanBillingDataAsync(CancellationToken ct)
+    {
+        // ── 1. Force owner_advanced visible ──────────────────────────────────
+        var ownerAdvancedId = Guid.Parse("00000005-0000-0000-0000-000000000000");
+        var ownerAdvanced   = await _ctx.Plans
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(p => p.Id == ownerAdvancedId, ct);
+
+        if (ownerAdvanced != null && (!ownerAdvanced.IsPublic || !ownerAdvanced.IsActive))
+        {
+            ownerAdvanced.IsPublic = true;
+            ownerAdvanced.IsActive = true;
+            _log.LogInformation("CorrectPlanBillingData: owner_advanced forced IsPublic=true IsActive=true.");
+        }
+
+        // ── 2. Add OneTime pricing for one_time_fixed_term plans that lack it ─
+        // These plans were set to one_time_fixed_term via admin but the seeder only
+        // created Monthly + Yearly entries.  IsCycleCompatible filters them out.
+        // We add a stable "OneTime" entry (using a deterministic GUID) so the plan
+        // displays correctly in the public pricing API.
+        var oneTimeFixes = new List<(Guid PlanId, Guid PricingId, decimal Amount)>
+        {
+            // seeker_advanced — OneTime at 15000 SYP (matches Yearly rate)
+            (Guid.Parse("00000002-0000-0000-0000-000000000000"),
+             Guid.Parse("f0000002-0000-0000-0000-000000000001"),
+             15000m),
+            // owner_basic — OneTime at 70000 SYP (matches Yearly rate)
+            (Guid.Parse("00000004-0000-0000-0000-000000000000"),
+             Guid.Parse("f0000004-0000-0000-0000-000000000001"),
+             70000m),
+        };
+
+        var fixPlanIds    = oneTimeFixes.Select(f => f.PlanId).ToList();
+        var fixPricingIds = oneTimeFixes.Select(f => f.PricingId).ToList();
+
+        // Plans that have PlanBillingType = "one_time_fixed_term" in the DB
+        var oneTimePlanIds = (await _ctx.Plans
+            .IgnoreQueryFilters()
+            .Where(p => fixPlanIds.Contains(p.Id) && p.PlanBillingType == "one_time_fixed_term")
+            .Select(p => p.Id)
+            .ToListAsync(ct)).ToHashSet();
+
+        // Existing OneTime pricing entries (by our deterministic IDs) — skip if already there
+        var existingPricingIds = (await _ctx.PlanPricings
+            .Where(pp => fixPricingIds.Contains(pp.Id))
+            .Select(pp => pp.Id)
+            .ToListAsync(ct)).ToHashSet();
+
+        var toAdd = new List<PlanPricing>();
+        foreach (var (planId, pricingId, amount) in oneTimeFixes)
+        {
+            if (!oneTimePlanIds.Contains(planId))    continue; // not one_time_fixed_term → skip
+            if (existingPricingIds.Contains(pricingId)) continue; // already exists → skip
+
+            toAdd.Add(new PlanPricing
+            {
+                Id           = pricingId,
+                PlanId       = planId,
+                BillingCycle = "OneTime",
+                PriceAmount  = amount,
+                CurrencyCode = "SYP",
+                IsActive     = true,
+                IsPublic     = true,
+            });
+        }
+
+        if (toAdd.Count > 0)
+        {
+            _ctx.PlanPricings.AddRange(toAdd);
+            _log.LogInformation(
+                "CorrectPlanBillingData: added {Count} OneTime pricing entries for one_time_fixed_term plans.",
+                toAdd.Count);
+        }
+
+        await _ctx.SaveChangesAsync(ct);
     }
 
     // ── BlogSeoSettings (singleton) ───────────────────────────────────────────

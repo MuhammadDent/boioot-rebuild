@@ -356,7 +356,7 @@ export default function PricingPage() {
           </div>
         )}
 
-        {visiblePlans.some(p => p.billingType !== "one_time_fixed_term" && p.billingType !== "free_default") && (
+        {visiblePlans.some(p => p.planBillingType !== "one_time_fixed_term" && p.planBillingType !== "free_default") && (
           <div style={{ display: "flex", justifyContent: "center", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.15))" }}>
             <div style={{ background: "#fff", borderRadius: "999px", padding: "0.2rem" }}>
               <BillingToggle cycle={cycle} onChange={setCycle} yearlySavingPct={avgSaving} />

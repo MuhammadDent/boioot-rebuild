@@ -105,7 +105,7 @@ function PlanCard({
 }) {
   const cardRouter = useRouter();
 
-  const isOneTimePlan = plan.billingType === "one_time_fixed_term"
+  const isOneTimePlan = plan.planBillingType === "one_time_fixed_term"
     || plan.pricing.every(p => p.billingCycle === "OneTime");
 
   const pricing = isOneTimePlan
@@ -114,7 +114,7 @@ function PlanCard({
 
   const targetPricing = pricing ?? (plan.pricing.length > 0 ? plan.pricing[0] : null);
 
-  const isActivatableFree = plan.billingType === "free_default";
+  const isActivatableFree = plan.planBillingType === "free_default";
   const isCurrent    = plan.planId === currentPlanId;
   const isRecommended = plan.isRecommended;
   const isActivatingFree = freeActivatingId === plan.planId;
@@ -458,7 +458,7 @@ function CheckoutModal({
           <p style={{ margin: "0.4rem 0 0", fontSize: "1.2rem", fontWeight: 900, color: "#059669" }}>
             {formatAmount(selectedPricing.priceAmount, selectedPricing.currencyCode)}
             <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "#64748b", marginRight: "0.35rem" }}>
-              {plan.billingType === "one_time_fixed_term"
+              {plan.planBillingType === "one_time_fixed_term"
                 ? "دفعة واحدة"
                 : `/ ${BILLING_CYCLE_LABELS[selectedPricing.billingCycle] ?? selectedPricing.billingCycle}`}
             </span>
@@ -466,7 +466,7 @@ function CheckoutModal({
         </div>
 
         {/* Billing cycle selector (if multiple options — hidden for one-time plans) */}
-        {plan.pricing.length > 1 && plan.billingType !== "one_time_fixed_term" && (
+        {plan.pricing.length > 1 && plan.planBillingType !== "one_time_fixed_term" && (
           <div style={{ marginBottom: "1.25rem" }}>
             <p style={{ margin: "0 0 0.6rem", fontSize: "0.85rem", fontWeight: 700, color: "#374151" }}>
               دورة الفوترة
@@ -996,8 +996,8 @@ export default function PlansPage() {
     .sort((a, b) => (a.displayOrder ?? a.rank) - (b.displayOrder ?? b.rank));
 
   const hasBothCycles = visiblePlans.some(p =>
-    p.billingType !== "one_time_fixed_term"
-    && p.billingType !== "free_default"
+    p.planBillingType !== "one_time_fixed_term"
+    && p.planBillingType !== "free_default"
     && p.pricing.some(pr => pr.billingCycle === "Yearly")
   );
 
@@ -1283,7 +1283,7 @@ export default function PlansPage() {
           onClose={() => setDetailPlan(null)}
           onChoose={(p, pr) => {
             setDetailPlan(null);
-            if (p.billingType === "free_default") {
+            if (p.planBillingType === "free_default") {
               handleActivateFree(p.planId);
             } else {
               setCheckoutPlan(p);

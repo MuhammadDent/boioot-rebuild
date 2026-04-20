@@ -47,7 +47,7 @@ export default function PlanDetailsModal({
 }: PlanDetailsModalProps) {
   const hasMonthly = plan.pricing.some(p => p.billingCycle === "Monthly");
   const hasYearly  = plan.pricing.some(p => p.billingCycle === "Yearly");
-  const isOneTime  = plan.billingType === "one_time_fixed_term"
+  const isOneTime  = plan.planBillingType === "one_time_fixed_term"
     || plan.pricing.every(p => p.billingCycle === "OneTime");
 
   const initialCycle: "Monthly" | "Yearly" =

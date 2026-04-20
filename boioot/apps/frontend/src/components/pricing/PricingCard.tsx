@@ -23,7 +23,7 @@ function resolveCta(
   sub: CurrentSubscriptionResponse | null
 ): { kind: CtaKind; pricingId: string | null } {
   // For one-time plans, use the first pricing entry regardless of toggle cycle
-  const isOneTimePlan = plan.billingType === "one_time_fixed_term"
+  const isOneTimePlan = plan.planBillingType === "one_time_fixed_term"
     || plan.pricing.every((p) => p.billingCycle === "OneTime");
   const entry = isOneTimePlan
     ? plan.pricing.find((p) => p.billingCycle === "OneTime") ?? plan.pricing[0]
@@ -88,7 +88,7 @@ export default function PricingCard({
   const isUpgrade  = kind === "upgrade";
 
   const oneTimeEntry = plan.pricing.find((p) => p.billingCycle === "OneTime");
-  const isOneTimePlan = plan.billingType === "one_time_fixed_term"
+  const isOneTimePlan = plan.planBillingType === "one_time_fixed_term"
     || plan.pricing.every((p) => p.billingCycle === "OneTime");
 
   // For one-time plans, always show the OneTime entry regardless of toggle cycle

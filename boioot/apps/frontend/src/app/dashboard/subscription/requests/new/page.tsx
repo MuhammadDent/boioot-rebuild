@@ -97,7 +97,7 @@ export default function NewRequestPage() {
     const planId = params.get("planId");
     if (!planId) return;
     const found = plans.find(p => p.planId === planId);
-    if (found && found.billingType !== "free_default") {
+    if (found && found.planBillingType !== "free_default") {
       setSelectedPlan(found);
       const fallbackPricing = found.pricing[0] ?? null;
       setSelectedPricing(fallbackPricing);
@@ -143,7 +143,7 @@ export default function NewRequestPage() {
     const effectivePricing = selectedPricing ?? selectedPlan.pricing[0] ?? null;
     const effectiveCycle: "Monthly" | "Yearly" | "OneTime" =
       (effectivePricing?.billingCycle as "Monthly" | "Yearly" | "OneTime") ??
-      (selectedPlan.billingType === "one_time_fixed_term" ? "OneTime" : "Monthly");
+      (selectedPlan.planBillingType === "one_time_fixed_term" ? "OneTime" : "Monthly");
 
     const payload = {
       planId:       selectedPlan.planId,
@@ -255,7 +255,7 @@ export default function NewRequestPage() {
   // ── compute visible plans ────────────────────────────────────────────────────
   const audienceType = getAudienceTypeForUser(user.role, currentSub?.audienceType);
   const selectablePlans = filterPlansForAudience(plans, audienceType)
-    .filter(p => p.billingType !== "free_default")   // exclude free plans — no payment needed
+    .filter(p => p.planBillingType !== "free_default")   // exclude free plans — no payment needed
     .sort((a, b) => (a.displayOrder ?? a.rank) - (b.displayOrder ?? b.rank));
 
   // ── main render ──────────────────────────────────────────────────────────────

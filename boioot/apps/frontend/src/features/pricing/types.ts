@@ -37,8 +37,9 @@ export interface PublicPricingItem {
   /**
    * Billing type: "free_default" | "one_time_fixed_term" | "recurring"
    * Use this — not billingCycle — to drive UI decisions (hide toggle for one-time plans).
+   * NOTE: the JSON field from the API is "planBillingType" — matches this field name.
    */
-  billingType:          string;
+  planBillingType:      string;
   pricing:              PublicPricingEntry[];
   limits:               PublicLimitItem[];
   features:             PublicFeatureItem[];
