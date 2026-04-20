@@ -18,11 +18,6 @@ const CYCLE_LABEL: Record<string, string> = {
   OneTime: "دفعة واحدة",
 };
 
-const CATEGORY_LABEL: Record<string, string> = {
-  Individual: "أفراد",
-  Business:   "مكاتب ومحترفون",
-  Developer:  "شركات تطوير",
-};
 
 function yearlySaving(monthlyAmount: number, yearlyAmount: number): number {
   if (!monthlyAmount || !yearlyAmount) return 0;
@@ -68,9 +63,6 @@ export default function PlanDetailsModal({
   const isFree     = activePricing ? activePricing.priceAmount === 0 : true;
   const audienceAr = plan.audienceType
     ? (AUDIENCE_TYPE_LABEL[plan.audienceType.toLowerCase()] ?? plan.audienceType)
-    : null;
-  const categoryAr = plan.planCategory
-    ? (CATEGORY_LABEL[plan.planCategory] ?? plan.planCategory)
     : null;
 
   const enabledFeatures  = plan.features.filter(f => f.isEnabled);
@@ -167,20 +159,6 @@ export default function PlanDetailsModal({
                     border:          "1px solid #e2e8f0",
                   }}>
                     {audienceAr}
-                  </span>
-                )}
-                {categoryAr && (
-                  <span style={{
-                    display:         "inline-flex",
-                    padding:         "0.2rem 0.7rem",
-                    borderRadius:    999,
-                    fontSize:        "0.72rem",
-                    fontWeight:      600,
-                    backgroundColor: "#f8fafc",
-                    color:           "#64748b",
-                    border:          "1px solid #e2e8f0",
-                  }}>
-                    {categoryAr}
                   </span>
                 )}
               </div>

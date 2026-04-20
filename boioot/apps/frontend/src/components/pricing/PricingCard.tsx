@@ -190,11 +190,6 @@ export default function PricingCard({
 
       {/* ── Plan header ── */}
       <div>
-        {plan.planCategory && (
-          <p style={{ margin: "0 0 0.25rem", fontSize: "0.72rem", fontWeight: 600, color: "var(--color-text-muted)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-            {plan.planCategory}
-          </p>
-        )}
         <h3 style={{
           fontSize:   "1.25rem",
           fontWeight: 900,

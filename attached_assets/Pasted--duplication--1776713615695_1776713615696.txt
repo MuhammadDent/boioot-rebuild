@@ -1,0 +1,169 @@
+أريد إزالة آخر duplication في نظام إدارة الباقات بشكل احترافي وآمن، وتحديدًا التخلص من الاعتماد على `category / planCategory` في الـ frontend logic لأنه يكرر معنى موجود أصلًا في `audience` و `accountType`.
+
+## الهدف
+
+جعل:
+
+* `audience` = المصدر الوحيد للحقيقة
+* `accountType` = قيمة مشتقة تلقائيًا من `audience`
+* `category / planCategory` = غير مستخدم في الـ UI ولا في قرارات الـ frontend
+
+---
+
+## قواعد صارمة
+
+1. ❌ لا تعمل refactor كبير
+2. ❌ لا تغيّر backend schema
+3. ❌ لا تغيّر database columns
+4. ❌ لا تكسر أي API أو payload مطلوب
+5. ❌ لا تحذف أي شيء من السيرفر إذا كان ما زال مطلوبًا
+6. ✅ التعديل يكون في Frontend logic + UI فقط
+7. ✅ أي حقل backend ما زال مطلوبًا يمكن إرساله، لكن لا تعتمد عليه في القرار ولا تعرضه للمستخدم
+
+---
+
+## المطلوب بدقة
+
+### 1) إزالة `category / planCategory` من واجهة الإدارة
+
+* لا يظهر أي selector أو input أو state مرئي متعلق بـ:
+
+  * `category`
+  * `planCategory`
+  * `Plan Category`
+  * `فئة الخطة`
+
+---
+
+### 2) إزالة الاعتماد عليه في الـ frontend logic
+
+ابحث عن أي منطق يستخدم:
+
+* `category`
+* `planCategory`
+* `Business`
+* `Individual`
+
+في تحديد سلوك الفورم أو في اشتقاق القيم
+
+وأزل هذا الاعتماد بحيث لا يكون `category` مصدر قرار نهائي لأي شيء في الواجهة.
+
+---
+
+### 3) اجعل `audience` هو المصدر الوحيد للحقيقة
+
+استخدم mapping واضح ومركزي فقط من `audience` إلى `accountType`:
+
+```ts
+switch (audience) {
+  case "owner":
+  case "seeker":
+  case "broker":
+    accountType = "Individual";
+    break;
+  case "office":
+    accountType = "Office";
+    break;
+  case "company":
+    accountType = "Company";
+    break;
+  default:
+    accountType = null;
+}
+```
+
+إذا كان هناك helper function أفضل، أنشئ helper صغيرًا وواضحًا بدل تكرار هذا المنطق.
+
+---
+
+### 4) إذا كان API ما زال يتطلب `category`
+
+* لا تجعل المستخدم يختاره
+* لا تجعل الواجهة تعتمد عليه
+* أرسله فقط كقيمة fallback/static إذا كان إلزاميًا مؤقتًا
+
+لكن:
+
+* لا تستخدمه في العرض
+* لا تستخدمه في validation
+* لا تستخدمه في branching logic
+
+إذا احتجت قيمة مؤقتة:
+
+* owner / seeker / broker → `"Individual"`
+* office / company → `"Business"`
+
+لكن هذا فقط للتوافق مع API الحالي، وليس كمفهوم يظهر في الواجهة.
+
+---
+
+### 5) نظّف الـ state والـ handlers
+
+* احذف أي `useState` أو `useEffect` أو handlers أو constants غير لازمة مرتبطة بـ `category`
+* احذف أي imports غير مستخدمة
+* احذف أي labels أو placeholders أو helper text متعلق بـ category
+
+---
+
+### 6) حافظ على السلوك الحالي
+
+بعد التعديل يجب أن يبقى التالي يعمل بدون تغيير:
+
+* إنشاء الباقة
+* تعديل الباقة
+* حفظ الباقة
+* إرسال البيانات للـ API
+* عرض الباقات للمستخدمين
+* owner / office / company flows
+
+---
+
+### 7) تحسين بسيط في UX
+
+أضف تحت `audience` فقط شرحًا صغيرًا جدًا:
+"حدد لمن هذه الخطة (مالك، مكتب، شركة...)"
+
+ولا تضف أي شرح جديد لـ category لأنه يجب أن يختفي من UI أصلًا.
+
+---
+
+## المطلوب في النهاية
+
+أعطني تقريرًا مختصرًا جدًا بهذه الصيغة:
+
+### ما الذي تم حذفه من الواجهة؟
+
+* ...
+
+### ما الذي تم حذفه من الـ frontend logic؟
+
+* ...
+
+### هل ما زال API يتطلب category؟
+
+* نعم / لا
+
+### إذا نعم، كيف تم التعامل معها؟
+
+* ...
+
+### هل أصبح audience هو المصدر الوحيد للحقيقة؟
+
+* نعم / لا
+
+### هل بقي أي duplication مشابه؟
+
+* ...
+
+---
+
+## ممنوع
+
+* لا تغيّر backend models
+* لا تغيّر migrations
+* لا تغيّر أسماء الحقول في السيرفر
+* لا تضف abstraction معقد
+* لا تعمل over-engineering
+
+الهدف النهائي:
+واجهة أبسط + منطق أوضح + إزالة duplication الأخير بدون كسر النظام.

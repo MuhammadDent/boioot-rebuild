@@ -24,6 +24,19 @@ function Toast({ msg, type }: { msg: string; type: "ok" | "err" }) {
   );
 }
 
+// ── Audience → AccountType/Category derivation ────────────────────────────────
+function audienceToAccountType(audience: string): string {
+  if (audience === "office")  return "Office";
+  if (audience === "company") return "Company";
+  if (audience === "seeker" || audience === "owner" || audience === "broker") return "Individual";
+  return "";
+}
+function audienceToPlanCategory(audience: string): string {
+  if (audience === "office" || audience === "company") return "Business";
+  if (audience === "seeker" || audience === "owner" || audience === "broker") return "Individual";
+  return "";
+}
+
 // ── Audience / Tier display helpers ───────────────────────────────────────────
 
 const AUDIENCE_AR_LABEL: Record<string, string> = {
@@ -623,7 +636,6 @@ function PlanPreviewCard({
   badgeText,
   planColor,
   isRecommended,
-  planCategory,
   basePriceMonthly,
   enabledFeatures,
   limits,
@@ -634,7 +646,6 @@ function PlanPreviewCard({
   badgeText: string;
   planColor: string;
   isRecommended: boolean;
-  planCategory: string;
   basePriceMonthly: string;
   enabledFeatures: PlanFeatureItem[];
   limits?: PlanLimitItem[];
@@ -669,11 +680,6 @@ function PlanPreviewCard({
         </div>
       )}
       <h3 style={{ margin: "0 0 0.2rem", fontSize: "1.1rem", fontWeight: 800 }}>{visibleName || "اسم الباقة"}</h3>
-      {planCategory && (
-        <p style={{ margin: "0 0 0.5rem", fontSize: "0.75rem", color: "#888" }}>
-          {planCategory === "Individual" ? "للأفراد" : planCategory === "Business" ? "للأعمال" : planCategory}
-        </p>
-      )}
       <p style={{ margin: "0 0 0.6rem", fontSize: "1.25rem", fontWeight: 800, color: accent }}>
         {price === 0 ? "مجاني" : `${price.toLocaleString("ar-SY")} ل.س / شهر`}
       </p>
@@ -826,7 +832,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [consumptionPolicy, setConsumptionPolicy] = useState(plan?.consumptionPolicy ?? "none");
   const [expiryRule, setExpiryRule]               = useState(plan?.expiryRule ?? "expire_by_date");
   const [downgradePlanCode, setDowngradePlanCode] = useState(plan?.downgradePlanCode ?? "");
-  const [planCategory, setPlanCategory]           = useState(plan?.planCategory ?? "");
   const [displayNameAr, setDisplayNameAr]         = useState(plan?.displayNameAr ?? "");
   const [displayNameEn, setDisplayNameEn]         = useState(plan?.displayNameEn ?? "");
   const [audienceType, setAudienceType]           = useState(plan?.audienceType ?? "");
@@ -834,19 +839,10 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [badgeText, setBadgeText]                 = useState(plan?.badgeText ?? "");
   const [planColor, setPlanColor]                 = useState(plan?.planColor ?? "");
 
-  // Auto-derive applicableAccountType and planCategory from audienceType
+  // Auto-derive applicableAccountType from audienceType (audience is single source of truth)
   useEffect(() => {
-    const map: Record<string, { accountType: string; category: string }> = {
-      seeker:  { accountType: "Individual", category: "Individual" },
-      owner:   { accountType: "Individual", category: "Individual" },
-      broker:  { accountType: "Individual", category: "Individual" },
-      office:  { accountType: "Office",     category: "Business"   },
-      company: { accountType: "Company",    category: "Business"   },
-    };
-    if (audienceType && map[audienceType]) {
-      setApplicableAccountType(map[audienceType].accountType);
-      setPlanCategory(map[audienceType].category);
-    }
+    const derived = audienceToAccountType(audienceType);
+    if (derived) setApplicableAccountType(derived);
   }, [audienceType]);
 
   const [limits, setLimits]     = useState<PlanLimitItem[]>(plan?.limits ?? []);
@@ -887,7 +883,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     name, description, applicableAccountType, priceMonthly, priceYearly,
     isActive, isPublic, isRecommended, displayOrder, billingMode, planBillingType,
     recurringCycle, durationDays, consumptionPolicy, expiryRule, downgradePlanCode,
-    planCategory, displayNameAr, displayNameEn, audienceType, tier, badgeText, planColor,
+    displayNameAr, displayNameEn, audienceType, tier, badgeText, planColor,
     hasTrial, trialDays, requiresPaymentForTrial, isDefaultForNewUsers,
     availableForSelfSignup, requiresAdminApproval, allowAddOns, allowUpgrade,
     allowDowngrade, autoDowngradeOnExpiry, allowRepurchaseOnConsumption,
@@ -925,7 +921,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         displayOrder:           parseInt(displayOrder) || 0,
         isPublic,
         isRecommended,
-        planCategory:           planCategory || undefined,
+        planCategory:           audienceToPlanCategory(audienceType) || undefined,
         displayNameAr:          displayNameAr.trim() || undefined,
         displayNameEn:          displayNameEn.trim() || undefined,
         audienceType:           audienceType || undefined,
@@ -1016,7 +1012,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         basePriceMonthly:       parseFloat(priceMonthly) || 0,
         basePriceYearly:        parseFloat(priceYearly)  || 0,
         applicableAccountType:  applicableAccountType || undefined,
-        planCategory:           planCategory || undefined,
+        planCategory:           audienceToPlanCategory(audienceType) || undefined,
         displayOrder:           parseInt(displayOrder) || 0,
         billingMode,
         planBillingType,
@@ -1661,7 +1657,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                 badgeText={badgeText}
                 planColor={planColor}
                 isRecommended={isRecommended}
-                planCategory={planCategory}
                 basePriceMonthly={priceMonthly}
                 enabledFeatures={features}
                 limits={limits}
