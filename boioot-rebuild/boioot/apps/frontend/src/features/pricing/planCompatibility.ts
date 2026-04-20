@@ -3,23 +3,36 @@ import type { PublicPricingItem } from "./types";
 /**
  * Derives the audience type that applies to the current user.
  *
- * Priority order:
- *  1. currentSub.audienceType  — most accurate, comes directly from the user's active plan
- *  2. user.role fallback       — unambiguous for User / Owner / Broker / Agent
- *  3. null                     — Admin, or CompanyOwner with no subscription yet (show all)
+ * BUG FIX: The backend's fallback free plan (FreePlanId = 00000001 = seeker_free)
+ * returns audienceType="seeker" for ANY user who has no active subscription.
+ * If we trusted currentSub.audienceType blindly, an Owner with no subscription
+ * would be treated as a seeker and would see seeker plans instead of owner plans.
+ *
+ * Fix: For roles with an unambiguous audience type (Owner, Broker, Agent),
+ * ALWAYS derive from the role — never from currentSub.audienceType which may
+ * reflect the wrong free-plan type.
+ *
+ * Only the "User" role is genuinely ambiguous (they can be seekers across
+ * different plan contexts), so we keep the subscription-based logic for them.
  */
 export function getAudienceTypeForUser(
   userRole: string | null | undefined,
   currentSubAudienceType: string | null | undefined,
 ): string | null {
-  if (currentSubAudienceType) return currentSubAudienceType.toLowerCase();
   switch (userRole) {
-    case "User":   return "seeker";
+    // Unambiguous roles — always derive from role, never from subscription audienceType.
+    // This prevents the cross-role free plan (seeker_free) from polluting the filter.
     case "Owner":  return "owner";
     case "Broker": return "broker";
     case "Agent":  return "office";
-    // CompanyOwner with no subscription — cannot determine type; show all
-    // Admin — should see everything
+
+    // User role is ambiguous — use subscription audienceType if available.
+    case "User":
+      if (currentSubAudienceType) return currentSubAudienceType.toLowerCase();
+      return "seeker";
+
+    // CompanyOwner with no subscription — cannot determine type; show all.
+    // Admin — should see everything.
     default: return null;
   }
 }

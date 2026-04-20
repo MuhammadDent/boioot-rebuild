@@ -1,0 +1,116 @@
+أريد تشخيصًا نهائيًا ودقيقًا لمشكلة خطط المالك فقط في صفحة:
+
+/dashboard/subscription/plans
+
+## الحقيقة المؤكدة:
+- حساب المكتب العقاري يعرض 3 باقات بشكل صحيح:
+  - مجاني
+  - أساسي
+  - متقدم
+- المشكلة فقط في حساب المالك:
+  - تظهر باقتان فقط
+  - المتقدمة لا تظهر
+
+⚠️ إذًا المشكلة ليست في UI العام
+⚠️ وليست في grid أو cards أو map العام
+⚠️ المشكلة owner-specific فقط
+
+---
+
+## المطلوب الآن:
+
+### 1) تتبع مسار المالك فقط
+أريدك أن تفحص بدقة كل ما يخص owner audience في الصفحة والإحضار والفلترة.
+
+افحص:
+
+- currentSub.audienceType
+- current user role / account type
+- filterPlansForAudience(plans, "owner")
+- أي mapping بين:
+  - owner
+  - landlord
+  - property_owner
+  - office
+  - agency
+  - broker
+
+---
+
+### 2) اطبع debug واضح لحساب المالك فقط
+أريد logs واضحة لهذه القيم:
+
+- CURRENT USER ROLE:
+- CURRENT SUB audienceType:
+- RAW PLANS tiers + audienceType:
+- OWNER FILTER RESULT:
+- DOES OWNER ADVANCED EXIST? yes/no
+
+---
+
+### 3) قارن بين owner plans و office plans
+أريد معرفة:
+- هل owner_advanced موجودة فعلًا في response على production؟
+- هل audienceType الخاص بها يساوي "owner" فعلًا؟
+- هل tier الخاص بها هو "advanced" فعلًا؟
+- هل توجد تسمية مختلفة تكسر الفلتر؟
+
+مثال محتمل:
+- الباقة موجودة لكن audienceType = landlord
+- أو role = Owner بينما الفلتر يبحث عن owner
+- أو currentSub.audienceType ترجع office/unknown/default
+
+---
+
+### 4) افحص هل يوجد شرط خاص بحساب المالك
+ابحث عن أي منطق مثل:
+- إذا كان current plan = free owner → اعرض فقط plan upgrades معينة
+- hide current tier or higher/lower plans
+- owner-specific plan restrictions
+- plan group mismatch
+
+---
+
+### 5) افحص بيانات الباقات الخاصة بالمالك في API response الحقيقي
+أريد طباعة شيء مثل:
+
+[
+  { name, tier, audienceType, isActive, isPublic, billingType }
+]
+
+ثم قل لي بوضوح:
+- كم باقة owner موجودة فعلًا؟
+- هل owner_advanced ضمنها؟
+- إذا كانت موجودة، أين تُستبعد؟
+- إذا لم تكن موجودة، لماذا لا تصل؟
+
+---
+
+### 6) أصلح المشكلة بأقل تعديل ممكن
+بعد تحديد السبب الحقيقي:
+- أصلح owner-only bug
+- بدون refactor كبير
+- بدون تغيير UI الآن
+- بدون كسر office plans
+
+---
+
+## التقرير النهائي المطلوب:
+### السبب الحقيقي
+- ...
+
+### هل المشكلة في:
+- owner audienceType mismatch؟
+- role mapping؟
+- currentSub logic؟
+- filtering؟
+- API data for owner؟
+- غير ذلك؟
+
+### الملفات التي تم تعديلها
+- ...
+
+### هل أصبحت owner تعرض 3 باقات؟
+- نعم / لا
+
+ابدأ الآن ولا تعطيني تخمينات، أريد السبب الحقيقي الخاص بالمالك فقط.
