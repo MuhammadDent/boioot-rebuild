@@ -1518,24 +1518,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           ═══════════════════════════════════════════════ */}
           {!isNew && (
             <SectionCard title="الحدود" icon="📦">
-              {/* Quick-fill presets */}
-              <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap", marginBottom: "0.85rem", alignItems: "center" }}>
-                <span style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700 }}>⚡ تعبئة سريعة:</span>
-                {(([
-                  { label: "Starter", vals: { max_active_listings: 2,  max_images_per_listing: 5,  max_featured_slots: 0,  max_agents: 1,  max_projects: 0 } },
-                  { label: "Pro",     vals: { max_active_listings: 20, max_images_per_listing: 20, max_featured_slots: 3,  max_agents: 5,  max_projects: 3 } },
-                  { label: "Premium", vals: { max_active_listings: -1, max_images_per_listing: 50, max_featured_slots: -1, max_agents: -1, max_projects: -1 } },
-                ]) as { label: string; vals: Record<string, number> }[]).map(preset => (
-                  <button key={preset.label} type="button"
-                    style={{ padding: "0.2rem 0.65rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "0.74rem", fontWeight: 600, cursor: "pointer", color: "#1e293b" }}
-                    onClick={() => Object.entries(preset.vals).forEach(([k, v]) => handleLimitChange(k, String(v)))}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-                <span style={{ fontSize: "0.68rem", color: "#94a3b8", marginRight: "auto" }}>−1 = غير محدود ∞</span>
-              </div>
-
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {KNOWN_LIMITS.map(kl => (
                   <NamedLimitField key={kl.key} icon={kl.icon} label={kl.label} limitKey={kl.key}
