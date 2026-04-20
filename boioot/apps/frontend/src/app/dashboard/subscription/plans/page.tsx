@@ -40,24 +40,46 @@ function formatAmount(amount: number, currency: string) {
   return `${amount.toLocaleString("ar-SY")} ${currency}`;
 }
 
-const LIMIT_KEYS = ["max_active_listings", "max_agents", "max_projects"];
+const LIMIT_KEYS = ["max_active_listings", "max_images_per_listing", "max_featured_slots", "max_agents", "max_projects"];
 const LIMIT_ICONS: Record<string, string> = {
-  max_active_listings: "📋",
-  max_agents:          "👥",
-  max_projects:        "🏗️",
+  max_active_listings:    "🏠",
+  max_images_per_listing: "📸",
+  max_featured_slots:     "⭐",
+  max_agents:             "👥",
+  max_projects:           "🏗️",
 };
 const LIMIT_LABELS: Record<string, string> = {
-  max_active_listings: "إعلان نشط",
-  max_agents:          "وكيل",
-  max_projects:        "مشروع",
+  max_active_listings:    "إعلان نشط",
+  max_images_per_listing: "صورة للإعلان",
+  max_featured_slots:     "فرصة مميزة",
+  max_agents:             "وكيل",
+  max_projects:           "مشروع",
 };
 
 // Maps each limit key to the featureAccess gate required to display it.
 // null = always visible regardless of role.
 const LIMIT_VISIBILITY: Record<string, FeatureAccessKey | null> = {
-  max_active_listings: null,
-  max_agents:          "agents",
-  max_projects:        "projects",
+  max_active_listings:    null,
+  max_images_per_listing: null,
+  max_featured_slots:     null,
+  max_agents:             "agents",
+  max_projects:           "projects",
+};
+
+// Taglines per tier — shown under the plan name
+const TIER_TAGLINE: Record<string, string> = {
+  free:       "مناسب للبداية",
+  basic:      "مناسب للنشاط اليومي",
+  advanced:   "مناسب للنشاط المكثف",
+  enterprise: "للمؤسسات والشركات الكبرى",
+};
+
+// Accent colors per tier
+const TIER_COLOR: Record<string, string> = {
+  free:       "#059669",
+  basic:      "#2563eb",
+  advanced:   "#7c3aed",
+  enterprise: "#b45309",
 };
 
 // ── PlanCard ─────────────────────────────────────────────────────────────────
@@ -90,203 +112,172 @@ function PlanCard({
     ? (plan.pricing.find(p => p.billingCycle === "OneTime") ?? plan.pricing[0])
     : (plan.pricing.find(p => p.billingCycle === cycle) ?? plan.pricing[0]);
 
-  // Safe target pricing — prefer cycle-matched; fall back to first entry; null if empty
   const targetPricing = pricing ?? (plan.pricing.length > 0 ? plan.pricing[0] : null);
 
-  // isFree = display only (price = 0) — used for formatting the price label
-  // isActivatableFree = ONLY "free_default" billing type → safe to call activate-free API
-  const isFree = pricing ? pricing.priceAmount === 0 : plan.pricing.every(p => p.priceAmount === 0);
   const isActivatableFree = plan.billingType === "free_default";
-  const isCurrent = plan.planId === currentPlanId;
+  const isCurrent    = plan.planId === currentPlanId;
   const isRecommended = plan.isRecommended;
   const isActivatingFree = freeActivatingId === plan.planId;
 
-  // Filter limits by: (a) known display keys, (b) role-based visibility gate.
-  // max_agents → CompanyOwner + Admin only
-  // max_projects → Company CompanyOwner + Admin only
+  const tier      = plan.tier ?? "";
+  const tierColor = TIER_COLOR[tier] ?? "#1a2e1a";
+  const tagline   = TIER_TAGLINE[tier] ?? "";
+
+  // Key limits (filtered by display keys + role gate)
   const keyLimits = plan.limits.filter(l => {
     if (!LIMIT_KEYS.includes(l.key)) return false;
+    if (l.value === 0) return false; // hide zero-value limits
     const gate = LIMIT_VISIBILITY[l.key];
     if (gate === null) return true;
     return canAccessFeature(user, gate);
-  });
+  }).slice(0, 4);
+
+  // Top enabled features (max 4)
+  const enabledFeatures = plan.features.filter(f => f.isEnabled).slice(0, 4);
+
+  // Border/shadow based on state
+  const cardBorder = isCurrent
+    ? `2.5px solid #2563eb`
+    : isRecommended
+      ? `2.5px solid ${tierColor}`
+      : "1.5px solid #e2e8f0";
+  const cardShadow = isRecommended
+    ? `0 6px 28px ${tierColor}22`
+    : isCurrent
+      ? "0 4px 18px rgba(37,99,235,0.15)"
+      : "0 1px 4px rgba(0,0,0,0.06)";
 
   return (
     <div style={{
       backgroundColor: "#fff",
-      borderRadius: 16,
+      borderRadius: 18,
       padding: "1.5rem",
-      boxShadow: isRecommended
-        ? "0 4px 24px rgba(5,150,105,0.18)"
-        : "0 1px 4px rgba(0,0,0,0.06)",
-      border: isRecommended
-        ? "2px solid #059669"
-        : isCurrent
-          ? "2px solid #2563eb"
-          : "1.5px solid #e2e8f0",
+      boxShadow: cardShadow,
+      border: cardBorder,
       display: "flex",
       flexDirection: "column",
-      gap: "0.85rem",
+      gap: 0,
       position: "relative",
     }}>
 
-      {/* Recommended badge */}
-      {isRecommended && (
+      {/* Top badge */}
+      {(isRecommended || isCurrent) && (
         <div style={{
           position: "absolute",
-          top: -12,
+          top: -13,
           right: "50%",
           transform: "translateX(50%)",
-          backgroundColor: "#059669",
+          backgroundColor: isCurrent ? "#2563eb" : tierColor,
           color: "#fff",
-          fontSize: "0.72rem",
+          fontSize: "0.7rem",
           fontWeight: 700,
-          padding: "0.2rem 0.85rem",
+          padding: "0.18rem 0.9rem",
           borderRadius: 20,
           whiteSpace: "nowrap",
+          letterSpacing: "0.02em",
         }}>
-          ⭐ الأكثر شعبية
+          {isCurrent ? "✓ باقتك الحالية" : "⭐ الأكثر شعبية"}
         </div>
       )}
 
-      {isCurrent && !isRecommended && (
-        <div style={{
-          position: "absolute",
-          top: -12,
-          right: "50%",
-          transform: "translateX(50%)",
-          backgroundColor: "#2563eb",
-          color: "#fff",
-          fontSize: "0.72rem",
-          fontWeight: 700,
-          padding: "0.2rem 0.85rem",
-          borderRadius: 20,
-          whiteSpace: "nowrap",
-        }}>
-          ✓ باقتك الحالية
-        </div>
-      )}
-
-      {/* Plan name + category */}
-      <div>
-        <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8", fontWeight: 500 }}>
-          {plan.planCategory ?? plan.applicableAccountType ?? ""}
-        </p>
-        <h3 style={{ margin: "0.2rem 0 0", fontSize: "1.15rem", fontWeight: 800, color: "#1a2e1a" }}>
+      {/* ── 1. Plan name + tagline ── */}
+      <div style={{ marginBottom: "1rem" }}>
+        {tagline && (
+          <span style={{
+            display: "inline-block",
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            color: tierColor,
+            backgroundColor: tierColor + "14",
+            padding: "0.15rem 0.55rem",
+            borderRadius: 20,
+            marginBottom: "0.4rem",
+            letterSpacing: "0.02em",
+          }}>
+            {tagline}
+          </span>
+        )}
+        <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#1a2e1a", lineHeight: 1.2 }}>
           {plan.displayNameAr}
         </h3>
-        {plan.description && (
-          <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5 }}>
-            {plan.description}
+      </div>
+
+      {/* ── 2. Price ── */}
+      <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem", marginBottom: "1rem" }}>
+        {pricing ? (
+          <>
+            <p style={{ margin: 0, fontSize: "1.75rem", fontWeight: 900, color: tierColor, lineHeight: 1 }}>
+              {formatAmount(pricing.priceAmount, pricing.currencyCode)}
+            </p>
+            <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
+              {isOneTimePlan ? "دفعة واحدة" : `/ ${BILLING_CYCLE_LABELS[cycle] ?? cycle}`}
+            </p>
+          </>
+        ) : (
+          <p style={{ margin: 0, fontSize: "0.88rem", color: "#64748b", fontStyle: "italic" }}>
+            تواصل معنا للاستفسار عن السعر
           </p>
         )}
       </div>
 
-      {/* Price */}
-      {pricing && (
-        <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "0.85rem" }}>
-          <p style={{ margin: 0, fontSize: "1.6rem", fontWeight: 900, color: "#059669", lineHeight: 1 }}>
-            {formatAmount(pricing.priceAmount, pricing.currencyCode)}
-          </p>
-          <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
-            {isOneTimePlan ? "دفعة واحدة" : `/ ${BILLING_CYCLE_LABELS[cycle] ?? cycle}`}
-          </p>
-        </div>
-      )}
-
-      {/* Key limits */}
+      {/* ── 3. Key limits ── */}
       {keyLimits.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", marginBottom: "0.85rem" }}>
           {keyLimits.map(l => (
-            <div
-              key={l.key}
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}
-            >
-              <span>{LIMIT_ICONS[l.key] ?? "•"}</span>
-              <span style={{ color: "#374151", fontWeight: 600 }}>
+            <div key={l.key} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.84rem" }}>
+              <span style={{ width: 18, textAlign: "center", flexShrink: 0 }}>{LIMIT_ICONS[l.key] ?? "•"}</span>
+              <span style={{ fontWeight: 700, color: "#1e293b", minWidth: 28 }}>
                 {formatLimitValue(l.value, null)}
               </span>
-              <span style={{ color: "#64748b" }}>
-                {LIMIT_LABELS[l.key] ?? l.name}
-              </span>
+              <span style={{ color: "#64748b" }}>{LIMIT_LABELS[l.key] ?? l.name}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Buttons: تفاصيل + CTA */}
+      {/* ── 4. Enabled features ── */}
+      {enabledFeatures.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.38rem", marginBottom: "1.1rem", paddingTop: keyLimits.length > 0 ? "0.75rem" : 0, borderTop: keyLimits.length > 0 ? "1px dashed #f1f5f9" : "none" }}>
+          {enabledFeatures.map(f => (
+            <div key={f.key} style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.82rem" }}>
+              <span style={{ color: "#059669", fontWeight: 700, flexShrink: 0 }}>✓</span>
+              <span style={{ color: "#374151" }}>{f.name}</span>
+            </div>
+          ))}
+          {plan.features.filter(f => f.isEnabled).length > 4 && (
+            <span style={{ fontSize: "0.74rem", color: "#94a3b8", paddingRight: "1.35rem" }}>
+              + {plan.features.filter(f => f.isEnabled).length - 4} مزايا إضافية
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── 5. CTA buttons ── */}
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
 
-        {/* Details button — always visible */}
-        <button
-          onClick={() => onViewDetails(plan)}
-          type="button"
-          style={{
-            width:           "100%",
-            padding:         "0.55rem",
-            borderRadius:    10,
-            border:          "1.5px solid #e2e8f0",
-            backgroundColor: "#f8fafc",
-            color:           "#475569",
-            fontSize:        "0.85rem",
-            fontWeight:      600,
-            cursor:          "pointer",
-            display:         "flex",
-            alignItems:      "center",
-            justifyContent:  "center",
-            gap:             "0.35rem",
-          }}
-        >
-          <span style={{ fontSize: "0.9rem" }}>📋</span>
-          تفاصيل الباقة
-        </button>
-
-        {/* Main CTA */}
+        {/* Primary CTA */}
         <button
           onClick={() => {
-            console.log("[PlanCard CTA click]", {
-              planId:          plan.planId,
-              planName:        plan.displayNameAr,
-              billingType:     plan.billingType,
-              isCurrent,
-              isActivatableFree,
-              isActivatingFree,
-              pricingCount:    plan.pricing.length,
-              targetPricing:   targetPricing?.pricingId ?? null,
-              pricingAmount:   targetPricing?.priceAmount ?? null,
-              pricingCycle:    targetPricing?.billingCycle ?? null,
-            });
             if (isCurrent || isActivatingFree) return;
-            // Case 1: truly free plan → activate-free API
-            if (isActivatableFree) {
-              onActivateFree(plan.planId);
-              return;
-            }
-            // Case 2: paid plan with pricing → open checkout modal
-            if (targetPricing) {
-              onChoose(plan, targetPricing);
-              return;
-            }
-            // Case 3: fallback — pricing data missing from API → go to subscription request page
-            console.warn("[PlanCard CTA] No pricing found for plan:", plan.planId, plan.displayNameAr, "— redirecting to request page");
+            if (isActivatableFree) { onActivateFree(plan.planId); return; }
+            if (targetPricing) { onChoose(plan, targetPricing); return; }
             cardRouter.push(`/dashboard/subscription/requests?planId=${plan.planId}`);
           }}
           disabled={isCurrent || isActivatingFree}
           type="button"
           style={{
-            width:           "100%",
-            padding:         "0.7rem",
-            borderRadius:    10,
-            border:          "none",
+            width: "100%",
+            padding: "0.75rem",
+            borderRadius: 11,
+            border: "none",
             backgroundColor: isCurrent || isActivatingFree
               ? "#e2e8f0"
-              : isRecommended
-                ? "#059669"
-                : "#1a2e1a",
-            color:           isCurrent || isActivatingFree ? "#94a3b8" : "#fff",
-            fontSize:        "0.9rem",
-            fontWeight:      700,
-            cursor:          isCurrent || isActivatingFree ? "default" : "pointer",
+              : tierColor,
+            color: isCurrent || isActivatingFree ? "#94a3b8" : "#fff",
+            fontSize: "0.92rem",
+            fontWeight: 700,
+            cursor: isCurrent || isActivatingFree ? "default" : "pointer",
+            transition: "opacity 0.15s",
           }}
         >
           {isCurrent
@@ -295,7 +286,28 @@ function PlanCard({
               ? "جارٍ التفعيل..."
               : isActivatableFree
                 ? "تفعيل مجاني"
-                : "اشترك الآن"}
+                : "اشترك الآن →"}
+        </button>
+
+        {/* Details link */}
+        <button
+          onClick={() => onViewDetails(plan)}
+          type="button"
+          style={{
+            width: "100%",
+            padding: "0.5rem",
+            borderRadius: 9,
+            border: "none",
+            background: "none",
+            color: "#94a3b8",
+            fontSize: "0.78rem",
+            fontWeight: 500,
+            cursor: "pointer",
+            textDecoration: "underline",
+            textUnderlineOffset: 3,
+          }}
+        >
+          عرض كامل التفاصيل
         </button>
       </div>
     </div>

@@ -62,11 +62,23 @@ const EVENT_TYPE_LABEL: Record<string, string> = {
 };
 
 const LIMIT_LABEL: Record<string, string> = {
-  max_active_listings: "إعلانات نشطة",
-  max_agents:          "عدد الوكلاء",
-  max_projects:        "عدد المشاريع",
+  max_active_listings:    "إعلانات نشطة",
+  max_agents:             "عدد الوكلاء",
+  max_projects:           "عدد المشاريع",
   max_images_per_listing: "صور لكل إعلان",
-  max_featured_slots:  "فرص مميزة",
+  max_featured_slots:     "فرص مميزة",
+  max_conversations:      "محادثات",
+  max_videos_per_listing: "فيديو للإعلان",
+};
+
+const LIMIT_ICON: Record<string, string> = {
+  max_active_listings:    "🏠",
+  max_agents:             "👥",
+  max_projects:           "🏗️",
+  max_images_per_listing: "📸",
+  max_featured_slots:     "⭐",
+  max_conversations:      "💬",
+  max_videos_per_listing: "🎥",
 };
 
 const FEATURE_LABEL: Record<string, string> = {
@@ -75,8 +87,38 @@ const FEATURE_LABEL: Record<string, string> = {
   featured_listings:    "الإعلانات المميزة",
   whatsapp_contact:     "زر واتساب",
   verified_badge:       "شارة التحقق",
-  homepage_exposure:    "عرض الصفحة الرئيسية",
+  homepage_exposure:    "ظهور في الصفحة الرئيسية",
   project_management:   "إدارة المشاريع",
+  multiple_photos:      "صور متعددة",
+  internal_chat:        "المراسلة الداخلية",
+  priority_support:     "دعم ذو أولوية",
+};
+
+const FEATURE_ICON: Record<string, string> = {
+  analytics_dashboard:  "📊",
+  video_upload:         "🎥",
+  featured_listings:    "⭐",
+  whatsapp_contact:     "💬",
+  verified_badge:       "✅",
+  homepage_exposure:    "🏠",
+  project_management:   "🏗️",
+  multiple_photos:      "📸",
+  internal_chat:        "📩",
+  priority_support:     "🛠️",
+};
+
+const TIER_LABEL_AR: Record<string, string> = {
+  free:       "مجاني",
+  basic:      "أساسي",
+  advanced:   "متقدم",
+  enterprise: "مؤسسي",
+};
+
+const TIER_COLOR_SUB: Record<string, string> = {
+  free:       "#059669",
+  basic:      "#2563eb",
+  advanced:   "#7c3aed",
+  enterprise: "#b45309",
 };
 
 function limitDisplay(value: number) {
@@ -735,126 +777,148 @@ export default function SubscriptionPage() {
       )}
 
       {/* Current plan card */}
-      <div style={{
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: "1.5rem",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-        border: "1.5px solid #e2e8f0",
-        marginBottom: "1.5rem",
-      }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem", marginBottom: "1.25rem" }}>
-          <div>
-            <p style={{ margin: "0 0 0.3rem", fontSize: "0.78rem", color: "#94a3b8", fontWeight: 500 }}>
-              باقتك الحالية
-            </p>
-            <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#1a2e1a" }}>
-              {sub.planName}
-            </h2>
-            {sub.tier && (
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
-                {sub.audienceType} · {sub.tier}
+      {(() => {
+        const tier = sub.tier ?? "";
+        const tierColor = TIER_COLOR_SUB[tier] ?? "#1a2e1a";
+        const tierLabelAr = TIER_LABEL_AR[tier] ?? tier;
+        const isUpgradable = tier !== "enterprise" && tier !== "advanced";
+        return (
+        <div style={{
+          backgroundColor: "#fff",
+          borderRadius: 18,
+          overflow: "hidden",
+          boxShadow: "0 2px 16px rgba(0,0,0,0.08)",
+          border: "1.5px solid #e2e8f0",
+          marginBottom: "1.5rem",
+        }}>
+          {/* Colored header stripe */}
+          <div style={{ background: `linear-gradient(135deg, ${tierColor}18, ${tierColor}08)`, borderBottom: `3px solid ${tierColor}`, padding: "1.25rem 1.5rem", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem" }}>
+            <div>
+              <p style={{ margin: "0 0 0.25rem", fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600, letterSpacing: "0.03em" }}>
+                باقتك الحالية
               </p>
+              <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#1a2e1a", lineHeight: 1.2 }}>
+                {sub.planName}
+              </h2>
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.4rem", flexWrap: "wrap" }}>
+                {tierLabelAr && (
+                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: tierColor, background: tierColor + "18", padding: "0.12rem 0.5rem", borderRadius: 20 }}>
+                    {tierLabelAr}
+                  </span>
+                )}
+                <span style={{
+                  display: "inline-flex", alignItems: "center",
+                  padding: "0.12rem 0.65rem",
+                  borderRadius: 20,
+                  fontSize: "0.72rem", fontWeight: 700,
+                  backgroundColor: statusStyle.bg,
+                  color: statusStyle.color,
+                  border: `1.5px solid ${statusStyle.border}`,
+                }}>
+                  {STATUS_LABEL[sub.status] ?? sub.status}
+                </span>
+              </div>
+            </div>
+            {sub.priceAmount > 0 && (
+              <div style={{ textAlign: "left" }}>
+                <p style={{ margin: 0, fontSize: "1.5rem", fontWeight: 900, color: tierColor, lineHeight: 1 }}>
+                  {sub.priceAmount.toLocaleString("ar-SY")}
+                </p>
+                <p style={{ margin: "0.15rem 0 0", fontSize: "0.72rem", color: "#94a3b8" }}>
+                  {sub.currencyCode} / {sub.billingCycle === "Monthly" ? "شهرياً" : "سنوياً"}
+                </p>
+              </div>
             )}
           </div>
-          <span style={{
-            display: "inline-flex", alignItems: "center",
-            padding: "0.3rem 0.85rem",
-            borderRadius: 20,
-            fontSize: "0.78rem", fontWeight: 700,
-            backgroundColor: statusStyle.bg,
-            color: statusStyle.color,
-            border: `1.5px solid ${statusStyle.border}`,
-          }}>
-            {STATUS_LABEL[sub.status] ?? sub.status}
-          </span>
-        </div>
 
-        {/* Dates grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-          gap: "0.75rem",
-          borderTop: "1px solid #f1f5f9",
-          paddingTop: "1.25rem",
-          marginBottom: "1.25rem",
-        }}>
-          <div>
-            <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>تاريخ البدء</p>
-            <p style={{ margin: "0.2rem 0 0", fontSize: "0.88rem", color: "#1e293b", fontWeight: 600 }}>
-              {formatDate(sub.startDate)}
-            </p>
-          </div>
-          {sub.endDate && (
-            <div>
-              <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>تاريخ الانتهاء</p>
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.88rem", color: "#1e293b", fontWeight: 600 }}>
-                {formatDate(sub.endDate)}
-              </p>
-            </div>
-          )}
-          {sub.currentPeriodEnd && (
-            <div>
-              <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>نهاية الفترة الحالية</p>
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.88rem", color: "#1e293b", fontWeight: 600 }}>
-                {formatDate(sub.currentPeriodEnd)}
-              </p>
-            </div>
-          )}
-          {sub.trialEndsAt && (
-            <div>
-              <p style={{ margin: 0, fontSize: "0.72rem", color: "#1d4ed8", fontWeight: 600 }}>انتهاء التجربة</p>
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.88rem", color: "#1d4ed8", fontWeight: 700 }}>
-                {formatDate(sub.trialEndsAt)}
-              </p>
-            </div>
-          )}
-          {sub.canceledAt && (
-            <div>
-              <p style={{ margin: 0, fontSize: "0.72rem", color: "#dc2626", fontWeight: 600 }}>تاريخ الإلغاء</p>
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.88rem", color: "#dc2626", fontWeight: 700 }}>
-                {formatDate(sub.canceledAt)}
-              </p>
-            </div>
-          )}
-          <div>
-            <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>التجديد التلقائي</p>
-            <p style={{ margin: "0.2rem 0 0", fontSize: "0.88rem", color: "#1e293b", fontWeight: 600 }}>
-              {sub.autoRenew ? "✅ مفعّل" : "❌ موقوف"}
-            </p>
-          </div>
-          {sub.priceAmount > 0 && (
-            <div>
-              <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>السعر</p>
-              <p style={{ margin: "0.2rem 0 0", fontSize: "0.88rem", color: "#059669", fontWeight: 700 }}>
-                {sub.priceAmount.toLocaleString("ar-SY")} {sub.currencyCode} / {sub.billingCycle === "Monthly" ? "شهرياً" : "سنوياً"}
-              </p>
-            </div>
-          )}
-        </div>
+          {/* Body */}
+          <div style={{ padding: "1.25rem 1.5rem" }}>
 
-        {/* Cancel button */}
-        {isCancelable && (
-          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "1rem" }}>
-            <button
-              onClick={() => setShowCancel(true)}
-              type="button"
-              style={{
-                padding: "0.55rem 1.1rem",
-                borderRadius: 9,
-                border: "1.5px solid #fca5a5",
-                backgroundColor: "#fff",
-                color: "#dc2626",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              إلغاء الاشتراك
-            </button>
+            {/* Dates grid */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+              gap: "0.75rem",
+              marginBottom: "1.25rem",
+            }}>
+              {sub.startDate && (
+                <div>
+                  <p style={{ margin: 0, fontSize: "0.7rem", color: "#94a3b8", fontWeight: 600 }}>تاريخ البدء</p>
+                  <p style={{ margin: "0.15rem 0 0", fontSize: "0.88rem", color: "#1e293b", fontWeight: 600 }}>{formatDate(sub.startDate)}</p>
+                </div>
+              )}
+              {sub.endDate && (
+                <div>
+                  <p style={{ margin: 0, fontSize: "0.7rem", color: "#94a3b8", fontWeight: 600 }}>تاريخ الانتهاء</p>
+                  <p style={{ margin: "0.15rem 0 0", fontSize: "0.88rem", color: "#1e293b", fontWeight: 600 }}>{formatDate(sub.endDate)}</p>
+                </div>
+              )}
+              {sub.currentPeriodEnd && (
+                <div>
+                  <p style={{ margin: 0, fontSize: "0.7rem", color: "#94a3b8", fontWeight: 600 }}>نهاية الفترة</p>
+                  <p style={{ margin: "0.15rem 0 0", fontSize: "0.88rem", color: "#1e293b", fontWeight: 600 }}>{formatDate(sub.currentPeriodEnd)}</p>
+                </div>
+              )}
+              {sub.trialEndsAt && (
+                <div>
+                  <p style={{ margin: 0, fontSize: "0.7rem", color: "#1d4ed8", fontWeight: 600 }}>انتهاء التجربة</p>
+                  <p style={{ margin: "0.15rem 0 0", fontSize: "0.88rem", color: "#1d4ed8", fontWeight: 700 }}>{formatDate(sub.trialEndsAt)}</p>
+                </div>
+              )}
+              {sub.canceledAt && (
+                <div>
+                  <p style={{ margin: 0, fontSize: "0.7rem", color: "#dc2626", fontWeight: 600 }}>تاريخ الإلغاء</p>
+                  <p style={{ margin: "0.15rem 0 0", fontSize: "0.88rem", color: "#dc2626", fontWeight: 700 }}>{formatDate(sub.canceledAt)}</p>
+                </div>
+              )}
+              <div>
+                <p style={{ margin: 0, fontSize: "0.7rem", color: "#94a3b8", fontWeight: 600 }}>التجديد التلقائي</p>
+                <p style={{ margin: "0.15rem 0 0", fontSize: "0.88rem", color: "#1e293b", fontWeight: 600 }}>{sub.autoRenew ? "✅ مفعّل" : "❌ موقوف"}</p>
+              </div>
+            </div>
+
+            {/* Actions row */}
+            <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "1rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+              {isUpgradable && (
+                <Link
+                  href="/dashboard/subscription/plans"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: "0.4rem",
+                    padding: "0.6rem 1.25rem",
+                    backgroundColor: tierColor,
+                    color: "#fff",
+                    borderRadius: 10,
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    textDecoration: "none",
+                  }}
+                >
+                  ⬆ ترقية الباقة
+                </Link>
+              )}
+              {isCancelable && (
+                <button
+                  onClick={() => setShowCancel(true)}
+                  type="button"
+                  style={{
+                    padding: "0.6rem 1.1rem",
+                    borderRadius: 9,
+                    border: "1.5px solid #fca5a5",
+                    backgroundColor: "#fff",
+                    color: "#dc2626",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  إلغاء الاشتراك
+                </button>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+        );
+      })()}
 
       {/* ── Listing Quota Usage Card ──────────────────────────────────────────── */}
       {sub.listingLimit > 0 && (
@@ -877,10 +941,10 @@ export default function SubscriptionPage() {
             boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             border: "1.5px solid #e2e8f0",
           }}>
-            <h3 style={{ margin: "0 0 1rem", fontSize: "0.9rem", fontWeight: 700, color: "#374151" }}>
-              📊 الحدود والإمكانات
+            <h3 style={{ margin: "0 0 1rem", fontSize: "0.88rem", fontWeight: 700, color: "#374151" }}>
+              📊 حدود الباقة
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
               {limits.map(([key, value]) => (
                 <div
                   key={key}
@@ -888,13 +952,21 @@ export default function SubscriptionPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    fontSize: "0.85rem",
+                    fontSize: "0.84rem",
+                    gap: "0.5rem",
                   }}
                 >
-                  <span style={{ color: "#475569" }}>{LIMIT_LABEL[key] ?? key}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "#475569" }}>
+                    <span style={{ width: 18, textAlign: "center", flexShrink: 0 }}>{LIMIT_ICON[key] ?? "•"}</span>
+                    <span>{LIMIT_LABEL[key] ?? key}</span>
+                  </div>
                   <span style={{
                     fontWeight: 700,
+                    fontSize: "0.88rem",
                     color: value === -1 ? "#059669" : value === 0 ? "#94a3b8" : "#1e293b",
+                    background: value === -1 ? "#f0fdf4" : "transparent",
+                    padding: value === -1 ? "0.1rem 0.4rem" : 0,
+                    borderRadius: 6,
                   }}>
                     {limitDisplay(value)}
                   </span>
@@ -913,17 +985,17 @@ export default function SubscriptionPage() {
             boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
             border: "1.5px solid #e2e8f0",
           }}>
-            <h3 style={{ margin: "0 0 1rem", fontSize: "0.9rem", fontWeight: 700, color: "#374151" }}>
-              ✨ المميزات المفعّلة
+            <h3 style={{ margin: "0 0 1rem", fontSize: "0.88rem", fontWeight: 700, color: "#374151" }}>
+              ✨ مزايا اشتراكك
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.5rem" }}>
               {enabledFeatures.map(([key]) => (
                 <div
                   key={key}
-                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "#166534" }}
+                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.84rem", color: "#166534", background: "#f0fdf4", borderRadius: 8, padding: "0.4rem 0.6rem" }}
                 >
-                  <span>✓</span>
-                  <span>{FEATURE_LABEL[key] ?? key}</span>
+                  <span style={{ flexShrink: 0 }}>{FEATURE_ICON[key] ?? "✓"}</span>
+                  <span style={{ fontWeight: 600 }}>{FEATURE_LABEL[key] ?? key}</span>
                 </div>
               ))}
             </div>
