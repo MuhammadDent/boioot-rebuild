@@ -135,29 +135,42 @@ function PlanCard({
   // Top enabled features (max 4)
   const enabledFeatures = plan.features.filter(f => f.isEnabled).slice(0, 4);
 
-  // Border/shadow based on state
+  // Visual state
+  const isPremiumTier = tier === "advanced" || tier === "enterprise";
   const cardBorder = isCurrent
     ? `2.5px solid #2563eb`
     : isRecommended
       ? `2.5px solid ${tierColor}`
       : "1.5px solid #e2e8f0";
   const cardShadow = isRecommended
-    ? `0 6px 28px ${tierColor}22`
+    ? `0 8px 32px ${tierColor}28`
     : isCurrent
-      ? "0 4px 18px rgba(37,99,235,0.15)"
-      : "0 1px 4px rgba(0,0,0,0.06)";
+      ? "0 4px 20px rgba(37,99,235,0.18)"
+      : "0 1px 6px rgba(0,0,0,0.06)";
+  const cardBg = isCurrent ? "#f8faff" : "#fff";
+
+  // CTA label
+  const ctaLabel = isCurrent
+    ? "✓ باقتك الحالية"
+    : isActivatingFree
+      ? "جارٍ التفعيل..."
+      : isActivatableFree
+        ? "ابدأ مجاناً ←"
+        : isPremiumTier
+          ? "الترقية الآن ←"
+          : "اشترك الآن ←";
 
   return (
     <div style={{
-      backgroundColor: "#fff",
+      backgroundColor: cardBg,
       borderRadius: 18,
-      padding: "1.5rem",
       boxShadow: cardShadow,
       border: cardBorder,
       display: "flex",
       flexDirection: "column",
       gap: 0,
       position: "relative",
+      overflow: "hidden",
     }}>
 
       {/* Top badge */}
@@ -175,140 +188,193 @@ function PlanCard({
           borderRadius: 20,
           whiteSpace: "nowrap",
           letterSpacing: "0.02em",
+          zIndex: 2,
         }}>
           {isCurrent ? "✓ باقتك الحالية" : "⭐ الأكثر شعبية"}
         </div>
       )}
 
-      {/* ── 1. Plan name + tagline ── */}
-      <div style={{ marginBottom: "1rem" }}>
-        {tagline && (
-          <span style={{
-            display: "inline-block",
-            fontSize: "0.68rem",
-            fontWeight: 700,
-            color: tierColor,
-            backgroundColor: tierColor + "14",
-            padding: "0.15rem 0.55rem",
-            borderRadius: 20,
-            marginBottom: "0.4rem",
-            letterSpacing: "0.02em",
-          }}>
-            {tagline}
-          </span>
-        )}
-        <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#1a2e1a", lineHeight: 1.2 }}>
-          {plan.displayNameAr}
-        </h3>
-      </div>
-
-      {/* ── 2. Price ── */}
-      <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem", marginBottom: "1rem" }}>
-        {pricing ? (
-          <>
-            <p style={{ margin: 0, fontSize: "1.75rem", fontWeight: 900, color: tierColor, lineHeight: 1 }}>
-              {formatAmount(pricing.priceAmount, pricing.currencyCode)}
-            </p>
-            <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
-              {isOneTimePlan ? "دفعة واحدة" : `/ ${BILLING_CYCLE_LABELS[cycle] ?? cycle}`}
-            </p>
-          </>
-        ) : (
-          <p style={{ margin: 0, fontSize: "0.88rem", color: "#64748b", fontStyle: "italic" }}>
-            تواصل معنا للاستفسار عن السعر
-          </p>
-        )}
-      </div>
-
-      {/* ── 3. Key limits ── */}
-      {keyLimits.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", marginBottom: "0.85rem" }}>
-          {keyLimits.map(l => (
-            <div key={l.key} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.84rem" }}>
-              <span style={{ width: 18, textAlign: "center", flexShrink: 0 }}>{LIMIT_ICONS[l.key] ?? "•"}</span>
-              <span style={{ fontWeight: 700, color: "#1e293b", minWidth: 28 }}>
-                {formatLimitValue(l.value, null)}
-              </span>
-              <span style={{ color: "#64748b" }}>{LIMIT_LABELS[l.key] ?? l.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── 4. Enabled features ── */}
-      {enabledFeatures.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.38rem", marginBottom: "1.1rem", paddingTop: keyLimits.length > 0 ? "0.75rem" : 0, borderTop: keyLimits.length > 0 ? "1px dashed #f1f5f9" : "none" }}>
-          {enabledFeatures.map(f => (
-            <div key={f.key} style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.82rem" }}>
-              <span style={{ color: "#059669", fontWeight: 700, flexShrink: 0 }}>✓</span>
-              <span style={{ color: "#374151" }}>{f.name}</span>
-            </div>
-          ))}
-          {plan.features.filter(f => f.isEnabled).length > 4 && (
-            <span style={{ fontSize: "0.74rem", color: "#94a3b8", paddingRight: "1.35rem" }}>
-              + {plan.features.filter(f => f.isEnabled).length - 4} مزايا إضافية
+      {/* Premium header stripe */}
+      {isPremiumTier && !isCurrent && (
+        <div style={{
+          background: `linear-gradient(135deg, ${tierColor}18, ${tierColor}08)`,
+          borderBottom: `3px solid ${tierColor}`,
+          padding: "1.25rem 1.5rem 0.85rem",
+        }}>
+          {tagline && (
+            <span style={{
+              display: "inline-block",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: tierColor,
+              backgroundColor: tierColor + "20",
+              padding: "0.15rem 0.55rem",
+              borderRadius: 20,
+              marginBottom: "0.4rem",
+              letterSpacing: "0.02em",
+            }}>
+              {tagline}
             </span>
           )}
+          <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#1a2e1a", lineHeight: 1.2 }}>
+            {plan.displayNameAr}
+          </h3>
         </div>
       )}
 
-      {/* ── 5. CTA buttons ── */}
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: 0, flex: 1 }}>
 
-        {/* Primary CTA */}
-        <button
-          onClick={() => {
-            if (isCurrent || isActivatingFree) return;
-            if (isActivatableFree) { onActivateFree(plan.planId); return; }
-            if (targetPricing) { onChoose(plan, targetPricing); return; }
-            cardRouter.push(`/dashboard/subscription/requests?planId=${plan.planId}`);
-          }}
-          disabled={isCurrent || isActivatingFree}
-          type="button"
-          style={{
-            width: "100%",
-            padding: "0.75rem",
-            borderRadius: 11,
-            border: "none",
-            backgroundColor: isCurrent || isActivatingFree
-              ? "#e2e8f0"
-              : tierColor,
-            color: isCurrent || isActivatingFree ? "#94a3b8" : "#fff",
-            fontSize: "0.92rem",
-            fontWeight: 700,
-            cursor: isCurrent || isActivatingFree ? "default" : "pointer",
-            transition: "opacity 0.15s",
-          }}
-        >
-          {isCurrent
-            ? "باقتك الحالية ✓"
-            : isActivatingFree
-              ? "جارٍ التفعيل..."
-              : isActivatableFree
-                ? "تفعيل مجاني"
-                : "اشترك الآن →"}
-        </button>
+        {/* ── 1. Plan name + tagline (non-premium) ── */}
+        {!isPremiumTier && (
+          <div style={{ marginBottom: "0.9rem" }}>
+            {tagline && (
+              <span style={{
+                display: "inline-block",
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                color: tierColor,
+                backgroundColor: tierColor + "14",
+                padding: "0.15rem 0.55rem",
+                borderRadius: 20,
+                marginBottom: "0.4rem",
+                letterSpacing: "0.02em",
+              }}>
+                {tagline}
+              </span>
+            )}
+            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#1a2e1a", lineHeight: 1.2 }}>
+              {plan.displayNameAr}
+            </h3>
+          </div>
+        )}
 
-        {/* Details link */}
-        <button
-          onClick={() => onViewDetails(plan)}
-          type="button"
-          style={{
-            width: "100%",
-            padding: "0.5rem",
-            borderRadius: 9,
-            border: "none",
-            background: "none",
-            color: "#94a3b8",
-            fontSize: "0.78rem",
-            fontWeight: 500,
-            cursor: "pointer",
-            textDecoration: "underline",
-            textUnderlineOffset: 3,
-          }}
-        >
-          عرض كامل التفاصيل
-        </button>
+        {/* ── 2. Price — dominant element ── */}
+        <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem", marginBottom: "1rem" }}>
+          {pricing ? (
+            <>
+              <p style={{ margin: 0, fontSize: "2rem", fontWeight: 900, color: tierColor, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                {formatAmount(pricing.priceAmount, pricing.currencyCode)}
+              </p>
+              <p style={{ margin: "0.3rem 0 0", fontSize: "0.75rem", color: "#94a3b8", fontWeight: 500 }}>
+                {isOneTimePlan ? "دفعة واحدة — بدون تجديد تلقائي" : `/ ${BILLING_CYCLE_LABELS[cycle] ?? cycle}`}
+              </p>
+            </>
+          ) : (
+            <p style={{ margin: 0, fontSize: "0.88rem", color: "#64748b", fontStyle: "italic" }}>
+              تواصل معنا للاستفسار عن السعر
+            </p>
+          )}
+        </div>
+
+        {/* ── 3. Key limits ── */}
+        {keyLimits.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "0.9rem" }}>
+            {keyLimits.map(l => (
+              <div key={l.key} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.86rem" }}>
+                <span style={{ width: 20, textAlign: "center", flexShrink: 0, fontSize: "1rem" }}>{LIMIT_ICONS[l.key] ?? "•"}</span>
+                <span style={{ fontWeight: 800, color: "#1e293b", minWidth: 30, fontSize: "0.95rem" }}>
+                  {formatLimitValue(l.value, null)}
+                </span>
+                <span style={{ color: "#64748b" }}>{LIMIT_LABELS[l.key] ?? l.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── 4. Enabled features ── */}
+        {enabledFeatures.length > 0 && (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.4rem",
+            marginBottom: "1.1rem",
+            paddingTop: keyLimits.length > 0 ? "0.75rem" : 0,
+            borderTop: keyLimits.length > 0 ? "1px dashed #f1f5f9" : "none",
+          }}>
+            {enabledFeatures.map(f => (
+              <div key={f.key} style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.83rem" }}>
+                <span style={{ color: "#059669", fontWeight: 800, flexShrink: 0, fontSize: "0.75rem" }}>✓</span>
+                <span style={{ color: "#374151", lineHeight: 1.4 }}>{f.name}</span>
+              </div>
+            ))}
+            {plan.features.filter(f => f.isEnabled).length > 4 && (
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                marginTop: "0.1rem",
+                fontSize: "0.76rem",
+                color: tierColor,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+                onClick={() => onViewDetails(plan)}
+              >
+                <span style={{ fontSize: "0.9rem" }}>+</span>
+                {plan.features.filter(f => f.isEnabled).length - 4} مزايا إضافية — اعرف التفاصيل
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 5. CTA buttons ── */}
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+
+          {/* Primary CTA */}
+          <button
+            onClick={() => {
+              if (isCurrent || isActivatingFree) return;
+              if (isActivatableFree) { onActivateFree(plan.planId); return; }
+              if (targetPricing) { onChoose(plan, targetPricing); return; }
+              cardRouter.push(`/dashboard/subscription/requests?planId=${plan.planId}`);
+            }}
+            disabled={isCurrent || isActivatingFree}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.8rem",
+              borderRadius: 11,
+              border: "none",
+              backgroundColor: isCurrent
+                ? "#e2e8f0"
+                : isActivatingFree
+                  ? tierColor + "99"
+                  : tierColor,
+              color: isCurrent ? "#94a3b8" : "#fff",
+              fontSize: "0.95rem",
+              fontWeight: 700,
+              cursor: isCurrent || isActivatingFree ? "default" : "pointer",
+              transition: "opacity 0.15s, transform 0.1s",
+              boxShadow: isCurrent ? "none" : `0 3px 12px ${tierColor}40`,
+              letterSpacing: "0.01em",
+            }}
+            onMouseOver={e => { if (!isCurrent && !isActivatingFree) (e.currentTarget as HTMLButtonElement).style.opacity = "0.88"; }}
+            onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+          >
+            {ctaLabel}
+          </button>
+
+          {/* Details link */}
+          <button
+            onClick={() => onViewDetails(plan)}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.45rem",
+              borderRadius: 9,
+              border: "none",
+              background: "none",
+              color: "#94a3b8",
+              fontSize: "0.78rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
+            عرض كامل التفاصيل والمقارنة
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1043,12 +1109,12 @@ export default function PlansPage() {
          data-version="owner-role-fix-v1">
 
       {/* Page header */}
-      <div style={{ marginBottom: "1.75rem" }}>
-        <h1 style={{ margin: 0, fontSize: "1.65rem", fontWeight: 800, color: "#1a2e1a" }}>
-          باقات الاشتراك
+      <div style={{ marginBottom: "2rem", borderBottom: "1px solid #f1f5f9", paddingBottom: "1.5rem" }}>
+        <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 900, color: "#1a2e1a", lineHeight: 1.2 }}>
+          اختر الباقة الأنسب لنمو نشاطك العقاري
         </h1>
-        <p style={{ margin: "0.3rem 0 0", fontSize: "0.875rem", color: "#64748b" }}>
-          اختر الباقة المناسبة لنشاطك العقاري وابدأ الاشتراك الآن
+        <p style={{ margin: "0.5rem 0 0", fontSize: "0.95rem", color: "#475569", lineHeight: 1.6 }}>
+          قارن المزايا وابدأ بالخطة المناسبة لك — يمكنك الترقية في أي وقت
         </p>
       </div>
 
@@ -1263,8 +1329,8 @@ export default function PlansPage() {
       {!plansLoading && !subLoading && !plansError && visiblePlans.length > 0 && (
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-          gap: "1rem",
+          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+          gap: "1.5rem",
         }}>
           {visiblePlans.map(plan => {
             // ── DIAGNOSTIC: render check ──────────────────────────────────────
@@ -1298,22 +1364,26 @@ export default function PlansPage() {
         </p>
       )}
 
-      {/* Info footer */}
+      {/* Trust / support footer */}
       {!plansLoading && !plansError && (
         <div style={{
-          marginTop: "1rem",
-          backgroundColor: "#fff",
+          marginTop: "1.5rem",
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          gap: "1.25rem 2.5rem",
+          padding: "1.1rem 1.5rem",
+          backgroundColor: "#f8fafc",
           borderRadius: 12,
-          padding: "1.25rem",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          border: "1.5px solid #e2e8f0",
           fontSize: "0.82rem",
           color: "#64748b",
-          lineHeight: 1.7,
+          lineHeight: 1.6,
           textAlign: "center",
         }}>
-          🔒 جميع المدفوعات تتم يدوياً ويراجعها فريق المبيعات قبل تفعيل الباقة.
-          {" "}
-          للاستفسار تواصل معنا عبر الدعم.
+          <span>🔒 المدفوعات يراجعها فريقنا قبل التفعيل</span>
+          <span>🔄 يمكنك الترقية لاحقاً في أي وقت</span>
+          <span>💬 للمساعدة في الاختيار تواصل مع الدعم</span>
         </div>
       )}
 

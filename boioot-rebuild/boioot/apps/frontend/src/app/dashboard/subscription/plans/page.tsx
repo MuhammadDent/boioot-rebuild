@@ -31,6 +31,7 @@ import {
   canAccessFeature,
   type FeatureAccessKey,
 } from "@/features/access/featureAccess";
+import PlanDetailsModal from "@/components/pricing/PlanDetailsModal";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,24 +40,46 @@ function formatAmount(amount: number, currency: string) {
   return `${amount.toLocaleString("ar-SY")} ${currency}`;
 }
 
-const LIMIT_KEYS = ["max_active_listings", "max_agents", "max_projects"];
+const LIMIT_KEYS = ["max_active_listings", "max_images_per_listing", "max_featured_slots", "max_agents", "max_projects"];
 const LIMIT_ICONS: Record<string, string> = {
-  max_active_listings: "📋",
-  max_agents:          "👥",
-  max_projects:        "🏗️",
+  max_active_listings:    "🏠",
+  max_images_per_listing: "📸",
+  max_featured_slots:     "⭐",
+  max_agents:             "👥",
+  max_projects:           "🏗️",
 };
 const LIMIT_LABELS: Record<string, string> = {
-  max_active_listings: "إعلان نشط",
-  max_agents:          "وكيل",
-  max_projects:        "مشروع",
+  max_active_listings:    "إعلان نشط",
+  max_images_per_listing: "صورة للإعلان",
+  max_featured_slots:     "فرصة مميزة",
+  max_agents:             "وكيل",
+  max_projects:           "مشروع",
 };
 
 // Maps each limit key to the featureAccess gate required to display it.
 // null = always visible regardless of role.
 const LIMIT_VISIBILITY: Record<string, FeatureAccessKey | null> = {
-  max_active_listings: null,
-  max_agents:          "agents",
-  max_projects:        "projects",
+  max_active_listings:    null,
+  max_images_per_listing: null,
+  max_featured_slots:     null,
+  max_agents:             "agents",
+  max_projects:           "projects",
+};
+
+// Taglines per tier — shown under the plan name
+const TIER_TAGLINE: Record<string, string> = {
+  free:       "مناسب للبداية",
+  basic:      "مناسب للنشاط اليومي",
+  advanced:   "مناسب للنشاط المكثف",
+  enterprise: "للمؤسسات والشركات الكبرى",
+};
+
+// Accent colors per tier
+const TIER_COLOR: Record<string, string> = {
+  free:       "#059669",
+  basic:      "#2563eb",
+  advanced:   "#7c3aed",
+  enterprise: "#b45309",
 };
 
 // ── PlanCard ─────────────────────────────────────────────────────────────────
@@ -68,6 +91,7 @@ function PlanCard({
   onChoose,
   onActivateFree,
   freeActivatingId,
+  onViewDetails,
   user,
 }: {
   plan: PublicPricingItem;
@@ -76,167 +100,282 @@ function PlanCard({
   onChoose: (plan: PublicPricingItem, pricing: PublicPricingEntry) => void;
   onActivateFree: (planId: string) => void;
   freeActivatingId: string | null;
+  onViewDetails: (plan: PublicPricingItem) => void;
   user: { role?: string | null; accountType?: string | null } | null;
 }) {
-  const pricing = plan.pricing.find(p => p.billingCycle === cycle)
-    ?? (plan.pricing.length > 0 ? plan.pricing[0] : undefined);
+  const cardRouter = useRouter();
 
-  // TODO(stabilization): plan.pricing may be empty for misconfigured plans — guard below
-  const isFree = pricing ? pricing.priceAmount === 0 : plan.pricing.every(p => p.priceAmount === 0);
-  const isCurrent = plan.planId === currentPlanId;
+  const isOneTimePlan = plan.planBillingType === "one_time_fixed_term"
+    || plan.pricing.every(p => p.billingCycle === "OneTime");
+
+  const pricing = isOneTimePlan
+    ? (plan.pricing.find(p => p.billingCycle === "OneTime") ?? plan.pricing[0])
+    : (plan.pricing.find(p => p.billingCycle === cycle) ?? plan.pricing[0]);
+
+  const targetPricing = pricing ?? (plan.pricing.length > 0 ? plan.pricing[0] : null);
+
+  const isActivatableFree = plan.planBillingType === "free_default";
+  const isCurrent    = plan.planId === currentPlanId;
   const isRecommended = plan.isRecommended;
   const isActivatingFree = freeActivatingId === plan.planId;
 
-  // Filter limits by: (a) known display keys, (b) role-based visibility gate.
-  // max_agents → CompanyOwner + Admin only
-  // max_projects → Company CompanyOwner + Admin only
+  const tier      = plan.tier ?? "";
+  const tierColor = TIER_COLOR[tier] ?? "#1a2e1a";
+  const tagline   = TIER_TAGLINE[tier] ?? "";
+
+  // Key limits (filtered by display keys + role gate)
   const keyLimits = plan.limits.filter(l => {
     if (!LIMIT_KEYS.includes(l.key)) return false;
+    if (l.value === 0) return false; // hide zero-value limits
     const gate = LIMIT_VISIBILITY[l.key];
     if (gate === null) return true;
     return canAccessFeature(user, gate);
-  });
+  }).slice(0, 4);
+
+  // Top enabled features (max 4)
+  const enabledFeatures = plan.features.filter(f => f.isEnabled).slice(0, 4);
+
+  // Visual state
+  const isPremiumTier = tier === "advanced" || tier === "enterprise";
+  const cardBorder = isCurrent
+    ? `2.5px solid #2563eb`
+    : isRecommended
+      ? `2.5px solid ${tierColor}`
+      : "1.5px solid #e2e8f0";
+  const cardShadow = isRecommended
+    ? `0 8px 32px ${tierColor}28`
+    : isCurrent
+      ? "0 4px 20px rgba(37,99,235,0.18)"
+      : "0 1px 6px rgba(0,0,0,0.06)";
+  const cardBg = isCurrent ? "#f8faff" : "#fff";
+
+  // CTA label
+  const ctaLabel = isCurrent
+    ? "✓ باقتك الحالية"
+    : isActivatingFree
+      ? "جارٍ التفعيل..."
+      : isActivatableFree
+        ? "ابدأ مجاناً ←"
+        : isPremiumTier
+          ? "الترقية الآن ←"
+          : "اشترك الآن ←";
 
   return (
     <div style={{
-      backgroundColor: "#fff",
-      borderRadius: 16,
-      padding: "1.5rem",
-      boxShadow: isRecommended
-        ? "0 4px 24px rgba(5,150,105,0.18)"
-        : "0 1px 4px rgba(0,0,0,0.06)",
-      border: isRecommended
-        ? "2px solid #059669"
-        : isCurrent
-          ? "2px solid #2563eb"
-          : "1.5px solid #e2e8f0",
+      backgroundColor: cardBg,
+      borderRadius: 18,
+      boxShadow: cardShadow,
+      border: cardBorder,
       display: "flex",
       flexDirection: "column",
-      gap: "0.85rem",
+      gap: 0,
       position: "relative",
+      overflow: "hidden",
     }}>
 
-      {/* Recommended badge */}
-      {isRecommended && (
+      {/* Top badge */}
+      {(isRecommended || isCurrent) && (
         <div style={{
           position: "absolute",
-          top: -12,
+          top: -13,
           right: "50%",
           transform: "translateX(50%)",
-          backgroundColor: "#059669",
+          backgroundColor: isCurrent ? "#2563eb" : tierColor,
           color: "#fff",
-          fontSize: "0.72rem",
+          fontSize: "0.7rem",
           fontWeight: 700,
-          padding: "0.2rem 0.85rem",
+          padding: "0.18rem 0.9rem",
           borderRadius: 20,
           whiteSpace: "nowrap",
+          letterSpacing: "0.02em",
+          zIndex: 2,
         }}>
-          ⭐ الأكثر شعبية
+          {isCurrent ? "✓ باقتك الحالية" : "⭐ الأكثر شعبية"}
         </div>
       )}
 
-      {isCurrent && !isRecommended && (
+      {/* Premium header stripe */}
+      {isPremiumTier && !isCurrent && (
         <div style={{
-          position: "absolute",
-          top: -12,
-          right: "50%",
-          transform: "translateX(50%)",
-          backgroundColor: "#2563eb",
-          color: "#fff",
-          fontSize: "0.72rem",
-          fontWeight: 700,
-          padding: "0.2rem 0.85rem",
-          borderRadius: 20,
-          whiteSpace: "nowrap",
+          background: `linear-gradient(135deg, ${tierColor}18, ${tierColor}08)`,
+          borderBottom: `3px solid ${tierColor}`,
+          padding: "1.25rem 1.5rem 0.85rem",
         }}>
-          ✓ باقتك الحالية
+          {tagline && (
+            <span style={{
+              display: "inline-block",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: tierColor,
+              backgroundColor: tierColor + "20",
+              padding: "0.15rem 0.55rem",
+              borderRadius: 20,
+              marginBottom: "0.4rem",
+              letterSpacing: "0.02em",
+            }}>
+              {tagline}
+            </span>
+          )}
+          <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#1a2e1a", lineHeight: 1.2 }}>
+            {plan.displayNameAr}
+          </h3>
         </div>
       )}
 
-      {/* Plan name + category */}
-      <div>
-        <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8", fontWeight: 500 }}>
-          {plan.planCategory ?? plan.applicableAccountType ?? ""}
-        </p>
-        <h3 style={{ margin: "0.2rem 0 0", fontSize: "1.15rem", fontWeight: 800, color: "#1a2e1a" }}>
-          {plan.displayNameAr}
-        </h3>
-        {plan.description && (
-          <p style={{ margin: "0.3rem 0 0", fontSize: "0.8rem", color: "#64748b", lineHeight: 1.5 }}>
-            {plan.description}
-          </p>
+      <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: 0, flex: 1 }}>
+
+        {/* ── 1. Plan name + tagline (non-premium) ── */}
+        {!isPremiumTier && (
+          <div style={{ marginBottom: "0.9rem" }}>
+            {tagline && (
+              <span style={{
+                display: "inline-block",
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                color: tierColor,
+                backgroundColor: tierColor + "14",
+                padding: "0.15rem 0.55rem",
+                borderRadius: 20,
+                marginBottom: "0.4rem",
+                letterSpacing: "0.02em",
+              }}>
+                {tagline}
+              </span>
+            )}
+            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#1a2e1a", lineHeight: 1.2 }}>
+              {plan.displayNameAr}
+            </h3>
+          </div>
         )}
+
+        {/* ── 2. Price — dominant element ── */}
+        <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "1rem", marginBottom: "1rem" }}>
+          {pricing ? (
+            <>
+              <p style={{ margin: 0, fontSize: "2rem", fontWeight: 900, color: tierColor, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                {formatAmount(pricing.priceAmount, pricing.currencyCode)}
+              </p>
+              <p style={{ margin: "0.3rem 0 0", fontSize: "0.75rem", color: "#94a3b8", fontWeight: 500 }}>
+                {isOneTimePlan ? "دفعة واحدة — بدون تجديد تلقائي" : `/ ${BILLING_CYCLE_LABELS[cycle] ?? cycle}`}
+              </p>
+            </>
+          ) : (
+            <p style={{ margin: 0, fontSize: "0.88rem", color: "#64748b", fontStyle: "italic" }}>
+              تواصل معنا للاستفسار عن السعر
+            </p>
+          )}
+        </div>
+
+        {/* ── 3. Key limits ── */}
+        {keyLimits.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "0.9rem" }}>
+            {keyLimits.map(l => (
+              <div key={l.key} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.86rem" }}>
+                <span style={{ width: 20, textAlign: "center", flexShrink: 0, fontSize: "1rem" }}>{LIMIT_ICONS[l.key] ?? "•"}</span>
+                <span style={{ fontWeight: 800, color: "#1e293b", minWidth: 30, fontSize: "0.95rem" }}>
+                  {formatLimitValue(l.value, null)}
+                </span>
+                <span style={{ color: "#64748b" }}>{LIMIT_LABELS[l.key] ?? l.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── 4. Enabled features ── */}
+        {enabledFeatures.length > 0 && (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.4rem",
+            marginBottom: "1.1rem",
+            paddingTop: keyLimits.length > 0 ? "0.75rem" : 0,
+            borderTop: keyLimits.length > 0 ? "1px dashed #f1f5f9" : "none",
+          }}>
+            {enabledFeatures.map(f => (
+              <div key={f.key} style={{ display: "flex", alignItems: "center", gap: "0.45rem", fontSize: "0.83rem" }}>
+                <span style={{ color: "#059669", fontWeight: 800, flexShrink: 0, fontSize: "0.75rem" }}>✓</span>
+                <span style={{ color: "#374151", lineHeight: 1.4 }}>{f.name}</span>
+              </div>
+            ))}
+            {plan.features.filter(f => f.isEnabled).length > 4 && (
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                marginTop: "0.1rem",
+                fontSize: "0.76rem",
+                color: tierColor,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+                onClick={() => onViewDetails(plan)}
+              >
+                <span style={{ fontSize: "0.9rem" }}>+</span>
+                {plan.features.filter(f => f.isEnabled).length - 4} مزايا إضافية — اعرف التفاصيل
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 5. CTA buttons ── */}
+        <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+
+          {/* Primary CTA */}
+          <button
+            onClick={() => {
+              if (isCurrent || isActivatingFree) return;
+              if (isActivatableFree) { onActivateFree(plan.planId); return; }
+              if (targetPricing) { onChoose(plan, targetPricing); return; }
+              cardRouter.push(`/dashboard/subscription/requests?planId=${plan.planId}`);
+            }}
+            disabled={isCurrent || isActivatingFree}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.8rem",
+              borderRadius: 11,
+              border: "none",
+              backgroundColor: isCurrent
+                ? "#e2e8f0"
+                : isActivatingFree
+                  ? tierColor + "99"
+                  : tierColor,
+              color: isCurrent ? "#94a3b8" : "#fff",
+              fontSize: "0.95rem",
+              fontWeight: 700,
+              cursor: isCurrent || isActivatingFree ? "default" : "pointer",
+              transition: "opacity 0.15s, transform 0.1s",
+              boxShadow: isCurrent ? "none" : `0 3px 12px ${tierColor}40`,
+              letterSpacing: "0.01em",
+            }}
+            onMouseOver={e => { if (!isCurrent && !isActivatingFree) (e.currentTarget as HTMLButtonElement).style.opacity = "0.88"; }}
+            onMouseOut={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+          >
+            {ctaLabel}
+          </button>
+
+          {/* Details link */}
+          <button
+            onClick={() => onViewDetails(plan)}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "0.45rem",
+              borderRadius: 9,
+              border: "none",
+              background: "none",
+              color: "#94a3b8",
+              fontSize: "0.78rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
+            عرض كامل التفاصيل والمقارنة
+          </button>
+        </div>
       </div>
-
-      {/* Price */}
-      {pricing && (
-        <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "0.85rem" }}>
-          <p style={{ margin: 0, fontSize: "1.6rem", fontWeight: 900, color: "#059669", lineHeight: 1 }}>
-            {formatAmount(pricing.priceAmount, pricing.currencyCode)}
-          </p>
-          <p style={{ margin: "0.25rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
-            / {BILLING_CYCLE_LABELS[cycle] ?? cycle}
-          </p>
-        </div>
-      )}
-
-      {/* Key limits */}
-      {keyLimits.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-          {keyLimits.map(l => (
-            <div
-              key={l.key}
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}
-            >
-              <span>{LIMIT_ICONS[l.key] ?? "•"}</span>
-              <span style={{ color: "#374151", fontWeight: 600 }}>
-                {formatLimitValue(l.value, null)}
-              </span>
-              <span style={{ color: "#64748b" }}>
-                {LIMIT_LABELS[l.key] ?? l.name}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* CTA */}
-      <button
-        onClick={() => {
-          if (isCurrent || isActivatingFree) return;
-          if (isFree) {
-            onActivateFree(plan.planId);
-          } else if (pricing) {
-            onChoose(plan, pricing);
-          }
-        }}
-        disabled={isCurrent || isActivatingFree}
-        type="button"
-        style={{
-          marginTop: "auto",
-          width: "100%",
-          padding: "0.7rem",
-          borderRadius: 10,
-          border: "none",
-          backgroundColor: isCurrent || isActivatingFree
-            ? "#e2e8f0"
-            : isRecommended
-              ? "#059669"
-              : "#1a2e1a",
-          color: isCurrent || isActivatingFree ? "#94a3b8" : "#fff",
-          fontSize: "0.9rem",
-          fontWeight: 700,
-          cursor: isCurrent || isActivatingFree ? "default" : "pointer",
-        }}
-      >
-        {isCurrent
-          ? "باقتك الحالية"
-          : isActivatingFree
-            ? "جارٍ التفعيل..."
-            : isFree
-              ? "تفعيل مجاني"
-              : "اختر الباقة"}
-      </button>
     </div>
   );
 }
@@ -313,7 +452,7 @@ function CheckoutModal({
         setSubmitPhase("uploading");
         const form = new FormData();
         form.append("file", proofFile);
-        const { url } = await api.postForm<{ url: string; fileName: string }>("/upload/proof", form);
+        const { url } = await api.upload<{ url: string; fileName: string }>("/upload/proof", form);
 
         setSubmitPhase("attaching");
         await paymentRequestsApi.uploadReceipt(result.id, { receiptImageUrl: url });
@@ -385,19 +524,23 @@ function CheckoutModal({
           <p style={{ margin: "0.4rem 0 0", fontSize: "1.2rem", fontWeight: 900, color: "#059669" }}>
             {formatAmount(selectedPricing.priceAmount, selectedPricing.currencyCode)}
             <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "#64748b", marginRight: "0.35rem" }}>
-              / {BILLING_CYCLE_LABELS[selectedPricing.billingCycle] ?? selectedPricing.billingCycle}
+              {plan.planBillingType === "one_time_fixed_term"
+                ? "دفعة واحدة"
+                : `/ ${BILLING_CYCLE_LABELS[selectedPricing.billingCycle] ?? selectedPricing.billingCycle}`}
             </span>
           </p>
         </div>
 
-        {/* Billing cycle selector (if multiple options) */}
-        {plan.pricing.length > 1 && (
+        {/* Billing cycle selector (if multiple options — hidden for one-time plans) */}
+        {plan.pricing.length > 1 && plan.planBillingType !== "one_time_fixed_term" && (
           <div style={{ marginBottom: "1.25rem" }}>
             <p style={{ margin: "0 0 0.6rem", fontSize: "0.85rem", fontWeight: 700, color: "#374151" }}>
               دورة الفوترة
             </p>
             <div style={{ display: "flex", gap: "0.6rem" }}>
-              {plan.pricing.map(p => (
+              {plan.pricing
+                .filter(p => p.billingCycle !== "OneTime") // defensive: never show OneTime in recurring selector
+                .map(p => (
                 <button
                   key={p.pricingId}
                   onClick={() => setSelectedPricing(p)}
@@ -841,6 +984,8 @@ export default function PlansPage() {
 
   const [freeActivatingId, setFreeActivatingId]   = useState<string | null>(null);
   const [freeSuccessPlan, setFreeSuccessPlan]     = useState<string | null>(null);
+  const [freeActivateError, setFreeActivateError] = useState<string | null>(null);
+  const [detailPlan, setDetailPlan]               = useState<PublicPricingItem | null>(null);
 
   // Audience tab for User role — initialized from ?audience= query param (client-side), defaults to "owner"
   const [userAudienceTab, setUserAudienceTab] = useState<string>("owner");
@@ -861,11 +1006,11 @@ export default function PlansPage() {
       console.log("PLANS API RESPONSE:", data);
       console.log("PLANS API — total count:", data.length);
       console.log("PLANS API — summary:", data.map(p => ({
-        name:            p.displayNameAr ?? p.planName,
-        audienceType:    p.audienceType,
-        tier:            p.tier,
+        name:           p.displayNameAr ?? p.planName,
+        audienceType:   p.audienceType,
+        tier:           p.tier,
         planBillingType: p.planBillingType,
-        pricingEntries:  p.pricing.length,
+        pricingEntries: p.pricing.length,
       })));
       const advancedOwner = data.find(p => p.audienceType === "owner" && p.tier === "advanced");
       console.log("PLANS API — متقدم للمالك present?", advancedOwner ? "YES ✓" : "NO ✗", advancedOwner ?? "");
@@ -910,7 +1055,20 @@ export default function PlansPage() {
         .then(sub => setCurrentSub(sub))
         .catch(() => {});
     } catch (err) {
-      setError(normalizeError(err));
+      const msg = normalizeError(err);
+      // If backend rejects because plan is not free → open checkout instead of showing raw error
+      if (msg.includes("ليست مجانية") || msg.includes("not free") || msg.includes("NotFree")) {
+        const plan = plans.find(p => p.planId === planId);
+        if (plan) {
+          const pricing = plan.pricing.find(p => p.billingCycle === cycle) ?? plan.pricing[0];
+          if (pricing) {
+            setCheckoutPlan(plan);
+            setCheckoutPricing(pricing);
+            return;
+          }
+        }
+      }
+      setFreeActivateError(msg);
     } finally {
       setFreeActivatingId(null);
     }
@@ -932,16 +1090,18 @@ export default function PlansPage() {
   console.log("PLANS FILTER — user.role:", user.role, "| audienceType resolved to:", audienceType);
   console.log("PLANS FILTER — total from API:", plans.length, "| after filter:", visiblePlans.length);
   console.log("PLANS FILTER — visible plans:", visiblePlans.map(p => p.displayNameAr ?? p.planName));
-  const _advancedInVisible = visiblePlans.find(p => p.tier === "advanced" && p.audienceType === "owner");
-  console.log("PLANS FILTER — متقدم للمالك in visible?", _advancedInVisible ? "YES ✓" : "NO ✗");
-  if (!_advancedInVisible) {
-    const _advancedInAll = plans.find(p => p.tier === "advanced" && p.audienceType === "owner");
-    console.log("PLANS FILTER — متقدم للمالك in ALL plans?", _advancedInAll ? "YES → filtered out by audienceType mismatch" : "NO → not in API response at all");
+  const advancedInVisible = visiblePlans.find(p => p.tier === "advanced" && p.audienceType === "owner");
+  console.log("PLANS FILTER — متقدم للمالك in visible?", advancedInVisible ? "YES ✓" : "NO ✗");
+  if (!advancedInVisible) {
+    const advancedInAll = plans.find(p => p.tier === "advanced" && p.audienceType === "owner");
+    console.log("PLANS FILTER — متقدم للمالك in ALL plans?", advancedInAll ? "YES → filtered out by audienceType mismatch" : "NO → not in API response at all");
   }
   // ────────────────────────────────────────────────────────────────────────────
 
   const hasBothCycles = visiblePlans.some(p =>
-    p.pricing.some(pr => pr.billingCycle === "Yearly")
+    p.planBillingType !== "one_time_fixed_term"
+    && p.planBillingType !== "free_default"
+    && p.pricing.some(pr => pr.billingCycle === "Yearly")
   );
 
   return (
@@ -949,12 +1109,12 @@ export default function PlansPage() {
          data-version="owner-role-fix-v1">
 
       {/* Page header */}
-      <div style={{ marginBottom: "1.75rem" }}>
-        <h1 style={{ margin: 0, fontSize: "1.65rem", fontWeight: 800, color: "#1a2e1a" }}>
-          باقات الاشتراك
+      <div style={{ marginBottom: "2rem", borderBottom: "1px solid #f1f5f9", paddingBottom: "1.5rem" }}>
+        <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 900, color: "#1a2e1a", lineHeight: 1.2 }}>
+          اختر الباقة الأنسب لنمو نشاطك العقاري
         </h1>
-        <p style={{ margin: "0.3rem 0 0", fontSize: "0.875rem", color: "#64748b" }}>
-          اختر الباقة المناسبة لنشاطك العقاري وابدأ الاشتراك الآن
+        <p style={{ margin: "0.5rem 0 0", fontSize: "0.95rem", color: "#475569", lineHeight: 1.6 }}>
+          قارن المزايا وابدأ بالخطة المناسبة لك — يمكنك الترقية في أي وقت
         </p>
       </div>
 
@@ -1039,7 +1199,7 @@ export default function PlansPage() {
             <p style={{ margin: "0.15rem 0 0", fontSize: "0.8rem", color: "#64748b" }}>
               {currentSub.status === "Active" ? "✓ نشط" : currentSub.status}
               {" · "}
-              {currentSub.billingCycle === "Monthly" ? "شهري" : "سنوي"}
+              {currentSub.billingCycle === "OneTime" ? "دفعة واحدة" : currentSub.billingCycle === "Monthly" ? "شهري" : "سنوي"}
             </p>
           </div>
           <button
@@ -1169,10 +1329,14 @@ export default function PlansPage() {
       {!plansLoading && !subLoading && !plansError && visiblePlans.length > 0 && (
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-          gap: "1rem",
+          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+          gap: "1.5rem",
         }}>
-          {visiblePlans.map(plan => (
+          {visiblePlans.map(plan => {
+            // ── DIAGNOSTIC: render check ──────────────────────────────────────
+            console.log("RENDER PLAN:", plan.tier, "|", plan.displayNameAr, "| audienceType:", plan.audienceType, "| billingType:", plan.planBillingType);
+            // ──────────────────────────────────────────────────────────────────
+            return (
             <PlanCard
               key={plan.planId}
               plan={plan}
@@ -1185,29 +1349,62 @@ export default function PlansPage() {
               }}
               onActivateFree={handleActivateFree}
               freeActivatingId={freeActivatingId}
+              onViewDetails={setDetailPlan}
               user={user}
             />
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Info footer */}
+      {/* Free activation error */}
+      {freeActivateError && (
+        <p style={{ color: "var(--color-error, #dc2626)", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, padding: "0.6rem 1rem", fontSize: "0.88rem", margin: "0.75rem 0" }}>
+          {freeActivateError}
+        </p>
+      )}
+
+      {/* Trust / support footer */}
       {!plansLoading && !plansError && (
         <div style={{
-          marginTop: "1rem",
-          backgroundColor: "#fff",
+          marginTop: "1.5rem",
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "center",
+          gap: "1.25rem 2.5rem",
+          padding: "1.1rem 1.5rem",
+          backgroundColor: "#f8fafc",
           borderRadius: 12,
-          padding: "1.25rem",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+          border: "1.5px solid #e2e8f0",
           fontSize: "0.82rem",
           color: "#64748b",
-          lineHeight: 1.7,
+          lineHeight: 1.6,
           textAlign: "center",
         }}>
-          🔒 جميع المدفوعات تتم يدوياً ويراجعها فريق المبيعات قبل تفعيل الباقة.
-          {" "}
-          للاستفسار تواصل معنا عبر الدعم.
+          <span>🔒 المدفوعات يراجعها فريقنا قبل التفعيل</span>
+          <span>🔄 يمكنك الترقية لاحقاً في أي وقت</span>
+          <span>💬 للمساعدة في الاختيار تواصل مع الدعم</span>
         </div>
+      )}
+
+      {/* Plan details modal */}
+      {detailPlan && (
+        <PlanDetailsModal
+          plan={detailPlan}
+          isCurrent={detailPlan.planId === currentSub?.planId}
+          defaultCycle={cycle}
+          onClose={() => setDetailPlan(null)}
+          onChoose={(p, pr) => {
+            setDetailPlan(null);
+            if (p.planBillingType === "free_default") {
+              handleActivateFree(p.planId);
+            } else {
+              setCheckoutPlan(p);
+              setCheckoutPricing(pr ?? p.pricing[0]);
+              setSuccessMethod(null);
+            }
+          }}
+        />
       )}
 
       {/* Checkout modal — keyed on planId+pricingId to force clean remount on plan change */}

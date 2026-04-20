@@ -746,23 +746,27 @@ export default function SubscriptionPage() {
           <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800, color: "#1a2e1a" }}>
             اشتراكي
           </h1>
-          <p style={{ margin: "0.25rem 0 0", fontSize: "0.875rem", color: "#64748b" }}>
-            إدارة اشتراكك وعرض تاريخ التغييرات
+          <p style={{ margin: "0.3rem 0 0", fontSize: "0.875rem", color: "#64748b", lineHeight: 1.5 }}>
+            اطّلع على باقتك الحالية وحدود استخدامك
           </p>
         </div>
         <Link
           href="/dashboard/subscription/plans"
           style={{
-            padding: "0.6rem 1.25rem",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.4rem",
+            padding: "0.65rem 1.35rem",
             backgroundColor: "#1a2e1a",
             color: "#fff",
             borderRadius: 10,
             textDecoration: "none",
             fontWeight: 700,
             fontSize: "0.875rem",
+            boxShadow: "0 2px 8px rgba(26,46,26,0.25)",
           }}
         >
-          تغيير الباقة
+          ⬆ عرض الباقات
         </Link>
       </div>
 
@@ -883,17 +887,18 @@ export default function SubscriptionPage() {
                 <Link
                   href="/dashboard/subscription/plans"
                   style={{
-                    display: "inline-flex", alignItems: "center", gap: "0.4rem",
-                    padding: "0.6rem 1.25rem",
+                    display: "inline-flex", alignItems: "center", gap: "0.45rem",
+                    padding: "0.65rem 1.35rem",
                     backgroundColor: tierColor,
                     color: "#fff",
                     borderRadius: 10,
                     fontWeight: 700,
-                    fontSize: "0.85rem",
+                    fontSize: "0.88rem",
                     textDecoration: "none",
+                    boxShadow: `0 3px 10px ${tierColor}40`,
                   }}
                 >
-                  ⬆ ترقية الباقة
+                  ⬆ الترقية إلى باقة أعلى
                 </Link>
               )}
               {isCancelable && (
