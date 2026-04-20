@@ -962,8 +962,18 @@ export default function PlansPage() {
   useEffect(() => {
     if (!user) return;
     subscriptionApi.getCurrent()
-      .then(sub => setCurrentSub(sub))
-      .catch(() => setCurrentSub(null))
+      .then(sub => {
+        // ── DIAGNOSTIC: subscription response ────────────────────────────────
+        console.log("SUB API — currentSub raw:", sub);
+        console.log("SUB API — currentSub.audienceType:", sub?.audienceType ?? "null/undefined");
+        console.log("SUB API — user.role:", user?.role);
+        // ──────────────────────────────────────────────────────────────────────
+        setCurrentSub(sub);
+      })
+      .catch((err) => {
+        console.log("SUB API — getCurrent FAILED:", err);
+        setCurrentSub(null);
+      })
       .finally(() => setSubLoading(false));
   }, [user]);
 
@@ -1253,7 +1263,11 @@ export default function PlansPage() {
           gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
           gap: "1rem",
         }}>
-          {visiblePlans.map(plan => (
+          {visiblePlans.map(plan => {
+            // ── DIAGNOSTIC: render check ──────────────────────────────────────
+            console.log("RENDER PLAN:", plan.tier, "|", plan.displayNameAr, "| audienceType:", plan.audienceType, "| billingType:", plan.planBillingType);
+            // ──────────────────────────────────────────────────────────────────
+            return (
             <PlanCard
               key={plan.planId}
               plan={plan}
@@ -1269,7 +1283,8 @@ export default function PlansPage() {
               onViewDetails={setDetailPlan}
               user={user}
             />
-          ))}
+            );
+          })}
         </div>
       )}
 
