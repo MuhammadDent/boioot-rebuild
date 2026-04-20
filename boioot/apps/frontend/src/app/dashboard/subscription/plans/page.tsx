@@ -934,6 +934,19 @@ export default function PlansPage() {
     setPlansError(null);
     try {
       const data = await pricingApi.getPublicPricing();
+      // ── DIAGNOSTIC LOGGING ────────────────────────────────────────────────
+      console.log("PLANS API RESPONSE:", data);
+      console.log("PLANS API — total count:", data.length);
+      console.log("PLANS API — summary:", data.map(p => ({
+        name:           p.displayNameAr ?? p.planName,
+        audienceType:   p.audienceType,
+        tier:           p.tier,
+        planBillingType: p.planBillingType,
+        pricingEntries: p.pricing.length,
+      })));
+      const advancedOwner = data.find(p => p.audienceType === "owner" && p.tier === "advanced");
+      console.log("PLANS API — متقدم للمالك present?", advancedOwner ? "YES ✓" : "NO ✗", advancedOwner ?? "");
+      // ──────────────────────────────────────────────────────────────────────
       setPlans(data);
     } catch {
       setPlansError("تعذّر تحميل الباقات. يرجى المحاولة لاحقاً.");
@@ -994,6 +1007,18 @@ export default function PlansPage() {
   const visiblePlans = filterPlansForAudience(plans, audienceType)
     .slice()
     .sort((a, b) => (a.displayOrder ?? a.rank) - (b.displayOrder ?? b.rank));
+
+  // ── DIAGNOSTIC: filtering result ────────────────────────────────────────────
+  console.log("PLANS FILTER — user.role:", user.role, "| audienceType resolved to:", audienceType);
+  console.log("PLANS FILTER — total from API:", plans.length, "| after filter:", visiblePlans.length);
+  console.log("PLANS FILTER — visible plans:", visiblePlans.map(p => p.displayNameAr ?? p.planName));
+  const advancedInVisible = visiblePlans.find(p => p.tier === "advanced" && p.audienceType === "owner");
+  console.log("PLANS FILTER — متقدم للمالك in visible?", advancedInVisible ? "YES ✓" : "NO ✗");
+  if (!advancedInVisible) {
+    const advancedInAll = plans.find(p => p.tier === "advanced" && p.audienceType === "owner");
+    console.log("PLANS FILTER — متقدم للمالك in ALL plans?", advancedInAll ? "YES → filtered out by audienceType mismatch" : "NO → not in API response at all");
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   const hasBothCycles = visiblePlans.some(p =>
     p.planBillingType !== "one_time_fixed_term"
