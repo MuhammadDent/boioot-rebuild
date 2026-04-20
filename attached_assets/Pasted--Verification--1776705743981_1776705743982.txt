@@ -1,0 +1,86 @@
+أريد حسم مشكلة عدم ظهور الباقة المتقدمة للمالك بشكل نهائي، لكن هذه المرة أريد Verification على مستوى Git + Frontend Deploy، وليس تحليل منطق فقط.
+
+## الحقيقة الحالية:
+- حساب المكتب العقاري يعرض 3 باقات
+- حساب المالك ما زال يعرض باقتين فقط على production
+- تم سابقًا تشخيص bug في:
+  src/features/pricing/planCompatibility.ts
+
+لكن النتيجة على الموقع الحي لم تتغير
+
+---
+
+## المطلوب الآن بدقة:
+
+### 1) تأكد أن إصلاح owner موجود فعليًا داخل الملف الحالي
+افتح الملف:
+src/features/pricing/planCompatibility.ts
+
+واعرض لي:
+- الدالة الحالية كاملة أو الجزء المسؤول عن تحديد audienceType
+- هل ما زالت تعتمد على currentSub.audienceType؟
+- أم أصبحت تعطي أولوية صريحة للـ role:
+  Owner / Broker / Agent
+
+---
+
+### 2) أثبت أن هذا الملف دخل فعلًا في آخر commit
+نفّذ:
+- git status
+- git log -n 3 --oneline
+- git show --name-only HEAD
+
+وأخبرني:
+- هل ملف planCompatibility.ts موجود ضمن آخر commit؟
+- ما هو commit hash الأخير؟
+
+---
+
+### 3) افحص هل frontend production مبني من نفس الفرع أصلًا
+أريدك أن تحدد:
+- ما هو مشروع الـ frontend الفعلي؟
+- هل هو مربوط بـ Vercel أو منصة أخرى؟
+- هل النشر يتم تلقائيًا من فرع main؟
+- هل يوجد build/deploy failed للـ frontend؟
+
+إذا كان هناك ملف إعداد frontend deployment أو Vercel config أو README يوضح ذلك، افحصه.
+
+---
+
+### 4) أضف fingerprint واضح جدًا داخل صفحة plans
+أريد تعديلًا مؤقتًا فقط للتشخيص:
+
+في صفحة:
+/dashboard/subscription/plans
+
+أضف console.log واضح جدًا مثل:
+console.log("FRONTEND PLAN PAGE VERSION: owner-role-fix-v1");
+
+وأضف أيضًا تعليقًا/نصًا مؤقتًا صغيرًا غير مؤذٍ في الصفحة نفسها، مثل:
+<!-- owner-role-fix-v1 -->
+
+أو أي fingerprint مرئي أو في source يثبت أن النسخة الجديدة وصلت للإنتاج.
+
+الهدف:
+إذا لم يظهر هذا الـ fingerprint على الموقع الحي، فالمشكلة Deploy وليست Logic.
+
+---
+
+### 5) بعد ذلك:
+- اعمل commit واضح
+- اعمل push
+- ثم أعطني:
+  - commit hash
+  - هل الملف دخل في commit؟
+  - ما هو fingerprint الذي أضفته؟
+  - كيف أتحقق أنا يدويًا أن production صار على النسخة الجديدة؟
+
+---
+
+### 6) لا تعمل refactor
+لا تغيّر أي UI حقيقي
+لا تغيّر البطاقات
+فقط Verification حاسم:
+هل frontend production يأخذ آخر نسخة أم لا؟
+
+ابدأ الآن.

@@ -822,6 +822,8 @@ const USER_AUDIENCE_TABS: Array<{ key: string; label: string; icon: string }> = 
 ];
 
 export default function PlansPage() {
+  // owner-role-fix-v1: role-based audienceType priority (planCompatibility.ts)
+  console.log("FRONTEND PLAN PAGE VERSION: owner-role-fix-v1");
   const { user, isLoading } = useProtectedRoute();
   const router = useRouter();
 
@@ -943,7 +945,8 @@ export default function PlansPage() {
   );
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 0 3rem" }}>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 0 3rem" }}
+         data-version="owner-role-fix-v1">
 
       {/* Page header */}
       <div style={{ marginBottom: "1.75rem" }}>
