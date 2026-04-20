@@ -1002,18 +1002,21 @@ export default function PlansPage() {
     setPlansError(null);
     try {
       const data = await pricingApi.getPublicPricing();
-      // ── DIAGNOSTIC LOGGING ────────────────────────────────────────────────
-      console.log("PLANS API RESPONSE:", data);
+      // ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
+      console.log("ALL PLANS FROM API:", data);
       console.log("PLANS API — total count:", data.length);
       console.log("PLANS API — summary:", data.map(p => ({
-        name:           p.displayNameAr ?? p.planName,
-        audienceType:   p.audienceType,
-        tier:           p.tier,
+        name:            p.displayNameAr ?? p.planName,
+        audienceType:    p.audienceType,
+        tier:            p.tier,
         planBillingType: p.planBillingType,
-        pricingEntries: p.pricing.length,
+        pricingEntries:  p.pricing?.length ?? 0,
       })));
       const advancedOwner = data.find(p => p.audienceType === "owner" && p.tier === "advanced");
-      console.log("PLANS API — متقدم للمالك present?", advancedOwner ? "YES ✓" : "NO ✗", advancedOwner ?? "");
+      console.log("PLANS API — owner_advanced present?", advancedOwner ? "✅ YES" : "❌ NO — missing from API response");
+      if (!advancedOwner) {
+        console.warn("⚠️ owner_advanced is missing. All owner plans:", data.filter(p => p.audienceType === "owner").map(p => p.tier));
+      }
       // ──────────────────────────────────────────────────────────────────────
       setPlans(data);
     } catch {
