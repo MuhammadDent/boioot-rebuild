@@ -9,22 +9,22 @@ public static class NotificationTemplateRegistry
         {
             ["buyer_request_matched"] = new(
                 Key: "buyer_request_matched",
-                TitleTemplate: "طلب عقاري مناسب لعقاراتك",
-                BodyTemplate: "نشر {actorName} طلباً في {city} قد يناسب عروضك المتاحة: {requestTitle}. افتح الطلب الآن وتواصل مع العميل قبل فوات الفرصة.",
+                TitleTemplate: "طلب عقاري مهم يناسب عروضك",
+                BodyTemplate: "يوجد طلب جديد من {actorName} في {city} قد يناسب عقاراتك المتاحة: {requestTitle}. راجع التفاصيل الآن وتواصل مع العميل قبل انتقاله لعرض آخر.",
                 DefaultPriority: 2,
                 Enabled: true),
 
             ["verification_approved"] = new(
                 Key: "verification_approved",
-                TitleTemplate: "تم توثيق حسابك بنجاح",
-                BodyTemplate: "تهانينا، تمت الموافقة على طلب التوثيق. حسابك الآن أكثر موثوقية لدى العملاء، ويمكنك متابعة استخدام بيوت بثقة أكبر.",
+                TitleTemplate: "تم اعتماد توثيق حسابك",
+                BodyTemplate: "تمت الموافقة على طلب التوثيق بنجاح. أصبح حسابك أكثر موثوقية أمام العملاء، ويمكنك متابعة نشر وإدارة عروضك بثقة أكبر.",
                 DefaultPriority: 3,
                 Enabled: true),
 
             ["verification_rejected"] = new(
                 Key: "verification_rejected",
-                TitleTemplate: "طلب التوثيق يحتاج إلى تعديل",
-                BodyTemplate: "لم نتمكن من قبول طلب التوثيق حالياً.{rejectionReasonText} يرجى مراجعة البيانات أو المستندات وإعادة التقديم عند الجاهزية.",
+                TitleTemplate: "طلب التوثيق بحاجة إلى مراجعة",
+                BodyTemplate: "راجعنا طلب التوثيق ونحتاج إلى بعض التعديلات قبل اعتماده.{rejectionReasonText}",
                 DefaultPriority: 3,
                 Enabled: true),
 

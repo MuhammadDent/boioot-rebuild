@@ -368,8 +368,8 @@ public class VerificationRequestService : IVerificationRequestService
                     {
                         ["rejectionReason"] = dto.RejectionReason,
                         ["rejectionReasonText"] = string.IsNullOrWhiteSpace(dto.RejectionReason)
-                            ? " يمكنك التقديم مجدداً."
-                            : $" السبب: {dto.RejectionReason}"
+                            ? " يمكنك تعديل البيانات أو المستندات وإرسال الطلب من جديد."
+                            : $" سبب المراجعة: {dto.RejectionReason}. يمكنك تعديل الطلب وإرساله من جديد."
                     });
 
                 if (rendered is null) return await GetRequestByIdCoreAsync(requestId, ct);

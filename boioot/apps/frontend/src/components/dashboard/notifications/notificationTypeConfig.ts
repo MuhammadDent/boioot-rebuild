@@ -37,7 +37,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<string, NotificationTypeConfig> = 
   new_comment:                  { icon: "💬" },
   verification_new_request:     { icon: "📋", badge: { label: "طلب جديد",       color: "#1d4ed8", bg: "#dbeafe" } },
   verification_approved:        { icon: "✅", badge: { label: "موافقة",        color: "#166534", bg: "#dcfce7" } },
-  verification_rejected:        { icon: "❌", badge: { label: "مرفوض",         color: "#b91c1c", bg: "#fee2e2" } },
+  verification_rejected:        { icon: "📝", badge: { label: "بحاجة مراجعة",  color: "#92400e", bg: "#fef3c7" } },
   verification_needs_info:      { icon: "📝", badge: { label: "معلومات إضافية", color: "#92400e", bg: "#fef3c7" } },
   verification_updated:         { icon: "🔔" },
 };

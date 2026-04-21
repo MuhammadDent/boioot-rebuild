@@ -1,0 +1,96 @@
+I want to STABILIZE and VALIDATE the current notification system before adding any new features.
+
+⚠️ STRICT RULES:
+- DO NOT add real-time features
+- DO NOT refactor architecture
+- DO NOT change APIs or database
+- DO NOT redesign UI
+- ONLY validate, fix, and improve clarity
+
+GOAL:
+Ensure the notification system is 100% reliable, clear, and production-ready.
+
+---
+
+## PART 1 — FUNCTIONAL VALIDATION
+
+Test and verify these notification types:
+
+1) buyer_request_matched
+2) verification_approved
+3) verification_rejected
+
+For each type, confirm:
+
+- Notification is created correctly
+- It appears in the bell dropdown
+- It appears in /notifications page
+- Unread badge updates correctly
+- Clicking it marks it as read
+- CTA (if exists) works correctly
+- No duplicate notifications appear
+
+Fix ONLY if something is broken.
+
+---
+
+## PART 2 — TEMPLATE VALIDATION
+
+Ensure ALL notification text comes from the template system:
+
+- No hardcoded strings remain
+- Title and body are generated from template layer
+- Placeholders render correctly (city, propertyType, etc.)
+
+If any fallback or hardcoded text exists → remove it safely.
+
+---
+
+## PART 3 — MESSAGE QUALITY IMPROVEMENT
+
+Improve Arabic notification messages to be:
+
+- Clear
+- Professional
+- Action-driven
+- Suitable for landlords and real estate offices
+
+Examples:
+
+buyer_request_matched:
+Make it feel urgent and valuable
+
+verification_approved:
+Make it reassuring and positive
+
+verification_rejected:
+Make it clear but not harsh, and guide next action
+
+DO NOT change structure, ONLY improve wording.
+
+---
+
+## PART 4 — UX CHECK (NO REDESIGN)
+
+Validate:
+
+- Icons match notification type
+- Badge colors make sense
+- CTA text is clear
+- No confusing wording
+- No missing states
+
+Only fix small clarity issues.
+
+---
+
+## OUTPUT
+
+Give me:
+
+1) What was validated
+2) What was fixed (if anything)
+3) Improved message texts (before → after)
+4) Any UX issues found
+
+Do NOT implement real-time or new features yet.

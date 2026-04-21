@@ -74,8 +74,6 @@ public class NotificationService : IUserNotificationService
         var total  = await _db.Notifications.CountAsync(n => n.UserId == userId, ct);
         var unread = await _db.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead, ct);
 
-        Console.WriteLine($"[NotificationService] userId={userId} total={total} unread={unread}");
-
         var items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

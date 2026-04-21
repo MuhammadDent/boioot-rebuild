@@ -159,9 +159,9 @@ public class NotificationMatchingService
             "buyer_request_matched",
             new Dictionary<string, string?>
             {
-                ["actorName"] = actorName,
-                ["requestTitle"] = request.Title,
-                ["city"] = request.City,
+                ["actorName"] = string.IsNullOrWhiteSpace(actorName) ? "عميل" : actorName.Trim(),
+                ["requestTitle"] = string.IsNullOrWhiteSpace(request.Title) ? "طلب عقاري جديد" : request.Title.Trim(),
+                ["city"] = string.IsNullOrWhiteSpace(request.City) ? "المنطقة المحددة" : request.City.Trim(),
                 ["propertyType"] = request.PropertyType,
                 ["capacity"] = capacity?.ToString()
             });
