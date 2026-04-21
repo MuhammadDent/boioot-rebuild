@@ -1,6 +1,7 @@
 using Boioot.Application.Common.Models;
 using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
 using Boioot.Application.Features.Subscriptions;
@@ -20,6 +21,7 @@ public class PropertyService : IPropertyService
     private readonly ICompanyOwnershipService _ownership;
     private readonly IPlanEntitlementService _entitlement;
     private readonly IAccountResolver _accountResolver;
+    private readonly IUserNotificationService _notifications;
     private readonly ILogger<PropertyService> _logger;
 
     public PropertyService(
@@ -27,12 +29,14 @@ public class PropertyService : IPropertyService
         ICompanyOwnershipService ownership,
         IPlanEntitlementService entitlement,
         IAccountResolver accountResolver,
+        IUserNotificationService notifications,
         ILogger<PropertyService> logger)
     {
         _context        = context;
         _ownership      = ownership;
         _entitlement    = entitlement;
         _accountResolver = accountResolver;
+        _notifications  = notifications;
         _logger         = logger;
     }
 
@@ -45,8 +49,10 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsPrimary))
-            .Where(p => p.Status == PropertyStatus.Available);
+            .Include(p => p.Images.Where(i => i.IsCover || i.IsPrimary || i.Order == 0))  // cover (+ fallback) for cards
+                .ThenInclude(i => i.UserImage)              // bridge: prefer R2 URL when available
+            .Where(p => p.Status == PropertyStatus.Available
+                     && p.ModerationStatus == ModerationStatus.Active);
 
         query = ApplyFilters(query, filters);
 
@@ -58,9 +64,16 @@ public class PropertyService : IPropertyService
             .Take(pageSize)
             .ToListAsync(ct);
 
-        return new PagedResult<PropertyResponse>(
-            items.Select(MapToResponse).ToList(),
-            page, pageSize, total);
+        // Truncate description for list cards — full text only needed on detail page
+        const int listDescLimit = 150;
+        var mapped = items.Select(MapToResponse).ToList();
+        foreach (var r in mapped)
+        {
+            if (r.Description != null && r.Description.Length > listDescLimit)
+                r.Description = r.Description[..listDescLimit] + "…";
+        }
+
+        return new PagedResult<PropertyResponse>(mapped, page, pageSize, total);
     }
 
     public async Task<PropertyResponse> GetByIdPublicAsync(Guid id, CancellationToken ct = default)
@@ -68,7 +81,7 @@ public class PropertyService : IPropertyService
         var property = await _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstOrDefaultAsync(p => p.Id == id && p.Status != PropertyStatus.Inactive, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
@@ -94,16 +107,18 @@ public class PropertyService : IPropertyService
             // Case 1: personal listing — owner is a registered user
             var user = await _context.Users
                 .AsNoTracking()
-                .Select(u => new { u.Id, u.FullName, u.Phone, u.ProfileImageUrl })
+                .Select(u => new { u.Id, u.FullName, u.Phone, u.ProfileImageUrl, u.VerificationLevel, u.IsVerified })
                 .FirstOrDefaultAsync(u => u.Id == ownerGuid, ct);
             if (user != null)
             {
-                resolvedRecipientId = user.Id.ToString();
-                response.OwnerName  = user.FullName;
-                response.OwnerPhone = !string.IsNullOrEmpty(user.Phone) ? user.Phone : property.Company?.Phone;
-                response.OwnerPhoto = !string.IsNullOrEmpty(user.ProfileImageUrl)
+                resolvedRecipientId          = user.Id.ToString();
+                response.OwnerName           = user.FullName;
+                response.OwnerPhone          = !string.IsNullOrEmpty(user.Phone) ? user.Phone : property.Company?.Phone;
+                response.OwnerPhoto          = !string.IsNullOrEmpty(user.ProfileImageUrl)
                     ? user.ProfileImageUrl
                     : property.Company?.LogoUrl;
+                response.OwnerVerificationLevel = user.VerificationLevel;
+                response.OwnerIsVerified        = user.IsVerified;
             }
         }
         else if (property.AgentId.HasValue)
@@ -112,22 +127,25 @@ public class PropertyService : IPropertyService
             var agent = await _context.Set<Agent>()
                 .AsNoTracking()
                 .Where(a => a.Id == property.AgentId.Value)
-                .Select(a => new { a.UserId, a.User.FullName, a.User.Phone, a.User.ProfileImageUrl })
+                .Select(a => new { a.UserId, a.User.FullName, a.User.Phone, a.User.ProfileImageUrl, a.User.VerificationLevel, a.User.IsVerified })
                 .FirstOrDefaultAsync(ct);
             if (agent != null)
             {
-                resolvedRecipientId = agent.UserId.ToString();
-                response.OwnerName  = agent.FullName;
-                response.OwnerPhone = !string.IsNullOrEmpty(agent.Phone) ? agent.Phone : property.Company?.Phone;
-                response.OwnerPhoto = !string.IsNullOrEmpty(agent.ProfileImageUrl)
+                resolvedRecipientId          = agent.UserId.ToString();
+                response.OwnerName           = agent.FullName;
+                response.OwnerPhone          = !string.IsNullOrEmpty(agent.Phone) ? agent.Phone : property.Company?.Phone;
+                response.OwnerPhoto          = !string.IsNullOrEmpty(agent.ProfileImageUrl)
                     ? agent.ProfileImageUrl
                     : property.Company?.LogoUrl;
+                response.OwnerVerificationLevel = agent.VerificationLevel;
+                response.OwnerIsVerified        = agent.IsVerified;
             }
             else
             {
-                response.OwnerName  = property.Company?.Name;
-                response.OwnerPhone = property.Company?.Phone;
-                response.OwnerPhoto = property.Company?.LogoUrl;
+                response.OwnerName      = property.Company?.Name;
+                response.OwnerPhone     = property.Company?.Phone;
+                response.OwnerPhoto     = property.Company?.LogoUrl;
+                response.OwnerIsVerified = property.Company?.IsVerified ?? false;
             }
         }
         else
@@ -143,21 +161,23 @@ public class PropertyService : IPropertyService
 
             if (companyAgent != null)
             {
-                resolvedRecipientId = companyAgent.UserId.ToString();
-                response.OwnerName  = property.Company?.Name ?? companyAgent.FullName;
-                response.OwnerPhone = !string.IsNullOrEmpty(property.Company?.Phone)
+                resolvedRecipientId  = companyAgent.UserId.ToString();
+                response.OwnerName   = property.Company?.Name ?? companyAgent.FullName;
+                response.OwnerPhone  = !string.IsNullOrEmpty(property.Company?.Phone)
                     ? property.Company.Phone
                     : companyAgent.Phone;
-                response.OwnerPhoto = !string.IsNullOrEmpty(property.Company?.LogoUrl)
+                response.OwnerPhoto  = !string.IsNullOrEmpty(property.Company?.LogoUrl)
                     ? property.Company.LogoUrl
                     : companyAgent.ProfileImageUrl;
+                response.OwnerIsVerified = property.Company?.IsVerified ?? false;
             }
             else
             {
                 // Absolute last resort: only company data, no chat recipient
-                response.OwnerName  = property.Company?.Name;
-                response.OwnerPhone = property.Company?.Phone;
-                response.OwnerPhoto = property.Company?.LogoUrl;
+                response.OwnerName       = property.Company?.Name;
+                response.OwnerPhone      = property.Company?.Phone;
+                response.OwnerPhoto      = property.Company?.LogoUrl;
+                response.OwnerIsVerified = property.Company?.IsVerified ?? false;
             }
         }
 
@@ -171,7 +191,7 @@ public class PropertyService : IPropertyService
     {
         var property = await _context.Properties
             .Include(p => p.Company)
-            .Include(p => p.Images)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstOrDefaultAsync(p => p.Id == propertyId, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
@@ -334,6 +354,8 @@ public class PropertyService : IPropertyService
             "Property created: {PropertyId} | Company: {CompanyId} | By: {UserId} ({Role})",
             property.Id, property.CompanyId, userId, userRole);
 
+        await NotifyMatchedBuyersOfDailyRentalAsync(property, userId, ct);
+
         return await LoadAndMapAsync(property.Id, ct);
     }
 
@@ -453,6 +475,7 @@ public class PropertyService : IPropertyService
                         PropertyId = property.Id,
                         ImageUrl   = request.NewImages[i],
                         IsPrimary  = false,
+                        IsCover    = false,
                         Order      = nextOrder + i,
                         CreatedAt  = now,
                         UpdatedAt  = now,
@@ -518,7 +541,9 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsPrimary));
+            .Include(p => p.Images.Where(i => i.IsCover || i.IsPrimary || i.Order == 0))  // cover (+ fallback) for cards
+                .ThenInclude(i => i.UserImage)             // bridge: prefer R2 URL when available
+            ;
 
         IQueryable<Property> filteredQuery = userRole switch
         {
@@ -564,17 +589,70 @@ public class PropertyService : IPropertyService
     {
         var ownerIdStr = userId.ToString();
 
-        // ── Free-trial tier (User role) ────────────────────────────────────────
+        // ── SINGLE SOURCE OF TRUTH: active subscription takes priority ─────────
+        // When the user has an account with an active subscription plan, use
+        // the plan's max_active_listings limit and count from the subscription
+        // period start — exactly matching GetCurrentPlanCapabilitiesAsync and
+        // CreateUserListingAsync enforcement.  This eliminates the role-vs-plan
+        // mismatch that previously caused the subscription page and post-ad page
+        // to show different quota numbers.
+        var acctId = await _accountResolver.ResolveAccountIdAsync(userId, ct);
+        if (acctId.HasValue)
+        {
+            var subLimit = (int)await _entitlement.GetLimitAsync(
+                acctId.Value, SubscriptionKeys.MaxActiveListings, ct);
+
+            // subLimit == 0 → "not available in this plan" (treat as 0 quota)
+            // subLimit == -1 → unlimited (show as -1 downstream)
+            // Any other positive value → plan limit
+
+            // Find the period start from the active subscription (same logic as GetCurrentPlanCapabilitiesAsync)
+            var now = DateTime.UtcNow;
+            var activeSub = await _context.Subscriptions
+                .AsNoTracking()
+                .Where(s =>
+                    s.AccountId == acctId.Value &&
+                    s.IsActive &&
+                    (s.Status == SubscriptionStatus.Trial ||
+                     s.Status == SubscriptionStatus.Active ||
+                     s.Status == SubscriptionStatus.Pending) &&
+                    (s.EndDate == null || s.EndDate > now))
+                .OrderByDescending(s => s.StartDate)
+                .Select(s => new { s.CurrentPeriodStart, s.StartDate })
+                .FirstOrDefaultAsync(ct);
+
+            var periodStart = activeSub != null
+                ? (activeSub.CurrentPeriodStart ?? activeSub.StartDate)
+                : new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            var subUsed = await _context.Properties
+                .AsNoTracking()
+                .CountAsync(p => p.AccountId == acctId.Value && p.CreatedAt >= periodStart, ct);
+
+            _logger.LogInformation(
+                "[Quota/Stats] userId={UserId} role={Role} acctId={AcctId} | " +
+                "planLimit={Limit} periodStart={PeriodStart:u} used={Used}",
+                userId, userRole, acctId.Value, subLimit, periodStart, subUsed);
+
+            return (subUsed, subLimit, false);
+        }
+
+        // ── No account: legacy quota logic ────────────────────────────────────
+
+        // Free-trial tier (User role)
         // Counting rule: User.TrialListingsUsed — incremented on each creation,
         // never decremented. Deletion does not restore trial quota.
         if (userRole == RoleNames.User)
         {
             var trialUser = await _context.Users.FindAsync([userId]);
             var used = trialUser?.TrialListingsUsed ?? 0;
+            _logger.LogInformation(
+                "[Quota/Stats] userId={UserId} role={Role} no account → trial quota used={Used} limit=2",
+                userId, userRole, used);
             return (used, 2, true);
         }
 
-        // ── Standard monthly limit (Owner, Broker, CompanyOwner, Admin, etc.) ──
+        // Standard monthly limit (Owner, Broker, CompanyOwner, Admin, etc.)
         var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var userCompanyIds = await _context.Agents
@@ -582,13 +660,19 @@ public class PropertyService : IPropertyService
             .Select(a => a.CompanyId!.Value)
             .ToListAsync(ct);
 
+        // Deliberately excludes the IsDeleted filter: deleting an ad must NOT restore monthly quota.
         var monthlyUsed = await _context.Properties
-            .CountAsync(p => !p.IsDeleted && p.CreatedAt >= startOfMonth && (
+            .CountAsync(p => p.CreatedAt >= startOfMonth && (
                 p.OwnerId == ownerIdStr ||
                 userCompanyIds.Contains(p.CompanyId)
             ), ct);
 
-        return (monthlyUsed, GetMonthlyLimit(userRole), false);
+        var monthlyLimit = GetMonthlyLimit(userRole);
+        _logger.LogInformation(
+            "[Quota/Stats] userId={UserId} role={Role} no account → role-based quota used={Used} limit={Limit}",
+            userId, userRole, monthlyUsed, monthlyLimit);
+
+        return (monthlyUsed, monthlyLimit, false);
     }
 
     public async Task<PropertyResponse> CreateUserListingAsync(
@@ -734,11 +818,12 @@ public class PropertyService : IPropertyService
             {
                 _context.Set<PropertyImage>().Add(new PropertyImage
                 {
-                    Id = Guid.NewGuid(),
+                    Id        = Guid.NewGuid(),
                     PropertyId = property.Id,
-                    ImageUrl = request.Images[i],
-                    IsPrimary = i == 0,
-                    Order = i,
+                    ImageUrl  = request.Images[i],
+                    IsPrimary = i == 0,   // first image is primary (backward compat)
+                    IsCover   = i == 0,   // first image is cover (canonical flag)
+                    Order     = i,
                     CreatedAt = now,
                     UpdatedAt = now,
                 });
@@ -751,6 +836,8 @@ public class PropertyService : IPropertyService
         _logger.LogInformation(
             "User listing created: {PropertyId} | By: {UserId}",
             property.Id, userId);
+
+        await NotifyMatchedBuyersOfDailyRentalAsync(property, userId, ct);
 
         return await LoadAndMapAsync(property.Id, ct);
     }
@@ -776,7 +863,8 @@ public class PropertyService : IPropertyService
         var query = _context.Properties
             .AsNoTracking()
             .Include(p => p.Company)
-            .Include(p => p.Images.Where(i => i.IsPrimary))
+            .Include(p => p.Images.Where(i => i.IsCover || i.IsPrimary || i.Order == 0))  // cover (+ fallback) for cards
+                .ThenInclude(i => i.UserImage)             // bridge: prefer R2 URL when available
             .Where(p => !p.IsDeleted && (
                 p.OwnerId == ownerIdStr ||
                 (p.AgentId != null && userAgentIds.Contains(p.AgentId.Value)) ||
@@ -1036,7 +1124,7 @@ public class PropertyService : IPropertyService
     {
         var property = await _context.Properties
             .Include(p => p.Company)
-            .Include(p => p.Images)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstAsync(p => p.Id == propertyId, ct);
 
@@ -1094,6 +1182,7 @@ public class PropertyService : IPropertyService
         CompanyId = p.CompanyId,
         CompanyName = p.Company?.Name ?? string.Empty,
         CompanyLogoUrl = p.Company?.LogoUrl,
+        OwnerIsVerified = p.Company?.IsVerified ?? false,
         AgentId = p.AgentId,
         OwnerId = p.OwnerId,
         IsPersonalListing = p.OwnerId != null,
@@ -1114,13 +1203,20 @@ public class PropertyService : IPropertyService
                 : System.Text.Json.JsonSerializer.Deserialize<List<string>>(p.Features) ?? []),
         VideoUrl = p.VideoUrl,
         Images = p.Images
-            .OrderBy(i => i.Order)
+            .OrderByDescending(i => i.IsCover)   // cover first
+            .ThenBy(i => i.Order)
             .Select(i => new PropertyImageResponse
             {
-                Id = i.Id,
-                ImageUrl = i.ImageUrl,
-                IsPrimary = i.IsPrimary,
-                Order = i.Order
+                Id           = i.Id,
+                // Bridge merge: prefer live R2 URL (UserImage.Url) for new uploads;
+                // fall back to PropertyImage.ImageUrl for legacy rows (base64/external URL).
+                ImageUrl     = !string.IsNullOrEmpty(i.UserImage?.Url) ? i.UserImage!.Url : i.ImageUrl,
+                ThumbnailUrl = i.UserImage?.ThumbnailUrl,
+                IsCover      = i.IsCover,
+                IsPrimary    = i.IsPrimary,   // backward-compat alias
+                Order        = i.Order,
+                UserImageId  = i.UserImageId,
+                ImageSource  = i.UserImageId.HasValue ? "user_upload" : "legacy",
             })
             .ToList(),
         ViewCount = p.ViewCount,
@@ -1132,4 +1228,83 @@ public class PropertyService : IPropertyService
         CreatedByRole      = p.CreatedByRole,
         CreatedByCompanyId = p.CreatedByCompanyId,
     };
+
+    private async Task NotifyMatchedBuyersOfDailyRentalAsync(Property property, Guid actorId, CancellationToken ct)
+    {
+        if (!IsDailyRentalListing(property.ListingType)) return;
+
+        try
+        {
+            var city = NormalizeMatchText(property.City);
+            var neighborhood = NormalizeMatchText(property.Neighborhood);
+            var propertyType = property.Type.ToString();
+
+            var query = _context.BuyerRequests
+                .AsNoTracking()
+                .Where(r => r.IsPublished && r.Status == "Open" && r.UserId != actorId);
+
+            if (!string.IsNullOrWhiteSpace(city))
+                query = query.Where(r => r.City != null && r.City.ToLower() == city);
+
+            if (!string.IsNullOrWhiteSpace(neighborhood))
+                query = query.Where(r => r.Neighborhood != null && r.Neighborhood.ToLower() == neighborhood);
+
+            var matchedRequestOwners = await query
+                .OrderByDescending(r => r.CreatedAt)
+                .Take(100)
+                .Select(r => new { r.UserId, r.PropertyType })
+                .ToListAsync(ct);
+
+            var recipientIds = matchedRequestOwners
+                .Where(r => string.Equals(r.PropertyType?.Trim(), propertyType, StringComparison.OrdinalIgnoreCase))
+                .Select(r => r.UserId)
+                .Distinct()
+                .ToList();
+
+            if (recipientIds.Count == 0) return;
+
+            var activeRecipientIds = await _context.Users
+                .AsNoTracking()
+                .Where(u => recipientIds.Contains(u.Id) && u.IsActive && !u.IsDeleted)
+                .Select(u => u.Id)
+                .ToListAsync(ct);
+
+            if (activeRecipientIds.Count == 0) return;
+
+            var notifications = activeRecipientIds.Select(uid => new NotificationRequest(
+                UserId: uid,
+                Type: "daily_rental_matched",
+                Title: "إيجار يومي جديد مطابق",
+                Body: $"تم إضافة عقار للإيجار اليومي قد يناسب طلبك: {property.Title}",
+                RelatedEntityId: property.Id.ToString(),
+                RelatedEntityType: "Property"))
+                .ToList();
+
+            await _notifications.CreateBatchAsync(notifications, ct);
+
+            _logger.LogInformation(
+                "[Property] Sent {Count} daily-rental match notification(s) for propertyId={PropertyId}",
+                notifications.Count, property.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "[Property] Failed to send daily-rental match notifications for propertyId={PropertyId}",
+                property.Id);
+        }
+    }
+
+    private static bool IsDailyRentalListing(string? listingType)
+    {
+        if (string.IsNullOrWhiteSpace(listingType)) return false;
+        var value = listingType.Trim();
+        return value.Equals("DailyRent", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("Daily Rental", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("Daily_Rent", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("daily-rent", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("يومي", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? NormalizeMatchText(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
 }
