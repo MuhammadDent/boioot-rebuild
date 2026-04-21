@@ -15,23 +15,31 @@ namespace Boioot.Infrastructure.Features.Bookings;
 public class BookingService : IBookingService
 {
     private const string Pending = "Pending";
+    private const string Approved = "Approved";
     private const string Confirmed = "Confirmed";
     private const string Rejected = "Rejected";
     private const string Cancelled = "Cancelled";
+    private const string Completed = "Completed";
+    private const string NotPaid = "NotPaid";
+    private const string ReadyForPayment = "ReadyForPayment";
+    private const string Paid = "Paid";
 
     private readonly BoiootDbContext _context;
     private readonly IUserNotificationService _notificationService;
+    private readonly INotificationTemplateService _notificationTemplates;
     private readonly BookingOptions _bookingOptions;
     private readonly ILogger<BookingService> _logger;
 
     public BookingService(
         BoiootDbContext context,
         IUserNotificationService notificationService,
+        INotificationTemplateService notificationTemplates,
         IOptions<BookingOptions> bookingOptions,
         ILogger<BookingService> logger)
     {
         _context = context;
         _notificationService = notificationService;
+        _notificationTemplates = notificationTemplates;
         _bookingOptions = bookingOptions.Value;
         _logger = logger;
     }
@@ -100,6 +108,7 @@ public class BookingService : IBookingService
             TotalAmount = totalAmount,
             CommissionPercent = commissionPercent,
             CommissionAmount = commissionAmount,
+            PaymentStatus = NotPaid,
             Status = Pending
         };
 
@@ -113,6 +122,7 @@ public class BookingService : IBookingService
             "booking_created",
             "طلب حجز جديد",
             $"وصل طلب حجز جديد لعقارك {property.Title}. راجع الطلب وأكده أو ارفضه من لوحة التحكم.",
+            property.Title,
             booking.Id,
             ct);
 
@@ -175,6 +185,7 @@ public class BookingService : IBookingService
                 TotalAmount = booking.TotalAmount,
                 CommissionPercent = booking.CommissionPercent,
                 CommissionAmount = booking.CommissionAmount,
+                PaymentStatus = booking.PaymentStatus,
                 Status = booking.Status,
                 CreatedAt = booking.CreatedAt
             })
@@ -208,6 +219,7 @@ public class BookingService : IBookingService
                 TotalAmount = booking.TotalAmount,
                 CommissionPercent = booking.CommissionPercent,
                 CommissionAmount = booking.CommissionAmount,
+                PaymentStatus = booking.PaymentStatus,
                 Status = booking.Status,
                 CreatedAt = booking.CreatedAt
             })
@@ -216,21 +228,28 @@ public class BookingService : IBookingService
 
     public async Task<BookingResponse> ConfirmAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default)
     {
+        return await ApproveAsync(ownerUserId, bookingId, ct);
+    }
+
+    public async Task<BookingResponse> ApproveAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default)
+    {
         var (booking, propertyTitle) = await GetOwnedBookingAsync(ownerUserId, bookingId, ct);
 
         if (!string.Equals(booking.Status, Pending, StringComparison.OrdinalIgnoreCase))
-            throw new BoiootException("يمكن تأكيد طلبات الحجز المعلقة فقط", 400);
+            throw new BoiootException("يمكن الموافقة على طلبات الحجز المعلقة فقط", 400);
 
         await EnsureNoConfirmedOverlapAsync(booking.PropertyId, booking.StartDate, booking.EndDate, booking.Id, ct);
 
-        booking.Status = Confirmed;
+        booking.Status = Approved;
+        booking.PaymentStatus = ReadyForPayment;
         await _context.SaveChangesAsync(ct);
 
         await NotifySafelyAsync(
             booking.RequestedByUserId.ToString(),
-            "booking_confirmed",
-            "تم تأكيد طلب الحجز",
-            $"تم تأكيد حجزك للعقار {propertyTitle}.",
+            "booking_approved",
+            "تمت الموافقة على طلب الحجز",
+            $"وافق المالك على حجزك للعقار {propertyTitle}. يمكنك متابعة تفاصيل الحجز من لوحة التحكم.",
+            propertyTitle,
             booking.Id,
             ct);
 
@@ -252,6 +271,7 @@ public class BookingService : IBookingService
             "booking_rejected",
             "تم رفض طلب الحجز",
             $"تم رفض طلب حجزك للعقار {propertyTitle}.",
+            propertyTitle,
             booking.Id,
             ct);
 
@@ -267,10 +287,15 @@ public class BookingService : IBookingService
         if (string.Equals(booking.Status, Rejected, StringComparison.OrdinalIgnoreCase))
             throw new BoiootException("لا يمكن إلغاء طلب مرفوض", 400);
 
+        if (string.Equals(booking.Status, Completed, StringComparison.OrdinalIgnoreCase))
+            throw new BoiootException("لا يمكن إلغاء حجز مكتمل", 400);
+
         if (string.Equals(booking.Status, Cancelled, StringComparison.OrdinalIgnoreCase))
             return Map(booking, await GetPropertyTitleAsync(booking.PropertyId, ct));
 
         booking.Status = Cancelled;
+        if (!string.Equals(booking.PaymentStatus, Paid, StringComparison.OrdinalIgnoreCase))
+            booking.PaymentStatus = NotPaid;
         await _context.SaveChangesAsync(ct);
 
         return Map(booking, await GetPropertyTitleAsync(booking.PropertyId, ct));
@@ -290,7 +315,7 @@ public class BookingService : IBookingService
             .AsNoTracking()
             .AnyAsync(b =>
                 b.PropertyId == propertyId &&
-                b.Status == Confirmed &&
+                (b.Status == Approved || b.Status == Confirmed) &&
                 (!excludedBookingId.HasValue || b.Id != excludedBookingId.Value) &&
                 start < b.EndDate &&
                 end > b.StartDate,
@@ -331,17 +356,24 @@ public class BookingService : IBookingService
             .FirstOrDefaultAsync(ct) ?? "";
     }
 
-    private async Task NotifySafelyAsync(string? userIdText, string type, string title, string body, Guid bookingId, CancellationToken ct)
+    private async Task NotifySafelyAsync(string? userIdText, string type, string title, string body, string propertyTitle, Guid bookingId, CancellationToken ct)
     {
         if (!Guid.TryParse(userIdText, out var recipientId)) return;
 
         try
         {
+            var rendered = _notificationTemplates.Render(
+                type,
+                new Dictionary<string, string?>
+                {
+                    ["propertyTitle"] = propertyTitle
+                });
+
             await _notificationService.CreateAsync(
                 recipientId,
                 type,
-                title,
-                body,
+                rendered?.Title ?? title,
+                rendered?.Body ?? body,
                 bookingId.ToString(),
                 "Booking",
                 ct);
@@ -368,6 +400,7 @@ public class BookingService : IBookingService
         TotalAmount = booking.TotalAmount,
         CommissionPercent = booking.CommissionPercent,
         CommissionAmount = booking.CommissionAmount,
+        PaymentStatus = booking.PaymentStatus,
         Status = booking.Status,
         CreatedAt = booking.CreatedAt
     };

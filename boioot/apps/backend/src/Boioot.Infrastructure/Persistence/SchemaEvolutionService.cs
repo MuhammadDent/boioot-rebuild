@@ -426,6 +426,7 @@ public sealed class SchemaEvolutionService
                 TotalAmount         REAL NOT NULL DEFAULT 0,
                 CommissionPercent   REAL NOT NULL DEFAULT 0,
                 CommissionAmount    REAL NOT NULL DEFAULT 0,
+                PaymentStatus       TEXT NOT NULL DEFAULT 'NotPaid',
                 Status              TEXT NOT NULL DEFAULT 'Pending',
                 CreatedAt           TEXT NOT NULL DEFAULT (datetime('now')),
                 UpdatedAt           TEXT NOT NULL DEFAULT (datetime('now'))
@@ -434,6 +435,7 @@ public sealed class SchemaEvolutionService
         await TryAlter("Bookings", "TotalAmount", "REAL NOT NULL DEFAULT 0", ct);
         await TryAlter("Bookings", "CommissionPercent", "REAL NOT NULL DEFAULT 0", ct);
         await TryAlter("Bookings", "CommissionAmount", "REAL NOT NULL DEFAULT 0", ct);
+        await TryAlter("Bookings", "PaymentStatus", "TEXT NOT NULL DEFAULT 'NotPaid'", ct);
         await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_PropertyId ON Bookings(PropertyId)", ct, warnOnError: true);
         await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_RequestedByUserId ON Bookings(RequestedByUserId)", ct, warnOnError: true);
         await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_PropertyId_StartDate_EndDate ON Bookings(PropertyId, StartDate, EndDate)", ct, warnOnError: true);

@@ -11,8 +11,10 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 
 const OWNER_TABS: Array<{ status: BookingStatus; label: string }> = [
   { status: "Pending", label: "معلّقة" },
-  { status: "Confirmed", label: "مؤكدة" },
+  { status: "Approved", label: "موافق عليها" },
   { status: "Rejected", label: "مرفوضة" },
+  { status: "Cancelled", label: "ملغاة" },
+  { status: "Completed", label: "مكتملة" },
 ];
 
 function formatDate(value: string) {
@@ -44,19 +46,21 @@ function BookingCard({
   booking,
   mode,
   busy,
-  onConfirm,
+  onApprove,
   onReject,
   onCancel,
 }: {
   booking: BookingResponse;
   mode: "owner" | "renter";
   busy: boolean;
-  onConfirm?: (id: string) => void;
+  onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onCancel?: (id: string) => void;
 }) {
   const isPending = booking.status === "Pending";
+  const isCancellable = booking.status === "Pending" || booking.status === "Approved" || booking.status === "Confirmed";
   const nights = getNightCount(booking.startDate, booking.endDate);
+  const finalTotal = booking.totalAmount + booking.commissionAmount;
   return (
     <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "1rem", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
@@ -78,16 +82,18 @@ function BookingCard({
         <span>السعر: {(nights || 1).toLocaleString("en")} ليلة × {formatMoney(booking.pricePerNight)}</span>
         <strong style={{ color: "#0f172a" }}>الإجمالي: {formatMoney(booking.totalAmount)}</strong>
         <span>عمولة المنصة ({booking.commissionPercent}%): {formatMoney(booking.commissionAmount)}</span>
+        <strong style={{ color: "#0f172a" }}>الإجمالي النهائي: {formatMoney(finalTotal)}</strong>
+        <span>حالة الدفع: {booking.paymentStatus === "ReadyForPayment" ? "جاهز للدفع" : booking.paymentStatus === "Paid" ? "مدفوع" : booking.paymentStatus === "Refunded" ? "مسترد" : "غير مدفوع"}</span>
       </div>
 
       {mode === "owner" && isPending && (
         <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button
-            onClick={() => onConfirm?.(booking.id)}
+            onClick={() => onApprove?.(booking.id)}
             disabled={busy}
             style={{ border: "none", borderRadius: 9, padding: "0.55rem 1rem", background: "var(--color-primary)", color: "#fff", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}
           >
-            تأكيد
+            موافقة
           </button>
           <button
             onClick={() => onReject?.(booking.id)}
@@ -99,7 +105,7 @@ function BookingCard({
         </div>
       )}
 
-      {mode === "renter" && (booking.status === "Pending" || booking.status === "Confirmed") && (
+      {mode === "renter" && isCancellable && (
         <div style={{ marginTop: "1rem" }}>
           <button
             onClick={() => onCancel?.(booking.id)}
@@ -143,11 +149,11 @@ export default function DashboardBookingsPage() {
     load();
   }, [load]);
 
-  async function updateBooking(id: string, action: "confirm" | "reject" | "cancel") {
+  async function updateBooking(id: string, action: "approve" | "reject" | "cancel") {
     setBusyId(id);
     setError("");
     try {
-      if (action === "confirm") await bookingsApi.confirm(id);
+      if (action === "approve") await bookingsApi.approve(id);
       if (action === "reject") await bookingsApi.reject(id);
       if (action === "cancel") await bookingsApi.cancel(id);
       await load();
@@ -223,7 +229,7 @@ export default function DashboardBookingsPage() {
                 booking={booking}
                 mode="owner"
                 busy={busyId === booking.id}
-                onConfirm={(id) => updateBooking(id, "confirm")}
+                onApprove={(id) => updateBooking(id, "approve")}
                 onReject={(id) => updateBooking(id, "reject")}
               />
             ))}

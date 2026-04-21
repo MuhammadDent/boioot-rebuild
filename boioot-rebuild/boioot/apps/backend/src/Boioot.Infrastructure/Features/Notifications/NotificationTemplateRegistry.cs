@@ -56,11 +56,25 @@ public static class NotificationTemplateRegistry
                 DefaultPriority: 2,
                 Enabled: true),
 
+            ["booking_approved"] = new(
+                Key: "booking_approved",
+                TitleTemplate: "تمت الموافقة على طلب الحجز",
+                BodyTemplate: "وافق المالك على حجزك للعقار {propertyTitle}. يمكنك متابعة تفاصيل الحجز من لوحة التحكم.",
+                DefaultPriority: 2,
+                Enabled: true),
+
             ["booking_rejected"] = new(
                 Key: "booking_rejected",
                 TitleTemplate: "تم رفض طلب الحجز",
                 BodyTemplate: "تم رفض طلب حجزك للعقار {propertyTitle}.",
                 DefaultPriority: 2,
+                Enabled: true),
+
+            ["booking_completed"] = new(
+                Key: "booking_completed",
+                TitleTemplate: "اكتمل الحجز",
+                BodyTemplate: "تم إكمال حجزك للعقار {propertyTitle}.",
+                DefaultPriority: 1,
                 Enabled: true),
         };
 }

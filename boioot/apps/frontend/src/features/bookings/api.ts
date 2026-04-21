@@ -18,6 +18,9 @@ export const bookingsApi = {
   confirm(id: string): Promise<BookingResponse> {
     return api.post<BookingResponse>(`/bookings/${id}/confirm`, {});
   },
+  approve(id: string): Promise<BookingResponse> {
+    return api.post<BookingResponse>(`/bookings/${id}/approve`, {});
+  },
   reject(id: string): Promise<BookingResponse> {
     return api.post<BookingResponse>(`/bookings/${id}/reject`, {});
   },

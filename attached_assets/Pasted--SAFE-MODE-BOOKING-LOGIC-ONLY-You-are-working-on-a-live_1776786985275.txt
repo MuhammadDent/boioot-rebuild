@@ -1,0 +1,228 @@
+⚠️ SAFE MODE — BOOKING LOGIC ONLY
+
+You are working on a live, evolving production-like system. Continue ONLY the booking business logic for Daily Rentals.
+
+STRICTLY FORBIDDEN:
+- DO NOT touch subscription/plans logic
+- DO NOT mix daily rental booking with subscription limits or plan entitlements
+- DO NOT add payment gateway yet
+- DO NOT redesign UI
+- DO NOT refactor unrelated code
+- DO NOT change existing public API contracts unless explicitly required by this task
+- DO NOT break current booking creation flow
+- DO NOT break current notification system
+- DO NOT change auth or middleware behavior
+
+GOAL:
+Complete the BOOKING LOGIC layer before payments:
+1) booking statuses
+2) owner approval/rejection
+3) overlap/conflict protection
+4) renter/owner booking visibility
+5) payment-readiness fields only (NO actual payments)
+
+Keep all changes additive, minimal, isolated, and backward-compatible.
+
+--------------------------------------------------
+PHASE 1 — BOOKING STATUS MODEL
+--------------------------------------------------
+
+Extend booking status safely to support:
+
+- Pending
+- Approved
+- Rejected
+- Cancelled
+- Completed
+
+Rules:
+- New booking must start as Pending
+- Approved means owner accepted booking
+- Rejected means owner declined booking
+- Cancelled means booking was cancelled
+- Completed is for future post-stay completion flow
+
+If a status enum or constants already exist, extend them safely instead of replacing them.
+
+--------------------------------------------------
+PHASE 2 — OWNER ACTIONS
+--------------------------------------------------
+
+Add owner-only actions:
+
+- Approve booking
+- Reject booking
+
+Requirements:
+- Only the property owner can approve/reject bookings for that property
+- Validate authenticated owner identity using existing auth
+- If booking does not belong to owner → deny access
+- If booking is no longer Pending → prevent invalid repeated action
+
+Preferred endpoints:
+- POST /api/bookings/{id}/approve
+- POST /api/bookings/{id}/reject
+
+Return safe and clear responses.
+
+--------------------------------------------------
+PHASE 3 — OVERLAP / CONFLICT PROTECTION
+--------------------------------------------------
+
+Implement strict conflict logic:
+
+When creating a booking:
+- If there is an overlapping APPROVED booking for the same property:
+  Reject the new booking request
+
+Use date overlap logic safely.
+
+Important:
+- Pending bookings should NOT block other pending bookings yet
+- Only Approved bookings block overlapping date ranges
+
+Also, when owner approves a booking:
+- Re-check conflicts before approving
+- If another approved overlapping booking already exists, approval must fail safely
+
+This is critical.
+
+--------------------------------------------------
+PHASE 4 — BOOKING VISIBILITY
+--------------------------------------------------
+
+Add minimal booking visibility for both sides:
+
+1) Renter side:
+- "My Bookings"
+- Show:
+  - property title
+  - dates
+  - status
+  - total amount
+  - commission amount if already stored
+  - final total if available
+
+2) Owner side:
+- "Property Bookings" or equivalent owner bookings list
+- Show:
+  - renter
+  - dates
+  - status
+  - total amount
+  - actions for Pending bookings:
+    - Approve
+    - Reject
+
+Do NOT redesign the dashboard.
+Use minimal, existing UI patterns.
+
+--------------------------------------------------
+PHASE 5 — PAYMENT READINESS (NO PAYMENT YET)
+--------------------------------------------------
+
+Prepare booking records for future payment integration only.
+
+Add a safe payment status field such as:
+
+- NotPaid
+- ReadyForPayment
+- Paid
+- Refunded (optional only if already useful)
+
+Rules:
+- New booking starts as NotPaid
+- When owner approves booking, booking can move to ReadyForPayment
+- DO NOT integrate any payment gateway now
+- DO NOT implement checkout now
+
+This phase is business-logic preparation only.
+
+--------------------------------------------------
+PHASE 6 — NOTIFICATIONS
+--------------------------------------------------
+
+Use existing notification system.
+
+Add or reuse booking-related notifications:
+
+- booking_created → owner
+- booking_approved → renter
+- booking_rejected → renter
+
+Requirements:
+- Reuse existing centralized notification flow
+- Reuse template system if already available
+- Do not hardcode strings if template system already covers this pattern
+- Notification failures must not break booking flow
+
+--------------------------------------------------
+PHASE 7 — VALIDATION RULES
+--------------------------------------------------
+
+Validate safely:
+
+1) New booking:
+- only for IsBookable daily rental properties
+- valid dates only
+- nights > 0
+
+2) Approval:
+- only owner
+- only Pending bookings
+- no overlapping Approved booking exists
+
+3) Rejection:
+- only owner
+- only Pending bookings
+
+4) Status transitions must be valid and safe
+
+Prevent invalid state jumps where possible.
+
+--------------------------------------------------
+PHASE 8 — KEEP UI MINIMAL
+--------------------------------------------------
+
+Do NOT redesign.
+
+Only add:
+- booking status badges
+- owner action buttons
+- minimal list pages/sections if missing
+
+If a shared status config/helper is useful, add it.
+Keep styles consistent with current project.
+
+--------------------------------------------------
+PHASE 9 — FINAL VALIDATION
+--------------------------------------------------
+
+After implementation, show me:
+
+1) Files created
+2) Files modified
+3) Final booking status lifecycle
+4) Conflict rule explanation
+5) Example scenarios:
+
+Scenario A:
+- User A books property for 10–12 May → Pending
+- Owner approves → Approved
+
+Scenario B:
+- User B tries 11–13 May after approval exists
+- New booking creation must be rejected safely
+
+Scenario C:
+- Two Pending bookings exist for overlapping dates
+- Owner can approve only one; approving the second overlapping one must fail
+
+6) Confirmation:
+- No subscription logic was touched
+- No payment gateway was added
+- No public unrelated API was broken
+
+IMPORTANT:
+If anything is risky or ambiguous, STOP and ask before implementing.
+Proceed carefully and incrementally.

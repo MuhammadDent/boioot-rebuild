@@ -14,5 +14,6 @@ public class Booking : BaseEntity
     public decimal TotalAmount { get; set; }
     public decimal CommissionPercent { get; set; }
     public decimal CommissionAmount { get; set; }
+    public string PaymentStatus { get; set; } = "NotPaid";
     public string Status { get; set; } = "Pending";
 }

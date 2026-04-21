@@ -185,7 +185,8 @@ export interface PropertyResponse {
   moderationStatus?: string;
 }
 
-export type BookingStatus = "Pending" | "Confirmed" | "Rejected" | "Cancelled";
+export type BookingStatus = "Pending" | "Approved" | "Confirmed" | "Rejected" | "Cancelled" | "Completed";
+export type BookingPaymentStatus = "NotPaid" | "ReadyForPayment" | "Paid" | "Refunded";
 
 export interface CreateBookingRequest {
   propertyId: string;
@@ -211,6 +212,7 @@ export interface BookingResponse {
   totalAmount: number;
   commissionPercent: number;
   commissionAmount: number;
+  paymentStatus: BookingPaymentStatus | string;
   status: BookingStatus | string;
   createdAt: string;
 }

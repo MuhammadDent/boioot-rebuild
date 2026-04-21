@@ -16,6 +16,7 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.Property(b => b.TotalAmount).HasPrecision(18, 2);
         builder.Property(b => b.CommissionPercent).HasPrecision(5, 2);
         builder.Property(b => b.CommissionAmount).HasPrecision(18, 2);
+        builder.Property(b => b.PaymentStatus).HasMaxLength(30).HasDefaultValue("NotPaid").IsRequired();
         builder.Property(b => b.Status).HasMaxLength(30).HasDefaultValue("Pending").IsRequired();
         builder.Property(b => b.PropertyOwnerUserId).HasMaxLength(80);
         builder.HasIndex(b => b.PropertyId);
