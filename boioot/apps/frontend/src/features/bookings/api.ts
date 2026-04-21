@@ -1,7 +1,11 @@
 import { api } from "@/lib/api";
-import type { BookingResponse, CreateBookingRequest } from "@/types";
+import type { AvailabilityResponse, BookingResponse, CreateBookingRequest } from "@/types";
 
 export const bookingsApi = {
+  availability(propertyId: string, startDate: string, endDate: string): Promise<AvailabilityResponse> {
+    const params = new URLSearchParams({ startDate, endDate });
+    return api.get<AvailabilityResponse>(`/properties/${propertyId}/availability?${params.toString()}`);
+  },
   create(request: CreateBookingRequest): Promise<BookingResponse> {
     return api.post<BookingResponse>("/bookings", request);
   },

@@ -97,7 +97,6 @@ public sealed class DatabaseStartupService
                 await CreateMigrationsHistoryTableAsync(ct);
                 await InjectAllMigrationIdsAsync(ct);
                 _log.LogInformation("PostgreSQL database ready.");
-                return;
             }
         }
 
@@ -321,6 +320,7 @@ public sealed class DatabaseStartupService
             await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_RequestedByUserId" ON "Bookings" ("RequestedByUserId")""", ct);
             await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_PropertyId_StartDate_EndDate" ON "Bookings" ("PropertyId", "StartDate", "EndDate")""", ct);
             await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_PropertyId_Status_StartDate_EndDate" ON "Bookings" ("PropertyId", "Status", "StartDate", "EndDate")""", ct);
+            _log.LogInformation("[schema-patch] Booking MVP patch applied.");
         }
         catch (Exception ex)
         {

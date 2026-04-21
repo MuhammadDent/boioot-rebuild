@@ -103,6 +103,39 @@ public class BookingService : IBookingService
         return Map(booking, property.Title);
     }
 
+    public async Task<bool> IsAvailableAsync(Guid propertyId, DateTime startDate, DateTime endDate, CancellationToken ct = default)
+    {
+        var property = await _context.Properties
+            .AsNoTracking()
+            .Where(p => p.Id == propertyId && !p.IsDeleted)
+            .Select(p => new
+            {
+                p.Id,
+                p.Status,
+                p.ListingType,
+                p.IsBookable
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (property is null)
+            return false;
+
+        if (property.Status != PropertyStatus.Available)
+            return false;
+
+        if (!property.IsBookable || !string.Equals(property.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var start = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
+        var end = DateTime.SpecifyKind(endDate.Date, DateTimeKind.Utc);
+        var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+
+        if (start < today || end <= start)
+            return false;
+
+        return !await HasConfirmedOverlapAsync(property.Id, start, end, null, ct);
+    }
+
     public async Task<IReadOnlyList<BookingResponse>> GetMineAsync(Guid userId, CancellationToken ct = default)
     {
         return await (
@@ -221,7 +254,15 @@ public class BookingService : IBookingService
 
     private async Task EnsureNoConfirmedOverlapAsync(Guid propertyId, DateTime start, DateTime end, Guid? excludedBookingId, CancellationToken ct)
     {
-        var hasConflict = await _context.Bookings
+        var hasConflict = await HasConfirmedOverlapAsync(propertyId, start, end, excludedBookingId, ct);
+
+        if (hasConflict)
+            throw new BoiootException("هذه الفترة محجوزة مسبقاً لهذا العقار", 409);
+    }
+
+    private async Task<bool> HasConfirmedOverlapAsync(Guid propertyId, DateTime start, DateTime end, Guid? excludedBookingId, CancellationToken ct)
+    {
+        return await _context.Bookings
             .AsNoTracking()
             .AnyAsync(b =>
                 b.PropertyId == propertyId &&
@@ -230,9 +271,6 @@ public class BookingService : IBookingService
                 start < b.EndDate &&
                 end > b.StartDate,
                 ct);
-
-        if (hasConflict)
-            throw new BoiootException("هذه الفترة محجوزة مسبقاً لهذا العقار", 409);
     }
 
     private async Task<(Booking Booking, string PropertyTitle)> GetOwnedBookingAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct)

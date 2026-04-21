@@ -3,27 +3,27 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { bookingsApi } from "@/features/bookings/api";
+import { getBookingStatusConfig } from "@/features/bookings/bookingStatusConfig";
 import { normalizeError } from "@/lib/api";
-import type { BookingResponse } from "@/types";
+import type { BookingResponse, BookingStatus } from "@/types";
 import Spinner from "@/components/ui/Spinner";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 
-const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }> = {
-  Pending: { label: "معلّق", bg: "#fffbeb", color: "#b45309" },
-  Confirmed: { label: "مؤكد", bg: "#f0fdf4", color: "#15803d" },
-  Rejected: { label: "مرفوض", bg: "#fef2f2", color: "#b91c1c" },
-  Cancelled: { label: "ملغى", bg: "#f1f5f9", color: "#475569" },
-};
+const OWNER_TABS: Array<{ status: BookingStatus; label: string }> = [
+  { status: "Pending", label: "معلّقة" },
+  { status: "Confirmed", label: "مؤكدة" },
+  { status: "Rejected", label: "مرفوضة" },
+];
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" });
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_LABELS[status] ?? { label: status, bg: "#f1f5f9", color: "#475569" };
+  const cfg = getBookingStatusConfig(status);
   return (
-    <span style={{ borderRadius: 999, padding: "0.25rem 0.7rem", background: cfg.bg, color: cfg.color, fontSize: "0.78rem", fontWeight: 800 }}>
-      {cfg.label}
+    <span style={{ borderRadius: 999, padding: "0.25rem 0.7rem", background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, fontSize: "0.78rem", fontWeight: 800 }}>
+      {cfg.icon} {cfg.label}
     </span>
   );
 }
@@ -104,6 +104,7 @@ export default function DashboardBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [ownerTab, setOwnerTab] = useState<BookingStatus>("Pending");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -149,6 +150,8 @@ export default function DashboardBookingsPage() {
     );
   }
 
+  const visibleIncoming = incoming.filter((booking) => booking.status === ownerTab);
+
   return (
     <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 0 3rem" }}>
       <div style={{ marginBottom: "1.5rem" }}>
@@ -167,13 +170,38 @@ export default function DashboardBookingsPage() {
 
       <section style={{ marginBottom: "2rem" }}>
         <h2 style={{ margin: "0 0 0.85rem", fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>طلبات واردة لعقاراتي</h2>
-        {incoming.length === 0 ? (
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.9rem" }}>
+          {OWNER_TABS.map((tab) => {
+            const cfg = getBookingStatusConfig(tab.status);
+            const count = incoming.filter((booking) => booking.status === tab.status).length;
+            const active = ownerTab === tab.status;
+            return (
+              <button
+                key={tab.status}
+                type="button"
+                onClick={() => setOwnerTab(tab.status)}
+                style={{
+                  border: `1px solid ${active ? cfg.border : "#e2e8f0"}`,
+                  borderRadius: 999,
+                  padding: "0.45rem 0.85rem",
+                  background: active ? cfg.bg : "#fff",
+                  color: active ? cfg.color : "#475569",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                {cfg.icon} {tab.label} ({count})
+              </button>
+            );
+          })}
+        </div>
+        {visibleIncoming.length === 0 ? (
           <div style={{ background: "#fff", border: "1px dashed #cbd5e1", borderRadius: 14, padding: "1rem", color: "#64748b" }}>
-            لا توجد طلبات واردة حالياً.
+            لا توجد طلبات {OWNER_TABS.find((tab) => tab.status === ownerTab)?.label ?? ""} حالياً.
           </div>
         ) : (
           <div style={{ display: "grid", gap: "0.75rem" }}>
-            {incoming.map((booking) => (
+            {visibleIncoming.map((booking) => (
               <BookingCard
                 key={booking.id}
                 booking={booking}
@@ -188,7 +216,7 @@ export default function DashboardBookingsPage() {
       </section>
 
       <section>
-        <h2 style={{ margin: "0 0 0.85rem", fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>حجوزاتي</h2>
+        <h2 style={{ margin: "0 0 0.85rem", fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>حجوزاتي - My Bookings</h2>
         {mine.length === 0 ? (
           <div style={{ background: "#fff", border: "1px dashed #cbd5e1", borderRadius: 14, padding: "1rem", color: "#64748b" }}>
             لم ترسل أي طلب حجز بعد.

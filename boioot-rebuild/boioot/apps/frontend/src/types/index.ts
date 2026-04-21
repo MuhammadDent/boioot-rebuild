@@ -211,6 +211,10 @@ export interface BookingResponse {
   createdAt: string;
 }
 
+export interface AvailabilityResponse {
+  available: boolean;
+}
+
 export interface ListingTypeConfig {
   id: string;
   value: string;

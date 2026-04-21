@@ -1,7 +1,11 @@
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
+using Boioot.Application.Features.Bookings.Interfaces;
+using Boioot.Domain.Entities;
+using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Boioot.Api.Controllers;
 
@@ -9,15 +13,21 @@ namespace Boioot.Api.Controllers;
 public class PropertiesController : BaseController
 {
     private readonly IPropertyService _propertyService;
+    private readonly IBookingService _bookingService;
+    private readonly BoiootDbContext _db;
 
-    public PropertiesController(IPropertyService propertyService)
+    public PropertiesController(IPropertyService propertyService, IBookingService bookingService, BoiootDbContext db)
     {
         _propertyService = propertyService;
+        _bookingService = bookingService;
+        _db = db;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetList([FromQuery] PropertyFilters filters, CancellationToken ct)
     {
+        // Short-lived public cache — safe because list is non-personalised (auth is separate)
+        Response.Headers.Append("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
         var result = await _propertyService.GetPublicListAsync(filters, ct);
         return Ok(result);
     }
@@ -25,8 +35,22 @@ public class PropertiesController : BaseController
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
+        // Detail page: shorter cache — view counter increments on every hit
+        Response.Headers.Append("Cache-Control", "public, max-age=10, stale-while-revalidate=30");
         var result = await _propertyService.GetByIdPublicAsync(id, ct);
         return Ok(result);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{id:guid}/availability")]
+    public async Task<IActionResult> GetAvailability(
+        Guid id,
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate,
+        CancellationToken ct)
+    {
+        var available = await _bookingService.IsAvailableAsync(id, startDate, endDate, ct);
+        return Ok(new { available });
     }
 
     // ── Property creation — two routes, same permission intent ──────────────────
@@ -104,6 +128,41 @@ public class PropertiesController : BaseController
     {
         var (used, limit, isFreeTrial) = await _propertyService.GetMonthlyListingStatsAsync(GetUserId(), GetUserRole(), ct);
         return Ok(new { used, limit, isFreeTrial });
+    }
+
+    // ── GET /api/properties/{id}/images ──────────────────────────────────────
+
+    /// <summary>
+    /// Returns all images for a property, ordered by Order ASC.
+    /// Public endpoint — no auth required.
+    ///
+    /// Prefer: GET /api/images/property/{id}
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("{id:guid}/images")]
+    public async Task<IActionResult> GetImages(Guid id, CancellationToken ct)
+    {
+        bool exists = await _db.Properties
+            .AnyAsync(p => p.Id == id && !p.IsDeleted, ct);
+
+        if (!exists)
+            return NotFound(new { error = "العقار غير موجود" });
+
+        var images = await _db.Set<PropertyImage>()
+            .Where(i => i.PropertyId == id)
+            .OrderBy(i => i.Order)
+            .Select(i => new
+            {
+                i.Id,
+                i.ImageUrl,
+                i.IsCover,
+                i.IsPrimary,
+                i.Order,
+                i.UserImageId,
+            })
+            .ToListAsync(ct);
+
+        return Ok(images);
     }
 
     // ── Admin moderation ──────────────────────────────────────────────────────

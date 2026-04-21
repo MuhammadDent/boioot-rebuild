@@ -22,6 +22,8 @@ import {
 } from "@/features/properties/constants";
 import type { PropertyResponse } from "@/types";
 
+type AvailabilityState = "idle" | "checking" | "available" | "unavailable" | "error";
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function shortRef(id: string) {
@@ -142,6 +144,8 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError]     = useState("");
   const [bookingSuccess, setBookingSuccess] = useState("");
+  const [availability, setAvailability] = useState<AvailabilityState>("idle");
+  const [availabilityError, setAvailabilityError] = useState("");
   const [bookingForm, setBookingForm] = useState({
     startDate: "",
     endDate: "",
@@ -167,6 +171,36 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
     if (!user?.fullName) return;
     setBookingForm((prev) => prev.guestName ? prev : { ...prev, guestName: user.fullName });
   }, [user?.fullName]);
+
+  useEffect(() => {
+    if (!bookingOpen || !bookingForm.startDate || !bookingForm.endDate) {
+      setAvailability("idle");
+      setAvailabilityError("");
+      return;
+    }
+
+    let ignore = false;
+    setAvailability("checking");
+    setAvailabilityError("");
+
+    const timeoutId = window.setTimeout(() => {
+      bookingsApi.availability(id, bookingForm.startDate, bookingForm.endDate)
+        .then((result) => {
+          if (ignore) return;
+          setAvailability(result.available ? "available" : "unavailable");
+        })
+        .catch((err) => {
+          if (ignore) return;
+          setAvailability("error");
+          setAvailabilityError(normalizeError(err) || "تعذر التحقق من توفر الفترة.");
+        });
+    }, 350);
+
+    return () => {
+      ignore = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [bookingForm.endDate, bookingForm.startDate, bookingOpen, id]);
 
   const doToggleFav = useCallback(async () => {
     setFavLoading(true);
@@ -248,6 +282,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
       });
       setBookingSuccess("تم إرسال طلب الحجز بنجاح. سيتواصل معك المعلن لتأكيد التفاصيل.");
       setBookingForm((prev) => ({ ...prev, startDate: "", endDate: "", notes: "" }));
+      setAvailability("idle");
     } catch (err) {
       setBookingError(normalizeError(err) || "تعذر إرسال طلب الحجز، حاول مجدداً.");
     } finally {
@@ -265,6 +300,8 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   const advertiserName    = property.ownerName ?? property.companyName ?? "المعلن";
   const advertiserPhoto   = property.ownerPhoto ?? property.companyLogoUrl ?? null;
   const canBook           = property.isBookable && property.listingType === "DailyRent" && !isOwn;
+  const hasSelectedDates  = !!bookingForm.startDate && !!bookingForm.endDate;
+  const canSubmitBooking  = !bookingLoading && (!hasSelectedDates || availability === "available");
 
   return (
     <div style={{ background: "var(--color-background)", padding: "2rem 0" }}>
@@ -618,6 +655,18 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
               </label>
             </div>
 
+            {hasSelectedDates && (
+              <div style={{ border: "1px solid var(--color-border)", borderRadius: 12, padding: "0.75rem", marginBottom: "0.75rem", background: "#f8fafc" }}>
+                <p style={{ margin: "0 0 0.4rem", color: "#334155", fontSize: "0.85rem", fontWeight: 800 }}>
+                  الفترة المختارة: {formatDate(bookingForm.startDate)} إلى {formatDate(bookingForm.endDate)}
+                </p>
+                {availability === "checking" && <p style={{ margin: 0, color: "#64748b", fontSize: "0.85rem" }}>جاري التحقق من التوفر...</p>}
+                {availability === "available" && <p style={{ margin: 0, color: "#15803d", fontSize: "0.85rem", fontWeight: 800 }}>✅ متاح للحجز</p>}
+                {availability === "unavailable" && <p style={{ margin: 0, color: "#b91c1c", fontSize: "0.85rem", fontWeight: 800 }}>❌ غير متاح لهذه الفترة</p>}
+                {availability === "error" && <p style={{ margin: 0, color: "#b91c1c", fontSize: "0.85rem", fontWeight: 800 }}>{availabilityError}</p>}
+              </div>
+            )}
+
             <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, marginBottom: "0.75rem" }}>
               الاسم
               <input
@@ -655,7 +704,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
 
             <button
               type="submit"
-              disabled={bookingLoading}
+              disabled={!canSubmitBooking}
               style={{
                 width: "100%",
                 height: 48,
@@ -664,11 +713,11 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                 background: "var(--color-primary)",
                 color: "#fff",
                 fontWeight: 800,
-                cursor: bookingLoading ? "not-allowed" : "pointer",
-                opacity: bookingLoading ? 0.75 : 1,
+                cursor: canSubmitBooking ? "pointer" : "not-allowed",
+                opacity: canSubmitBooking ? 1 : 0.75,
               }}
             >
-              {bookingLoading ? "جاري الإرسال..." : "إرسال طلب الحجز"}
+              {bookingLoading ? "جاري الإرسال..." : availability === "unavailable" ? "الفترة غير متاحة" : "إرسال طلب الحجز"}
             </button>
           </form>
         </div>

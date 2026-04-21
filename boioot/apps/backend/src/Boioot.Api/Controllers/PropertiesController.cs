@@ -1,5 +1,6 @@
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
+using Boioot.Application.Features.Bookings.Interfaces;
 using Boioot.Domain.Entities;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -12,11 +13,13 @@ namespace Boioot.Api.Controllers;
 public class PropertiesController : BaseController
 {
     private readonly IPropertyService _propertyService;
+    private readonly IBookingService _bookingService;
     private readonly BoiootDbContext _db;
 
-    public PropertiesController(IPropertyService propertyService, BoiootDbContext db)
+    public PropertiesController(IPropertyService propertyService, IBookingService bookingService, BoiootDbContext db)
     {
         _propertyService = propertyService;
+        _bookingService = bookingService;
         _db = db;
     }
 
@@ -36,6 +39,18 @@ public class PropertiesController : BaseController
         Response.Headers.Append("Cache-Control", "public, max-age=10, stale-while-revalidate=30");
         var result = await _propertyService.GetByIdPublicAsync(id, ct);
         return Ok(result);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{id:guid}/availability")]
+    public async Task<IActionResult> GetAvailability(
+        Guid id,
+        [FromQuery] DateTime startDate,
+        [FromQuery] DateTime endDate,
+        CancellationToken ct)
+    {
+        var available = await _bookingService.IsAvailableAsync(id, startDate, endDate, ct);
+        return Ok(new { available });
     }
 
     // ── Property creation — two routes, same permission intent ──────────────────
