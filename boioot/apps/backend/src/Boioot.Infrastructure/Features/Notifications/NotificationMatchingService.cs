@@ -131,6 +131,21 @@ public class NotificationMatchingService
 
         if (activeRecipientIds.Count == 0) return;
 
+        var relatedEntityId = request.Id.ToString();
+        var existingRecipientIds = await _context.Notifications
+            .AsNoTracking()
+            .Where(n => activeRecipientIds.Contains(n.UserId)
+                     && n.Type == "buyer_request_matched"
+                     && n.RelatedEntityId == relatedEntityId
+                     && n.RelatedEntityType == "BuyerRequest")
+            .Select(n => n.UserId)
+            .ToListAsync(ct);
+
+        if (existingRecipientIds.Count > 0)
+            activeRecipientIds = activeRecipientIds.Except(existingRecipientIds).ToList();
+
+        if (activeRecipientIds.Count == 0) return;
+
         var actorName = await _context.Users
             .AsNoTracking()
             .Where(u => u.Id == actorUserId)
@@ -142,7 +157,7 @@ public class NotificationMatchingService
             Type: "buyer_request_matched",
             Title: "طلب عقاري جديد مطابق",
             Body: $"نشر {actorName} طلباً جديداً قد يناسب عقاراتك: {request.Title}",
-            RelatedEntityId: request.Id.ToString(),
+            RelatedEntityId: relatedEntityId,
             RelatedEntityType: "BuyerRequest"))
             .ToList();
 
