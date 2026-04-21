@@ -1,0 +1,94 @@
+I want to add REAL-TIME notifications to the existing system in a SAFE and controlled way.
+
+⚠️ STRICT RULES:
+- DO NOT break existing notification system
+- DO NOT change API contracts unless absolutely required
+- DO NOT refactor unrelated code
+- DO NOT redesign UI
+- Keep everything backward-compatible
+- Changes must be minimal and isolated
+
+GOAL:
+When a notification is created, it should instantly appear in the frontend (bell, dropdown, notifications page) without refresh.
+
+---
+
+## STEP 1 — ARCHITECTURE PLAN (IMPORTANT)
+
+Before coding, explain:
+
+1) Which real-time approach you will use:
+   - SignalR (preferred if backend is .NET)
+   - or WebSocket / SSE fallback
+
+2) How users will be identified securely (userId / connection mapping)
+
+3) How you will emit notification events ONLY to the correct user
+
+4) What happens if the real-time connection fails
+
+DO NOT write code yet.
+
+---
+
+## STEP 2 — BACKEND (AFTER APPROVAL)
+
+Requirements:
+
+1) When a notification is created:
+   - Trigger a real-time event to that specific user
+
+2) DO NOT duplicate notification creation logic
+
+3) DO NOT broadcast to all users
+
+4) Keep it lightweight and safe
+
+---
+
+## STEP 3 — FRONTEND
+
+Update existing UI:
+
+1) Bell badge updates instantly
+2) Dropdown updates instantly
+3) /notifications updates if open
+4) New notifications appear without reload
+
+Optional:
+- small highlight animation
+
+---
+
+## STEP 4 — FALLBACK SAFETY
+
+1) If real-time fails:
+   - system must still work normally
+   - notifications must still appear via API
+
+2) Add simple reconnect logic
+
+---
+
+## STEP 5 — VALIDATION
+
+Test:
+
+- buyer_request_matched arrives instantly
+- verification_approved arrives instantly
+- verification_rejected arrives instantly
+- no duplicates
+- read/unread still works
+
+---
+
+## OUTPUT
+
+Show me:
+
+1) Architecture plan
+2) Files to be added
+3) Files to be modified
+4) Why this will NOT break the system
+
+Wait for approval before coding.
