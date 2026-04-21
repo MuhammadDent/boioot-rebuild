@@ -2,6 +2,9 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Features.Billing.Interfaces;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Application.Features.Admin.Interfaces;
+using Boioot.Application.Features.Storage;
+using Boioot.Application.Features.Storage.Settings;
+using Boioot.Infrastructure.Features.Storage;
 using Boioot.Application.Features.VerificationRequests.Interfaces;
 using Boioot.Infrastructure.Features.VerificationRequests;
 using Boioot.Application.Features.AgentManagement.Interfaces;
@@ -125,6 +128,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBlogService, BlogService>();
         services.AddScoped<ILocationMasterService, LocationMasterService>();
         services.AddScoped<IUserNotificationService, NotificationService>();
+        services.AddScoped<INotificationEventDispatcher, NotificationEventDispatcher>();
+        services.AddScoped<NotificationMatchingService>();
         services.AddScoped<Boioot.Application.Features.Email.IEmailService,
                            Boioot.Infrastructure.Features.Email.LoggingEmailService>();
         services.AddScoped<ISiteContentService, SiteContentService>();
@@ -150,6 +155,52 @@ public static class ServiceCollectionExtensions
         services.AddScoped<DatabaseStartupService>();
         services.AddScoped<SchemaEvolutionService>();
         services.AddScoped<RbacRepository>();
+
+        // ── Image processing (compress → WebP + thumbnail) ────────────────────
+        // Stateless, thread-safe — registered as singleton to avoid repeated allocations.
+        services.AddSingleton<IImageProcessingService, ImageProcessingService>();
+
+        // ── File storage abstraction ───────────────────────────────────────────
+        // Bind StorageOptions (includes nested R2Options) from config.
+        // Registration logic:
+        //   - Provider = "R2" AND all R2 fields are non-empty  →  R2FileStorageService
+        //   - Everything else (Local, missing config, partial config)  →  LocalFileStorageService
+        //
+        // This means the app ALWAYS starts safely: if Fly.io secrets are not
+        // yet configured, it silently falls back to local disk.
+        services.Configure<StorageOptions>(
+            configuration.GetSection(StorageOptions.SectionName));
+
+        var storageSection = configuration.GetSection(StorageOptions.SectionName);
+        var provider       = storageSection["Provider"] ?? "Local";
+
+        var r2AccountId  = storageSection["R2:AccountId"]       ?? string.Empty;
+        var r2BucketName = storageSection["R2:BucketName"]      ?? string.Empty;
+        var r2AccessKey  = storageSection["R2:AccessKeyId"]     ?? string.Empty;
+        var r2Secret     = storageSection["R2:SecretAccessKey"] ?? string.Empty;
+        var r2BaseUrl    = storageSection["R2:PublicBaseUrl"]   ?? string.Empty;
+
+        var r2IsConfigured =
+            provider.Equals("R2", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(r2AccountId)  &&
+            !string.IsNullOrWhiteSpace(r2BucketName) &&
+            !string.IsNullOrWhiteSpace(r2AccessKey)  &&
+            !string.IsNullOrWhiteSpace(r2Secret)     &&
+            !string.IsNullOrWhiteSpace(r2BaseUrl);
+
+        if (r2IsConfigured)
+        {
+            Console.WriteLine("[STARTUP] IFileStorageService → R2FileStorageService (Cloudflare R2)");
+            services.AddSingleton<IFileStorageService, R2FileStorageService>();
+        }
+        else
+        {
+            var reason = provider.Equals("R2", StringComparison.OrdinalIgnoreCase)
+                ? "R2 credentials incomplete — falling back to Local"
+                : $"Provider='{provider}'";
+            Console.WriteLine($"[STARTUP] IFileStorageService → LocalFileStorageService ({reason})");
+            services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        }
 
         return services;
     }
@@ -201,8 +252,16 @@ public static class ServiceCollectionExtensions
         if (!string.IsNullOrWhiteSpace(pgHost) && !string.IsNullOrWhiteSpace(pgDatabase))
             return $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword};SSL Mode=Disable";
 
-        throw new InvalidOperationException(
-            "No PostgreSQL connection string found. " +
-            "Set ConnectionStrings:Postgres, DATABASE_URL, or the PGHOST/PGDATABASE environment variables.");
+        // ── DIAGNOSTIC FALLBACK ────────────────────────────────────────────────
+        // No connection string found from any source.
+        // Return a clearly-invalid placeholder so the app can START and serve
+        // /health without crashing. DB operations will fail with a clear message.
+        // To fix: set DATABASE_URL or PGHOST+PGDATABASE on Fly.io via:
+        //   fly secrets set DATABASE_URL="postgresql://..."
+        Console.WriteLine("[STARTUP][ERROR] No PostgreSQL connection string found!");
+        Console.WriteLine("[STARTUP][ERROR]   Sources checked: ConnectionStrings:Postgres, DATABASE_URL, PGHOST+PGDATABASE");
+        Console.WriteLine("[STARTUP][ERROR]   App will start but ALL database operations will fail.");
+        Console.WriteLine("[STARTUP][ERROR]   Fix: run `fly secrets set DATABASE_URL=postgresql://user:pass@host/db`");
+        return "Host=MISSING;Database=MISSING;Username=MISSING;Password=MISSING";
     }
 }

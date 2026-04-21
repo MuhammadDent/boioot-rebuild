@@ -15,16 +15,19 @@ public class BuyerRequestService : IBuyerRequestService
 {
     private readonly BoiootDbContext _context;
     private readonly IUserNotificationService _notifications;
+    private readonly INotificationEventDispatcher _notificationEvents;
     private readonly ILogger<BuyerRequestService> _logger;
 
     public BuyerRequestService(
         BoiootDbContext context,
         IUserNotificationService notifications,
+        INotificationEventDispatcher notificationEvents,
         ILogger<BuyerRequestService> logger)
     {
-        _context       = context;
-        _notifications = notifications;
-        _logger        = logger;
+        _context            = context;
+        _notifications      = notifications;
+        _notificationEvents = notificationEvents;
+        _logger             = logger;
     }
 
     // ── Create ───────────────────────────────────────────────────────────────
@@ -46,12 +49,12 @@ public class BuyerRequestService : IBuyerRequestService
         _context.BuyerRequests.Add(entity);
         await _context.SaveChangesAsync(ct);
 
+        _notificationEvents.DispatchBuyerRequestCreated(entity.Id, userId);
+
         var user = await _context.Users
             .Where(u => u.Id == userId)
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(ct);
-
-        await NotifyMatchedUsersOfNewRequestAsync(entity, userId, user ?? "مستخدم", ct);
 
         return MapToResponse(entity, user ?? "", 0);
     }
@@ -527,132 +530,4 @@ public class BuyerRequestService : IBuyerRequestService
         CreatedAt       = c.CreatedAt,
     };
 
-    private async Task NotifyMatchedUsersOfNewRequestAsync(
-        BuyerRequest request, Guid actorId, string actorName, CancellationToken ct)
-    {
-        try
-        {
-            var city = NormalizeMatchText(request.City);
-            var neighborhood = NormalizeMatchText(request.Neighborhood);
-            var propertyType = ResolvePropertyType(request.PropertyType);
-
-            var query = _context.Properties
-                .AsNoTracking()
-                .Where(p => p.Status == PropertyStatus.Available
-                         && p.ModerationStatus == ModerationStatus.Active
-                         && !p.IsDeleted);
-
-            if (propertyType.HasValue)
-                query = query.Where(p => p.Type == propertyType.Value);
-
-            if (!string.IsNullOrWhiteSpace(city))
-                query = query.Where(p => p.City.ToLower() == city);
-
-            if (!string.IsNullOrWhiteSpace(neighborhood))
-                query = query.Where(p => p.Neighborhood != null && p.Neighborhood.ToLower() == neighborhood);
-
-            var candidates = await query
-                .OrderByDescending(p => p.CreatedAt)
-                .Take(100)
-                .Select(p => new
-                {
-                    p.OwnerId,
-                    p.CreatedByUserId,
-                    p.AccountId,
-                    AgentUserId = p.Agent != null ? (Guid?)p.Agent.UserId : null
-                })
-                .ToListAsync(ct);
-
-            if (candidates.Count == 0) return;
-
-            var recipientIds = new HashSet<Guid>();
-            foreach (var candidate in candidates)
-            {
-                AddParsedGuid(recipientIds, candidate.OwnerId);
-                AddParsedGuid(recipientIds, candidate.CreatedByUserId);
-                if (candidate.AgentUserId.HasValue)
-                    recipientIds.Add(candidate.AgentUserId.Value);
-            }
-
-            var accountIds = candidates
-                .Where(c => c.AccountId.HasValue)
-                .Select(c => c.AccountId!.Value)
-                .Distinct()
-                .ToList();
-
-            if (accountIds.Count > 0)
-            {
-                var accountUserIds = await _context.AccountUsers
-                    .AsNoTracking()
-                    .Where(au => accountIds.Contains(au.AccountId) && au.IsActive)
-                    .Select(au => au.UserId)
-                    .ToListAsync(ct);
-
-                foreach (var id in accountUserIds)
-                    recipientIds.Add(id);
-
-                var accountOwnerIds = await _context.Accounts
-                    .AsNoTracking()
-                    .Where(a => accountIds.Contains(a.Id) && a.IsActive)
-                    .Select(a => new { a.CreatedByUserId, a.PrimaryAdminUserId })
-                    .ToListAsync(ct);
-
-                foreach (var owner in accountOwnerIds)
-                {
-                    recipientIds.Add(owner.CreatedByUserId);
-                    if (owner.PrimaryAdminUserId.HasValue)
-                        recipientIds.Add(owner.PrimaryAdminUserId.Value);
-                }
-            }
-
-            recipientIds.Remove(actorId);
-            if (recipientIds.Count == 0) return;
-
-            var activeRecipientIds = await _context.Users
-                .AsNoTracking()
-                .Where(u => recipientIds.Contains(u.Id) && u.IsActive && !u.IsDeleted)
-                .Select(u => u.Id)
-                .ToListAsync(ct);
-
-            if (activeRecipientIds.Count == 0) return;
-
-            var notifications = activeRecipientIds.Select(uid => new NotificationRequest(
-                UserId: uid,
-                Type: "buyer_request_matched",
-                Title: "طلب عقاري جديد مطابق",
-                Body: $"نشر {actorName} طلباً جديداً قد يناسب عقاراتك: {request.Title}",
-                RelatedEntityId: request.Id.ToString(),
-                RelatedEntityType: "BuyerRequest"))
-                .ToList();
-
-            await _notifications.CreateBatchAsync(notifications, ct);
-
-            _logger.LogInformation(
-                "[BuyerRequest] Sent {Count} matched-user notification(s) for requestId={RequestId}",
-                notifications.Count, request.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex,
-                "[BuyerRequest] Failed to send matched-user notifications for requestId={RequestId}",
-                request.Id);
-        }
-    }
-
-    private static string? NormalizeMatchText(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
-
-    private static PropertyType? ResolvePropertyType(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return null;
-        return Enum.TryParse<PropertyType>(value.Trim(), ignoreCase: true, out var parsed)
-            ? parsed
-            : null;
-    }
-
-    private static void AddParsedGuid(HashSet<Guid> target, string? value)
-    {
-        if (Guid.TryParse(value, out var id))
-            target.Add(id);
-    }
 }

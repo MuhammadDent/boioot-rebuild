@@ -1,7 +1,6 @@
 using Boioot.Application.Common.Models;
 using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
-using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
 using Boioot.Application.Features.Subscriptions;
@@ -21,7 +20,6 @@ public class PropertyService : IPropertyService
     private readonly ICompanyOwnershipService _ownership;
     private readonly IPlanEntitlementService _entitlement;
     private readonly IAccountResolver _accountResolver;
-    private readonly IUserNotificationService _notifications;
     private readonly ILogger<PropertyService> _logger;
 
     public PropertyService(
@@ -29,14 +27,12 @@ public class PropertyService : IPropertyService
         ICompanyOwnershipService ownership,
         IPlanEntitlementService entitlement,
         IAccountResolver accountResolver,
-        IUserNotificationService notifications,
         ILogger<PropertyService> logger)
     {
         _context        = context;
         _ownership      = ownership;
         _entitlement    = entitlement;
         _accountResolver = accountResolver;
-        _notifications  = notifications;
         _logger         = logger;
     }
 
@@ -353,8 +349,6 @@ public class PropertyService : IPropertyService
         _logger.LogInformation(
             "Property created: {PropertyId} | Company: {CompanyId} | By: {UserId} ({Role})",
             property.Id, property.CompanyId, userId, userRole);
-
-        await NotifyMatchedBuyersOfDailyRentalAsync(property, userId, ct);
 
         return await LoadAndMapAsync(property.Id, ct);
     }
@@ -837,8 +831,6 @@ public class PropertyService : IPropertyService
             "User listing created: {PropertyId} | By: {UserId}",
             property.Id, userId);
 
-        await NotifyMatchedBuyersOfDailyRentalAsync(property, userId, ct);
-
         return await LoadAndMapAsync(property.Id, ct);
     }
 
@@ -1229,82 +1221,4 @@ public class PropertyService : IPropertyService
         CreatedByCompanyId = p.CreatedByCompanyId,
     };
 
-    private async Task NotifyMatchedBuyersOfDailyRentalAsync(Property property, Guid actorId, CancellationToken ct)
-    {
-        if (!IsDailyRentalListing(property.ListingType)) return;
-
-        try
-        {
-            var city = NormalizeMatchText(property.City);
-            var neighborhood = NormalizeMatchText(property.Neighborhood);
-            var propertyType = property.Type.ToString();
-
-            var query = _context.BuyerRequests
-                .AsNoTracking()
-                .Where(r => r.IsPublished && r.Status == "Open" && r.UserId != actorId);
-
-            if (!string.IsNullOrWhiteSpace(city))
-                query = query.Where(r => r.City != null && r.City.ToLower() == city);
-
-            if (!string.IsNullOrWhiteSpace(neighborhood))
-                query = query.Where(r => r.Neighborhood != null && r.Neighborhood.ToLower() == neighborhood);
-
-            var matchedRequestOwners = await query
-                .OrderByDescending(r => r.CreatedAt)
-                .Take(100)
-                .Select(r => new { r.UserId, r.PropertyType })
-                .ToListAsync(ct);
-
-            var recipientIds = matchedRequestOwners
-                .Where(r => string.Equals(r.PropertyType?.Trim(), propertyType, StringComparison.OrdinalIgnoreCase))
-                .Select(r => r.UserId)
-                .Distinct()
-                .ToList();
-
-            if (recipientIds.Count == 0) return;
-
-            var activeRecipientIds = await _context.Users
-                .AsNoTracking()
-                .Where(u => recipientIds.Contains(u.Id) && u.IsActive && !u.IsDeleted)
-                .Select(u => u.Id)
-                .ToListAsync(ct);
-
-            if (activeRecipientIds.Count == 0) return;
-
-            var notifications = activeRecipientIds.Select(uid => new NotificationRequest(
-                UserId: uid,
-                Type: "daily_rental_matched",
-                Title: "إيجار يومي جديد مطابق",
-                Body: $"تم إضافة عقار للإيجار اليومي قد يناسب طلبك: {property.Title}",
-                RelatedEntityId: property.Id.ToString(),
-                RelatedEntityType: "Property"))
-                .ToList();
-
-            await _notifications.CreateBatchAsync(notifications, ct);
-
-            _logger.LogInformation(
-                "[Property] Sent {Count} daily-rental match notification(s) for propertyId={PropertyId}",
-                notifications.Count, property.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex,
-                "[Property] Failed to send daily-rental match notifications for propertyId={PropertyId}",
-                property.Id);
-        }
-    }
-
-    private static bool IsDailyRentalListing(string? listingType)
-    {
-        if (string.IsNullOrWhiteSpace(listingType)) return false;
-        var value = listingType.Trim();
-        return value.Equals("DailyRent", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("Daily Rental", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("Daily_Rent", StringComparison.OrdinalIgnoreCase)
-            || value.Equals("daily-rent", StringComparison.OrdinalIgnoreCase)
-            || value.Contains("يومي", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string? NormalizeMatchText(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
 }

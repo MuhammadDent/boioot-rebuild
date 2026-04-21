@@ -7,6 +7,7 @@ Boioot is a Syrian real estate platform connecting buyers and sellers. It featur
 I prefer simple language. I want iterative development. Ask before making major changes.
 - Safe Mode for backend/production-like work is mandatory: additive-only changes, no existing API contract changes, no auth/middleware changes, no schema changes already in use, no unrelated refactors, no frontend logic changes unless explicitly requested.
 - New backend functionality should be isolated in new services/modules/controllers where possible and integrated only after existing logic, preserving current behavior.
+- Notification matching/creation must never block or slow down the original user flow; run it as a post-success background side-effect and swallow/log failures.
 - Before delivering backend changes, validate that existing critical flows remain unaffected: listings, requests, image uploads, verification, subscriptions, and authentication.
 
 ## System Architecture
@@ -30,7 +31,7 @@ I prefer simple language. I want iterative development. Ask before making major 
     - **Blog Module:** Full-stack blog system with admin CRUD and public display, including SEO features.
     - **RBAC Dashboard Isolation:** Fine-grained access control for dashboard features based on user roles and account types.
     - **Multi-Level User Verification:** Comprehensive system for identity and business verification with admin review workflows.
-    - **In-App Notifications:** Existing notification endpoints and service are used for request discussion activity, verification review flows, subscription payment admin/user messages, buyer-request match alerts, and daily-rental match alerts.
+    - **In-App Notifications:** Existing notification endpoints and service are used for request discussion activity, verification review flows, subscription payment admin/user messages, and background buyer-request match alerts.
     - **CMS Lite:** `SiteContent` entity for managing site content with admin CRUD and a public API, integrated into the frontend via a context provider.
     - **Global Error Handling:** Consistent, localized JSON error responses.
     - **Plan-Based Access Control (PBAC):** Frontend-driven feature gating and limit enforcement based on user's subscription plan, with graceful degradation.

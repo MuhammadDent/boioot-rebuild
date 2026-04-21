@@ -128,6 +128,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBlogService, BlogService>();
         services.AddScoped<ILocationMasterService, LocationMasterService>();
         services.AddScoped<IUserNotificationService, NotificationService>();
+        services.AddScoped<INotificationEventDispatcher, NotificationEventDispatcher>();
+        services.AddScoped<NotificationMatchingService>();
         services.AddScoped<Boioot.Application.Features.Email.IEmailService,
                            Boioot.Infrastructure.Features.Email.LoggingEmailService>();
         services.AddScoped<ISiteContentService, SiteContentService>();
