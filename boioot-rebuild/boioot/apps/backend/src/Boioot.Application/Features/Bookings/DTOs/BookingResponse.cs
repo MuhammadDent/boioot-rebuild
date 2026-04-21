@@ -4,6 +4,7 @@ public class BookingResponse
 {
     public Guid Id { get; set; }
     public Guid PropertyId { get; set; }
+    public string? PropertyTitle { get; set; }
     public Guid RequestedByUserId { get; set; }
     public string? PropertyOwnerUserId { get; set; }
     public DateTime StartDate { get; set; }

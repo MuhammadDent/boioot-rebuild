@@ -17,5 +17,6 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.HasIndex(b => b.PropertyId);
         builder.HasIndex(b => b.RequestedByUserId);
         builder.HasIndex(b => new { b.PropertyId, b.StartDate, b.EndDate });
+        builder.HasIndex(b => new { b.PropertyId, b.Status, b.StartDate, b.EndDate });
     }
 }

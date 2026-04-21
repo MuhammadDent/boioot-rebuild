@@ -185,6 +185,32 @@ export interface PropertyResponse {
   moderationStatus?: string;
 }
 
+export type BookingStatus = "Pending" | "Confirmed" | "Rejected" | "Cancelled";
+
+export interface CreateBookingRequest {
+  propertyId: string;
+  startDate: string;
+  endDate: string;
+  guestName: string;
+  phone?: string;
+  notes?: string;
+}
+
+export interface BookingResponse {
+  id: string;
+  propertyId: string;
+  propertyTitle?: string;
+  requestedByUserId: string;
+  propertyOwnerUserId?: string | null;
+  startDate: string;
+  endDate: string;
+  guestName: string;
+  phone?: string | null;
+  notes?: string | null;
+  status: BookingStatus | string;
+  createdAt: string;
+}
+
 export interface ListingTypeConfig {
   id: string;
   value: string;
@@ -333,29 +359,6 @@ export interface UpdatePropertyRequest {
   newImages?: string[];
   videoUrl?: string;
   isBookable?: boolean;
-}
-
-export interface CreateBookingRequest {
-  propertyId: string;
-  startDate: string;
-  endDate: string;
-  guestName: string;
-  phone?: string;
-  notes?: string;
-}
-
-export interface BookingResponse {
-  id: string;
-  propertyId: string;
-  requestedByUserId: string;
-  propertyOwnerUserId?: string;
-  startDate: string;
-  endDate: string;
-  guestName: string;
-  phone?: string;
-  notes?: string;
-  status: string;
-  createdAt: string;
 }
 
 export interface SubmitRequestPayload {

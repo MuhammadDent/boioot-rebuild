@@ -281,6 +281,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       icon: I.listings,
       items: [
         { href: "/dashboard/my-listings",  label: "إعلاناتي",  icon: I.listings },
+        { href: "/dashboard/bookings",     label: "الحجوزات",  icon: I.check },
         { href: "/dashboard/my-requests",  label: "طلباتي",    icon: I.requests },
       ],
     },
@@ -300,6 +301,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       items: [
         { href: "/dashboard/clients",     label: "العملاء",    icon: I.clients  },
         { href: "/dashboard/my-listings", label: "إعلاناتي",   icon: I.listings },
+        { href: "/dashboard/bookings",    label: "الحجوزات",   icon: I.check },
         { href: "/dashboard/my-requests", label: "طلباتي",     icon: I.requests },
       ],
     },
@@ -318,6 +320,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       icon: I.listings,
       items: [
         { href: "/dashboard/listings",    label: "الإعلانات",  icon: I.listings },
+        { href: "/dashboard/bookings",    label: "الحجوزات",   icon: I.check },
         { href: "/dashboard/my-requests", label: "الطلبات",    icon: I.requests },
       ],
     },
@@ -337,6 +340,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       icon: I.listings,
       items: [
         { href: "/dashboard/listings",    label: "الإعلانات",  icon: I.listings },
+        { href: "/dashboard/bookings",    label: "الحجوزات",   icon: I.check },
         { href: "/dashboard/my-requests", label: "الطلبات",    icon: I.requests },
       ],
     },

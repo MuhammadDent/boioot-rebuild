@@ -429,6 +429,7 @@ public sealed class SchemaEvolutionService
         await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_PropertyId ON Bookings(PropertyId)", ct, warnOnError: true);
         await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_RequestedByUserId ON Bookings(RequestedByUserId)", ct, warnOnError: true);
         await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_PropertyId_StartDate_EndDate ON Bookings(PropertyId, StartDate, EndDate)", ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_PropertyId_Status_StartDate_EndDate ON Bookings(PropertyId, Status, StartDate, EndDate)", ct, warnOnError: true);
     }
 
     private async Task ApplyFeatureDefinitionPatchesAsync(CancellationToken ct)

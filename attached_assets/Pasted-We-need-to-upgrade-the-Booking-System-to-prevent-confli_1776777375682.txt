@@ -1,0 +1,117 @@
+We need to upgrade the Booking System to prevent conflicts and make it production-safe.
+
+CRITICAL RULES:
+- DO NOT touch subscription system
+- DO NOT redesign UI
+- DO NOT break existing booking API
+- Only extend safely
+
+GOAL:
+Add booking control, status flow, and prevent double booking.
+
+-----------------------------------
+
+STEP 1 — Booking Status System
+
+Extend Booking.Status:
+
+- Pending (default)
+- Confirmed
+- Rejected
+- Cancelled
+
+Rules:
+- New bookings = Pending
+- Owner must confirm manually
+
+-----------------------------------
+
+STEP 2 — Prevent Double Booking (CRITICAL)
+
+Before creating booking:
+
+Check:
+If ANY existing booking exists for same property where:
+
+- status = Confirmed
+AND
+- date overlap:
+
+(startDate < existing.EndDate AND endDate > existing.StartDate)
+
+→ Reject request
+
+-----------------------------------
+
+STEP 3 — Owner Actions API
+
+Add endpoints:
+
+POST /api/bookings/{id}/confirm
+POST /api/bookings/{id}/reject
+
+Rules:
+- Only OwnerId can perform action
+- Validate booking exists
+- Change status accordingly
+
+-----------------------------------
+
+STEP 4 — Renter Protection
+
+If booking is Pending:
+- Do NOT block other bookings yet
+
+If Confirmed:
+- Block overlapping bookings
+
+-----------------------------------
+
+STEP 5 — Notifications
+
+When:
+
+- Booking created → notify owner
+- Booking confirmed → notify renter
+- Booking rejected → notify renter
+
+Use existing notification system
+Add types:
+- booking_created
+- booking_confirmed
+- booking_rejected
+
+-----------------------------------
+
+STEP 6 — Frontend (Minimal)
+
+For Owner:
+
+- Show bookings list (simple list)
+- Buttons:
+    Confirm / Reject
+
+For Renter:
+
+- Show booking status
+
+NO UI redesign
+
+-----------------------------------
+
+STEP 7 — Validation
+
+After implementation show:
+
+1) Conflict check logic
+2) API endpoints
+3) Booking lifecycle flow
+4) Example:
+   - user A books
+   - owner confirms
+   - user B tries same dates → rejected
+
+-----------------------------------
+
+IMPORTANT:
+This is critical to make system safe before payments.

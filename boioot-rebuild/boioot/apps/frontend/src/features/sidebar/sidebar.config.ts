@@ -223,7 +223,10 @@ const MESSAGES_GROUP: SidebarGroup = {
   id: "messages",
   label: "التواصل",
   icon: I.messages,
-  items: [{ href: "/dashboard/messages", label: "الرسائل", icon: I.messages }],
+  items: [
+    { href: "/dashboard/messages",            label: "الرسائل",     icon: I.messages },
+    { href: "/dashboard/messages?support=1", label: "الدعم الفني", icon: I.messages },
+  ],
 };
 
 const VERIFICATION_GROUP: SidebarGroup = {
@@ -278,6 +281,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       icon: I.listings,
       items: [
         { href: "/dashboard/my-listings",  label: "إعلاناتي",  icon: I.listings },
+        { href: "/dashboard/bookings",     label: "الحجوزات",  icon: I.check },
         { href: "/dashboard/my-requests",  label: "طلباتي",    icon: I.requests },
       ],
     },
@@ -297,6 +301,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       items: [
         { href: "/dashboard/clients",     label: "العملاء",    icon: I.clients  },
         { href: "/dashboard/my-listings", label: "إعلاناتي",   icon: I.listings },
+        { href: "/dashboard/bookings",    label: "الحجوزات",   icon: I.check },
         { href: "/dashboard/my-requests", label: "طلباتي",     icon: I.requests },
       ],
     },
@@ -315,6 +320,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       icon: I.listings,
       items: [
         { href: "/dashboard/listings",    label: "الإعلانات",  icon: I.listings },
+        { href: "/dashboard/bookings",    label: "الحجوزات",   icon: I.check },
         { href: "/dashboard/my-requests", label: "الطلبات",    icon: I.requests },
       ],
     },
@@ -334,6 +340,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       icon: I.listings,
       items: [
         { href: "/dashboard/listings",    label: "الإعلانات",  icon: I.listings },
+        { href: "/dashboard/bookings",    label: "الحجوزات",   icon: I.check },
         { href: "/dashboard/my-requests", label: "الطلبات",    icon: I.requests },
       ],
     },
@@ -348,7 +355,10 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       label: "لوحة التحكم",
       icon: I.dashboard,
       alwaysOpen: true,
-      items: [{ href: "/dashboard/admin", label: "نظرة عامة", icon: I.dashboard, exact: true }],
+      items: [
+        { href: "/dashboard/admin",          label: "نظرة عامة", icon: I.dashboard, exact: true },
+        { href: "/dashboard/admin/messages", label: "الرسائل",   icon: I.messages },
+      ],
     },
     {
       id: "operations",

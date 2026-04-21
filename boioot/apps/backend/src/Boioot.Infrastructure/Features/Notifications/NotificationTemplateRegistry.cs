@@ -41,5 +41,26 @@ public static class NotificationTemplateRegistry
                 BodyTemplate: "استخدمت {used} من أصل {limit} في خطة اشتراكك.",
                 DefaultPriority: 2,
                 Enabled: true),
+
+            ["booking_created"] = new(
+                Key: "booking_created",
+                TitleTemplate: "طلب حجز جديد",
+                BodyTemplate: "وصل طلب حجز جديد لعقارك {propertyTitle}. راجع الطلب وأكده أو ارفضه من لوحة التحكم.",
+                DefaultPriority: 2,
+                Enabled: true),
+
+            ["booking_confirmed"] = new(
+                Key: "booking_confirmed",
+                TitleTemplate: "تم تأكيد طلب الحجز",
+                BodyTemplate: "تم تأكيد حجزك للعقار {propertyTitle}.",
+                DefaultPriority: 2,
+                Enabled: true),
+
+            ["booking_rejected"] = new(
+                Key: "booking_rejected",
+                TitleTemplate: "تم رفض طلب الحجز",
+                BodyTemplate: "تم رفض طلب حجزك للعقار {propertyTitle}.",
+                DefaultPriority: 2,
+                Enabled: true),
         };
 }
