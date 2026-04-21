@@ -1,12 +1,14 @@
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Bookings.DTOs;
 using Boioot.Application.Features.Bookings.Interfaces;
+using Boioot.Application.Features.Bookings.Settings;
 using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Boioot.Infrastructure.Features.Bookings;
 
@@ -19,15 +21,18 @@ public class BookingService : IBookingService
 
     private readonly BoiootDbContext _context;
     private readonly IUserNotificationService _notificationService;
+    private readonly BookingOptions _bookingOptions;
     private readonly ILogger<BookingService> _logger;
 
     public BookingService(
         BoiootDbContext context,
         IUserNotificationService notificationService,
+        IOptions<BookingOptions> bookingOptions,
         ILogger<BookingService> logger)
     {
         _context = context;
         _notificationService = notificationService;
+        _bookingOptions = bookingOptions.Value;
         _logger = logger;
     }
 
@@ -44,7 +49,8 @@ public class BookingService : IBookingService
                 p.IsBookable,
                 p.OwnerId,
                 p.CreatedByUserId,
-                p.Title
+                p.Title,
+                p.Price
             })
             .FirstOrDefaultAsync(ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
@@ -74,6 +80,12 @@ public class BookingService : IBookingService
         if (string.Equals(ownerUserId, userId.ToString(), StringComparison.OrdinalIgnoreCase))
             throw new BoiootException("لا يمكنك حجز إعلانك الخاص", 400);
 
+        var nights = (end - start).Days;
+        var pricePerNight = property.Price;
+        var totalAmount = pricePerNight * nights;
+        var commissionPercent = Math.Max(0m, _bookingOptions.CommissionPercent);
+        var commissionAmount = Math.Round(totalAmount * commissionPercent / 100m, 2, MidpointRounding.AwayFromZero);
+
         var booking = new Booking
         {
             PropertyId = property.Id,
@@ -84,6 +96,10 @@ public class BookingService : IBookingService
             GuestName = request.GuestName.Trim(),
             Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+            PricePerNight = pricePerNight,
+            TotalAmount = totalAmount,
+            CommissionPercent = commissionPercent,
+            CommissionAmount = commissionAmount,
             Status = Pending
         };
 
@@ -155,6 +171,10 @@ public class BookingService : IBookingService
                 GuestName = booking.GuestName,
                 Phone = booking.Phone,
                 Notes = booking.Notes,
+                PricePerNight = booking.PricePerNight,
+                TotalAmount = booking.TotalAmount,
+                CommissionPercent = booking.CommissionPercent,
+                CommissionAmount = booking.CommissionAmount,
                 Status = booking.Status,
                 CreatedAt = booking.CreatedAt
             })
@@ -184,6 +204,10 @@ public class BookingService : IBookingService
                 GuestName = booking.GuestName,
                 Phone = booking.Phone,
                 Notes = booking.Notes,
+                PricePerNight = booking.PricePerNight,
+                TotalAmount = booking.TotalAmount,
+                CommissionPercent = booking.CommissionPercent,
+                CommissionAmount = booking.CommissionAmount,
                 Status = booking.Status,
                 CreatedAt = booking.CreatedAt
             })
@@ -340,6 +364,10 @@ public class BookingService : IBookingService
         GuestName = booking.GuestName,
         Phone = booking.Phone,
         Notes = booking.Notes,
+        PricePerNight = booking.PricePerNight,
+        TotalAmount = booking.TotalAmount,
+        CommissionPercent = booking.CommissionPercent,
+        CommissionAmount = booking.CommissionAmount,
         Status = booking.Status,
         CreatedAt = booking.CreatedAt
     };

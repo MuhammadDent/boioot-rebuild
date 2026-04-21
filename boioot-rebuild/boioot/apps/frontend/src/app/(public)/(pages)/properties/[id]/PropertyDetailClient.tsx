@@ -36,6 +36,15 @@ function formatDate(iso: string) {
   });
 }
 
+function getNightCount(startDate: string, endDate: string) {
+  if (!startDate || !endDate) return 0;
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  const diff = end.getTime() - start.getTime();
+  if (!Number.isFinite(diff) || diff <= 0) return 0;
+  return Math.round(diff / 86_400_000);
+}
+
 function waLink(phone: string, text = "") {
   const clean = phone.replace(/\D/g, "");
   return `https://wa.me/${clean}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
@@ -302,6 +311,10 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   const canBook           = property.isBookable && property.listingType === "DailyRent" && !isOwn;
   const hasSelectedDates  = !!bookingForm.startDate && !!bookingForm.endDate;
   const canSubmitBooking  = !bookingLoading && (!hasSelectedDates || availability === "available");
+  const bookingNights     = getNightCount(bookingForm.startDate, bookingForm.endDate);
+  const bookingTotal      = property.price * bookingNights;
+  const bookingCommissionPercent = 10;
+  const bookingCommission = Math.round((bookingTotal * bookingCommissionPercent / 100) * 100) / 100;
 
   return (
     <div style={{ background: "var(--color-background)", padding: "2rem 0" }}>
@@ -664,6 +677,13 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                 {availability === "available" && <p style={{ margin: 0, color: "#15803d", fontSize: "0.85rem", fontWeight: 800 }}>✅ متاح للحجز</p>}
                 {availability === "unavailable" && <p style={{ margin: 0, color: "#b91c1c", fontSize: "0.85rem", fontWeight: 800 }}>❌ غير متاح لهذه الفترة</p>}
                 {availability === "error" && <p style={{ margin: 0, color: "#b91c1c", fontSize: "0.85rem", fontWeight: 800 }}>{availabilityError}</p>}
+                {bookingNights > 0 && (
+                  <div style={{ marginTop: "0.65rem", paddingTop: "0.65rem", borderTop: "1px solid #e2e8f0", display: "grid", gap: "0.35rem", color: "#334155", fontSize: "0.85rem" }}>
+                    <span>السعر: {bookingNights.toLocaleString("en")} ليلة × {formatPrice(property.price, property.currency)}</span>
+                    <strong>الإجمالي: {formatPrice(bookingTotal, property.currency)}</strong>
+                    <span>عمولة المنصة ({bookingCommissionPercent}%): {formatPrice(bookingCommission, property.currency)}</span>
+                  </div>
+                )}
               </div>
             )}
 

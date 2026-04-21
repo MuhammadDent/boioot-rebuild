@@ -19,6 +19,18 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" });
 }
 
+function formatMoney(value: number) {
+  return value.toLocaleString("en") + " ل.س";
+}
+
+function getNightCount(startDate: string, endDate: string) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diff = end.getTime() - start.getTime();
+  if (!Number.isFinite(diff) || diff <= 0) return 0;
+  return Math.round(diff / 86_400_000);
+}
+
 function StatusBadge({ status }: { status: string }) {
   const cfg = getBookingStatusConfig(status);
   return (
@@ -44,6 +56,7 @@ function BookingCard({
   onCancel?: (id: string) => void;
 }) {
   const isPending = booking.status === "Pending";
+  const nights = getNightCount(booking.startDate, booking.endDate);
   return (
     <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "1rem", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
@@ -62,6 +75,9 @@ function BookingCard({
         <span>الضيف: {booking.guestName}</span>
         {booking.phone && <span dir="ltr" style={{ textAlign: "right" }}>الهاتف: {booking.phone}</span>}
         {booking.notes && <span>ملاحظات: {booking.notes}</span>}
+        <span>السعر: {(nights || 1).toLocaleString("en")} ليلة × {formatMoney(booking.pricePerNight)}</span>
+        <strong style={{ color: "#0f172a" }}>الإجمالي: {formatMoney(booking.totalAmount)}</strong>
+        <span>عمولة المنصة ({booking.commissionPercent}%): {formatMoney(booking.commissionAmount)}</span>
       </div>
 
       {mode === "owner" && isPending && (

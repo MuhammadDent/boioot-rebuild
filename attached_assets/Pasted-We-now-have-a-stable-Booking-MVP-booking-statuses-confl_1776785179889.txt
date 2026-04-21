@@ -1,0 +1,102 @@
+We now have a stable Booking MVP, booking statuses, conflict prevention, and availability endpoint working.
+
+Next step: prepare the Daily Rental booking flow for commission-based monetization, WITHOUT adding payment gateway yet.
+
+CRITICAL RULES:
+- DO NOT touch subscription/plans system
+- DO NOT redesign UI
+- DO NOT break existing booking endpoints
+- Keep all changes additive and safe
+- We are preparing for commission logic only, not payment integration yet
+
+GOAL:
+Make booking data and UI ready for commission-based revenue.
+
+-----------------------------------
+
+STEP 1 — Booking Pricing Structure
+
+Extend Booking model safely to include:
+
+- SubtotalPrice
+- PlatformFee
+- FinalPrice
+
+Rules:
+- SubtotalPrice = nights × pricePerNight
+- PlatformFee = platform commission amount
+- FinalPrice = subtotal + platformFee
+
+For now:
+- platform fee can be calculated using a configurable fixed percentage
+- keep it simple and isolated
+
+-----------------------------------
+
+STEP 2 — Commission Configuration
+
+Add a simple central configuration for daily rental commission, for example:
+
+- DailyRentalCommissionPercent
+
+Do NOT connect this to subscription plans
+Do NOT mix with normal property listing monetization
+
+-----------------------------------
+
+STEP 3 — Booking Service Update
+
+When a booking is created:
+
+Calculate:
+- nights
+- subtotal
+- platform fee
+- final total
+
+Store all values in booking record
+
+-----------------------------------
+
+STEP 4 — Frontend Booking Summary
+
+In booking modal/page, show clearly:
+
+- price per night
+- number of nights
+- subtotal
+- service/platform fee
+- final total
+
+Use clear Arabic wording.
+No redesign, just improve clarity.
+
+-----------------------------------
+
+STEP 5 — Owner / Renter Transparency
+
+Ensure:
+- renter can see total amount clearly
+- owner booking view can later distinguish gross booking amount vs platform fee
+
+No payout system yet.
+Just prepare the data model and display.
+
+-----------------------------------
+
+STEP 6 — Validation
+
+Show me:
+
+1) Updated booking fields
+2) Example calculation
+3) API response example
+4) Frontend booking summary example
+5) Confirmation that nothing was mixed with subscription plans
+
+-----------------------------------
+
+IMPORTANT:
+This phase is only to prepare monetization structure.
+Do NOT add payment gateway yet.
+Do NOT add payout logic yet.

@@ -310,12 +310,20 @@ public sealed class DatabaseStartupService
                     "GuestName" character varying(120) NOT NULL,
                     "Phone" character varying(40),
                     "Notes" character varying(1000),
+                    "PricePerNight" numeric(18,2) NOT NULL DEFAULT 0,
+                    "TotalAmount" numeric(18,2) NOT NULL DEFAULT 0,
+                    "CommissionPercent" numeric(5,2) NOT NULL DEFAULT 0,
+                    "CommissionAmount" numeric(18,2) NOT NULL DEFAULT 0,
                     "Status" character varying(30) NOT NULL DEFAULT 'Pending',
                     "CreatedAt" timestamp with time zone NOT NULL,
                     "UpdatedAt" timestamp with time zone NOT NULL
                 )
                 """, ct);
 
+            await _db.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "PricePerNight" numeric(18,2) NOT NULL DEFAULT 0""", ct);
+            await _db.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "TotalAmount" numeric(18,2) NOT NULL DEFAULT 0""", ct);
+            await _db.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "CommissionPercent" numeric(5,2) NOT NULL DEFAULT 0""", ct);
+            await _db.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "CommissionAmount" numeric(18,2) NOT NULL DEFAULT 0""", ct);
             await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_PropertyId" ON "Bookings" ("PropertyId")""", ct);
             await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_RequestedByUserId" ON "Bookings" ("RequestedByUserId")""", ct);
             await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_PropertyId_StartDate_EndDate" ON "Bookings" ("PropertyId", "StartDate", "EndDate")""", ct);

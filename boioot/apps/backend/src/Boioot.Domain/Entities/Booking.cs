@@ -10,5 +10,9 @@ public class Booking : BaseEntity
     public string GuestName { get; set; } = string.Empty;
     public string? Phone { get; set; }
     public string? Notes { get; set; }
+    public decimal PricePerNight { get; set; }
+    public decimal TotalAmount { get; set; }
+    public decimal CommissionPercent { get; set; }
+    public decimal CommissionAmount { get; set; }
     public string Status { get; set; } = "Pending";
 }

@@ -207,6 +207,10 @@ export interface BookingResponse {
   guestName: string;
   phone?: string | null;
   notes?: string | null;
+  pricePerNight: number;
+  totalAmount: number;
+  commissionPercent: number;
+  commissionAmount: number;
   status: BookingStatus | string;
   createdAt: string;
 }

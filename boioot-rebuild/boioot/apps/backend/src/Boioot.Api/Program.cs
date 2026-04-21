@@ -4,6 +4,7 @@ using Boioot.Api.Authorization;
 using Boioot.Api.Hubs;
 using Microsoft.OpenApi.Models;
 using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Bookings.Settings;
 using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Domain.Constants;
@@ -110,6 +111,8 @@ builder.Services.Configure<BankInstructionsOptions>(
     builder.Configuration.GetSection(BankInstructionsOptions.SectionName));
 builder.Services.Configure<StripeOptions>(
     builder.Configuration.GetSection(StripeOptions.SectionName));
+builder.Services.Configure<BookingOptions>(
+    builder.Configuration.GetSection(BookingOptions.SectionName));
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMemoryCache();
 builder.Services.AddSignalR();
