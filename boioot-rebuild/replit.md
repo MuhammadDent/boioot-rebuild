@@ -5,6 +5,9 @@ Boioot is a Syrian real estate platform connecting buyers and sellers. It featur
 
 ## User Preferences
 I prefer simple language. I want iterative development. Ask before making major changes.
+- Safe Mode for backend/production-like work is mandatory: additive-only changes, no existing API contract changes, no auth/middleware changes, no schema changes already in use, no unrelated refactors, no frontend logic changes unless explicitly requested.
+- New backend functionality should be isolated in new services/modules/controllers where possible and integrated only after existing logic, preserving current behavior.
+- Before delivering backend changes, validate that existing critical flows remain unaffected: listings, requests, image uploads, verification, subscriptions, and authentication.
 
 ## System Architecture
 

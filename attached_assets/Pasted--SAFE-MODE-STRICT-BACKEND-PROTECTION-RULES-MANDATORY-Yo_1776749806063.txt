@@ -1,0 +1,78 @@
+⚠️ SAFE MODE – STRICT BACKEND PROTECTION RULES (MANDATORY)
+
+You are working on a live production-like system. Your task is to ADD functionality without breaking or modifying any existing behavior.
+
+🚫 STRICTLY FORBIDDEN:
+
+- DO NOT modify any existing API endpoints (routes, request shape, or response structure)
+- DO NOT rename or delete any existing functions, files, or models
+- DO NOT change authentication logic or middleware
+- DO NOT change database schemas that are already in use
+- DO NOT refactor unrelated code
+- DO NOT reorganize project structure
+- DO NOT touch any frontend logic unless explicitly asked
+- DO NOT change naming conventions used in the current system
+
+---
+
+✅ REQUIRED APPROACH:
+
+- Follow an **ADDITIVE ONLY** strategy:
+  → Only add new code, never modify existing working code
+
+- All new logic MUST be:
+  → Isolated (new services / modules)
+  → Non-invasive (no side effects on current flows)
+
+- Use clear modular structure, for example:
+  - notificationService
+  - matchingService
+  - notificationController (new only)
+
+- When integrating with existing flows:
+  → Only hook AFTER existing logic (append, don’t modify)
+
+---
+
+🧪 PRE-DELIVERY VALIDATION (MANDATORY):
+
+Before finishing, ensure that ALL existing features still work exactly as before:
+
+- Creating listings works
+- Creating requests works
+- Image uploads work
+- Verification flow works
+- Subscription system works
+- Authentication/login works
+
+If ANY existing functionality is affected → STOP and fix it.
+
+---
+
+📋 RESPONSE REQUIREMENTS:
+
+After implementation, you MUST provide:
+
+1. List of all files created
+2. List of all files modified (should be minimal and only additive)
+3. Clear explanation of why no existing behavior was broken
+4. Confirmation that:
+   → All changes are additive only
+   → No existing API contracts were modified
+
+---
+
+⚠️ IMPORTANT:
+
+If you are unsure about any change that might affect existing logic:
+→ STOP and ask for clarification before proceeding
+
+DO NOT guess.
+DO NOT take risks.
+
+---
+
+🎯 GOAL:
+
+Extend the system safely without breaking anything.
+Stability is MORE important than speed or code elegance.
