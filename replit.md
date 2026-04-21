@@ -27,6 +27,7 @@ I prefer simple language. I want iterative development. Ask before making major 
     - **Entity Management:** Logical deletion (`ISoftDeletable`) for core entities.
     - **Property & Project Modules:** CRUD operations, public listings, pagination, filtering.
     - **Requests/Leads Module:** Anonymous lead capture and dashboard management.
+    - **Booking MVP:** Additive booking flow for DailyRent properties only. `Properties.IsBookable` gates the UI and API, `POST /api/bookings` is authenticated, blocks self-booking and non-future/invalid ranges, and stores pending booking requests in the new `Bookings` table. PostgreSQL/SQLite schema patches are idempotent and run through startup schema evolution, not manual migrations.
     - **Subscription Module:** Manages plans, accounts, subscriptions, and invoicing with support for multiple billing providers. Includes a user role upgrade flow.
     - **Blog Module:** Full-stack blog system with admin CRUD and public display, including SEO features.
     - **RBAC Dashboard Isolation:** Fine-grained access control for dashboard features based on user roles and account types.

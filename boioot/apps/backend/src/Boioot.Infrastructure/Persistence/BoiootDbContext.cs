@@ -65,6 +65,7 @@ public class BoiootDbContext : DbContext
     public DbSet<BlogSeoSettings> BlogSeoSettings => Set<BlogSeoSettings>();
 
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Booking> Bookings => Set<Booking>();
 
     // ── Auth: Refresh tokens (Phase 1A) ──────────────────────────────────────
     public DbSet<UserRefreshToken> UserRefreshTokens => Set<UserRefreshToken>();

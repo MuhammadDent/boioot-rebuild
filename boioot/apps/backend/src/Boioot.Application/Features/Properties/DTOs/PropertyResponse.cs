@@ -41,6 +41,7 @@ public class PropertyResponse
 
     // Media
     public string? VideoUrl { get; set; }
+    public bool IsBookable { get; set; }
 
     public IReadOnlyList<PropertyImageResponse> Images { get; set; } = [];
     public DateTime CreatedAt { get; set; }

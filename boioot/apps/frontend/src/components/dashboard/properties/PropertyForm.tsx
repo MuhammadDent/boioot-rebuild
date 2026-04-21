@@ -48,6 +48,7 @@ interface FormFields {
   neighborhood: string;
   address: string;
   companyId: string;
+  isBookable: boolean;
 }
 
 type FormErrors = Partial<Record<keyof FormFields, string>>;
@@ -87,6 +88,7 @@ const EMPTY_FIELDS: FormFields = {
   neighborhood: "",
   address: "",
   companyId: "",
+  isBookable: false,
 };
 
 function fromInitial(data: PropertyResponse): FormFields {
@@ -106,6 +108,7 @@ function fromInitial(data: PropertyResponse): FormFields {
     neighborhood: data.neighborhood ?? "",
     address: data.address ?? "",
     companyId: "",
+    isBookable: data.isBookable ?? false,
   };
 }
 
@@ -315,6 +318,7 @@ export default function PropertyForm({
       city: fields.city,
       latitude:  lat  ?? undefined,
       longitude: lng  ?? undefined,
+      isBookable: fields.isBookable && fields.listingType === "DailyRent",
     };
 
     if (mode === "create") {
@@ -429,6 +433,23 @@ export default function PropertyForm({
             )}
           </div>
         </Row>
+
+        {fields.listingType === "DailyRent" && (
+          <div className="form-group">
+            <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontWeight: 700 }}>
+              <input
+                type="checkbox"
+                checked={fields.isBookable}
+                onChange={(e) => setFields((prev) => ({ ...prev, isBookable: e.target.checked }))}
+                disabled={disabled}
+              />
+              تفعيل طلبات الحجز لهذا العقار
+            </label>
+            <p style={{ margin: "0.35rem 0 0", color: "var(--color-text-secondary)", fontSize: "0.82rem" }}>
+              يظهر زر طلب الحجز في صفحة الإعلان فقط عند اختيار إيجار يومي وتفعيل هذا الخيار.
+            </p>
+          </div>
+        )}
 
         {mode === "edit" && (
           <div className="form-group">

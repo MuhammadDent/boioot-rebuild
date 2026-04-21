@@ -74,4 +74,5 @@ public class UpdatePropertyRequest
     public List<string>? NewImages { get; set; }
 
     public string? VideoUrl { get; set; }
+    public bool IsBookable { get; set; } = false;
 }

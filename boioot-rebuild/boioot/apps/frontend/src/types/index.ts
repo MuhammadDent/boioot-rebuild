@@ -87,8 +87,12 @@ export interface PagedResult<T> {
 export interface ProjectImageResponse {
   id: string;
   imageUrl: string;
-  isPrimary: boolean;
+  thumbnailUrl?: string;  // 480px WebP — use for cards; null for legacy images
+  isCover: boolean;
+  isPrimary: boolean;   // backward-compat alias for isCover
   order: number;
+  userImageId?: string;  // non-null when uploaded via R2 pipeline
+  imageSource?: string;  // "legacy" | "user_upload"
 }
 
 export interface ProjectResponse {
@@ -115,8 +119,12 @@ export interface ProjectResponse {
 export interface PropertyImageResponse {
   id: string;
   imageUrl: string;
-  isPrimary: boolean;
+  thumbnailUrl?: string;  // 480px WebP — use for cards; null for legacy images
+  isCover: boolean;
+  isPrimary: boolean;   // backward-compat alias for isCover
   order: number;
+  userImageId?: string;  // non-null when uploaded via R2 pipeline
+  imageSource?: string;  // "legacy" | "user_upload"
 }
 
 export interface PropertyResponse {
@@ -156,6 +164,7 @@ export interface PropertyResponse {
   features?: string[];
   // Media
   videoUrl?: string;
+  isBookable: boolean;
   images: PropertyImageResponse[];
   createdAt: string;
   updatedAt: string;
@@ -165,6 +174,9 @@ export interface PropertyResponse {
   ownerName?: string;
   ownerPhone?: string;
   ownerPhoto?: string;
+  // Advertiser verification — level from user (detail) or company.IsVerified (list)
+  ownerVerificationLevel?: number;
+  ownerIsVerified?: boolean;
   // Resolved chat recipient user ID (backfill: OwnerId → Agent.UserId → company agent)
   recipientId?: string;
   // Analytics
@@ -292,6 +304,7 @@ export interface CreatePropertyRequest {
   // Media
   images?: string[];
   videoUrl?: string;
+  isBookable?: boolean;
 }
 
 export interface UpdatePropertyRequest {
@@ -319,6 +332,30 @@ export interface UpdatePropertyRequest {
   /** New base64 images to append. null = don't add images. */
   newImages?: string[];
   videoUrl?: string;
+  isBookable?: boolean;
+}
+
+export interface CreateBookingRequest {
+  propertyId: string;
+  startDate: string;
+  endDate: string;
+  guestName: string;
+  phone?: string;
+  notes?: string;
+}
+
+export interface BookingResponse {
+  id: string;
+  propertyId: string;
+  requestedByUserId: string;
+  propertyOwnerUserId?: string;
+  startDate: string;
+  endDate: string;
+  guestName: string;
+  phone?: string;
+  notes?: string;
+  status: string;
+  createdAt: string;
 }
 
 export interface SubmitRequestPayload {

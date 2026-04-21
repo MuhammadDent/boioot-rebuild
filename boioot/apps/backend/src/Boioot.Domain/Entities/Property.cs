@@ -39,6 +39,7 @@ public class Property : BaseEntity, ISoftDeletable
 
     // Media
     public string? VideoUrl { get; set; }
+    public bool IsBookable { get; set; } = false;
 
     public Guid CompanyId { get; set; }
     public Guid? AgentId { get; set; }

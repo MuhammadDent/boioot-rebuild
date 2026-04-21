@@ -41,6 +41,7 @@ public class PropertyResponse
 
     // Media
     public string? VideoUrl { get; set; }
+    public bool IsBookable { get; set; }
 
     public IReadOnlyList<PropertyImageResponse> Images { get; set; } = [];
     public DateTime CreatedAt { get; set; }
@@ -53,6 +54,9 @@ public class PropertyResponse
     public string? OwnerName { get; set; }
     public string? OwnerPhone { get; set; }
     public string? OwnerPhoto { get; set; }
+    // Advertiser verification — level from user (detail view) or company.IsVerified (list)
+    public int OwnerVerificationLevel { get; set; } = 0;
+    public bool OwnerIsVerified { get; set; } = false;
 
     // Resolved chat recipient user ID (OwnerId → Agent.UserId → company agent fallback)
     public string? RecipientId { get; set; }

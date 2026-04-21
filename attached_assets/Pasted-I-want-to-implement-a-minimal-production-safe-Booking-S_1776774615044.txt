@@ -1,0 +1,145 @@
+I want to implement a minimal, production-safe Booking System for Daily Rentals.
+
+CRITICAL RULES:
+- DO NOT touch subscription system at all
+- DO NOT modify existing APIs or break contracts
+- DO NOT redesign UI
+- DO NOT refactor unrelated code
+- All changes must be isolated and reversible
+
+GOAL:
+Add a basic booking flow for properties marked as Daily Rental only.
+
+-----------------------------------
+
+STEP 1 — Property Flag
+
+Add a boolean field:
+
+IsDailyRental
+
+Rules:
+- Default = false
+- No breaking changes to existing properties
+- Only used to enable booking flow
+
+-----------------------------------
+
+STEP 2 — Booking Entity (Backend)
+
+Create new entity:
+
+Booking:
+- Id
+- PropertyId
+- UserId (renter)
+- OwnerId
+- StartDate
+- EndDate
+- Nights (computed or stored)
+- PricePerNight
+- TotalPrice
+- PlatformFee (for future use)
+- Status (Pending, Confirmed, Cancelled)
+- CreatedAt
+
+Rules:
+- No relation changes to existing entities
+- Keep schema simple
+- Use existing DbContext
+
+-----------------------------------
+
+STEP 3 — Booking Service
+
+Create BookingService:
+
+Responsibilities:
+- Validate property is IsDailyRental = true
+- Validate dates (start < end)
+- Calculate:
+    nights = difference in days
+    total = nights * pricePerNight
+- Create booking record
+- Save to DB
+
+NO payment integration yet.
+
+-----------------------------------
+
+STEP 4 — API Endpoint
+
+Add endpoint:
+
+POST /api/bookings
+
+Body:
+- propertyId
+- startDate
+- endDate
+
+Rules:
+- Must be authenticated
+- Get UserId from existing auth system
+- Return booking result safely
+
+-----------------------------------
+
+STEP 5 — Notification Integration
+
+After successful booking creation:
+
+- Send notification to Owner:
+    type: booking_created (new type)
+
+Use existing notification system
+DO NOT break existing notification flow
+
+-----------------------------------
+
+STEP 6 — Frontend (Minimal)
+
+ONLY for properties where:
+IsDailyRental = true
+
+Add:
+- Date picker (start / end)
+- Show:
+    number of nights
+    total price
+- Button:
+    "احجز الآن"
+
+On click:
+- Call API
+- Show success message
+
+DO NOT redesign property page
+
+-----------------------------------
+
+STEP 7 — Safety Rules
+
+- No double booking logic yet (next phase)
+- No calendar yet
+- No payments yet
+- No UI redesign
+- No changes to existing flows
+
+-----------------------------------
+
+STEP 8 — Validation
+
+After implementation show:
+
+1) Files created
+2) Files modified
+3) API request/response example
+4) Booking creation flow
+5) Confirmation no existing system was affected
+
+-----------------------------------
+
+IMPORTANT:
+This is MVP only.
+We will add payments, availability, and reviews in next phases.

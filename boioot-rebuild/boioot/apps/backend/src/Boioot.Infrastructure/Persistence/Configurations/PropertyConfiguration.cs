@@ -22,6 +22,7 @@ public class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.Property(p => p.Neighborhood).HasMaxLength(150);
         builder.Property(p => p.Address).HasMaxLength(300);
         builder.Property(p => p.City).IsRequired().HasMaxLength(100);
+        builder.Property(p => p.IsBookable).HasDefaultValue(false);
 
         builder.HasOne(p => p.Company)
             .WithMany(c => c.Properties)

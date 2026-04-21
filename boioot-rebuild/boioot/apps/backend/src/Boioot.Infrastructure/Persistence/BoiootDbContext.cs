@@ -65,6 +65,7 @@ public class BoiootDbContext : DbContext
     public DbSet<BlogSeoSettings> BlogSeoSettings => Set<BlogSeoSettings>();
 
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Booking> Bookings => Set<Booking>();
 
     // ── Auth: Refresh tokens (Phase 1A) ──────────────────────────────────────
     public DbSet<UserRefreshToken> UserRefreshTokens => Set<UserRefreshToken>();
@@ -82,6 +83,9 @@ public class BoiootDbContext : DbContext
 
     // ── Monetization Phase 1 ──────────────────────────────────────────────────
     public DbSet<LeadUnlock> LeadUnlocks => Set<LeadUnlock>();
+
+    // ── User uploaded images ───────────────────────────────────────────────────
+    public DbSet<UserImage> UserImages => Set<UserImage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

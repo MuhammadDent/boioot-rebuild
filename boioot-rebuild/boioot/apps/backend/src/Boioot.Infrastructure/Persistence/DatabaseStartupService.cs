@@ -106,6 +106,225 @@ public sealed class DatabaseStartupService
         _log.LogInformation("Running EF Core MigrateAsync for PostgreSQL pending migrations...");
         await _db.Database.MigrateAsync(ct);
         _log.LogInformation("PostgreSQL migration complete.");
+
+        // ── Idempotent column-type fixes (applied after every migration run) ──
+        await ApplyPostgresColumnFixesAsync(ct);
+        await ApplyPostgresBookingPatchesAsync(ct);
+
+        // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
+        await SyncIsCoverFromIsPrimaryAsync(ct);
+    }
+
+    /// <summary>
+    /// Applies safe, idempotent ALTER TABLE fixes for PostgreSQL columns whose
+    /// type must be widened beyond what the original EF migration created.
+    /// Each statement is guarded by a data_type check so it is a no-op when
+    /// the column is already the correct type.
+    /// </summary>
+    private async Task ApplyPostgresColumnFixesAsync(CancellationToken ct)
+    {
+        // Fix 1 & 2: ImageUrl was created as varchar(500) — must be text (no limit).
+        // SqlState 22001 was raised during property/project creation with long CDN URLs.
+        var columnFixes = new[]
+        {
+            (Table: "PropertyImages", Column: "ImageUrl"),
+            (Table: "ProjectImages",  Column: "ImageUrl"),
+        };
+
+        foreach (var (table, column) in columnFixes)
+        {
+            try
+            {
+                // Only ALTER if the column is still a character varying — idempotent.
+                string checkSql = $"""
+                    SELECT data_type
+                    FROM   information_schema.columns
+                    WHERE  table_schema = 'public'
+                      AND  table_name   = '{table}'
+                      AND  column_name  = '{column}'
+                    """;
+
+                await using var cmd = _db.Database.GetDbConnection().CreateCommand();
+                await _db.Database.OpenConnectionAsync(ct);
+                cmd.CommandText = checkSql;
+                var dataType = (await cmd.ExecuteScalarAsync(ct))?.ToString() ?? "";
+                await _db.Database.CloseConnectionAsync();
+
+                if (dataType.Contains("character varying", StringComparison.OrdinalIgnoreCase))
+                {
+                    _log.LogInformation(
+                        "[column-fix] Altering {Table}.{Column} from varchar → text ...",
+                        table, column);
+
+                    await _db.Database.ExecuteSqlRawAsync(
+                        $"""ALTER TABLE "{table}" ALTER COLUMN "{column}" TYPE text""", ct);
+
+                    _log.LogInformation(
+                        "[column-fix] {Table}.{Column} → text  ✓", table, column);
+                }
+                else
+                {
+                    _log.LogInformation(
+                        "[column-fix] {Table}.{Column} is already '{DataType}' — skipped.",
+                        table, column, dataType);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(
+                    "[column-fix] Could not fix {Table}.{Column}: {Msg}", table, column, ex.Message);
+            }
+        }
+
+        // Fix 3 & 4: UserImages.CreatedAt / UpdatedAt were created as TEXT by the manual
+        // EF Core migration (which uses TEXT for cross-DB compat).  Npgsql refuses to read
+        // TEXT columns as System.DateTime, so we ALTER them to the proper PostgreSQL type.
+        // The USING clause casts the stored ISO-8601 strings produced by EF Core.
+        var datetimeFixes = new[]
+        {
+            (Table: "UserImages", Column: "CreatedAt"),
+            (Table: "UserImages", Column: "UpdatedAt"),
+        };
+
+        foreach (var (table, column) in datetimeFixes)
+        {
+            try
+            {
+                string checkSql = $"""
+                    SELECT data_type
+                    FROM   information_schema.columns
+                    WHERE  table_schema = 'public'
+                      AND  table_name   = '{table}'
+                      AND  column_name  = '{column}'
+                    """;
+
+                await using var cmd = _db.Database.GetDbConnection().CreateCommand();
+                await _db.Database.OpenConnectionAsync(ct);
+                cmd.CommandText = checkSql;
+                var dataType = (await cmd.ExecuteScalarAsync(ct))?.ToString() ?? "";
+                await _db.Database.CloseConnectionAsync();
+
+                if (dataType.Equals("text", StringComparison.OrdinalIgnoreCase))
+                {
+                    _log.LogInformation(
+                        "[column-fix] Altering {Table}.{Column} from text → timestamp ...",
+                        table, column);
+
+                    await _db.Database.ExecuteSqlRawAsync(
+                        $"""
+                        ALTER TABLE "{table}"
+                        ALTER COLUMN "{column}" TYPE timestamp with time zone
+                        USING "{column}"::timestamp with time zone
+                        """, ct);
+
+                    _log.LogInformation(
+                        "[column-fix] {Table}.{Column} → timestamp with time zone  ✓",
+                        table, column);
+                }
+                else
+                {
+                    _log.LogInformation(
+                        "[column-fix] {Table}.{Column} is already '{DataType}' — skipped.",
+                        table, column, dataType);
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(
+                    "[column-fix] Could not fix {Table}.{Column}: {Msg}", table, column, ex.Message);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Idempotent one-time data fix: copies IsPrimary → IsCover for any
+    /// PropertyImage / ProjectImage row that has IsPrimary=true but IsCover=false.
+    ///
+    /// Background: IsCover was added later (migration 20260415160000) with defaultValue=false.
+    /// Rows that existed before that migration have IsCover=false even if IsPrimary=true.
+    /// This fix ensures IsCover is always consistent with IsPrimary for legacy data so
+    /// that filtering by IsCover reliably returns the cover image.
+    ///
+    /// Safe to re-run: only touches rows where IsPrimary=true AND IsCover=false.
+    /// </summary>
+    private async Task SyncIsCoverFromIsPrimaryAsync(CancellationToken ct)
+    {
+        if (IsSqlite) return; // Only needed on PostgreSQL (production)
+
+        try
+        {
+            int propFixed = await _db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "PropertyImages"
+                SET    "IsCover" = TRUE
+                WHERE  "IsPrimary" = TRUE
+                  AND  "IsCover"   = FALSE
+                """, ct);
+
+            int projFixed = await _db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "ProjectImages"
+                SET    "IsCover" = TRUE
+                WHERE  "IsPrimary" = TRUE
+                  AND  "IsCover"   = FALSE
+                """, ct);
+
+            if (propFixed > 0 || projFixed > 0)
+            {
+                _log.LogInformation(
+                    "[data-fix] SyncIsCoverFromIsPrimary: updated {P} PropertyImages, {Pr} ProjectImages.",
+                    propFixed, projFixed);
+            }
+            else
+            {
+                _log.LogInformation(
+                    "[data-fix] SyncIsCoverFromIsPrimary: no rows needed updating — already in sync.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[data-fix] SyncIsCoverFromIsPrimary failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    private async Task ApplyPostgresBookingPatchesAsync(CancellationToken ct)
+    {
+        if (!IsPostgres) return;
+
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                ALTER TABLE "Properties"
+                ADD COLUMN IF NOT EXISTS "IsBookable" boolean NOT NULL DEFAULT FALSE
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS "Bookings" (
+                    "Id" uuid NOT NULL PRIMARY KEY,
+                    "PropertyId" uuid NOT NULL,
+                    "RequestedByUserId" uuid NOT NULL,
+                    "PropertyOwnerUserId" character varying(80),
+                    "StartDate" timestamp with time zone NOT NULL,
+                    "EndDate" timestamp with time zone NOT NULL,
+                    "GuestName" character varying(120) NOT NULL,
+                    "Phone" character varying(40),
+                    "Notes" character varying(1000),
+                    "Status" character varying(30) NOT NULL DEFAULT 'Pending',
+                    "CreatedAt" timestamp with time zone NOT NULL,
+                    "UpdatedAt" timestamp with time zone NOT NULL
+                )
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_PropertyId" ON "Bookings" ("PropertyId")""", ct);
+            await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_RequestedByUserId" ON "Bookings" ("RequestedByUserId")""", ct);
+            await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_PropertyId_StartDate_EndDate" ON "Bookings" ("PropertyId", "StartDate", "EndDate")""", ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] Booking MVP patch failed (non-critical): {Msg}", ex.Message);
+        }
     }
 
     /// <summary>

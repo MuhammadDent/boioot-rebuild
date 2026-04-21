@@ -94,4 +94,5 @@ public class CreatePropertyRequest
 
     // Base64 data URL or external URL for video
     public string? VideoUrl { get; set; }
+    public bool IsBookable { get; set; } = false;
 }

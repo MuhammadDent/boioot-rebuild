@@ -109,6 +109,7 @@ public sealed class DatabaseStartupService
 
         // ── Idempotent column-type fixes (applied after every migration run) ──
         await ApplyPostgresColumnFixesAsync(ct);
+        await ApplyPostgresBookingPatchesAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
         await SyncIsCoverFromIsPrimaryAsync(ct);
@@ -283,6 +284,46 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("[data-fix] SyncIsCoverFromIsPrimary failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    private async Task ApplyPostgresBookingPatchesAsync(CancellationToken ct)
+    {
+        if (!IsPostgres) return;
+
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                ALTER TABLE "Properties"
+                ADD COLUMN IF NOT EXISTS "IsBookable" boolean NOT NULL DEFAULT FALSE
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS "Bookings" (
+                    "Id" uuid NOT NULL PRIMARY KEY,
+                    "PropertyId" uuid NOT NULL,
+                    "RequestedByUserId" uuid NOT NULL,
+                    "PropertyOwnerUserId" character varying(80),
+                    "StartDate" timestamp with time zone NOT NULL,
+                    "EndDate" timestamp with time zone NOT NULL,
+                    "GuestName" character varying(120) NOT NULL,
+                    "Phone" character varying(40),
+                    "Notes" character varying(1000),
+                    "Status" character varying(30) NOT NULL DEFAULT 'Pending',
+                    "CreatedAt" timestamp with time zone NOT NULL,
+                    "UpdatedAt" timestamp with time zone NOT NULL
+                )
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_PropertyId" ON "Bookings" ("PropertyId")""", ct);
+            await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_RequestedByUserId" ON "Bookings" ("RequestedByUserId")""", ct);
+            await _db.Database.ExecuteSqlRawAsync("""CREATE INDEX IF NOT EXISTS "IX_Bookings_PropertyId_StartDate_EndDate" ON "Bookings" ("PropertyId", "StartDate", "EndDate")""", ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] Booking MVP patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 

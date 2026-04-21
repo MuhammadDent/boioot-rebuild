@@ -63,6 +63,7 @@ public sealed class SchemaEvolutionService
         await ApplyVerificationRequestsPatchesAsync(ct);
         await ApplyMonetizationPhase1PatchesAsync(ct);
         await ApplySubscriptionRequestActionsPatchesAsync(ct);
+        await ApplyBookingPatchesAsync(ct);
 
         await ApplySqliteIndexPatchesAsync(ct);
         await ApplyWalCheckpointAsync(ct);
@@ -94,6 +95,7 @@ public sealed class SchemaEvolutionService
         await TryAlter("Properties", "CreatedByUserId",   "TEXT NOT NULL DEFAULT ''",      ct);
         await TryAlter("Properties", "CreatedByRole",     "TEXT NOT NULL DEFAULT ''",      ct);
         await TryAlter("Properties", "CreatedByCompanyId","TEXT",                          ct);
+        await TryAlter("Properties", "IsBookable",        "INTEGER NOT NULL DEFAULT 0",    ct);
     }
 
     private async Task ApplyLocationPatchesAsync(CancellationToken ct)
@@ -405,6 +407,28 @@ public sealed class SchemaEvolutionService
         await TryAlter("Invoices", "RejectedBy",       "TEXT", ct);
         await TryAlter("Invoices", "RejectedAt",       "TEXT", ct);
         await TryAlter("Invoices", "StripeSessionUrl", "TEXT", ct);
+    }
+
+    private async Task ApplyBookingPatchesAsync(CancellationToken ct)
+    {
+        await TryExec(@"
+            CREATE TABLE IF NOT EXISTS Bookings (
+                Id                  TEXT NOT NULL PRIMARY KEY,
+                PropertyId          TEXT NOT NULL,
+                RequestedByUserId   TEXT NOT NULL,
+                PropertyOwnerUserId TEXT,
+                StartDate           TEXT NOT NULL,
+                EndDate             TEXT NOT NULL,
+                GuestName           TEXT NOT NULL DEFAULT '',
+                Phone               TEXT,
+                Notes               TEXT,
+                Status              TEXT NOT NULL DEFAULT 'Pending',
+                CreatedAt           TEXT NOT NULL DEFAULT (datetime('now')),
+                UpdatedAt           TEXT NOT NULL DEFAULT (datetime('now'))
+            )", ct);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_PropertyId ON Bookings(PropertyId)", ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_RequestedByUserId ON Bookings(RequestedByUserId)", ct, warnOnError: true);
+        await TryExec("CREATE INDEX IF NOT EXISTS IX_Bookings_PropertyId_StartDate_EndDate ON Bookings(PropertyId, StartDate, EndDate)", ct, warnOnError: true);
     }
 
     private async Task ApplyFeatureDefinitionPatchesAsync(CancellationToken ct)

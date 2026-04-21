@@ -18,6 +18,7 @@ import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/das
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { useSubscription } from "@/hooks/useSubscription";
 import { api } from "@/lib/api";
+import PropertyImageUploader, { type PendingImageUpload } from "./PropertyImageUploader";
 
 // ─── Property amenity types (from API) ───────────────────────────────────────
 
@@ -27,29 +28,6 @@ interface AmenityItem {
   label: string;
   groupAr: string;
   order: number;
-}
-
-// ─── Image utility ────────────────────────────────────────────────────────────
-
-async function resizeImage(file: File, maxPx = 1200): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * ratio);
-        canvas.height = Math.round(img.height * ratio);
-        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
-      };
-      img.onerror = reject;
-      img.src = e.target!.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -70,6 +48,7 @@ interface FormFields {
   neighborhood: string;
   address: string;
   companyId: string;
+  isBookable: boolean;
 }
 
 type FormErrors = Partial<Record<keyof FormFields, string>>;
@@ -77,7 +56,11 @@ type FormErrors = Partial<Record<keyof FormFields, string>>;
 interface PropertyFormProps {
   mode: "create" | "edit";
   initialData?: PropertyResponse;
-  onSubmit: (data: CreatePropertyRequest | UpdatePropertyRequest) => Promise<void>;
+  /** pendingUploads is only passed in create mode for post-creation finalization. */
+  onSubmit: (
+    data: CreatePropertyRequest | UpdatePropertyRequest,
+    pendingUploads?: PendingImageUpload[]
+  ) => Promise<void>;
   isSubmitting: boolean;
   serverError: string;
   hideCompany?: boolean;
@@ -105,6 +88,7 @@ const EMPTY_FIELDS: FormFields = {
   neighborhood: "",
   address: "",
   companyId: "",
+  isBookable: false,
 };
 
 function fromInitial(data: PropertyResponse): FormFields {
@@ -124,6 +108,7 @@ function fromInitial(data: PropertyResponse): FormFields {
     neighborhood: data.neighborhood ?? "",
     address: data.address ?? "",
     companyId: "",
+    isBookable: data.isBookable ?? false,
   };
 }
 
@@ -211,27 +196,15 @@ export default function PropertyForm({
   const [lat, setLat] = useState<number | null>(initialData?.latitude ?? null);
   const [lng, setLng] = useState<number | null>(initialData?.longitude ?? null);
 
-  // ── Image state (split into three for proper partial-edit support) ──────────
-  // 1) Existing server images (sorted: primary first, then by order)
-  const [existingImages, setExistingImages] = useState<NonNullable<PropertyResponse["images"]>>(
-    () =>
-      initialData?.images
-        ? [...initialData.images].sort((a, b) =>
-            a.isPrimary ? -1 : b.isPrimary ? 1 : a.order - b.order
-          )
-        : []
-  );
-  // 2) IDs of existing images explicitly removed by the user
-  const [removedImageIds, setRemovedImageIds] = useState<string[]>([]);
-  // 3) New images added in this session (base64 data URLs)
-  const [newImages, setNewImages] = useState<string[]>([]);
+  // ── Image state (new R2 upload pipeline) ─────────────────────────────────────
+  // In create mode: pendingUploads is passed to onSubmit for post-creation finalization.
+  // In edit mode: PropertyImageUploader calls API directly — no batching needed.
+  const [pendingUploads, setPendingUploads] = useState<PendingImageUpload[]>([]);
 
   const [videoUrl, setVideoUrl] = useState<string>(initialData?.videoUrl ?? "");
-  const [imageLoading, setImageLoading] = useState(false);
   const [videoMode, setVideoMode] = useState<"url" | "file">("url");
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -257,31 +230,6 @@ export default function PropertyForm({
   function setField(field: keyof FormFields, value: string) {
     setFields((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
-  }
-
-  async function handleImageFiles(e: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
-    const keptExisting = existingImages.filter((img) => !removedImageIds.includes(img.id)).length;
-    const remaining = 10 - keptExisting - newImages.length;
-    if (remaining <= 0) return;
-    const toProcess = files.slice(0, remaining);
-    setImageLoading(true);
-    try {
-      const b64s = await Promise.all(toProcess.map((f) => resizeImage(f)));
-      setNewImages((prev) => [...prev, ...b64s]);
-    } finally {
-      setImageLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }
-
-  function removeExistingImage(id: string) {
-    setRemovedImageIds((prev) => [...prev, id]);
-  }
-
-  function removeNewImage(idx: number) {
-    setNewImages((prev) => prev.filter((_, i) => i !== idx));
   }
 
   async function handleVideoFile(e: ChangeEvent<HTMLInputElement>) {
@@ -318,9 +266,41 @@ export default function PropertyForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
+    // ─── Log full form data before validation ─────────────────────────────
+    console.log("════════════════════════════════════════════════════════");
+    console.log("[PropertyForm] ▶ SUBMIT triggered — mode:", mode);
+    console.log("[PropertyForm] Full fields snapshot:");
+    console.log("  title       :", JSON.stringify(fields.title));
+    console.log("  description :", JSON.stringify(fields.description));
+    console.log("  type        :", JSON.stringify(fields.type));
+    console.log("  listingType :", JSON.stringify(fields.listingType));
+    console.log("  status      :", JSON.stringify(fields.status));
+    console.log("  price       :", fields.price, " currency:", fields.currency);
+    console.log("  area        :", fields.area);
+    console.log("  bedrooms    :", fields.bedrooms);
+    console.log("  bathrooms   :", fields.bathrooms);
+    console.log("  city        :", JSON.stringify(fields.city));
+    console.log("  province    :", JSON.stringify(fields.province));
+    console.log("  lat / lng   :", lat, "/", lng);
+    console.log("  pendingUploads:", pendingUploads.length, "images");
+    pendingUploads.forEach((u, i) => {
+      console.log(`  pendingUpload[${i}]: fileKey=${u.fileKey ?? "(none)"} file=${u.file?.name ?? "(none)"}`);
+    });
+    console.log("════════════════════════════════════════════════════════");
+
     const fieldErrors = validate(fields, mode);
     setErrors(fieldErrors);
-    if (Object.keys(fieldErrors).length > 0) return;
+
+    const errorKeys = Object.keys(fieldErrors) as Array<keyof typeof fieldErrors>;
+    if (errorKeys.length > 0) {
+      console.error("[PropertyForm] ✗ Validation FAILED —", errorKeys.length, "field(s) invalid:");
+      errorKeys.forEach((key) => {
+        console.error(`  Field "${key}": ${fieldErrors[key]}`);
+      });
+      return;
+    }
+
+    console.log("[PropertyForm] ✓ Validation PASSED — proceeding to submit");
 
     const base = {
       title: fields.title.trim(),
@@ -338,24 +318,25 @@ export default function PropertyForm({
       city: fields.city,
       latitude:  lat  ?? undefined,
       longitude: lng  ?? undefined,
+      isBookable: fields.isBookable && fields.listingType === "DailyRent",
     };
 
     if (mode === "create") {
       const cid = fields.companyId.trim();
-      await onSubmit({
-        ...base,
-        companyId: cid || undefined,
-        features: selectedFeatures.length > 0 ? selectedFeatures : undefined,
-        images: newImages.length > 0 ? newImages : undefined,
-        videoUrl: videoUrl.trim() || undefined,
-      } as CreatePropertyRequest);
+      await onSubmit(
+        {
+          ...base,
+          companyId: cid || undefined,
+          features: selectedFeatures.length > 0 ? selectedFeatures : undefined,
+          videoUrl: videoUrl.trim() || undefined,
+        } as CreatePropertyRequest,
+        pendingUploads.length > 0 ? pendingUploads : undefined
+      );
     } else {
       await onSubmit({
         ...base,
         status: fields.status,
         features: selectedFeatures.length > 0 ? selectedFeatures : undefined,
-        removedImageIds: removedImageIds.length > 0 ? removedImageIds : undefined,
-        newImages: newImages.length > 0 ? newImages : undefined,
         videoUrl: videoUrl.trim() || "",
       } as UpdatePropertyRequest);
     }
@@ -453,6 +434,23 @@ export default function PropertyForm({
           </div>
         </Row>
 
+        {fields.listingType === "DailyRent" && (
+          <div className="form-group">
+            <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontWeight: 700 }}>
+              <input
+                type="checkbox"
+                checked={fields.isBookable}
+                onChange={(e) => setFields((prev) => ({ ...prev, isBookable: e.target.checked }))}
+                disabled={disabled}
+              />
+              تفعيل طلبات الحجز لهذا العقار
+            </label>
+            <p style={{ margin: "0.35rem 0 0", color: "var(--color-text-secondary)", fontSize: "0.82rem" }}>
+              يظهر زر طلب الحجز في صفحة الإعلان فقط عند اختيار إيجار يومي وتفعيل هذا الخيار.
+            </p>
+          </div>
+        )}
+
         {mode === "edit" && (
           <div className="form-group">
             <label className="form-label">
@@ -489,7 +487,12 @@ export default function PropertyForm({
               min={0}
               step="any"
               value={fields.price}
-              onChange={set("price")}
+              onChange={(e) => {
+                const val = e.target.value;
+                console.log("[PropertyForm] price state:", JSON.stringify(val));
+                setFields((prev) => ({ ...prev, price: val }));
+                if (errors.price) setErrors((prev) => ({ ...prev, price: undefined }));
+              }}
               placeholder="0"
               disabled={disabled}
               dir="ltr"
@@ -571,8 +574,9 @@ export default function PropertyForm({
             label="المدينة"
             value={fields.city}
             onChange={(val) => {
-              setField("city", val);
-              setField("neighborhood", "");
+              console.log("[PropertyForm] city state:", JSON.stringify(val));
+              setFields((prev) => ({ ...prev, city: val, neighborhood: "" }));
+              if (errors.city) setErrors((prev) => ({ ...prev, city: undefined }));
             }}
             province={fields.province}
             required
@@ -770,154 +774,14 @@ export default function PropertyForm({
       <Section label="الصور والفيديو (اختياري)">
         {/* ── Images ── */}
         <div style={{ marginBottom: "1.25rem" }}>
-          {(() => {
-            const keptExisting = existingImages.filter((img) => !removedImageIds.includes(img.id));
-            const totalCount = keptExisting.length + newImages.length;
-
-            return (
-              <>
-                {/* Header row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-                  <label className="form-label" style={{ margin: 0 }}>
-                    صور العقار <span style={{ color: "#94a3b8", fontWeight: 400 }}>(حتى 10 صور)</span>
-                  </label>
-                  <span style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{totalCount} / 10</span>
-                </div>
-
-                {/* ── Existing images (edit mode) ── */}
-                {mode === "edit" && existingImages.length > 0 && (
-                  <div style={{ marginBottom: "0.85rem" }}>
-                    <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#4a6741", marginBottom: "0.45rem" }}>
-                      الصور المحفوظة
-                    </p>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-                      {existingImages.map((img, idx) => {
-                        const isRemoved = removedImageIds.includes(img.id);
-                        const isCover = idx === 0 && keptExisting.length > 0 && !isRemoved;
-                        return (
-                          <div key={img.id} style={{
-                            position: "relative", borderRadius: 8, overflow: "hidden", aspectRatio: "4/3",
-                            opacity: isRemoved ? 0.35 : 1,
-                            transition: "opacity 0.15s",
-                          }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={img.imageUrl} alt={`صورة ${idx + 1}`}
-                              style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-
-                            {/* Cover badge */}
-                            {isCover && !isRemoved && (
-                              <span style={{
-                                position: "absolute", top: 4, right: 4,
-                                background: "#16a34a", color: "#fff",
-                                fontSize: "0.58rem", fontWeight: 700,
-                                padding: "2px 6px", borderRadius: 99,
-                              }}>غلاف</span>
-                            )}
-
-                            {/* Remove / Undo button */}
-                            {!isRemoved ? (
-                              <button type="button" onClick={() => removeExistingImage(img.id)}
-                                disabled={disabled}
-                                title="حذف هذه الصورة"
-                                style={{
-                                  position: "absolute", top: 4, left: 4,
-                                  background: "rgba(220,38,38,0.85)", color: "#fff",
-                                  border: "none", borderRadius: "50%", width: 22, height: 22,
-                                  cursor: "pointer", fontSize: "0.7rem",
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                }}>✕</button>
-                            ) : (
-                              <button type="button"
-                                onClick={() => setRemovedImageIds((prev) => prev.filter((id) => id !== img.id))}
-                                disabled={disabled}
-                                title="استعادة الصورة"
-                                style={{
-                                  position: "absolute", inset: 0, width: "100%", height: "100%",
-                                  background: "rgba(0,0,0,0.45)", color: "#fff",
-                                  border: "none", cursor: "pointer", fontSize: "0.72rem", fontWeight: 700,
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                }}>↩ استعادة</button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Empty state (edit mode, no existing images) */}
-                {mode === "edit" && existingImages.length === 0 && newImages.length === 0 && (
-                  <p style={{ fontSize: "0.82rem", color: "#94a3b8", marginBottom: "0.75rem" }}>
-                    لا توجد صور محفوظة لهذا الإعلان بعد.
-                  </p>
-                )}
-
-                {/* ── New images ── */}
-                {newImages.length > 0 && (
-                  <div style={{ marginBottom: "0.75rem" }}>
-                    <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#1e40af", marginBottom: "0.45rem" }}>
-                      صور جديدة (لم تُحفظ بعد)
-                    </p>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.5rem" }}>
-                      {newImages.map((src, idx) => {
-                        const isCover = keptExisting.length === 0 && idx === 0;
-                        return (
-                          <div key={idx} style={{ position: "relative", borderRadius: 8, overflow: "hidden", aspectRatio: "4/3" }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={src} alt={`صورة جديدة ${idx + 1}`}
-                              style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            {isCover && (
-                              <span style={{
-                                position: "absolute", top: 4, right: 4,
-                                background: "#16a34a", color: "#fff",
-                                fontSize: "0.58rem", fontWeight: 700,
-                                padding: "2px 6px", borderRadius: 99,
-                              }}>غلاف</span>
-                            )}
-                            <button type="button" onClick={() => removeNewImage(idx)}
-                              disabled={disabled}
-                              title="إزالة هذه الصورة"
-                              style={{
-                                position: "absolute", top: 4, left: 4,
-                                background: "rgba(0,0,0,0.55)", color: "#fff",
-                                border: "none", borderRadius: "50%", width: 22, height: 22,
-                                cursor: "pointer", fontSize: "0.7rem",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                              }}>✕</button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Upload area ── */}
-                {totalCount < 10 && (
-                  <label style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                    border: "2px dashed #d1d5db", borderRadius: 10, padding: "1.1rem",
-                    cursor: disabled || imageLoading ? "default" : "pointer",
-                    background: "#f9fafb", color: "#6b7280", gap: "0.3rem",
-                    marginBottom: "0.4rem",
-                  }}>
-                    <span style={{ fontSize: "1.4rem" }}>{imageLoading ? "⏳" : "📷"}</span>
-                    <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>
-                      {imageLoading ? "جاري المعالجة..." : "اضغط لإضافة صور"}
-                    </span>
-                    <span style={{ fontSize: "0.72rem" }}>JPG، PNG — حتى 5MB لكل صورة</span>
-                    <input ref={fileInputRef} type="file" accept="image/*" multiple hidden
-                      disabled={disabled || imageLoading} onChange={handleImageFiles} />
-                  </label>
-                )}
-
-                {totalCount > 0 && (
-                  <p style={{ fontSize: "0.72rem", color: "#64748b", margin: "0.2rem 0 0" }}>
-                    الصورة الأولى ستكون صورة الغلاف للإعلان
-                  </p>
-                )}
-              </>
-            );
-          })()}
+          <PropertyImageUploader
+            entityId={mode === "edit" ? initialData?.id : undefined}
+            entityType="property"
+            initialImages={mode === "edit" ? (initialData?.images ?? []) : []}
+            onPendingChange={mode === "create" ? setPendingUploads : undefined}
+            disabled={disabled}
+            maxImages={10}
+          />
         </div>
 
         {/* Video */}

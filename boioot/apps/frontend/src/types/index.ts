@@ -164,6 +164,7 @@ export interface PropertyResponse {
   features?: string[];
   // Media
   videoUrl?: string;
+  isBookable: boolean;
   images: PropertyImageResponse[];
   createdAt: string;
   updatedAt: string;
@@ -303,6 +304,7 @@ export interface CreatePropertyRequest {
   // Media
   images?: string[];
   videoUrl?: string;
+  isBookable?: boolean;
 }
 
 export interface UpdatePropertyRequest {
@@ -330,6 +332,30 @@ export interface UpdatePropertyRequest {
   /** New base64 images to append. null = don't add images. */
   newImages?: string[];
   videoUrl?: string;
+  isBookable?: boolean;
+}
+
+export interface CreateBookingRequest {
+  propertyId: string;
+  startDate: string;
+  endDate: string;
+  guestName: string;
+  phone?: string;
+  notes?: string;
+}
+
+export interface BookingResponse {
+  id: string;
+  propertyId: string;
+  requestedByUserId: string;
+  propertyOwnerUserId?: string;
+  startDate: string;
+  endDate: string;
+  guestName: string;
+  phone?: string;
+  notes?: string;
+  status: string;
+  createdAt: string;
 }
 
 export interface SubmitRequestPayload {
