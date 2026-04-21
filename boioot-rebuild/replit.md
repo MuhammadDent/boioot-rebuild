@@ -31,7 +31,7 @@ I prefer simple language. I want iterative development. Ask before making major 
     - **Blog Module:** Full-stack blog system with admin CRUD and public display, including SEO features.
     - **RBAC Dashboard Isolation:** Fine-grained access control for dashboard features based on user roles and account types.
     - **Multi-Level User Verification:** Comprehensive system for identity and business verification with admin review workflows.
-    - **In-App Notifications:** Existing notification endpoints and service are used for request discussion activity, verification review flows, subscription payment admin/user messages, and background buyer-request match alerts.
+    - **In-App Notifications:** Existing notification endpoints and service are used for request discussion activity, verification review flows, subscription payment admin/user messages, and background buyer-request match alerts. Phase 1 message text for selected notification types is centralized in an in-code template registry/service without API or schema changes.
     - **CMS Lite:** `SiteContent` entity for managing site content with admin CRUD and a public API, integrated into the frontend via a context provider.
     - **Global Error Handling:** Consistent, localized JSON error responses.
     - **Plan-Based Access Control (PBAC):** Frontend-driven feature gating and limit enforcement based on user's subscription plan, with graceful degradation.

@@ -15,15 +15,18 @@ public class NotificationMatchingService
 
     private readonly BoiootDbContext _context;
     private readonly IUserNotificationService _notifications;
+    private readonly INotificationTemplateService _templates;
     private readonly ILogger<NotificationMatchingService> _logger;
 
     public NotificationMatchingService(
         BoiootDbContext context,
         IUserNotificationService notifications,
+        INotificationTemplateService templates,
         ILogger<NotificationMatchingService> logger)
     {
         _context = context;
         _notifications = notifications;
+        _templates = templates;
         _logger = logger;
     }
 
@@ -152,11 +155,24 @@ public class NotificationMatchingService
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(ct) ?? "مستخدم";
 
+        var rendered = _templates.Render(
+            "buyer_request_matched",
+            new Dictionary<string, string?>
+            {
+                ["actorName"] = actorName,
+                ["requestTitle"] = request.Title,
+                ["city"] = request.City,
+                ["propertyType"] = request.PropertyType,
+                ["capacity"] = capacity?.ToString()
+            });
+
+        if (rendered is null) return;
+
         var notifications = activeRecipientIds.Select(uid => new NotificationRequest(
             UserId: uid,
             Type: "buyer_request_matched",
-            Title: "طلب عقاري جديد مطابق",
-            Body: $"نشر {actorName} طلباً جديداً قد يناسب عقاراتك: {request.Title}",
+            Title: rendered.Title,
+            Body: rendered.Body,
             RelatedEntityId: relatedEntityId,
             RelatedEntityType: "BuyerRequest"))
             .ToList();

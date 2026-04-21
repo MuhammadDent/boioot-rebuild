@@ -15,16 +15,19 @@ public class VerificationRequestService : IVerificationRequestService
 {
     private readonly BoiootDbContext _context;
     private readonly IUserNotificationService _notifications;
+    private readonly INotificationTemplateService _notificationTemplates;
     private readonly ILogger<VerificationRequestService> _logger;
 
     public VerificationRequestService(
         BoiootDbContext context,
         IUserNotificationService notifications,
+        INotificationTemplateService notificationTemplates,
         ILogger<VerificationRequestService> logger)
     {
-        _context       = context;
-        _notifications = notifications;
-        _logger        = logger;
+        _context               = context;
+        _notifications         = notifications;
+        _notificationTemplates = notificationTemplates;
+        _logger                = logger;
     }
 
     // ── User-side ─────────────────────────────────────────────────────────────
@@ -339,14 +342,12 @@ public class VerificationRequestService : IVerificationRequestService
             {
                 VerificationRequestStatus.Approved =>
                     ("verification_approved",
-                     "تمت الموافقة على طلب التوثيق",
-                     "تهانينا! تمت مراجعة طلبك والموافقة عليه. حسابك الآن موثّق."),
+                     string.Empty,
+                     string.Empty),
                 VerificationRequestStatus.Rejected =>
                     ("verification_rejected",
-                     "تم رفض طلب التوثيق",
-                     string.IsNullOrWhiteSpace(dto.RejectionReason)
-                         ? "عذراً، تم رفض طلب التوثيق. يمكنك التقديم مجدداً."
-                         : $"عذراً، تم رفض طلب التوثيق. السبب: {dto.RejectionReason}"),
+                     string.Empty,
+                     string.Empty),
                 VerificationRequestStatus.NeedsMoreInfo =>
                     ("verification_needs_info",
                      "طلب التوثيق يحتاج معلومات إضافية",
@@ -358,6 +359,24 @@ public class VerificationRequestService : IVerificationRequestService
                      "تم تحديث طلب التوثيق",
                      "تم تحديث حالة طلب التوثيق الخاص بك.")
             };
+
+            if (notifType is "verification_approved" or "verification_rejected")
+            {
+                var rendered = _notificationTemplates.Render(
+                    notifType,
+                    new Dictionary<string, string?>
+                    {
+                        ["rejectionReason"] = dto.RejectionReason,
+                        ["rejectionReasonText"] = string.IsNullOrWhiteSpace(dto.RejectionReason)
+                            ? " يمكنك التقديم مجدداً."
+                            : $" السبب: {dto.RejectionReason}"
+                    });
+
+                if (rendered is null) return await GetRequestByIdCoreAsync(requestId, ct);
+
+                title = rendered.Title;
+                body = rendered.Body;
+            }
 
             await _notifications.CreateAsync(
                 userId:            request.UserId,
