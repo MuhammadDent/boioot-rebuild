@@ -2,98 +2,26 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { notificationsApi, type NotificationItem } from "@/features/notifications/api";
-import { resolveNotificationTarget } from "@/components/dashboard/NotificationsBell";
+import { notificationsApi, type NotificationItem as NotificationModel } from "@/features/notifications/api";
+import NotificationItem from "@/components/dashboard/notifications/NotificationItem";
+import {
+  fullNotificationDate,
+  getNotificationTypeConfig,
+  resolveNotificationTarget,
+  shouldOpenSubscriptionRequestModal,
+} from "@/components/dashboard/notifications/notificationTypeConfig";
 import SubscriptionRequestDetailModal from "@/components/dashboard/SubscriptionRequestDetailModal";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function relativeTime(dateStr: string): string {
-  const diff  = Date.now() - new Date(dateStr).getTime();
-  const mins  = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days  = Math.floor(diff / 86_400_000);
-  if (mins  < 1)  return "الآن";
-  if (mins  < 60) return `منذ ${mins} دقيقة`;
-  if (hours < 24) return `منذ ${hours} ساعة`;
-  if (days  < 30) return `منذ ${days} يوم`;
-  return new Date(dateStr).toLocaleDateString("ar-SY");
-}
-
-function fullDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("ar-SY", { dateStyle: "medium", timeStyle: "short" });
-}
-
-function typeIcon(type: string): string {
-  const map: Record<string, string> = {
-    listing_approved:             "✅",
-    listing_rejected:             "❌",
-    listing_featured:             "⭐",
-    subscription_approved:        "🎉",
-    subscription_rejected:        "❌",
-    subscription_missing_info:    "📋",
-    subscription_activated:       "🚀",
-    payment_received:             "💳",
-    payment_submitted:            "📤",
-    payment_pending:              "⏳",
-    new_request:                  "📨",
-    request_comment:              "💬",
-    request_reply:                "↩️",
-    request_discussion_activity:  "💬",
-    special_request_new:          "📋",
-    trial_warning:                "⚠️",
-    trial_limit_reached:          "🚫",
-    system_alert:                 "🔔",
-    new_message:                  "✉️",
-    new_comment:                  "💬",
-    buyer_request_matched:        "📨",
-    verification_new_request:     "📋",
-    verification_approved:        "✅",
-    verification_rejected:        "❌",
-    verification_needs_info:      "📝",
-    verification_updated:         "🔔",
-  };
-  return map[type] ?? "🔔";
-}
-
-function actionLabel(n: NotificationItem): string | null {
-  if (n.relatedEntityType === "SubscriptionPaymentRequest") {
-    if (n.type === "subscription_approved")     return "عرض الموافقة";
-    if (n.type === "subscription_rejected")     return "عرض سبب الرفض";
-    if (n.type === "subscription_missing_info") return "عرض المطلوب";
-    return "عرض الرد";
-  }
-  if (n.relatedEntityType === "BuyerRequest" || n.relatedEntityType === "SpecialRequest") {
-    return "عرض الطلب";
-  }
-  if (n.relatedEntityType === "VerificationRequest") {
-    return "عرض طلب التوثيق";
-  }
-  return null;
-}
-
-const DECISION_BADGE: Record<string, { label: string; color: string; bg: string }> = {
-  subscription_approved:        { label: "موافقة",        color: "#166534", bg: "#dcfce7" },
-  subscription_rejected:        { label: "رفض",           color: "#b91c1c", bg: "#fee2e2" },
-  subscription_missing_info:    { label: "استكمال مطلوب", color: "#92400e", bg: "#fef3c7" },
-  subscription_activated:       { label: "مُفعَّل",       color: "#166534", bg: "#bbf7d0" },
-  verification_approved:        { label: "موافقة",        color: "#166534", bg: "#dcfce7" },
-  verification_rejected:        { label: "مرفوض",         color: "#b91c1c", bg: "#fee2e2" },
-  verification_needs_info:      { label: "معلومات إضافية", color: "#92400e", bg: "#fef3c7" },
-  verification_new_request:     { label: "طلب جديد",      color: "#1d4ed8", bg: "#dbeafe" },
-};
-
-// ─── Generic detail modal ─────────────────────────────────────────────────────
 
 function GenericDetailModal({
   notification,
   onClose,
 }: {
-  notification: NotificationItem;
+  notification: NotificationModel;
   onClose: () => void;
 }) {
   const router = useRouter();
   const target = resolveNotificationTarget(notification);
+  const config = getNotificationTypeConfig(notification.type);
 
   return (
     <div
@@ -105,10 +33,10 @@ function GenericDetailModal({
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-          <span style={{ fontSize: "32px" }}>{typeIcon(notification.type)}</span>
+          <span style={{ fontSize: "32px" }}>{config.icon}</span>
           <div>
             <p style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#111827", lineHeight: 1.4 }}>{notification.title}</p>
-            <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#9ca3af" }}>{fullDate(notification.createdAt)}</p>
+            <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#9ca3af" }}>{fullNotificationDate(notification.createdAt)}</p>
           </div>
         </div>
         <div style={{ height: "1px", background: "#f3f4f6", margin: "0 0 16px" }} />
@@ -132,30 +60,26 @@ function GenericDetailModal({
   );
 }
 
-// ─── Modal state type ─────────────────────────────────────────────────────────
-
 type ModalState =
   | { kind: "none" }
   | { kind: "subscription_request"; requestId: string }
-  | { kind: "generic"; notification: NotificationItem };
+  | { kind: "generic"; notification: NotificationModel };
 
 type Filter = "all" | "unread";
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
   const router = useRouter();
 
-  const [items,      setItems]      = useState<NotificationItem[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState<string | null>(null);
+  const [items, setItems] = useState<NotificationModel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
-  const [filter,     setFilter]     = useState<Filter>("all");
-  const [page,       setPage]       = useState(1);
-  const [total,      setTotal]      = useState(0);
-  const [unread,     setUnread]     = useState(0);
-  const [modal,      setModal]      = useState<ModalState>({ kind: "none" });
-  const [hoveredId,  setHoveredId]  = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [unread, setUnread] = useState(0);
+  const [modal, setModal] = useState<ModalState>({ kind: "none" });
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const PAGE_SIZE = 25;
 
@@ -184,22 +108,21 @@ export default function NotificationsPage() {
     setUnread(prev => Math.max(0, prev - 1));
   };
 
-  const handleItemClick = (n: NotificationItem) => {
-    if (!n.isRead) handleMarkRead(n.id);
+  const handleItemClick = (notification: NotificationModel) => {
+    if (!notification.isRead) handleMarkRead(notification.id);
 
-    // Subscription payment request → rich detail modal
-    if (n.relatedEntityType === "SubscriptionPaymentRequest" && n.relatedEntityId) {
-      setModal({ kind: "subscription_request", requestId: n.relatedEntityId });
+    if (shouldOpenSubscriptionRequestModal(notification) && notification.relatedEntityId) {
+      setModal({ kind: "subscription_request", requestId: notification.relatedEntityId });
       return;
     }
 
-    const target = resolveNotificationTarget(n);
+    const target = resolveNotificationTarget(notification);
     if (target) {
       router.push(target);
       return;
     }
 
-    setModal({ kind: "generic", notification: n });
+    setModal({ kind: "generic", notification });
   };
 
   const handleMarkAll = async () => {
@@ -220,8 +143,6 @@ export default function NotificationsPage() {
 
   return (
     <div style={{ padding: "24px", maxWidth: "720px", margin: "0 auto", direction: "rtl" }}>
-
-      {/* Page header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: "#111827" }}>الإشعارات</h1>
@@ -239,7 +160,6 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {/* Filter tabs */}
       <div style={{ display: "flex", gap: "4px", marginBottom: "16px", background: "#f3f4f6", borderRadius: "10px", padding: "4px", width: "fit-content" }}>
         {([ ["all", "الكل"], ["unread", "غير مقروءة"] ] as [Filter, string][]).map(([f, label]) => (
           <button
@@ -263,7 +183,6 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      {/* List */}
       {loading ? (
         <div style={{ padding: "60px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>
           جاري التحميل...
@@ -288,67 +207,20 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-          {displayed.map((n, idx) => {
-            const isHovered   = hoveredId === n.id;
-            const label       = actionLabel(n);
-            const decisionBdg = DECISION_BADGE[n.type];
-
-            return (
-              <div
-                key={n.id}
-                role="button"
-                tabIndex={0}
-                style={{
-                  display: "flex", gap: "14px", padding: "16px 20px",
-                  background: isHovered ? (n.isRead ? "#f9fafb" : "#dcfce7") : (n.isRead ? "#fff" : "#f0fdf4"),
-                  borderBottom: idx < displayed.length - 1 ? "1px solid #f3f4f6" : "none",
-                  cursor: "pointer", transition: "background 0.12s", userSelect: "none",
-                }}
-                onMouseEnter={() => setHoveredId(n.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                onClick={() => handleItemClick(n)}
-                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleItemClick(n); } }}
-              >
-                <span style={{ fontSize: "22px", flexShrink: 0, lineHeight: 1.3, marginTop: "2px" }}>
-                  {typeIcon(n.type)}
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: "14px", fontWeight: n.isRead ? 400 : 700, color: "#111827", lineHeight: 1.4 }}>
-                    {n.title}
-                  </p>
-                  <p style={{
-                    margin: "4px 0 0", fontSize: "13px", color: "#6b7280", lineHeight: 1.5,
-                    overflow: "hidden", textOverflow: "ellipsis",
-                    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
-                  }}>
-                    {n.body}
-                  </p>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "11px", color: "#9ca3af" }}>
-                      {relativeTime(n.createdAt)} · {fullDate(n.createdAt)}
-                    </span>
-                    {decisionBdg && (
-                      <span style={{ fontSize: "10px", fontWeight: 700, color: decisionBdg.color, background: decisionBdg.bg, borderRadius: "999px", padding: "1px 7px" }}>
-                        {decisionBdg.label}
-                      </span>
-                    )}
-                    {label && (
-                      <span style={{ fontSize: "10px", fontWeight: 700, color: "#1d4ed8", background: "#dbeafe", borderRadius: "999px", padding: "1px 7px", cursor: "pointer" }}>
-                        {label} ›
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {!n.isRead && (
-                  <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#16a34a", flexShrink: 0, marginTop: "4px" }} />
-                )}
-              </div>
-            );
-          })}
+          {displayed.map((notification, index) => (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              variant="page"
+              isHovered={hoveredId === notification.id}
+              isLast={index === displayed.length - 1}
+              onHover={setHoveredId}
+              onClick={handleItemClick}
+            />
+          ))}
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "24px" }}>
           <button type="button" disabled={page <= 1} onClick={() => setPage(p => p - 1)}
@@ -365,7 +237,6 @@ export default function NotificationsPage() {
         </div>
       )}
 
-      {/* Modals */}
       {modal.kind === "subscription_request" && (
         <SubscriptionRequestDetailModal
           requestId={modal.requestId}

@@ -3,10 +3,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { notificationsApi, type NotificationItem } from "@/features/notifications/api";
+import { notificationsApi, type NotificationItem as NotificationModel } from "@/features/notifications/api";
+import NotificationItem from "@/components/dashboard/notifications/NotificationItem";
+import {
+  getNotificationTypeConfig,
+  relativeNotificationTime,
+  resolveNotificationTarget,
+  shouldOpenSubscriptionRequestModal,
+} from "@/components/dashboard/notifications/notificationTypeConfig";
 import SubscriptionRequestDetailModal from "./SubscriptionRequestDetailModal";
 
-// ─── Bell icon ────────────────────────────────────────────────────────────────
+export { resolveNotificationTarget } from "@/components/dashboard/notifications/notificationTypeConfig";
 
 function BellIcon({ size = 18 }: { size?: number }) {
   return (
@@ -21,153 +28,16 @@ function BellIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-// ─── Relative time (Arabic) ───────────────────────────────────────────────────
-
-function relativeTime(dateStr: string): string {
-  const diff  = Date.now() - new Date(dateStr).getTime();
-  const mins  = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days  = Math.floor(diff / 86_400_000);
-  if (mins  < 1)  return "الآن";
-  if (mins  < 60) return `منذ ${mins} دقيقة`;
-  if (hours < 24) return `منذ ${hours} ساعة`;
-  if (days  < 30) return `منذ ${days} يوم`;
-  return new Date(dateStr).toLocaleDateString("ar-SY");
-}
-
-// ─── Type icon map ────────────────────────────────────────────────────────────
-
-function typeIcon(type: string): string {
-  const map: Record<string, string> = {
-    listing_approved:             "✅",
-    listing_rejected:             "❌",
-    listing_featured:             "⭐",
-    subscription_approved:        "🎉",
-    subscription_rejected:        "❌",
-    subscription_missing_info:    "📋",
-    subscription_activated:       "🚀",
-    payment_received:             "💳",
-    payment_submitted:            "📤",
-    payment_pending:              "⏳",
-    new_request:                  "📨",
-    request_comment:              "💬",
-    request_reply:                "↩️",
-    request_discussion_activity:  "💬",
-    special_request_new:          "📋",
-    trial_warning:                "⚠️",
-    trial_limit_reached:          "🚫",
-    system_alert:                 "🔔",
-    new_message:                  "✉️",
-    new_comment:                  "💬",
-    buyer_request_matched:        "📨",
-    verification_new_request:     "📋",
-    verification_approved:        "✅",
-    verification_rejected:        "❌",
-    verification_needs_info:      "📝",
-    verification_updated:         "🔔",
-  };
-  return map[type] ?? "🔔";
-}
-
-// ─── Action label for subscription-related notifications ──────────────────────
-
-function actionLabel(n: NotificationItem): string | null {
-  if (n.relatedEntityType === "SubscriptionPaymentRequest") {
-    if (n.type === "subscription_approved")     return "عرض الموافقة";
-    if (n.type === "subscription_rejected")     return "عرض سبب الرفض";
-    if (n.type === "subscription_missing_info") return "عرض المطلوب";
-    return "عرض الرد";
-  }
-  if (n.relatedEntityType === "BuyerRequest" || n.relatedEntityType === "SpecialRequest") {
-    return "عرض الطلب";
-  }
-  if (n.relatedEntityType === "VerificationRequest") {
-    return "عرض طلب التوثيق";
-  }
-  return null;
-}
-
-// ─── Decision badge ───────────────────────────────────────────────────────────
-
-function DecisionBadge({ type }: { type: string }) {
-  const map: Record<string, { label: string; color: string; bg: string }> = {
-    subscription_approved:        { label: "موافقة",          color: "#166534", bg: "#dcfce7" },
-    subscription_rejected:        { label: "رفض",             color: "#b91c1c", bg: "#fee2e2" },
-    subscription_missing_info:    { label: "استكمال مطلوب",   color: "#92400e", bg: "#fef3c7" },
-    subscription_activated:       { label: "مُفعَّل",         color: "#166534", bg: "#bbf7d0" },
-    verification_approved:        { label: "موافقة",          color: "#166534", bg: "#dcfce7" },
-    verification_rejected:        { label: "مرفوض",           color: "#b91c1c", bg: "#fee2e2" },
-    verification_needs_info:      { label: "معلومات إضافية",  color: "#92400e", bg: "#fef3c7" },
-    verification_new_request:     { label: "طلب جديد",        color: "#1d4ed8", bg: "#dbeafe" },
-  };
-  const meta = map[type];
-  if (!meta) return null;
-  return (
-    <span
-      style={{
-        fontSize:     "10px",
-        fontWeight:   700,
-        color:        meta.color,
-        background:   meta.bg,
-        borderRadius: "999px",
-        padding:      "1px 6px",
-        whiteSpace:   "nowrap",
-        marginTop:    "3px",
-        alignSelf:    "flex-start",
-        display:      "inline-block",
-      }}
-    >
-      {meta.label}
-    </span>
-  );
-}
-
-// ─── Notification target resolver ─────────────────────────────────────────────
-// Returns a URL for direct navigation, null when a modal should open instead.
-
-export function resolveNotificationTarget(n: NotificationItem): string | null {
-  const { relatedEntityId, relatedEntityType, type } = n;
-
-  // Subscription payment requests → always open detail modal (return null)
-  if (
-    relatedEntityType === "SubscriptionPaymentRequest" ||
-    type === "subscription_approved" ||
-    type === "subscription_rejected" ||
-    type === "subscription_missing_info" ||
-    type === "subscription_activated"
-  ) {
-    return null;
-  }
-
-  if (relatedEntityType && relatedEntityId) {
-    switch (relatedEntityType) {
-      case "BuyerRequest":       return `/requests/${relatedEntityId}`;
-      case "Property":           return `/dashboard/properties/${relatedEntityId}`;
-      case "SpecialRequest":     return `/dashboard/requests/${relatedEntityId}`;
-      case "VerificationRequest": return `/dashboard/verification/${relatedEntityId}`;
-      default: break;
-    }
-  }
-
-  // Type-based fallbacks
-  if (type === "new_message")    return "/dashboard/messages";
-  if ((type === "request_comment" || type === "request_reply") && relatedEntityId)
-    return `/requests/${relatedEntityId}`;
-
-  return null;
-}
-
-// ─── Generic notification detail modal ───────────────────────────────────────
-
 function NotificationDetailModal({
   notification,
   onClose,
 }: {
-  notification: NotificationItem;
+  notification: NotificationModel;
   onClose: () => void;
 }) {
   const router = useRouter();
   const target = resolveNotificationTarget(notification);
+  const config = getNotificationTypeConfig(notification.type);
 
   return (
     <div
@@ -190,13 +60,13 @@ function NotificationDetailModal({
         onClick={e => e.stopPropagation()}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-          <span style={{ fontSize: "28px" }}>{typeIcon(notification.type)}</span>
+          <span style={{ fontSize: "28px" }}>{config.icon}</span>
           <div>
             <p style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#111827", lineHeight: 1.4 }}>
               {notification.title}
             </p>
             <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#9ca3af" }}>
-              {relativeTime(notification.createdAt)}
+              {relativeNotificationTime(notification.createdAt)}
             </p>
           </div>
         </div>
@@ -234,22 +104,20 @@ function NotificationDetailModal({
   );
 }
 
-// ─── NotificationsBell ────────────────────────────────────────────────────────
-
 type ModalState =
   | { kind: "none" }
   | { kind: "subscription_request"; requestId: string }
-  | { kind: "generic"; notification: NotificationItem };
+  | { kind: "generic"; notification: NotificationModel };
 
 export default function NotificationsBell() {
-  const router    = useRouter();
-  const [open,        setOpen]        = useState(false);
-  const [unread,      setUnread]      = useState(0);
-  const [items,       setItems]       = useState<NotificationItem[]>([]);
-  const [loading,     setLoading]     = useState(false);
-  const [markingAll,  setMarkingAll]  = useState(false);
-  const [hoveredId,   setHoveredId]   = useState<string | null>(null);
-  const [modal,       setModal]       = useState<ModalState>({ kind: "none" });
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const [items, setItems] = useState<NotificationModel[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const panelRef = useRef<HTMLDivElement>(null);
 
   const fetchUnread = useCallback(async () => {
@@ -281,7 +149,6 @@ export default function NotificationsBell() {
     if (next) loadList();
   };
 
-  // Close on outside click (skip when any modal is open)
   useEffect(() => {
     if (!open || modal.kind !== "none") return;
     const handler = (e: MouseEvent) => {
@@ -299,23 +166,23 @@ export default function NotificationsBell() {
     setUnread(prev => Math.max(0, prev - 1));
   };
 
-  const handleNotificationClick = (n: NotificationItem) => {
-    if (!n.isRead) handleMarkRead(n.id);
+  const handleNotificationClick = (notification: NotificationModel) => {
+    if (!notification.isRead) handleMarkRead(notification.id);
 
     setOpen(false);
 
-    if (n.relatedEntityType === "SubscriptionPaymentRequest" && n.relatedEntityId) {
-      setModal({ kind: "subscription_request", requestId: n.relatedEntityId });
+    if (shouldOpenSubscriptionRequestModal(notification) && notification.relatedEntityId) {
+      setModal({ kind: "subscription_request", requestId: notification.relatedEntityId });
       return;
     }
 
-    const target = resolveNotificationTarget(n);
+    const target = resolveNotificationTarget(notification);
     if (target) {
       router.push(target);
       return;
     }
 
-    setModal({ kind: "generic", notification: n });
+    setModal({ kind: "generic", notification });
   };
 
   const handleMarkAll = async () => {
@@ -332,8 +199,6 @@ export default function NotificationsBell() {
   return (
     <>
       <div ref={panelRef} style={{ position: "relative" }}>
-
-        {/* Bell button */}
         <button
           type="button"
           className="dash-hdr__icon-btn"
@@ -360,7 +225,6 @@ export default function NotificationsBell() {
           )}
         </button>
 
-        {/* Dropdown */}
         {open && (
           <div
             style={{
@@ -371,7 +235,6 @@ export default function NotificationsBell() {
               zIndex: 9999, display: "flex", flexDirection: "column",
             }}
           >
-            {/* Header */}
             <div
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -397,7 +260,6 @@ export default function NotificationsBell() {
               )}
             </div>
 
-            {/* Body */}
             {loading ? (
               <div style={{ padding: "32px", textAlign: "center", color: "#9ca3af", fontSize: "13px", flex: 1 }}>
                 جاري التحميل...
@@ -408,64 +270,19 @@ export default function NotificationsBell() {
               </div>
             ) : (
               <ul style={{ listStyle: "none", margin: 0, padding: 0, flex: 1 }}>
-                {items.map(n => {
-                  const isHovered = hoveredId === n.id;
-                  const label     = actionLabel(n);
-                  return (
-                    <li
-                      key={n.id}
-                      role="button"
-                      tabIndex={0}
-                      style={{
-                        display: "flex", gap: "10px", padding: "12px 16px",
-                        background: isHovered ? (n.isRead ? "#f9fafb" : "#dcfce7") : (n.isRead ? "#fff" : "#f0fdf4"),
-                        borderBottom: "1px solid #f3f4f6",
-                        cursor: "pointer", transition: "background 0.12s", userSelect: "none",
-                      }}
-                      onMouseEnter={() => setHoveredId(n.id)}
-                      onMouseLeave={() => setHoveredId(null)}
-                      onClick={() => handleNotificationClick(n)}
-                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleNotificationClick(n); } }}
-                    >
-                      <span style={{ fontSize: "18px", flexShrink: 0, lineHeight: 1.4 }}>
-                        {typeIcon(n.type)}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: "13px", fontWeight: n.isRead ? 400 : 700, color: "#111827", lineHeight: 1.4 }}>
-                          {n.title}
-                        </p>
-                        <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#6b7280", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {n.body}
-                        </p>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
-                          <span style={{ fontSize: "11px", color: "#9ca3af" }}>
-                            {relativeTime(n.createdAt)}
-                          </span>
-                          <DecisionBadge type={n.type} />
-                          {label && (
-                            <span
-                              style={{
-                                fontSize: "10px", fontWeight: 700,
-                                color: "#1d4ed8", background: "#dbeafe",
-                                borderRadius: "999px", padding: "1px 7px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              {label} ›
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {!n.isRead && (
-                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#16a34a", flexShrink: 0, marginTop: "5px" }} />
-                      )}
-                    </li>
-                  );
-                })}
+                {items.map(notification => (
+                  <NotificationItem
+                    key={notification.id}
+                    notification={notification}
+                    variant="dropdown"
+                    isHovered={hoveredId === notification.id}
+                    onHover={setHoveredId}
+                    onClick={handleNotificationClick}
+                  />
+                ))}
               </ul>
             )}
 
-            {/* Footer */}
             <div
               style={{
                 padding: "10px 16px", borderTop: "1px solid #f3f4f6",
@@ -484,7 +301,6 @@ export default function NotificationsBell() {
         )}
       </div>
 
-      {/* Subscription request detail modal */}
       {modal.kind === "subscription_request" && (
         <SubscriptionRequestDetailModal
           requestId={modal.requestId}
@@ -492,7 +308,6 @@ export default function NotificationsBell() {
         />
       )}
 
-      {/* Generic notification detail modal */}
       {modal.kind === "generic" && (
         <NotificationDetailModal
           notification={modal.notification}

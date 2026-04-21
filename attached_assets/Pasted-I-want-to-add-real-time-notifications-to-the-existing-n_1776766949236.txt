@@ -1,0 +1,85 @@
+I want to add real-time notifications to the existing notification system in a SAFE and minimal way.
+
+⚠️ STRICT SAFE MODE RULES:
+- DO NOT break any existing functionality
+- DO NOT change existing API contracts unless absolutely necessary
+- DO NOT refactor unrelated code
+- DO NOT redesign the current notification UI
+- DO NOT change authentication or middleware behavior
+- Keep all changes additive, isolated, and backward-compatible
+
+GOAL:
+When a new notification is created, the authenticated user should receive it in real time in the frontend without refreshing the page.
+
+IMPORTANT:
+This should build on top of the CURRENT system:
+- existing notification backend
+- existing template layer
+- existing bell/badge/dropdown/list UI
+- existing unread/read handling
+
+---
+
+## BACKEND REQUIREMENTS
+
+Implement a minimal real-time notification push mechanism.
+
+Preferred approach:
+- Use a lightweight WebSocket / SignalR / server-supported real-time method already compatible with the stack
+- If the stack makes this risky, use a safe short polling fallback and explain why
+
+Requirements:
+1) When a notification is created for a user, emit/push an event to that user only
+2) Do NOT broadcast notifications to all users
+3) Keep user targeting secure
+4) Reuse existing notification creation flow
+5) Do not duplicate notification creation logic
+
+---
+
+## FRONTEND REQUIREMENTS
+
+Update the existing notification UI to react to real-time events:
+
+1) Bell badge count updates automatically
+2) Dropdown updates automatically
+3) /notifications list updates automatically if currently open
+4) New unread notifications should appear without page reload
+5) Do NOT change the existing visual design unless needed for subtle polish only
+
+Optional small polish:
+- brief highlight animation for a newly arrived notification
+- subtle sound is NOT required
+
+---
+
+## SAFETY / PERFORMANCE
+
+1) Real-time logic must not block notification creation
+2) If real-time delivery fails, the saved notification must still remain available normally
+3) If the live connection fails, existing notifications page and bell must still work through normal fetch
+4) Avoid aggressive polling if using fallback
+5) Keep reconnection logic simple and safe
+
+---
+
+## VALIDATION
+
+Test at least these cases:
+1) buyer_request_matched arrives in real time
+2) verification_approved or verification_rejected arrives in real time
+3) unread badge updates correctly
+4) opening the notification still marks it as read correctly
+5) no duplicate rendering in dropdown/list
+
+---
+
+## BEFORE CODING
+
+Show me first:
+1) Which real-time approach you will use
+2) Which files you will add
+3) Which files you will minimally modify
+4) Why this will not break the current system
+
+Wait for my approval before writing code.
