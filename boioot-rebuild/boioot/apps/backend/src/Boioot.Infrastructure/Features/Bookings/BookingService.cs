@@ -79,7 +79,7 @@ public class BookingService : IBookingService
         if (end <= start)
             throw new BoiootException("تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول", 400);
 
-        await EnsureNoConfirmedOverlapAsync(property.Id, start, end, null, ct);
+        await EnsureNoApprovedOverlapAsync(property.Id, start, end, null, ct);
 
         var ownerUserId = !string.IsNullOrWhiteSpace(property.OwnerId)
             ? property.OwnerId
@@ -159,7 +159,7 @@ public class BookingService : IBookingService
         if (start < today || end <= start)
             return false;
 
-        return !await HasConfirmedOverlapAsync(property.Id, start, end, null, ct);
+        return !await HasApprovedOverlapAsync(property.Id, start, end, null, ct);
     }
 
     public async Task<IReadOnlyList<BookingResponse>> GetMineAsync(Guid userId, CancellationToken ct = default)
@@ -186,7 +186,7 @@ public class BookingService : IBookingService
                 CommissionPercent = booking.CommissionPercent,
                 CommissionAmount = booking.CommissionAmount,
                 PaymentStatus = booking.PaymentStatus,
-                Status = booking.Status,
+                Status = booking.Status == Confirmed ? Approved : booking.Status,
                 CreatedAt = booking.CreatedAt
             })
             .ToListAsync(ct);
@@ -220,7 +220,7 @@ public class BookingService : IBookingService
                 CommissionPercent = booking.CommissionPercent,
                 CommissionAmount = booking.CommissionAmount,
                 PaymentStatus = booking.PaymentStatus,
-                Status = booking.Status,
+                Status = booking.Status == Confirmed ? Approved : booking.Status,
                 CreatedAt = booking.CreatedAt
             })
             .ToListAsync(ct);
@@ -238,7 +238,7 @@ public class BookingService : IBookingService
         if (!string.Equals(booking.Status, Pending, StringComparison.OrdinalIgnoreCase))
             throw new BoiootException("يمكن الموافقة على طلبات الحجز المعلقة فقط", 400);
 
-        await EnsureNoConfirmedOverlapAsync(booking.PropertyId, booking.StartDate, booking.EndDate, booking.Id, ct);
+        await EnsureNoApprovedOverlapAsync(booking.PropertyId, booking.StartDate, booking.EndDate, booking.Id, ct);
 
         booking.Status = Approved;
         booking.PaymentStatus = ReadyForPayment;
@@ -301,21 +301,21 @@ public class BookingService : IBookingService
         return Map(booking, await GetPropertyTitleAsync(booking.PropertyId, ct));
     }
 
-    private async Task EnsureNoConfirmedOverlapAsync(Guid propertyId, DateTime start, DateTime end, Guid? excludedBookingId, CancellationToken ct)
+    private async Task EnsureNoApprovedOverlapAsync(Guid propertyId, DateTime start, DateTime end, Guid? excludedBookingId, CancellationToken ct)
     {
-        var hasConflict = await HasConfirmedOverlapAsync(propertyId, start, end, excludedBookingId, ct);
+        var hasConflict = await HasApprovedOverlapAsync(propertyId, start, end, excludedBookingId, ct);
 
         if (hasConflict)
             throw new BoiootException("هذه الفترة محجوزة مسبقاً لهذا العقار", 409);
     }
 
-    private async Task<bool> HasConfirmedOverlapAsync(Guid propertyId, DateTime start, DateTime end, Guid? excludedBookingId, CancellationToken ct)
+    private async Task<bool> HasApprovedOverlapAsync(Guid propertyId, DateTime start, DateTime end, Guid? excludedBookingId, CancellationToken ct)
     {
         return await _context.Bookings
             .AsNoTracking()
             .AnyAsync(b =>
                 b.PropertyId == propertyId &&
-                (b.Status == Approved || b.Status == Confirmed) &&
+                (b.Status == Confirmed ? Approved : b.Status) == Approved &&
                 (!excludedBookingId.HasValue || b.Id != excludedBookingId.Value) &&
                 start < b.EndDate &&
                 end > b.StartDate,
@@ -401,7 +401,12 @@ public class BookingService : IBookingService
         CommissionPercent = booking.CommissionPercent,
         CommissionAmount = booking.CommissionAmount,
         PaymentStatus = booking.PaymentStatus,
-        Status = booking.Status,
+        Status = NormalizeStatus(booking.Status),
         CreatedAt = booking.CreatedAt
     };
+
+    private static string NormalizeStatus(string status)
+    {
+        return string.Equals(status, Confirmed, StringComparison.OrdinalIgnoreCase) ? Approved : status;
+    }
 }

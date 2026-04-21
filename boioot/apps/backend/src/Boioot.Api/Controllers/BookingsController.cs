@@ -56,7 +56,9 @@ public class BookingsController : BaseController
                    b."StartDate", b."EndDate", b."GuestName", b."Phone", b."Notes",
                    COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
                    COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
-                   COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus", b."Status", b."CreatedAt"
+                   COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
+                   CASE WHEN b."Status" = 'Confirmed' THEN 'Approved' ELSE b."Status" END AS "Status",
+                   b."CreatedAt"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
             WHERE b."RequestedByUserId" = @userId
@@ -75,7 +77,9 @@ public class BookingsController : BaseController
                    b."StartDate", b."EndDate", b."GuestName", b."Phone", b."Notes",
                    COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
                    COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
-                   COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus", b."Status", b."CreatedAt"
+                   COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
+                   CASE WHEN b."Status" = 'Confirmed' THEN 'Approved' ELSE b."Status" END AS "Status",
+                   b."CreatedAt"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
             WHERE b."PropertyOwnerUserId" = @userIdText OR p."OwnerId" = @userIdText OR p."CreatedByUserId" = @userIdText
@@ -177,7 +181,7 @@ public class BookingsController : BaseController
             SELECT COUNT(1)
             FROM "Bookings"
             WHERE "PropertyId" = @propertyId
-              AND "Status" IN ('Approved', 'Confirmed')
+              AND CASE WHEN "Status" = 'Confirmed' THEN 'Approved' ELSE "Status" END = 'Approved'
               AND (@excludedBookingId IS NULL OR "Id" <> @excludedBookingId)
               AND @start < "EndDate"
               AND @end > "StartDate"
@@ -212,7 +216,9 @@ public class BookingsController : BaseController
                    b."StartDate", b."EndDate", b."GuestName", b."Phone", b."Notes",
                    COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
                    COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
-                   COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus", b."Status", b."CreatedAt"
+                   COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
+                   CASE WHEN b."Status" = 'Confirmed' THEN 'Approved' ELSE b."Status" END AS "Status",
+                   b."CreatedAt"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
             WHERE b."Id" = @id
@@ -275,7 +281,7 @@ public class BookingsController : BaseController
                 reader.GetDecimal(12),
                 reader.GetDecimal(13),
                 reader.GetString(14),
-                reader.GetString(15),
+                NormalizeBookingStatus(reader.GetString(15)),
                 reader.GetDateTime(16)));
         }
 
@@ -336,6 +342,11 @@ public class BookingsController : BaseController
         parameter.ParameterName = name;
         parameter.Value = value ?? DBNull.Value;
         command.Parameters.Add(parameter);
+    }
+
+    private static string NormalizeBookingStatus(string status)
+    {
+        return string.Equals(status, "Confirmed", StringComparison.OrdinalIgnoreCase) ? "Approved" : status;
     }
 
     private sealed record BookingListItem(

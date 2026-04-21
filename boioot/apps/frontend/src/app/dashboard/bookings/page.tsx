@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { bookingsApi } from "@/features/bookings/api";
-import { getBookingStatusConfig } from "@/features/bookings/bookingStatusConfig";
+import { getBookingStatusConfig, normalizeBookingStatus } from "@/features/bookings/bookingStatusConfig";
 import { normalizeError } from "@/lib/api";
 import type { BookingResponse, BookingStatus } from "@/types";
 import Spinner from "@/components/ui/Spinner";
@@ -34,7 +34,7 @@ function getNightCount(startDate: string, endDate: string) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = getBookingStatusConfig(status);
+  const cfg = getBookingStatusConfig(normalizeBookingStatus(status));
   return (
     <span style={{ borderRadius: 999, padding: "0.25rem 0.7rem", background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, fontSize: "0.78rem", fontWeight: 800 }}>
       {cfg.icon} {cfg.label}
@@ -57,8 +57,9 @@ function BookingCard({
   onReject?: (id: string) => void;
   onCancel?: (id: string) => void;
 }) {
-  const isPending = booking.status === "Pending";
-  const isCancellable = booking.status === "Pending" || booking.status === "Approved" || booking.status === "Confirmed";
+  const normalizedStatus = normalizeBookingStatus(booking.status);
+  const isPending = normalizedStatus === "Pending";
+  const isCancellable = normalizedStatus === "Pending" || normalizedStatus === "Approved";
   const nights = getNightCount(booking.startDate, booking.endDate);
   const finalTotal = booking.totalAmount + booking.commissionAmount;
   return (
@@ -72,7 +73,7 @@ function BookingCard({
             من {formatDate(booking.startDate)} إلى {formatDate(booking.endDate)}
           </p>
         </div>
-        <StatusBadge status={booking.status} />
+        <StatusBadge status={normalizedStatus} />
       </div>
 
       <div style={{ marginTop: "0.85rem", display: "grid", gap: "0.35rem", color: "#334155", fontSize: "0.86rem" }}>
@@ -136,8 +137,8 @@ export default function DashboardBookingsPage() {
         bookingsApi.forMyProperties(),
         bookingsApi.mine(),
       ]);
-      setIncoming(ownerBookings);
-      setMine(renterBookings);
+      setIncoming(ownerBookings.map((booking) => ({ ...booking, status: normalizeBookingStatus(booking.status) })));
+      setMine(renterBookings.map((booking) => ({ ...booking, status: normalizeBookingStatus(booking.status) })));
     } catch (err) {
       setError(normalizeError(err));
     } finally {
@@ -172,7 +173,7 @@ export default function DashboardBookingsPage() {
     );
   }
 
-  const visibleIncoming = incoming.filter((booking) => booking.status === ownerTab);
+  const visibleIncoming = incoming.filter((booking) => normalizeBookingStatus(booking.status) === ownerTab);
 
   return (
     <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 0 3rem" }}>
@@ -195,7 +196,7 @@ export default function DashboardBookingsPage() {
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.9rem" }}>
           {OWNER_TABS.map((tab) => {
             const cfg = getBookingStatusConfig(tab.status);
-            const count = incoming.filter((booking) => booking.status === tab.status).length;
+            const count = incoming.filter((booking) => normalizeBookingStatus(booking.status) === tab.status).length;
             const active = ownerTab === tab.status;
             return (
               <button

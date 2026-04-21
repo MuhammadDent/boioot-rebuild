@@ -1,0 +1,120 @@
+⚠️ SAFE MODE — BOOKING STATUS NORMALIZATION
+
+We have a critical consistency issue in booking statuses.
+
+STRICT RULES:
+- DO NOT break existing system
+- DO NOT remove legacy support abruptly
+- DO NOT refactor unrelated logic
+- DO NOT touch payments
+- DO NOT redesign UI
+- DO NOT modify notification system structure
+
+GOAL:
+Unify booking statuses so the system has ONE source of truth.
+
+----------------------------------------
+PROBLEM
+----------------------------------------
+
+Currently we have:
+- Legacy status: Confirmed
+- New status: Approved
+
+Both represent the same business meaning.
+
+This MUST be normalized to avoid future bugs in:
+- conflict detection
+- payment logic
+- analytics
+- filtering
+
+----------------------------------------
+TARGET STATE
+----------------------------------------
+
+Single canonical status:
+
+Approved = ONLY valid "accepted booking" state
+
+----------------------------------------
+IMPLEMENTATION PLAN
+----------------------------------------
+
+1) BACKEND NORMALIZATION
+
+- Treat "Confirmed" as "Approved" everywhere in logic
+- DO NOT rely on Confirmed anymore in new code
+
+Add safe mapping layer:
+
+IF status == Confirmed → treat as Approved
+
+----------------------------------------
+
+2) DATABASE SAFETY
+
+DO NOT delete old data.
+
+Instead:
+- Keep existing rows with Confirmed
+- But ensure:
+  - All new bookings use Approved only
+
+OPTIONAL (safe improvement if easy):
+- Add migration script:
+  UPDATE Bookings SET Status = 'Approved' WHERE Status = 'Confirmed';
+
+But ONLY if safe and idempotent.
+
+----------------------------------------
+
+3) BUSINESS LOGIC UPDATE
+
+Update ALL logic to use:
+
+Approved ONLY
+
+Specifically:
+- conflict checks must use Approved
+- availability logic must use Approved
+- approval endpoint must set Approved
+
+----------------------------------------
+
+4) FRONTEND NORMALIZATION
+
+- If booking.status == "Confirmed" → display as "Approved"
+- UI should NOT show "Confirmed" anymore
+
+----------------------------------------
+
+5) VALIDATION
+
+Show me:
+
+1) Where mapping is handled
+2) All places where Approved is used
+3) Confirmation that:
+   - No new Confirmed values are created
+   - Conflict logic uses only Approved
+   - UI shows only Approved
+
+----------------------------------------
+
+6) SAFETY CHECK
+
+Confirm:
+
+- No breaking changes
+- No lost data
+- Old bookings still readable
+- System behaves identically for users
+
+----------------------------------------
+
+IMPORTANT:
+
+If anything is risky (especially DB migration), STOP and explain before executing.
+
+Proceed incrementally and safely.
