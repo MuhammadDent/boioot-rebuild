@@ -1,0 +1,54 @@
+⚠️ SAFE MODE STILL APPLIES
+
+Do NOT break any existing behavior.
+Do NOT change any public API.
+Do NOT change request/response contracts.
+Do NOT refactor unrelated code.
+Do NOT change auth, middleware, or database schema unless absolutely necessary.
+Keep everything additive, isolated, and backward-compatible.
+
+I want you to IMPLEMENT a centralized notification message template layer now.
+
+Goal:
+Allow notification messages to be controlled, updated, and managed from one central place instead of hardcoding titles/bodies inside multiple services.
+
+Requirements:
+
+1) Add a centralized notification template registry/service
+2) Each notification type must support:
+   - key
+   - title template
+   - body template
+   - default priority
+   - enabled flag
+3) Move hardcoded notification texts into this centralized layer
+4) Keep placeholder rendering simple, for example:
+   - {city}
+   - {propertyType}
+   - {capacity}
+   - {daysLeft}
+5) Start with these notification types:
+   - buyer_request_matched
+   - verification_approved
+   - verification_rejected
+   - subscription_expiring
+   - subscription_limit_warning
+6) Current behavior must remain the same, but message generation must come from the template layer
+7) If a template is disabled, the notification should not be sent
+8) Do NOT build admin UI yet
+9) Do NOT add database schema changes for this phase
+10) Prefer a safe in-code centralized template registry/service for phase 1
+11) Reuse the current notification architecture and services
+
+Implementation rules:
+- Add new isolated files/services for the template layer
+- Update only the minimum existing files required to consume templates
+- Do not change existing notification flows except replacing hardcoded text generation with template-based generation
+- Fail safely: if template rendering fails, log it and do not break the user flow
+
+Before coding:
+1) Show me exactly which files you will create
+2) Show me exactly which existing files you will minimally update
+3) Explain how this works without breaking the current system
+
+Wait for my approval before writing code.
