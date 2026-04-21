@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
 import { saveRedirectTarget } from "@/lib/authRedirect";
 import MessagesIconBtn from "@/components/ui/MessagesIconBtn";
+import NotificationsBell from "@/components/dashboard/NotificationsBell";
 import MobileNavDrawer from "@/components/layout/MobileNavDrawer";
 import { getRoleCategory } from "@/features/admin/constants";
 
@@ -148,6 +149,7 @@ export default function MainHeader() {
                   onClick={handleMessagesClick}
                   size={34}
                 />
+                <NotificationsBell />
 
                 <Link
                   href={profileHref}

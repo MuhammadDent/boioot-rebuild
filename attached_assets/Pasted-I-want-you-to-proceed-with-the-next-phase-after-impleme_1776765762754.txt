@@ -1,0 +1,196 @@
+I want you to proceed with the next phase after implementing the centralized notification template system.
+
+⚠️ STRICT RULES (MUST FOLLOW):
+
+* DO NOT break any existing functionality
+* DO NOT change database schema
+* DO NOT change API contracts or DTOs
+* DO NOT refactor unrelated code
+* DO NOT modify authentication or middleware
+* DO NOT introduce new dependencies unless absolutely necessary
+* All changes must be additive, minimal, and safe (Safe Mode)
+
+---
+
+## PHASE 1 — VALIDATE CURRENT SYSTEM (MANDATORY FIRST)
+
+Validate that the centralized notification template system is fully working.
+
+Test the following notification types end-to-end:
+
+1. buyer_request_matched
+2. verification_approved
+3. verification_rejected
+
+For EACH type:
+
+* Trigger the real flow (do NOT mock)
+* Confirm notification is created in DB
+* Confirm notification is delivered to user
+* Confirm title/body are coming from the TEMPLATE SYSTEM (NOT hardcoded)
+
+Add temporary debug logs if needed:
+
+* Log template key used
+* Log rendered title/body
+
+Then REMOVE debug logs after verification.
+
+If any hardcoded text is still used anywhere → FIX IT to use template service.
+
+---
+
+## PHASE 2 — IMPROVE MESSAGE QUALITY (CENTRAL TEMPLATES ONLY)
+
+Refine ONLY the template content inside NotificationTemplateRegistry.
+
+⚠️ DO NOT change any business logic — ONLY message text.
+
+Goals:
+
+* Clear and professional Arabic wording
+* Optimized for user engagement (conversion-oriented)
+* Suitable for real estate context (buyers / owners / agents)
+
+Improve these templates:
+
+1. buyer_request_matched
+   Make it:
+
+* Actionable
+* Clear what happened
+* Encourage user to view the request
+
+2. verification_approved
+   Make it:
+
+* Positive
+* Trust-building
+* Clear next step (continue using platform)
+
+3. verification_rejected
+   Make it:
+
+* Polite and non-aggressive
+* Explain that action is required
+* Encourage retry
+
+Use placeholders correctly:
+{city}, {propertyType}, {capacity}, etc (only if already available)
+
+DO NOT add new placeholders unless already supported.
+
+---
+
+## PHASE 3 — FRONTEND NOTIFICATION UI (HIGH PRIORITY)
+
+Implement a complete notification UI system in frontend.
+
+⚠️ DO NOT break existing pages or routing.
+
+### 1) Notification Bell (Header)
+
+* Add bell icon in header/navbar
+* Show unread count badge
+* Auto-update on page load (no real-time needed yet)
+
+---
+
+### 2) Dropdown (on click)
+
+* Show last 5–10 notifications
+* Each item shows:
+
+  * title
+  * short body preview
+  * timestamp
+* Unread items visually highlighted
+* Click navigates to full notification list page
+
+---
+
+### 3) Notification List Page (/notifications)
+
+* Full list of notifications
+* Sorted by newest first
+* Each item:
+
+  * title
+  * body
+  * timestamp
+  * read/unread state
+* Clicking item:
+
+  * marks as read
+  * executes CTA (if exists)
+
+---
+
+### 4) Read / Unread Handling
+
+* Mark notification as read when opened
+* Add "Mark all as read" button (optional if easy)
+* Badge count must update correctly
+
+---
+
+### 5) CTA Handling (IMPORTANT)
+
+If notification type supports action:
+
+* buyer_request_matched → navigate to matching request or relevant page
+* verification → navigate to verification/status page
+
+⚠️ Do NOT hardcode URLs blindly
+Reuse existing routing logic if available
+
+---
+
+### 6) UI Requirements
+
+* Clean and minimal design
+* No heavy UI libraries unless already used
+* Responsive (desktop first is fine)
+* Avoid over-engineering
+
+---
+
+## FINAL VALIDATION
+
+After implementation:
+
+1. Confirm:
+
+* Notifications still created correctly
+* Template system still used (no regression)
+* UI displays correct data
+
+2. Show me:
+
+* Files modified (backend + frontend)
+* Summary of UI components added
+* Example of final rendered notification (real output)
+
+3. Confirm explicitly:
+
+* No breaking changes
+* No schema changes
+* No API changes
+
+---
+
+## IMPORTANT
+
+If anything is unclear:
+
+* ASK before implementing
+
+If you detect risk:
+
+* STOP and explain
+
+Otherwise:
+
+* Proceed step-by-step safely
+
+Do NOT rush. Accuracy over speed.

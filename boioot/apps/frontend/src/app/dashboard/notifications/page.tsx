@@ -46,6 +46,12 @@ function typeIcon(type: string): string {
     system_alert:                 "🔔",
     new_message:                  "✉️",
     new_comment:                  "💬",
+    buyer_request_matched:        "📨",
+    verification_new_request:     "📋",
+    verification_approved:        "✅",
+    verification_rejected:        "❌",
+    verification_needs_info:      "📝",
+    verification_updated:         "🔔",
   };
   return map[type] ?? "🔔";
 }
@@ -60,6 +66,9 @@ function actionLabel(n: NotificationItem): string | null {
   if (n.relatedEntityType === "BuyerRequest" || n.relatedEntityType === "SpecialRequest") {
     return "عرض الطلب";
   }
+  if (n.relatedEntityType === "VerificationRequest") {
+    return "عرض طلب التوثيق";
+  }
   return null;
 }
 
@@ -68,6 +77,10 @@ const DECISION_BADGE: Record<string, { label: string; color: string; bg: string 
   subscription_rejected:        { label: "رفض",           color: "#b91c1c", bg: "#fee2e2" },
   subscription_missing_info:    { label: "استكمال مطلوب", color: "#92400e", bg: "#fef3c7" },
   subscription_activated:       { label: "مُفعَّل",       color: "#166534", bg: "#bbf7d0" },
+  verification_approved:        { label: "موافقة",        color: "#166534", bg: "#dcfce7" },
+  verification_rejected:        { label: "مرفوض",         color: "#b91c1c", bg: "#fee2e2" },
+  verification_needs_info:      { label: "معلومات إضافية", color: "#92400e", bg: "#fef3c7" },
+  verification_new_request:     { label: "طلب جديد",      color: "#1d4ed8", bg: "#dbeafe" },
 };
 
 // ─── Generic detail modal ─────────────────────────────────────────────────────
@@ -151,13 +164,11 @@ export default function NotificationsPage() {
     setError(null);
     try {
       const result = await notificationsApi.getList(p, PAGE_SIZE);
-      console.log("[Notifications] listResponse:", result);
       setItems(result.items);
       setTotal(result.total);
       setUnread(result.unread);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "تعذّر تحميل الإشعارات";
-      console.error("[Notifications] listError:", err);
       setError(msg);
       setItems([]);
     } finally {

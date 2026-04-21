@@ -46,6 +46,12 @@ function typeIcon(type: string): string {
     system_alert:                 "🔔",
     new_message:                  "✉️",
     new_comment:                  "💬",
+    buyer_request_matched:        "📨",
+    verification_new_request:     "📋",
+    verification_approved:        "✅",
+    verification_rejected:        "❌",
+    verification_needs_info:      "📝",
+    verification_updated:         "🔔",
   };
   return map[type] ?? "🔔";
 }
@@ -60,6 +66,9 @@ function actionLabel(n: NotificationItem): string | null {
   if (n.relatedEntityType === "BuyerRequest" || n.relatedEntityType === "SpecialRequest") {
     return "عرض الطلب";
   }
+  if (n.relatedEntityType === "VerificationRequest") {
+    return "عرض طلب التوثيق";
+  }
   return null;
 }
 
@@ -68,6 +77,10 @@ const DECISION_BADGE: Record<string, { label: string; color: string; bg: string 
   subscription_rejected:        { label: "رفض",           color: "#b91c1c", bg: "#fee2e2" },
   subscription_missing_info:    { label: "استكمال مطلوب", color: "#92400e", bg: "#fef3c7" },
   subscription_activated:       { label: "مُفعَّل",       color: "#166534", bg: "#bbf7d0" },
+  verification_approved:        { label: "موافقة",        color: "#166534", bg: "#dcfce7" },
+  verification_rejected:        { label: "مرفوض",         color: "#b91c1c", bg: "#fee2e2" },
+  verification_needs_info:      { label: "معلومات إضافية", color: "#92400e", bg: "#fef3c7" },
+  verification_new_request:     { label: "طلب جديد",      color: "#1d4ed8", bg: "#dbeafe" },
 };
 
 // ─── Generic detail modal ─────────────────────────────────────────────────────
@@ -135,6 +148,7 @@ export default function NotificationsPage() {
 
   const [items,      setItems]      = useState<NotificationItem[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState<string | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
   const [filter,     setFilter]     = useState<Filter>("all");
   const [page,       setPage]       = useState(1);
@@ -147,11 +161,16 @@ export default function NotificationsPage() {
 
   const load = useCallback(async (p: number) => {
     setLoading(true);
+    setError(null);
     try {
       const result = await notificationsApi.getList(p, PAGE_SIZE);
       setItems(result.items);
       setTotal(result.total);
       setUnread(result.unread);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "تعذّر تحميل الإشعارات";
+      setError(msg);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -248,6 +267,20 @@ export default function NotificationsPage() {
       {loading ? (
         <div style={{ padding: "60px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>
           جاري التحميل...
+        </div>
+      ) : error ? (
+        <div style={{ padding: "48px 24px", textAlign: "center", background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: "12px" }}>
+          <p style={{ margin: "0 0 12px", fontSize: "14px", color: "#be123c", fontWeight: 600 }}>
+            تعذّر تحميل الإشعارات
+          </p>
+          <p style={{ margin: "0 0 16px", fontSize: "13px", color: "#9f1239" }}>{error}</p>
+          <button
+            type="button"
+            onClick={() => load(page)}
+            style={{ padding: "8px 20px", borderRadius: "8px", border: "none", background: "#be123c", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+          >
+            إعادة المحاولة
+          </button>
         </div>
       ) : displayed.length === 0 ? (
         <div style={{ padding: "60px 24px", textAlign: "center", color: "#9ca3af", fontSize: "14px", background: "#f9fafb", borderRadius: "12px" }}>

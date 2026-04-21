@@ -59,6 +59,7 @@ function typeIcon(type: string): string {
     system_alert:                 "🔔",
     new_message:                  "✉️",
     new_comment:                  "💬",
+    buyer_request_matched:        "📨",
     verification_new_request:     "📋",
     verification_approved:        "✅",
     verification_rejected:        "❌",
@@ -267,7 +268,7 @@ export default function NotificationsBell() {
   const loadList = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await notificationsApi.getList(1, 20);
+      const result = await notificationsApi.getList(1, 10);
       setItems(result.items);
       setUnread(result.unread);
     } catch { /* silent */ }
@@ -299,34 +300,21 @@ export default function NotificationsBell() {
   };
 
   const handleNotificationClick = (n: NotificationItem) => {
-    console.log("[BELL_CLICK] notification:", JSON.stringify({
-      id: n.id, type: n.type, relatedEntityType: n.relatedEntityType,
-      relatedEntityId: n.relatedEntityId, isRead: n.isRead
-    }));
-
-    // Mark as read non-blocking
     if (!n.isRead) handleMarkRead(n.id);
 
     setOpen(false);
 
-    // Subscription payment request → rich detail modal
     if (n.relatedEntityType === "SubscriptionPaymentRequest" && n.relatedEntityId) {
-      console.log("[BELL_CLICK] → opening subscription_request modal, requestId:", n.relatedEntityId);
       setModal({ kind: "subscription_request", requestId: n.relatedEntityId });
       return;
     }
 
-    // Has direct navigation target
     const target = resolveNotificationTarget(n);
-    console.log("[BELL_CLICK] resolved target:", target);
     if (target) {
-      console.log("[BELL_CLICK] → navigating to:", target);
       router.push(target);
       return;
     }
 
-    // Fallback: generic body modal
-    console.log("[BELL_CLICK] → opening generic modal");
     setModal({ kind: "generic", notification: n });
   };
 
@@ -485,7 +473,7 @@ export default function NotificationsBell() {
               }}
             >
               <Link
-                href="/dashboard/notifications"
+                href="/notifications"
                 onClick={() => setOpen(false)}
                 style={{ fontSize: "12px", fontWeight: 600, color: "#16a34a", textDecoration: "none" }}
               >
