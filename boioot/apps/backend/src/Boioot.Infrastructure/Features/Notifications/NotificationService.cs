@@ -3,16 +3,24 @@ using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Domain.Entities;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Boioot.Infrastructure.Features.Notifications;
 
 public class NotificationService : IUserNotificationService
 {
     private readonly BoiootDbContext _db;
+    private readonly INotificationRealtimePublisher _realtimePublisher;
+    private readonly ILogger<NotificationService> _logger;
 
-    public NotificationService(BoiootDbContext db)
+    public NotificationService(
+        BoiootDbContext db,
+        INotificationRealtimePublisher realtimePublisher,
+        ILogger<NotificationService> logger)
     {
         _db = db;
+        _realtimePublisher = realtimePublisher;
+        _logger = logger;
     }
 
     public async Task CreateAsync(
@@ -37,6 +45,7 @@ public class NotificationService : IUserNotificationService
 
         _db.Notifications.Add(notification);
         await _db.SaveChangesAsync(ct);
+        await PublishCreatedSafelyAsync(notification, ct);
     }
 
     public async Task CreateBatchAsync(
@@ -60,6 +69,8 @@ public class NotificationService : IUserNotificationService
 
         _db.Notifications.AddRange(list);
         await _db.SaveChangesAsync(ct);
+        foreach (var notification in list)
+            await PublishCreatedSafelyAsync(notification, ct);
     }
 
     public async Task<NotificationListResult> GetForUserAsync(
@@ -120,5 +131,32 @@ public class NotificationService : IUserNotificationService
         await _db.Notifications
             .Where(n => n.UserId == userId && !n.IsRead)
             .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true), ct);
+    }
+
+    private async Task PublishCreatedSafelyAsync(Notification notification, CancellationToken ct)
+    {
+        try
+        {
+            await _realtimePublisher.PublishCreatedAsync(notification.UserId, ToDto(notification), ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Realtime notification delivery failed for notification {NotificationId}", notification.Id);
+        }
+    }
+
+    private static NotificationDto ToDto(Notification notification)
+    {
+        return new NotificationDto
+        {
+            Id                = notification.Id,
+            Type              = notification.Type,
+            Title             = notification.Title,
+            Body              = notification.Body,
+            IsRead            = notification.IsRead,
+            RelatedEntityId   = notification.RelatedEntityId,
+            RelatedEntityType = notification.RelatedEntityType,
+            CreatedAt         = notification.CreatedAt,
+        };
     }
 }

@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { notificationsApi, type NotificationItem as NotificationModel } from "@/features/notifications/api";
+import { useNotificationsRealtime } from "@/features/notifications/useNotificationsRealtime";
 import NotificationItem from "@/components/dashboard/notifications/NotificationItem";
 import {
   fullNotificationDate,
@@ -69,6 +71,7 @@ type Filter = "all" | "unread";
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [items, setItems] = useState<NotificationModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +104,39 @@ export default function NotificationsPage() {
   }, []);
 
   useEffect(() => { load(page); }, [load, page]);
+
+  const recoverFirstPage = useCallback(async () => {
+    try {
+      const result = await notificationsApi.getList(1, PAGE_SIZE);
+      setUnread(result.unread);
+      setTotal(result.total);
+      if (page === 1) {
+        setItems(result.items);
+      }
+    } catch {}
+  }, [page]);
+
+  const handleRealtimeNotification = useCallback((notification: NotificationModel) => {
+    let inserted = false;
+
+    setItems(prev => {
+      if (prev.some(item => item.id === notification.id)) return prev;
+      inserted = true;
+      if (page !== 1) return prev;
+      return [notification, ...prev].slice(0, PAGE_SIZE);
+    });
+
+    if (inserted) {
+      setTotal(prev => prev + 1);
+      if (!notification.isRead) setUnread(prev => prev + 1);
+    }
+  }, [page]);
+
+  useNotificationsRealtime({
+    enabled: isAuthenticated && !authLoading,
+    onNotification: handleRealtimeNotification,
+    onRecover: recoverFirstPage,
+  });
 
   const handleMarkRead = async (id: string) => {
     try { await notificationsApi.markRead(id); } catch { /* still update UI */ }

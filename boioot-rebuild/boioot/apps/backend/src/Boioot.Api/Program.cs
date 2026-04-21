@@ -1,15 +1,22 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Boioot.Api.Authorization;
+using Boioot.Api.Hubs;
+using Microsoft.OpenApi.Models;
 using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Domain.Constants;
+using Boioot.Application.Features.Storage;
 using Boioot.Infrastructure.Extensions;
+using Boioot.Infrastructure.Features.Storage;
 using Boioot.Infrastructure.Persistence;
 using Boioot.Infrastructure.Persistence.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -31,12 +38,83 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddControllers()
     .AddJsonOptions(opt =>
         opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+// Override the default 400 factory so validation field names + messages are logged
+// and also returned in the response body for easier frontend debugging.
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(e => e.Value?.Errors.Count > 0)
+            .ToDictionary(
+                e => e.Key,
+                e => e.Value!.Errors.Select(er =>
+                    string.IsNullOrWhiteSpace(er.ErrorMessage) ? er.Exception?.Message ?? "خطأ" : er.ErrorMessage
+                ).ToArray()
+            );
+
+        Console.WriteLine("[Validation] 400 Bad Request on: " + context.HttpContext.Request.Path);
+        foreach (var kv in errors)
+            Console.WriteLine($"  [{kv.Key}] → {string.Join("; ", kv.Value)}");
+
+        var result = new Microsoft.AspNetCore.Mvc.ObjectResult(new
+        {
+            title  = "One or more validation errors occurred.",
+            status = 400,
+            errors,
+        })
+        {
+            StatusCode = 400,
+        };
+        return result;
+    };
+});
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title   = "Boioot API",
+        Version = "v1",
+    });
+
+    var jwtScheme = new OpenApiSecurityScheme
+    {
+        Name         = "Authorization",
+        Type         = SecuritySchemeType.Http,
+        Scheme       = "bearer",
+        BearerFormat = "JWT",
+        In           = ParameterLocation.Header,
+        Description  = "أدخل الـ JWT token هنا. مثال: eyJhbGci...",
+    };
+
+    options.AddSecurityDefinition("Bearer", jwtScheme);
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id   = "Bearer",
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 builder.Services.Configure<BankInstructionsOptions>(
     builder.Configuration.GetSection(BankInstructionsOptions.SectionName));
 builder.Services.Configure<StripeOptions>(
     builder.Configuration.GetSection(StripeOptions.SectionName));
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMemoryCache();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
+builder.Services.AddScoped<INotificationRealtimePublisher, SignalRNotificationRealtimePublisher>();
 
 builder.Services.AddCors(options =>
 {
@@ -89,6 +167,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/hubs/notifications"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -128,6 +223,20 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 var app = builder.Build();
+
+// ── Forwarded Headers (must be FIRST) ────────────────────────────────────────
+// Required for Fly.io and any reverse proxy: makes the app see the real
+// client IP and the original scheme (https) instead of the internal proxy's.
+// Fly.io terminates TLS and forwards HTTP internally — DO NOT add Kestrel HTTPS.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.UseRouting();
 
 app.UseExceptionHandler(errorApp =>
 {
@@ -198,14 +307,18 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/",           () => "Boioot API is running on Fly 🚀");
 app.MapGet("/health",     () => Results.Ok(new { status = "healthy" }));
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
+app.MapHub<NotificationsHub>("/hubs/notifications");
 
 // ── Database initialization and seeding (runs in background after app binds PORT) ────
 // IMPORTANT: Must run AFTER app.StartAsync() so Kestrel is already listening.
 // This prevents Replit's health check from timing out during long DB init.
-_ = Task.Run(async () =>
+// Runs only in Production (Fly.io) — DATABASE_URL confirmed present in Fly secrets.
+// Development (Replit) skips this block; local PG is always ready at startup.
+if (app.Environment.IsProduction()) _ = Task.Run(async () =>
 {
     // Brief delay to ensure the server is fully bound before we start DB work.
     await Task.Delay(TimeSpan.FromSeconds(2));
@@ -244,10 +357,43 @@ _ = Task.Run(async () =>
     {
         bgLogger.LogError(ex, "[startup] تعذّر تهيئة قاعدة البيانات أو تنفيذ بيانات البذر — التطبيق يستمر بدون قاعدة البيانات");
     }
+
+    // ── Configure R2 bucket CORS (idempotent — safe to run every deploy) ─────
+    // Ensures browser PUT requests from boioot.net are allowed by the R2 bucket.
+    // Must run AFTER DB init so the server is confirmed healthy before touching R2.
+    try
+    {
+        var storageService = bgServices.GetService<IFileStorageService>();
+        if (storageService is R2FileStorageService r2Service)
+        {
+            bgLogger.LogInformation("[startup] Applying R2 bucket CORS configuration...");
+            await r2Service.EnsureBucketCorsAsync();
+        }
+        else
+        {
+            bgLogger.LogInformation("[startup] Storage is not R2 — skipping CORS configuration.");
+        }
+    }
+    catch (Exception ex)
+    {
+        bgLogger.LogWarning(ex, "[startup] R2 CORS configuration failed — continuing startup.");
+    }
 });
 
 // app.Run() is the final statement — it blocks until shutdown signal.
 // Nothing executes after this line while the server is alive.
-Console.WriteLine($"[startup] Server starting on port {port} ...");
-Console.WriteLine("[STARTUP] App is running and will stay alive");
+// ── Startup diagnostics (DB connectivity — no secrets exposed) ────────────────
+var diagDbUrl      = Environment.GetEnvironmentVariable("DATABASE_URL");
+var diagPgHost     = Environment.GetEnvironmentVariable("PGHOST");
+var diagPgDatabase = Environment.GetEnvironmentVariable("PGDATABASE");
+var diagConnStr    = builder.Configuration.GetConnectionString("Postgres");
+
+Console.WriteLine($"[STARTUP] DATABASE_URL set      : {(string.IsNullOrWhiteSpace(diagDbUrl)      ? "NO" : "YES")}");
+Console.WriteLine($"[STARTUP] PGHOST set            : {(string.IsNullOrWhiteSpace(diagPgHost)     ? "NO" : $"YES ({diagPgHost})")}");
+Console.WriteLine($"[STARTUP] PGDATABASE set        : {(string.IsNullOrWhiteSpace(diagPgDatabase) ? "NO" : $"YES ({diagPgDatabase})")}");
+Console.WriteLine($"[STARTUP] ConnectionStrings:Postgres set : {(string.IsNullOrWhiteSpace(diagConnStr) ? "NO" : "YES")}");
+
+Console.WriteLine($"[STARTUP] Server starting on port {port} ...");
+Console.WriteLine("[STARTUP] App started successfully on Fly");
 app.Run();
+// trigger backend deploy

@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Boioot.Api.Authorization;
+using Boioot.Api.Hubs;
 using Microsoft.OpenApi.Models;
 using Boioot.Application.Exceptions;
+using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Application.Features.Billing.Settings;
 using Boioot.Domain.Constants;
 using Boioot.Application.Features.Storage;
@@ -14,6 +16,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -109,6 +112,9 @@ builder.Services.Configure<StripeOptions>(
     builder.Configuration.GetSection(StripeOptions.SectionName));
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMemoryCache();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
+builder.Services.AddScoped<INotificationRealtimePublisher, SignalRNotificationRealtimePublisher>();
 
 builder.Services.AddCors(options =>
 {
@@ -160,6 +166,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/hubs/notifications"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -288,6 +311,7 @@ app.MapGet("/",           () => "Boioot API is running on Fly 🚀");
 app.MapGet("/health",     () => Results.Ok(new { status = "healthy" }));
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
+app.MapHub<NotificationsHub>("/hubs/notifications");
 
 // ── Database initialization and seeding (runs in background after app binds PORT) ────
 // IMPORTANT: Must run AFTER app.StartAsync() so Kestrel is already listening.

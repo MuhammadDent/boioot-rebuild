@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import { notificationsApi, type NotificationItem as NotificationModel } from "@/features/notifications/api";
+import { useNotificationsRealtime } from "@/features/notifications/useNotificationsRealtime";
 import NotificationItem from "@/components/dashboard/notifications/NotificationItem";
 import {
   getNotificationTypeConfig,
@@ -111,6 +113,7 @@ type ModalState =
 
 export default function NotificationsBell() {
   const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [items, setItems] = useState<NotificationModel[]>([]);
@@ -142,6 +145,26 @@ export default function NotificationsBell() {
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, []);
+
+  const handleRealtimeNotification = useCallback((notification: NotificationModel) => {
+    let inserted = false;
+
+    setItems(prev => {
+      if (prev.some(item => item.id === notification.id)) return prev;
+      inserted = true;
+      return [notification, ...prev].slice(0, 10);
+    });
+
+    if (!notification.isRead && inserted) {
+      setUnread(prev => prev + 1);
+    }
+  }, []);
+
+  useNotificationsRealtime({
+    enabled: isAuthenticated && !authLoading,
+    onNotification: handleRealtimeNotification,
+    onRecover: loadList,
+  });
 
   const handleToggle = () => {
     const next = !open;
