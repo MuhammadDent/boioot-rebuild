@@ -332,6 +332,12 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   // DEBUG — temporary console logs to diagnose live rendering. Remove after confirmation.
   useEffect(() => {
     console.log("LISTING TYPE DEBUG:", property.listingType);
+    console.log("BOOKING DEBUG:", {
+      listingType: property.listingType,
+      isBookable: property.isBookable,
+      isDailyRent,
+      canBook,
+    });
     console.log("[PropertyDetail DEBUG]", {
       id: property.id,
       listingType: property.listingType,

@@ -54,7 +54,6 @@ public class BookingService : IBookingService
                 p.Id,
                 p.Status,
                 p.ListingType,
-                p.IsBookable,
                 p.OwnerId,
                 p.CreatedByUserId,
                 p.Title,
@@ -66,7 +65,7 @@ public class BookingService : IBookingService
         if (property.Status != PropertyStatus.Available)
             throw new BoiootException("هذا العقار غير متاح للحجز حالياً", 400);
 
-        if (!property.IsBookable || !string.Equals(property.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(property.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase))
             throw new BoiootException("هذا العقار غير متاح للحجز المباشر", 400);
 
         var start = DateTime.SpecifyKind(request.StartDate.Date, DateTimeKind.Utc);
@@ -139,8 +138,7 @@ public class BookingService : IBookingService
             {
                 p.Id,
                 p.Status,
-                p.ListingType,
-                p.IsBookable
+                p.ListingType
             })
             .FirstOrDefaultAsync(ct);
 
@@ -150,7 +148,7 @@ public class BookingService : IBookingService
         if (property.Status != PropertyStatus.Available)
             return false;
 
-        if (!property.IsBookable || !string.Equals(property.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(property.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase))
             return false;
 
         var start = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
