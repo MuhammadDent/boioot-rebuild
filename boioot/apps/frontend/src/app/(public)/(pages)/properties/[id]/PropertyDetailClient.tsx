@@ -10,6 +10,7 @@ import ImageSlider from "@/components/properties/ImageSlider";
 import { bookingsApi } from "@/features/bookings/api";
 import { favoritesApi } from "@/features/favorites/api";
 import { messagingApi } from "@/features/dashboard/messages/api";
+import { ratingsApi } from "@/features/ratings/api";
 import { normalizeError, PlanLimitError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
@@ -166,10 +167,20 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   });
 
   const [pageUrl, setPageUrl] = useState("");
+  const [topSummary, setTopSummary] = useState<{ average: number; count: number } | null>(null);
+
+  const reviewsSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setPageUrl(window.location.href);
   }, []);
+
+  useEffect(() => {
+    if (property.listingType !== "DailyRent") return;
+    ratingsApi.getSummary(property.id)
+      .then((s) => { if (s.count > 0) setTopSummary(s); })
+      .catch(() => {});
+  }, [property.id, property.listingType]);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -374,11 +385,39 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
             </p>
 
             {/* Location */}
-            <p style={{ color: "var(--color-text-secondary)", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+            <p style={{ color: "var(--color-text-secondary)", marginBottom: "0.85rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
               📍 {property.province && `${property.province} — `}{property.city}
               {property.neighborhood && ` — ${property.neighborhood}`}
               {property.address && ` — ${property.address}`}
             </p>
+
+            {/* ── Compact rating chip (DailyRent only) — clickable, scrolls to reviews ── */}
+            {topSummary && (
+              <button
+                type="button"
+                onClick={() => reviewsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  background: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  borderRadius: "20px",
+                  padding: "0.3rem 0.9rem",
+                  marginBottom: "1.25rem",
+                  cursor: "pointer",
+                  fontSize: "0.88rem",
+                  fontFamily: "inherit",
+                }}
+              >
+                <span style={{ color: "#f59e0b", fontSize: "1.05rem", lineHeight: 1 }}>★</span>
+                <strong style={{ color: "#92400e" }}>{topSummary.average.toFixed(1)}</strong>
+                <span style={{ color: "#a16207" }}>·</span>
+                <span style={{ color: "#78350f", textDecoration: "underline", textUnderlineOffset: "3px" }}>
+                  {topSummary.count} تقييم
+                </span>
+              </button>
+            )}
 
             {/* Description */}
             {property.description && (
@@ -471,33 +510,50 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                 </div>
               </div>
 
-              {/* ── Contact CTA section ── */}
+              {/* ── Primary CTA: Booking (DailyRent only) ── */}
+              {canBook && (
+                <div style={{ marginBottom: "1rem" }}>
+                  <button
+                    type="button"
+                    onClick={openBooking}
+                    style={{
+                      width: "100%",
+                      height: "56px",
+                      border: "none",
+                      borderRadius: "12px",
+                      background: "var(--color-primary)",
+                      color: "#fff",
+                      fontWeight: 800,
+                      fontSize: "17px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.5rem",
+                      boxShadow: "0 4px 14px rgba(37,99,235,0.28)",
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    أرسل طلب حجز
+                  </button>
+                  <p style={{ margin: "0.4rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)", textAlign: "center" }}>
+                    يمكنك إرسال طلب حجز مباشر للمعلن
+                  </p>
+                </div>
+              )}
+
+              {/* ── Secondary contact methods ── */}
               <div style={{ marginBottom: "0.75rem" }}>
-                <p style={{ margin: "0 0 0.75rem", fontSize: "0.82rem", fontWeight: 600, color: "var(--color-text-secondary)", letterSpacing: "0.02em" }}>
-                  التواصل مع المعلن
+                <p style={{ margin: "0 0 0.65rem", fontSize: "0.82rem", fontWeight: 600, color: "var(--color-text-secondary)", letterSpacing: "0.02em" }}>
+                  {canBook ? "وسائل التواصل الأخرى" : "التواصل مع المعلن"}
                 </p>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-
-                  {canBook && (
-                    <button
-                      type="button"
-                      onClick={openBooking}
-                      style={{
-                        width: "100%",
-                        height: "52px",
-                        border: "none",
-                        borderRadius: "12px",
-                        background: "var(--color-primary)",
-                        color: "#fff",
-                        fontWeight: 800,
-                        fontSize: "16px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      طلب حجز
-                    </button>
-                  )}
 
                   {!isOwn && (
                     <button
@@ -752,7 +808,9 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
 
       {/* Ratings section — DailyRent listings only */}
       {showRatings && (
-        <ListingRatings listingId={property.id} />
+        <div ref={reviewsSectionRef} className="container">
+          <ListingRatings listingId={property.id} />
+        </div>
       )}
     </div>
   );

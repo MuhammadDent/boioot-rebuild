@@ -1,0 +1,96 @@
+I want to improve the property details page UX for daily rental listings.
+
+Current problem:
+
+* The ratings/reviews section is only shown at the bottom of the page.
+* There is no strong or clear booking CTA.
+* The user journey for daily rental is unclear.
+* Messaging / WhatsApp / phone buttons exist, but there is no primary action that clearly says “Book” or “Send booking request”.
+
+## Goal
+
+Improve the property details page so it feels more like a real daily-rental product, with clearer trust signals and a clear conversion path.
+
+## Required UX changes
+
+### 1) Move rating summary upward
+
+Keep the full reviews section at the bottom, but move a compact rating summary to the top section near:
+
+* title
+* price
+* location
+
+Example:
+
+* ⭐ 4.8
+* 23 reviews
+
+This top rating summary should be clickable and scroll to the reviews section below.
+
+### 2) Add a primary CTA for daily rental
+
+For listings where listingType === "DailyRent", add a strong primary CTA in the top action area:
+
+Primary button:
+
+* "أرسل طلب حجز" / "Send Booking Request"
+
+Secondary actions:
+
+* "المراسلة عبر التطبيق"
+* "التواصل عبر واتساب"
+* "إظهار رقم الهاتف"
+
+The booking request CTA must visually be the main action, not hidden below contact buttons.
+
+### 3) Improve action hierarchy
+
+Reorganize the right/left side action card so the order is:
+
+* price / booking context
+* primary booking CTA
+* app messaging
+* WhatsApp
+* phone
+* favorite
+
+Do not let the contact buttons overpower the main booking CTA.
+
+### 4) Add booking intent context
+
+For DailyRent listings, show a small helper text near the main CTA, such as:
+
+* "أرسل طلب حجز لهذا العقار اليومي"
+  or
+* "يمكنك إرسال طلب حجز مباشر للمعلن"
+
+### 5) Keep changes safe
+
+* Do NOT break current messaging features
+* Do NOT remove existing buttons
+* Do NOT refactor the whole page
+* Only improve layout, CTA hierarchy, and trust placement
+
+### 6) Ratings section structure
+
+At the bottom:
+
+* keep full ratings/reviews section
+* keep empty state if no reviews
+* keep add review form rules as they are
+
+At the top:
+
+* only show compact rating summary, not the full reviews block
+
+### 7) Expected result
+
+The page should clearly communicate:
+
+* this is a daily rental listing
+* users can send a booking request
+* ratings exist as a trust signal
+* the page has a clear conversion path
+
+Please implement this in a clean, production-safe way and tell me exactly which files were changed.
