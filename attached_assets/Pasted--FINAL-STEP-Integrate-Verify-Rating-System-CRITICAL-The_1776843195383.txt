@@ -1,0 +1,117 @@
+🚨 FINAL STEP: Integrate & Verify Rating System (CRITICAL)
+
+The rating system (backend + frontend) appears to be already implemented.
+
+Now I want you to:
+
+---
+
+## 🎯 GOAL:
+
+Ensure the rating system is fully integrated, visible, and working correctly in the actual listing page.
+
+---
+
+## 🔍 1) Verify Frontend Integration
+
+* Go to the main listing details page (e.g. PropertyDetailClient.tsx)
+* Ensure this component is used:
+
+< ListingRatings listingId={id} />
+
+* It must be rendered in the correct place (below description or booking section)
+
+---
+
+## 🔍 2) Check API Wiring
+
+Verify that frontend calls:
+
+* GET /api/listings/{id}/ratings
+* GET /api/listings/{id}/rating-summary
+* GET /api/listings/{id}/can-rate
+* POST /api/ratings
+
+Ensure:
+
+* Correct base URL
+* Auth headers included
+* No 401 / CORS issues
+
+---
+
+## 🔍 3) Debug canRate Logic
+
+* Log the response of `/can-rate`
+* If always false → check:
+
+  * Booking status (must be Completed)
+  * UserId match
+  * EndDate < now
+
+---
+
+## 🔍 4) UI Visibility Rules
+
+Ensure:
+
+* Rating summary ALWAYS visible
+* Reviews list ALWAYS visible (if exist)
+* AddRatingForm visible ONLY if:
+
+  * canRate = true
+  * user has not rated before
+
+---
+
+## 🔍 5) Fix Silent Failures
+
+* Add console logs for:
+
+  * API responses
+  * Errors
+* Show UI fallback if API fails
+
+---
+
+## 🔍 6) Test Flow
+
+Simulate:
+
+1. User completes booking
+2. Open listing page
+3. Add rating
+4. Refresh page
+5. Verify:
+
+   * Rating appears
+   * Average updates
+   * Cannot rate again
+
+---
+
+## 🔍 7) Performance Check
+
+* Ensure summary is not refetched excessively
+* Add basic memoization or caching if needed
+
+---
+
+## 🚨 IMPORTANT RULES
+
+* DO NOT rewrite the system
+* DO NOT refactor backend
+* ONLY fix integration issues
+* Keep changes minimal and safe
+
+---
+
+## 🎯 EXPECTED RESULT
+
+* Ratings visible on listing page
+* Add rating works correctly
+* Average updates instantly
+* No errors in console
+* System fully production-ready
+
+---
