@@ -1,0 +1,80 @@
+The new booking UI and top rating summary are NOT visible on the live property page after deployment.
+
+This means one of the following is true:
+
+* the wrong frontend file was modified
+* the modified component is not actually used by the real property details route
+* the new UI is hidden behind a condition that is not passing
+* the booking card was implemented but not mounted in the real rendered page
+
+I do NOT want more generic implementation work now.
+I want strict diagnosis of the real rendered property details page.
+
+## Your task now
+
+### 1) Identify the REAL frontend file path used by the live route:
+
+`/properties/[id]`
+
+Trace the render chain from route file to the final rendered property details component.
+
+I want the exact chain, for example:
+
+* route file
+* page component
+* data loader
+* final detail component
+* action/sidebar component if any
+
+### 2) Verify whether the deployed UI changes were applied to the REAL rendered component
+
+Specifically verify whether the live property page actually renders:
+
+* booking request CTA
+* booking form
+* guest count field
+* compact rating summary near the top
+
+### 3) If the wrong file was modified, fix that
+
+Apply the changes to the REAL component that is actually rendered by `/properties/[id]`.
+
+### 4) If the component is correct but hidden by conditions, print the exact condition(s)
+
+For example:
+
+* listingType check
+* auth check
+* owner check
+* feature flag
+* missing data check
+
+Then fix the conditions safely so the booking CTA appears for DailyRent listings.
+
+### 5) Add temporary debug logs
+
+Add temporary frontend console logs in the real property details page for:
+
+* listing id
+* listingType
+* whether booking form should render
+* whether top rating summary should render
+
+### 6) Confirm the exact files changed
+
+At the end, report only:
+
+* real route file
+* real rendered component file
+* whether previous edits were on the wrong file
+* exact condition blocking the UI (if any)
+* exact files you changed now
+
+### 7) Important constraints
+
+* Do not redesign everything
+* Do not create parallel unused components
+* Do not just say “implemented”
+* Fix the live page that is actually rendered
+
+I need a real root-cause diagnosis and a precise fix.

@@ -326,6 +326,21 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   const canBook           = property.isBookable && property.listingType === "DailyRent" && !isOwn;
   const showRatings       = property.listingType === "DailyRent";
   const hasSelectedDates  = !!bookingForm.startDate && !!bookingForm.endDate;
+
+  // DEBUG — temporary console logs to diagnose live rendering. Remove after confirmation.
+  useEffect(() => {
+    console.log("[PropertyDetail DEBUG]", {
+      id: property.id,
+      listingType: property.listingType,
+      isBookable: property.isBookable,
+      isOwn,
+      canBook,
+      showRatings,
+      topSummary,
+      resolvedRecipient,
+      userId: user?.id ?? null,
+    });
+  }, [property.id, property.listingType, property.isBookable, isOwn, canBook, showRatings, topSummary, resolvedRecipient, user?.id]);
   const canSubmitBooking  = !bookingLoading && (!hasSelectedDates || availability === "available");
   const bookingNights     = getNightCount(bookingForm.startDate, bookingForm.endDate);
   const bookingTotal      = property.price * bookingNights;
