@@ -1,0 +1,263 @@
+I want to continue the manual booking workflow and complete the next production-safe phase in my Boioot project.
+
+Current status:
+
+* Booking creation works successfully
+* `POST /api/bookings` returns 201
+* initial booking status is `PendingApproval`
+* booking retrieval endpoints were fixed and now work
+* we are intentionally postponing the PropertyId type cleanup until after this workflow is stable
+
+Now I want to implement the **owner approval + payment proof + final confirmation** flow cleanly.
+
+## Goal
+
+Complete this booking lifecycle:
+
+1. Tenant creates booking request
+   -> `PendingApproval`
+
+2. Owner reviews request and can:
+
+   * Approve initially
+   * Reject
+
+If approved:
+-> `ApprovedAwaitingPaymentProof`
+
+3. Tenant uploads payment proof images/files + optional note
+   -> `PaymentProofSubmitted`
+
+4. Owner reviews proof and can:
+
+   * Confirm booking finally
+   * Reject proof / reject booking
+
+If confirmed:
+-> `Confirmed`
+
+If rejected:
+-> `Rejected`
+
+---
+
+# Backend requirements
+
+## 1) Booking statuses
+
+Make sure these statuses are fully supported end-to-end:
+
+* PendingApproval
+* ApprovedAwaitingPaymentProof
+* PaymentProofSubmitted
+* Confirmed
+* Rejected
+
+Do not add unnecessary extra statuses unless required.
+
+---
+
+## 2) Endpoints to implement/update
+
+### Owner initial approve
+
+POST `/api/bookings/{id}/approve`
+
+Rules:
+
+* only owner of the property can do this
+* only allowed when status = `PendingApproval`
+* set status to `ApprovedAwaitingPaymentProof`
+* set `ApprovedAt`
+
+### Owner reject
+
+POST `/api/bookings/{id}/reject`
+
+Rules:
+
+* only owner
+* allowed from:
+
+  * PendingApproval
+  * PaymentProofSubmitted
+* set status to `Rejected`
+
+### Tenant submit payment proof
+
+POST `/api/bookings/{id}/submit-proof`
+
+Payload:
+
+* uploaded file(s) or image URL(s), depending on existing upload architecture
+* optional note
+
+Rules:
+
+* only tenant who created the booking
+* only allowed when status = `ApprovedAwaitingPaymentProof`
+* store:
+
+  * payment proof references
+  * payment note
+  * `PaymentProofSubmittedAt`
+* set status to `PaymentProofSubmitted`
+
+### Owner final confirm
+
+POST `/api/bookings/{id}/confirm`
+
+Rules:
+
+* only owner
+* only allowed when status = `PaymentProofSubmitted`
+* set status to `Confirmed`
+* set `ConfirmedAt`
+
+---
+
+## 3) Data model
+
+Reuse the existing booking entity and only add what is necessary.
+
+If not already present, support fields like:
+
+* PaymentProofNote
+* PaymentProofSubmittedAt
+* ApprovedAt
+* ConfirmedAt
+* Payment proof attachment refs / URLs
+
+If the app already has a safe upload/storage pattern, reuse it instead of inventing a new one.
+
+---
+
+## 4) Validation and permissions
+
+Enforce strictly:
+
+* tenant can only act on their own booking
+* owner can only act on bookings for their own properties
+* invalid status transitions must return 400 with clear Arabic messages
+* missing booking returns 404
+* unauthorized actions return proper auth/forbidden response
+
+---
+
+# Frontend requirements
+
+## 1) Property page
+
+Keep the booking request form as-is for creation.
+Do not reintroduce automatic availability blocking.
+
+After successful create:
+
+* show success message
+* indicate booking is awaiting owner approval
+
+---
+
+## 2) Tenant bookings page
+
+In `dashboard/bookings` tenant view:
+
+For each booking:
+
+* show status clearly in Arabic
+* show dates, guests, property title, created date
+
+If status = `ApprovedAwaitingPaymentProof`:
+
+* show payment proof upload section
+* allow selecting/uploading one or more images/files
+* show optional note textarea
+* show submit button:
+
+  * "إرسال إثبات الدفع"
+
+If status = `PaymentProofSubmitted`:
+
+* show that proof was submitted and is awaiting owner review
+
+If status = `Confirmed`:
+
+* show clear confirmed badge/message
+
+If status = `Rejected`:
+
+* show clear rejected state
+
+---
+
+## 3) Owner bookings page
+
+In `dashboard/bookings` owner view:
+
+### For `PendingApproval`
+
+Show action buttons:
+
+* "موافقة مبدئية"
+* "رفض"
+
+### For `PaymentProofSubmitted`
+
+Show:
+
+* uploaded proof previews / download links
+* tenant note
+* action buttons:
+
+  * "تأكيد الحجز"
+  * "رفض"
+
+### For other statuses
+
+Show clean status badges / read-only state
+
+---
+
+## 4) UX requirements
+
+* Use Arabic labels/messages
+* Buttons must show loading state
+* Prevent duplicate submissions
+* Show toast or inline success/error feedback
+* Keep UI simple and production-safe
+* Do not redesign unrelated pages
+
+---
+
+# API and upload integration
+
+If payment proof upload needs a storage endpoint:
+
+* reuse existing upload system if available
+* do not build a whole new storage architecture unless necessary
+
+If an upload endpoint already exists, integrate with it cleanly.
+
+---
+
+# Important constraints
+
+* Do NOT touch the PropertyId cleanup now
+* Do NOT redesign the entire dashboard
+* Do NOT break booking creation
+* Do NOT reintroduce auto-availability as a blocker
+* Keep the implementation incremental and testable
+
+---
+
+# Final deliverable
+
+At the end, report only:
+
+1. exact files changed
+2. endpoints added/updated
+3. booking status transitions supported
+4. upload/proof flow implemented
+5. what I should test now
+
+Implement this carefully step by step.
