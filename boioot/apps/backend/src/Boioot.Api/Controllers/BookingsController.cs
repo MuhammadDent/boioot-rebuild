@@ -37,24 +37,32 @@ public class BookingsController : BaseController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBookingRequest request, CancellationToken ct)
     {
-        try { await EnsurePaymentStatusColumnAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "[BookingsController] EnsurePaymentStatus non-critical failure"); }
+        _logger.LogInformation("[Create] START — userId={UserId} propertyId={PropertyId} startDate={StartDate:yyyy-MM-dd} endDate={EndDate:yyyy-MM-dd} guestName={GuestName} phone={Phone} guestCount={GuestCount}",
+            GetUserId(), request?.PropertyId, request?.StartDate, request?.EndDate, request?.GuestName, request?.Phone, request?.GuestCount);
+
+        try { await EnsureBookingSchemaAsync(ct); }
+        catch (Exception ex) { _logger.LogWarning(ex, "[Create] EnsureBookingSchema non-critical failure: {Msg}", ex.Message); }
+
         try
         {
-            var result = await _bookingService.CreateAsync(GetUserId(), request, ct);
+            _logger.LogInformation("[Create] Calling BookingService.CreateAsync…");
+            var result = await _bookingService.CreateAsync(GetUserId(), request!, ct);
+            _logger.LogInformation("[Create] SUCCESS — bookingId={BookingId} status={Status}", result.Id, result.Status);
             return StatusCode(201, result);
         }
         catch (Boioot.Application.Exceptions.BoiootException ex)
         {
+            _logger.LogWarning("[Create] BoiootException: {Msg}", ex.Message);
             return StatusCode(ex.StatusCode, new { message = ex.Message });
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
         {
-            _logger.LogError(ex, "[BookingsController] DbUpdateException while creating booking for property {PropertyId}", request.PropertyId);
+            _logger.LogError(ex, "[Create] DbUpdateException for property {PropertyId} — inner: {Inner}", request?.PropertyId, ex.InnerException?.Message);
             return StatusCode(500, new { message = "تعذّر حفظ طلب الحجز، يرجى المحاولة مجدداً." });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[BookingsController] Unexpected error creating booking for property {PropertyId}", request.PropertyId);
+            _logger.LogError(ex, "[Create] Unexpected error for property {PropertyId} — {Msg}", request?.PropertyId, ex.Message);
             return StatusCode(500, new { message = "حدث خطأ غير متوقع، يرجى المحاولة مجدداً." });
         }
     }
@@ -258,6 +266,22 @@ public class BookingsController : BaseController
         {
             return StatusCode(ex.StatusCode, new { message = ex.Message });
         }
+    }
+
+    private async Task EnsureBookingSchemaAsync(CancellationToken ct)
+    {
+        if (!_context.Database.IsNpgsql()) return;
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "PaymentStatus" character varying(30) NOT NULL DEFAULT 'NotPaid'""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "GuestCount" integer NOT NULL DEFAULT 1""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "PricePerNight" numeric(18,2) NOT NULL DEFAULT 0""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "TotalAmount" numeric(18,2) NOT NULL DEFAULT 0""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "CommissionPercent" numeric(5,2) NOT NULL DEFAULT 0""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "CommissionAmount" numeric(18,2) NOT NULL DEFAULT 0""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "PaymentProofUrls" text""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "PaymentProofNote" character varying(1000)""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "PaymentProofSubmittedAt" timestamp with time zone""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "ApprovedAt" timestamp with time zone""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "ConfirmedAt" timestamp with time zone""", ct);
     }
 
     private async Task EnsurePaymentStatusColumnAsync(CancellationToken ct)

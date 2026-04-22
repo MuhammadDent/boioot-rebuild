@@ -1,0 +1,142 @@
+We have a 500 Internal Server Error when calling:
+
+POST /api/bookings
+
+Frontend is working correctly, but booking creation fails.
+
+I need you to DEBUG this precisely and fix it safely.
+
+---
+
+## Step 1 — Find the real exception
+
+Go to:
+
+BookingsController.Create
+
+Wrap the entire method with detailed logging:
+
+* log incoming request (dates, propertyId, tenantId, guests)
+* log before DB insert
+* log inside try/catch
+* log full exception message + stack trace
+
+Return temporarily:
+
+{
+message: ex.Message,
+stack: ex.StackTrace
+}
+
+so we can see the real error (for debugging only)
+
+---
+
+## Step 2 — Check common failure points
+
+Verify all of the following:
+
+### 1. BookingStatus enum vs DB
+
+Make sure DB supports new statuses:
+
+* PendingApproval
+* ApprovedAwaitingPaymentProof
+* PaymentProofSubmitted
+* Confirmed
+* Rejected
+* CancelledByTenant
+* CancelledByOwner
+
+If using PostgreSQL enum:
+→ update enum properly via migration
+
+---
+
+### 2. Required fields
+
+Check Booking entity:
+
+* Any new fields must be nullable or have defaults:
+
+  * PaymentProofNote
+  * PaymentProofSubmittedAt
+  * ApprovedAt
+  * ConfirmedAt
+
+Ensure they are not breaking insert
+
+---
+
+### 3. Date handling
+
+Ensure:
+
+* startDate < endDate
+* DateTimeKind is set properly (use DateTime.SpecifyKind UTC if needed)
+
+---
+
+### 4. Relationships
+
+Validate:
+
+* Property exists
+* Tenant exists
+* Owner exists
+* Foreign keys valid
+
+---
+
+### 5. EF Core issues
+
+Check for:
+
+* LINQ not translatable
+* missing Include()
+* invalid navigation usage
+
+---
+
+## Step 3 — Fix based on real error
+
+Do NOT guess.
+Fix only the actual root cause.
+
+---
+
+## Step 4 — Restore safe response
+
+After fixing:
+
+* remove stack trace from API response
+* return clean Arabic message:
+  "تم إرسال طلب الحجز بنجاح"
+
+---
+
+## Step 5 — Verify
+
+Test:
+
+POST /api/bookings
+
+Expected:
+200 OK
+
+Booking created with:
+status = PendingApproval
+
+---
+
+## Final output
+
+Tell me:
+
+1. What was the exact exception
+2. Where it happened
+3. What you changed
+4. Why it failed
+5. Confirmation that booking now works
+
+Do NOT refactor unrelated code.
