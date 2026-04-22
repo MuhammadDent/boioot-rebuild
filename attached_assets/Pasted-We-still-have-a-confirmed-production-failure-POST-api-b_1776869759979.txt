@@ -1,0 +1,96 @@
+We still have a confirmed production failure:
+
+POST /api/bookings returns 500
+
+The current user-facing message is:
+"تعذر حفظ طلب الحجز، يرجى المحاولة مجددًا."
+
+This is not enough. I need the REAL exception now.
+
+## Task: expose and fix the exact backend failure
+
+### 1) Instrument BookingsController.Create and BookingService.CreateAsync
+
+Add temporary detailed logging around the exact insert/save path.
+
+Log all of these before SaveChangesAsync:
+
+* propertyId
+* ownerUserId
+* tenantUserId
+* startDate
+* endDate
+* guestCount
+* totalNights
+* totalPrice
+* status
+* every new booking field value
+
+### 2) Capture the exact exception
+
+Inside the catch block, temporarily log and return:
+
+* exception type
+* exception message
+* inner exception message
+* failing entity fields
+* stack trace line if possible
+
+I want the REAL database/backend error, not the friendly Arabic fallback.
+
+### 3) Specifically inspect the Bookings table schema in the live DB
+
+Compare Booking entity fields vs actual DB columns.
+
+Check for missing columns such as:
+
+* GuestCount
+* PaymentProofNote
+* PaymentProofSubmittedAt
+* ApprovedAt
+* ConfirmedAt
+* any new status/proof-related field
+
+Also verify:
+
+* nullability
+* default values
+* enum/status compatibility
+* foreign keys
+
+### 4) Do not rely on startup catch-and-continue
+
+If schema patch fails silently, surface that failure clearly.
+
+If needed:
+
+* add a dedicated schema ensure step before booking insert
+* or run a proper migration/SQL patch
+* but do it safely
+
+### 5) Fix the exact root cause only
+
+Do not guess.
+Do not just add more catch blocks.
+Fix the actual failing DB/backend mismatch.
+
+### 6) After fixing
+
+Restore safe user response:
+
+* success: "تم إرسال طلب الحجز بنجاح"
+* failure: clear Arabic message based on actual cause
+
+### 7) Final report
+
+Tell me only:
+
+1. exact exception type
+2. exact exception message
+3. exact missing/mismatched column or constraint
+4. exact file(s) changed
+5. confirmation that POST /api/bookings now returns 200
+
+Important:
+Do NOT say "it should work".
+Actually verify the endpoint after the fix.

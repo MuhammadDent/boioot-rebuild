@@ -9,6 +9,22 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
     public void Configure(EntityTypeBuilder<Booking> builder)
     {
         builder.HasKey(b => b.Id);
+
+        // The global convention in BoiootDbContext.ConfigureConventions applies
+        // GuidToStringConverter to all Guid properties (for SQLite varchar compat).
+        // Bookings table uses native PostgreSQL uuid columns for Id, PropertyId,
+        // and RequestedByUserId — so we must remove the string converter here
+        // and declare the native uuid column type so Npgsql sends them correctly.
+        builder.Property(b => b.Id)
+            .HasColumnType("uuid")
+            .HasConversion<Guid>();
+        builder.Property(b => b.PropertyId)
+            .HasColumnType("uuid")
+            .HasConversion<Guid>();
+        builder.Property(b => b.RequestedByUserId)
+            .HasColumnType("uuid")
+            .HasConversion<Guid>();
+
         builder.Property(b => b.GuestName).HasMaxLength(120).IsRequired();
         builder.Property(b => b.Phone).HasMaxLength(40);
         builder.Property(b => b.Notes).HasMaxLength(1000);

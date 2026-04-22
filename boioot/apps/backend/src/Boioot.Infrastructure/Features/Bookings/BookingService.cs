@@ -118,8 +118,35 @@ public class BookingService : IBookingService
             Status = PendingApproval
         };
 
+        _logger.LogInformation(
+            "[CreateBooking] PRE-SAVE — PropertyId={PropertyId} TenantId={TenantId} OwnerId={OwnerId} " +
+            "StartDate={StartDate:yyyy-MM-dd} EndDate={EndDate:yyyy-MM-dd} Nights={Nights} " +
+            "PricePerNight={PricePerNight} TotalAmount={TotalAmount} CommissionPercent={CommissionPercent} CommissionAmount={CommissionAmount} " +
+            "GuestName={GuestName} Phone={Phone} Notes={Notes} GuestCount={GuestCount} " +
+            "PaymentStatus={PaymentStatus} Status={Status} " +
+            "PaymentProofUrls={PaymentProofUrls} PaymentProofNote={PaymentProofNote} " +
+            "PaymentProofSubmittedAt={PaymentProofSubmittedAt} ApprovedAt={ApprovedAt} ConfirmedAt={ConfirmedAt}",
+            property.Id, userId, ownerUserId,
+            start, end, nights,
+            pricePerNight, totalAmount, commissionPercent, commissionAmount,
+            booking.GuestName, booking.Phone, booking.Notes, booking.GuestCount,
+            booking.PaymentStatus, booking.Status,
+            booking.PaymentProofUrls, booking.PaymentProofNote,
+            booking.PaymentProofSubmittedAt, booking.ApprovedAt, booking.ConfirmedAt);
+
         _context.Bookings.Add(booking);
-        await _context.SaveChangesAsync(ct);
+
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (Exception saveEx)
+        {
+            _logger.LogError(saveEx,
+                "[CreateBooking] SaveChangesAsync FAILED — ExType={ExType} Msg={Msg} Inner={Inner}",
+                saveEx.GetType().FullName, saveEx.Message, saveEx.InnerException?.Message);
+            throw;
+        }
 
         _logger.LogInformation("Booking created: {BookingId} | Property: {PropertyId} | By: {UserId}", booking.Id, property.Id, userId);
 

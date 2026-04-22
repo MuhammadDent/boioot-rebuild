@@ -58,12 +58,26 @@ public class BookingsController : BaseController
         catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
         {
             _logger.LogError(ex, "[Create] DbUpdateException for property {PropertyId} — inner: {Inner}", request?.PropertyId, ex.InnerException?.Message);
-            return StatusCode(500, new { message = "تعذّر حفظ طلب الحجز، يرجى المحاولة مجدداً." });
+            return StatusCode(500, new
+            {
+                debugType    = "DbUpdateException",
+                message      = ex.Message,
+                inner        = ex.InnerException?.Message,
+                innerType    = ex.InnerException?.GetType().Name,
+                stack        = ex.ToString()
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[Create] Unexpected error for property {PropertyId} — {Msg}", request?.PropertyId, ex.Message);
-            return StatusCode(500, new { message = "حدث خطأ غير متوقع، يرجى المحاولة مجدداً." });
+            _logger.LogError(ex, "[Create] Unexpected error for property {PropertyId} — {ExType}: {Msg}", request?.PropertyId, ex.GetType().Name, ex.Message);
+            return StatusCode(500, new
+            {
+                debugType    = ex.GetType().FullName,
+                message      = ex.Message,
+                inner        = ex.InnerException?.Message,
+                innerType    = ex.InnerException?.GetType().Name,
+                stack        = ex.ToString()
+            });
         }
     }
 

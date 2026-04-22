@@ -31,17 +31,30 @@ export PORT="${TARGET_PORT}"
 
 echo "[run-api] Starting .NET on PORT=$PORT"
 
-# ─── Fast path: run pre-built Debug binary (no compilation delay) ─────────────
+# ─── Fast path: run pre-built Debug binary only if it is up to date ──────────
 # IMPORTANT: --contentroot must point to the DLL directory so ASP.NET Core
 # finds appsettings.json there (otherwise it defaults to the workflow CWD
 # /artifacts/api-server — no appsettings.json → falls back to SQLite).
+#
+# Safety check: if any .cs or .json source file is newer than the DLL, the
+# binary is stale from a previous session — fall through to slow path so the
+# new code is compiled.  This prevents silently running old code after edits.
+NEEDS_REBUILD=false
 if [ -f "$DLL" ]; then
-  echo "[run-api] Pre-built binary found — starting directly (fast path)"
+  NEWER=$(find "$SCRIPT_DIR/src" -name "*.cs" -newer "$DLL" 2>/dev/null | head -1)
+  if [ -n "$NEWER" ]; then
+    echo "[run-api] Source files changed (e.g. $NEWER) — rebuilding..."
+    NEEDS_REBUILD=true
+  fi
+fi
+
+if [ -f "$DLL" ] && [ "$NEEDS_REBUILD" = "false" ]; then
+  echo "[run-api] Binary is up-to-date — starting directly (fast path)"
   exec dotnet "$DLL" --contentroot "$DLL_DIR"
 fi
 
-# ─── Slow path: binary missing — compile and run ──────────────────────────────
-echo "[run-api] Pre-built binary not found — running dotnet run (will compile)..."
+# ─── Slow path: binary missing or stale — compile and run ─────────────────────
+echo "[run-api] Compiling and starting (slow path)..."
 cd "$SCRIPT_DIR"
 exec dotnet run \
   --project src/Boioot.Api \

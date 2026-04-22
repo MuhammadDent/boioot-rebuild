@@ -37,11 +37,12 @@ name = "Boioot Frontend"
 author = "agent"
 
 [workflows.workflow.metadata]
-outputType = "console"
+outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "sleep infinity"
+args = "cd boioot/apps/frontend && pnpm dev"
+waitForPort = 3000
 
 [[workflows.workflow]]
 name = "Boioot .NET API"
@@ -52,7 +53,8 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "sleep infinity"
+args = "bash boioot/apps/backend/run-api.sh"
+waitForPort = 8080
 
 [agent]
 stack = "PNPM_WORKSPACE"
