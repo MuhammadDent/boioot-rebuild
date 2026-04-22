@@ -1110,3 +1110,37 @@ export interface UpdateLimitDefinitionPayload {
   appliesToScope?: string;
   isActive: boolean;
 }
+
+// ── Ratings ────────────────────────────────────────────────────────────────
+
+export interface RatingResponse {
+  id: string;
+  reviewerName: string;
+  score: number;
+  comment?: string | null;
+  createdAt: string;
+}
+
+export interface RatingSummaryResponse {
+  average: number;
+  count: number;
+}
+
+export interface PagedRatingsResponse {
+  items: RatingResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CanRateResponse {
+  canRate: boolean;
+  alreadyRated: boolean;
+  hasCompletedBooking: boolean;
+}
+
+export interface CreateRatingRequest {
+  listingId: string;
+  score: number;
+  comment?: string;
+}

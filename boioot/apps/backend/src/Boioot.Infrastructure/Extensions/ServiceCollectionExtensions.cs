@@ -27,7 +27,9 @@ using Boioot.Application.Features.Projects.Interfaces;
 using Boioot.Application.Features.Properties.Interfaces;
 using Boioot.Application.Features.Requests.Interfaces;
 using Boioot.Application.Features.Subscriptions.Interfaces;
+using Boioot.Application.Features.Ratings.Interfaces;
 using Boioot.Application.Features.SubscriptionPayments.Interfaces;
+using Boioot.Infrastructure.Features.Ratings;
 using Boioot.Infrastructure.Features.SubscriptionPayments;
 using Boioot.Infrastructure.Common;
 using Boioot.Infrastructure.Features.Admin;
@@ -138,6 +140,9 @@ public static class ServiceCollectionExtensions
                            Boioot.Infrastructure.Features.Email.LoggingEmailService>();
         services.AddScoped<ISiteContentService, SiteContentService>();
         services.AddScoped<IVerificationRequestService, VerificationRequestService>();
+
+        // ── Ratings & Reviews ────────────────────────────────────────────────
+        services.AddScoped<IRatingService, RatingService>();
 
         // ── Monetization Phase 1 ─────────────────────────────────────────────
         services.AddScoped<Boioot.Application.Features.LeadUnlocks.ILeadUnlockService,

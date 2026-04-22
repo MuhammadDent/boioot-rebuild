@@ -109,6 +109,7 @@ public sealed class DatabaseStartupService
         // ── Idempotent column-type fixes (applied after every migration run) ──
         await ApplyPostgresColumnFixesAsync(ct);
         await ApplyPostgresBookingPatchesAsync(ct);
+        await ApplyReviewsPatchAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
         await SyncIsCoverFromIsPrimaryAsync(ct);
@@ -462,6 +463,31 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("Could not create __EFMigrationsHistory: {msg}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Idempotent schema patch for the Ratings/Reviews feature.
+    /// Adds a unique constraint on (ReviewerId, TargetType, TargetId) so that
+    /// each user can submit at most one review per listing, enforced at the DB level.
+    /// </summary>
+    private async Task ApplyReviewsPatchAsync(CancellationToken ct)
+    {
+        if (!IsPostgres) return;
+
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_Reviews_ReviewerId_TargetType_TargetId_Unique"
+                ON "Reviews" ("ReviewerId", "TargetType", "TargetId")
+                """, ct);
+
+            _log.LogInformation("[schema-patch] Reviews unique constraint applied.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] Reviews patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 

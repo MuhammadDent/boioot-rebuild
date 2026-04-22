@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import VerificationBadge from "@/components/properties/VerificationBadge";
+import ListingRatings from "@/components/ratings/ListingRatings";
 import ImageSlider from "@/components/properties/ImageSlider";
 import { bookingsApi } from "@/features/bookings/api";
 import { favoritesApi } from "@/features/favorites/api";
@@ -310,6 +311,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   const advertiserName    = property.ownerName ?? property.companyName ?? "المعلن";
   const advertiserPhoto   = property.ownerPhoto ?? property.companyLogoUrl ?? null;
   const canBook           = property.isBookable && property.listingType === "DailyRent" && !isOwn;
+  const showRatings       = property.listingType === "DailyRent";
   const hasSelectedDates  = !!bookingForm.startDate && !!bookingForm.endDate;
   const canSubmitBooking  = !bookingLoading && (!hasSelectedDates || availability === "available");
   const bookingNights     = getNightCount(bookingForm.startDate, bookingForm.endDate);
@@ -746,6 +748,11 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
             </button>
           </form>
         </div>
+      )}
+
+      {/* Ratings section — DailyRent listings only */}
+      {showRatings && (
+        <ListingRatings listingId={property.id} />
       )}
     </div>
   );

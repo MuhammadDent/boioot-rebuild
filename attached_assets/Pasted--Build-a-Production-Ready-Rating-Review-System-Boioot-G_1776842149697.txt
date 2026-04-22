@@ -1,0 +1,182 @@
+🔥 **Build a Production-Ready Rating & Review System (Boioot)**
+
+---
+
+**🎯 Goal:**
+Implement a complete, production-ready **Rating & Review system** for daily rental listings in my SaaS project (**Boioot**) without breaking any existing functionality.
+
+---
+
+## 🧠 Context
+
+* Monorepo architecture:
+
+  * Frontend: Next.js → `apps/frontend`
+  * Backend: .NET → `apps/backend`
+* Listings system already exists
+* Users can book/rent listings
+* Ratings must only be allowed **after a completed booking**
+
+---
+
+## ⚙️ Backend Requirements (STRICT)
+
+### 1) Create Entity: `Rating`
+
+Fields:
+
+* `Id` (GUID or int)
+* `UserId` (reviewer)
+* `ListingId`
+* `Score` (integer: 1–5)
+* `Comment` (optional, max length reasonable)
+* `CreatedAt` (UTC timestamp)
+
+---
+
+### 2) Business Rules (CRITICAL)
+
+* A user can rate a listing **only once**
+* Rating allowed only if **booking status = Completed**
+* Score must be strictly **between 1 and 5**
+* Prevent duplicate ratings at DB level (unique constraint)
+
+---
+
+### 3) Database Constraints
+
+* Unique index on `(UserId, ListingId)`
+* Foreign keys to User and Listing
+* Proper indexing for performance
+
+---
+
+### 4) API Endpoints
+
+➕ Create Rating:
+POST /ratings
+
+Payload:
+{
+"listingId": "...",
+"score": 5,
+"comment": "Great experience"
+}
+
+---
+
+📥 Get Listing Ratings:
+GET /listings/{id}/ratings
+
+* Must be paginated
+* Sorted by newest first
+
+---
+
+📊 Get Rating Summary:
+GET /listings/{id}/rating-summary
+
+Response:
+{
+"average": 4.6,
+"count": 18
+}
+
+---
+
+### 5) Performance Optimization
+
+* Calculate average in backend (NOT frontend)
+* Add lightweight caching for summary endpoint
+* Avoid N+1 queries
+
+---
+
+## 🎨 Frontend Requirements (Next.js)
+
+### 1) Display Ratings on Listing Page
+
+* Star rating component ⭐
+* Show:
+
+  * Average rating (e.g., 4.6)
+  * Total number of reviews
+* Clean UI (similar to Airbnb)
+
+---
+
+### 2) Add Rating UI
+
+Visible ONLY if:
+
+* User has completed booking
+* User has not rated before
+
+Components:
+
+* Star selector (1–5)
+* Comment textarea
+* Submit button
+
+---
+
+### 3) UX & Validation
+
+* Prevent duplicate submission
+* Disable UI during submission (loading state)
+* Show success message
+* Handle API errors properly
+* (Optional) Optimistic UI update
+
+---
+
+### 4) Security
+
+* Backend must enforce all validation rules
+* Do NOT rely on frontend validation
+* Ensure authenticated user only
+
+---
+
+## ⚡ Advanced Enhancements (IMPORTANT)
+
+* Add sorting options:
+
+  * Latest
+  * Highest rated
+  * Lowest rated
+* Prepare for:
+
+  * Owner replies to reviews
+  * Report review feature
+* Ensure scalability
+
+---
+
+## 🚫 STRICT CONSTRAINTS
+
+* DO NOT modify existing systems (auth / listings / bookings)
+* DO NOT break existing APIs
+* NO unnecessary refactoring
+* Keep implementation clean and isolated
+
+---
+
+## 🧪 Testing Requirements
+
+* Create rating successfully
+* Prevent duplicate ratings
+* Validate booking requirement
+* Verify correct average calculation
+* Ensure UI updates correctly
+
+---
+
+## 🎯 Expected Result
+
+* Fully working Rating system (Backend + Frontend)
+* Production-ready
+* Clean architecture
+* No regressions in existing features
+
+---
