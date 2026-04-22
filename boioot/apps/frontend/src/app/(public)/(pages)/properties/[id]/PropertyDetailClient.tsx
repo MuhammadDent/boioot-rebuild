@@ -34,11 +34,13 @@ function shortRef(id: string) {
 }
 
 function formatDate(iso: string) {
-  // Append T00:00:00Z so JS always parses as UTC midnight, preventing off-by-one
-  // day errors in negative-UTC-offset timezones.
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
-    year: "numeric", month: "numeric", day: "numeric",
-  });
+  if (!iso) return "—";
+  // Only append T00:00:00Z for date-only strings (YYYY-MM-DD).
+  // Full ISO datetimes already contain "T", appending would produce an invalid date.
+  const normalized = iso.includes("T") ? iso : `${iso}T00:00:00Z`;
+  const d = new Date(normalized);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB", { year: "numeric", month: "numeric", day: "numeric" });
 }
 
 function todayIso() {
@@ -445,8 +447,8 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
               {property.address && ` — ${property.address}`}
             </p>
 
-            {/* ── Compact rating chip (DailyRent only) — always visible after load ── */}
-            {showRatings && ratingLoaded && (
+            {/* ── Compact rating chip (DailyRent only) — shows immediately with fallback ── */}
+            {showRatings && (
               topSummary && topSummary.count > 0 ? (
                 <button
                   type="button"
@@ -767,6 +769,8 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
             style={{
               width: "100%",
               maxWidth: 440,
+              maxHeight: "90dvh",
+              overflowY: "auto",
               background: "var(--color-bg-card)",
               borderRadius: "18px",
               border: "1px solid var(--color-border)",

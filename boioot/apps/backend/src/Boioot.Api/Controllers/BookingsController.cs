@@ -37,14 +37,31 @@ public class BookingsController : BaseController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateBookingRequest request, CancellationToken ct)
     {
-        await EnsurePaymentStatusColumnAsync(ct);
-        var start = DateTime.SpecifyKind(request.StartDate.Date, DateTimeKind.Utc);
-        var end = DateTime.SpecifyKind(request.EndDate.Date, DateTimeKind.Utc);
-        if (end > start && await HasBlockingOverlapAsync(request.PropertyId, start, end, null, ct))
-            return Conflict(new { message = "هذه الفترة محجوزة مسبقاً لهذا العقار" });
+        try { await EnsurePaymentStatusColumnAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "[BookingsController] EnsurePaymentStatus non-critical failure"); }
+        try
+        {
+            var start = DateTime.SpecifyKind(request.StartDate.Date, DateTimeKind.Utc);
+            var end   = DateTime.SpecifyKind(request.EndDate.Date,   DateTimeKind.Utc);
+            if (end > start && await HasBlockingOverlapAsync(request.PropertyId, start, end, null, ct))
+                return Conflict(new { message = "هذه الفترة محجوزة مسبقاً لهذا العقار" });
 
-        var result = await _bookingService.CreateAsync(GetUserId(), request, ct);
-        return StatusCode(201, result);
+            var result = await _bookingService.CreateAsync(GetUserId(), request, ct);
+            return StatusCode(201, result);
+        }
+        catch (Boioot.Application.Exceptions.BoiootException ex)
+        {
+            return StatusCode(ex.StatusCode, new { message = ex.Message });
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            _logger.LogError(ex, "[BookingsController] DbUpdateException while creating booking for property {PropertyId}", request.PropertyId);
+            return StatusCode(500, new { message = "تعذّر حفظ طلب الحجز، يرجى المحاولة مجدداً." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[BookingsController] Unexpected error creating booking for property {PropertyId}", request.PropertyId);
+            return StatusCode(500, new { message = "حدث خطأ غير متوقع، يرجى المحاولة مجدداً." });
+        }
     }
 
     [HttpGet("mine")]

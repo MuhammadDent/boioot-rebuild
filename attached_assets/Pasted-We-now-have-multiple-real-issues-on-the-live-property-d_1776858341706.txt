@@ -1,0 +1,143 @@
+We now have multiple real issues on the live property details page, and I want a strict bug-fix pass focused only on these problems.
+
+## Current confirmed issues
+
+### 1) Booking modal / booking form UX bug
+
+The booking modal/form is too tall and is not properly scrollable.
+The user cannot comfortably reach all fields and actions.
+
+### 2) Invalid Date is visible on the property page
+
+The page is showing `Invalid Date` in the property metadata area.
+This means some date value is being parsed or rendered incorrectly in the property details page.
+
+### 3) Ratings are still not showing
+
+The top rating summary is not visible, and the reviews section is not behaving correctly.
+There is also an internal error message during booking flow, which may indicate a backend/API issue affecting the page.
+
+---
+
+## I want a strict diagnosis + fix for these exact issues only
+
+### A. Fix booking modal scrolling / overflow
+
+Inspect the booking modal container and form wrapper.
+
+Requirements:
+
+* modal content must be scrollable vertically if content exceeds viewport height
+* modal should stay centered and usable on desktop
+* header and close area should remain usable
+* submit button must remain reachable
+* do not redesign the whole modal, only fix overflow/height/scroll behavior
+
+Typical acceptable solution:
+
+* max-height relative to viewport
+* `overflow-y-auto`
+* proper inner padding and spacing
+
+---
+
+### B. Fix Invalid Date on property page
+
+Find the exact field causing `Invalid Date`.
+
+I want you to trace:
+
+* which property field is rendered there
+* raw API value
+* parsing logic
+* rendering logic
+
+Then fix it safely.
+
+Requirements:
+
+* never render `Invalid Date`
+* if a date is missing/invalid, show fallback text or hide that value cleanly
+* use consistent date parsing logic
+* do not rely on ambiguous locale parsing
+
+---
+
+### C. Diagnose ratings not showing
+
+Inspect the ratings flow end-to-end on the real property page.
+
+Check:
+
+* rating summary API request
+* ratings list API request
+* response status
+* console errors
+* component conditions
+* state transitions
+
+I want you to determine exactly whether:
+
+* API is failing
+* frontend state is failing
+* rendering is blocked by a condition
+* another page error is preventing ratings from rendering
+
+Fix the real root cause.
+
+Requirements:
+
+* top rating summary should render for DailyRent listings even when there are zero reviews
+* if zero reviews: show "لا توجد تقييمات بعد"
+* if API fails: show a visible graceful fallback, not silent failure
+* full reviews section should remain visible below
+
+---
+
+### D. Diagnose internal server error in booking flow
+
+There is a backend/internal error showing during booking flow.
+
+Find the exact failing request:
+
+* endpoint
+* payload
+* backend exception or validation failure
+* why it returns internal error
+
+Fix it properly.
+Do not hide the error without fixing the cause.
+
+---
+
+## Add temporary diagnostics
+
+Please add temporary logs for:
+
+* property raw date values used in UI
+* rating summary request + result
+* ratings list request + result
+* booking submit payload
+* failing backend exception or decision path
+
+---
+
+## Final report format
+
+At the end report only:
+
+1. Invalid Date root cause:
+2. Ratings root cause:
+3. Booking internal error root cause:
+4. Modal scroll fix files:
+5. Exact files changed:
+6. What I should test now:
+
+---
+
+## Important constraints
+
+* Do not redesign the page
+* Do not create new parallel components
+* Fix the real rendered property page only
+* Keep fixes production-safe and minimal
