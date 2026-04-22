@@ -239,6 +239,9 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
           if (ignore) return;
           console.log("[Booking availability DEBUG] API response:", result);
           setAvailability(result.available ? "available" : "unavailable");
+          if (!result.available && result.reason) {
+            setAvailabilityError(result.reason);
+          }
         })
         .catch((err) => {
           if (ignore) return;
@@ -833,7 +836,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                 </p>
                 {availability === "checking" && <p style={{ margin: 0, color: "#64748b", fontSize: "0.85rem" }}>جاري التحقق من التوفر...</p>}
                 {availability === "available" && <p style={{ margin: 0, color: "#15803d", fontSize: "0.85rem", fontWeight: 800 }}>✅ متاح للحجز</p>}
-                {availability === "unavailable" && <p style={{ margin: 0, color: "#b91c1c", fontSize: "0.85rem", fontWeight: 800 }}>❌ غير متاح لهذه الفترة</p>}
+                {availability === "unavailable" && <p style={{ margin: 0, color: "#b91c1c", fontSize: "0.85rem", fontWeight: 800 }}>❌ {availabilityError || "غير متاح لهذه الفترة"}</p>}
                 {availability === "error" && <p style={{ margin: 0, color: "#b91c1c", fontSize: "0.85rem", fontWeight: 800 }}>{availabilityError}</p>}
                 {bookingNights > 0 && (
                   <div style={{ marginTop: "0.65rem", paddingTop: "0.65rem", borderTop: "1px solid #e2e8f0", display: "grid", gap: "0.35rem", color: "#334155", fontSize: "0.85rem" }}>

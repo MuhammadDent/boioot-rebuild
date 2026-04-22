@@ -132,63 +132,122 @@ public class BookingService : IBookingService
         return Map(booking, property.Title);
     }
 
-    public async Task<bool> IsAvailableAsync(Guid propertyId, DateTime startDate, DateTime endDate, CancellationToken ct = default)
+    public async Task<(bool Available, string? Reason)> IsAvailableAsync(
+        Guid propertyId, DateTime startDate, DateTime endDate, CancellationToken ct = default)
     {
-        _logger.LogDebug("[Availability] PropertyId={PropertyId} | Raw startDate={StartDate:O} | Raw endDate={EndDate:O}",
-            propertyId, startDate, endDate);
+        // ── 1. Log raw inputs ─────────────────────────────────────────────────
+        _logger.LogInformation(
+            "[Availability] START — propertyId={PropertyId} rawStart={RawStart:O} rawEnd={RawEnd:O} startKind={SK} endKind={EK}",
+            propertyId, startDate, endDate, startDate.Kind, endDate.Kind);
 
-        var property = await _context.Properties
-            .AsNoTracking()
-            .Where(p => p.Id == propertyId && !p.IsDeleted)
-            .Select(p => new
-            {
-                p.Id,
-                p.Status,
-                p.ListingType
-            })
-            .FirstOrDefaultAsync(ct);
-
-        if (property is null)
-        {
-            _logger.LogDebug("[Availability] REJECT — property not found");
-            return false;
-        }
-
-        if (property.Status != PropertyStatus.Available)
-        {
-            _logger.LogDebug("[Availability] REJECT — status={Status}", property.Status);
-            return false;
-        }
-
-        if (!string.Equals(property.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase))
-        {
-            _logger.LogDebug("[Availability] REJECT — listingType={ListingType} is not DailyRent", property.ListingType);
-            return false;
-        }
-
+        // ── 2. Normalise to UTC-midnight (Npgsql requires Utc kind for timestamptz) ─
         var start = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
         var end   = DateTime.SpecifyKind(endDate.Date,   DateTimeKind.Utc);
         var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
 
-        _logger.LogDebug("[Availability] Normalised start={Start:yyyy-MM-dd} end={End:yyyy-MM-dd} today={Today:yyyy-MM-dd}",
-            start, end, today);
+        _logger.LogInformation(
+            "[Availability] Normalised — start={Start:yyyy-MM-dd}({SK}) end={End:yyyy-MM-dd}({EK}) today={Today:yyyy-MM-dd}",
+            start, start.Kind, end, end.Kind, today);
+
+        // ── 3. Fetch property from DB ──────────────────────────────────────────
+        Guid       foundId          = default;
+        PropertyStatus foundStatus  = default;
+        string?    foundListingType = null;
+        bool       propertyFound    = false;
+
+        try
+        {
+            var row = await _context.Properties
+                .AsNoTracking()
+                .Where(p => p.Id == propertyId && !p.IsDeleted)
+                .Select(p => new { p.Id, p.Status, p.ListingType })
+                .FirstOrDefaultAsync(ct);
+
+            if (row is not null)
+            {
+                foundId          = row.Id;
+                foundStatus      = row.Status;
+                foundListingType = row.ListingType;
+                propertyFound    = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "[Availability] DB ERROR fetching property — propertyId={PropertyId} msg={Msg}",
+                propertyId, ex.Message);
+            return (false, "حدث خطأ أثناء التحقق من توفر العقار");
+        }
+
+        if (!propertyFound)
+        {
+            _logger.LogWarning("[Availability] REJECT — property not found propertyId={PropertyId}", propertyId);
+            return (false, "العقار غير موجود");
+        }
+
+        _logger.LogInformation(
+            "[Availability] Property found — status={Status} listingType={ListingType}",
+            foundStatus, foundListingType);
+
+        // ── 4. Business rule guards ────────────────────────────────────────────
+        if (foundStatus != PropertyStatus.Available)
+        {
+            _logger.LogInformation("[Availability] REJECT — status={Status} is not Available", foundStatus);
+            return (false, "العقار غير متاح للحجز حالياً");
+        }
+
+        if (!string.Equals(foundListingType, "DailyRent", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("[Availability] REJECT — listingType={ListingType} not DailyRent", foundListingType);
+            return (false, "هذا العقار غير متاح للحجز المباشر");
+        }
 
         if (start < today)
         {
-            _logger.LogDebug("[Availability] REJECT — start {Start:yyyy-MM-dd} is before today {Today:yyyy-MM-dd}", start, today);
-            return false;
+            _logger.LogInformation(
+                "[Availability] REJECT — start={Start:yyyy-MM-dd} is before today={Today:yyyy-MM-dd}", start, today);
+            return (false, "لا يمكن اختيار تاريخ قديم");
         }
 
         if (end <= start)
         {
-            _logger.LogDebug("[Availability] REJECT — end {End:yyyy-MM-dd} <= start {Start:yyyy-MM-dd} (reversed or same-day range)", end, start);
-            return false;
+            _logger.LogInformation(
+                "[Availability] REJECT — end={End:yyyy-MM-dd} <= start={Start:yyyy-MM-dd}", end, start);
+            return (false, "تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول");
         }
 
-        var hasOverlap = await HasApprovedOverlapAsync(property.Id, start, end, null, ct);
-        _logger.LogDebug("[Availability] Overlap check result: hasOverlap={HasOverlap}", hasOverlap);
+        // ── 5. Overlap query ──────────────────────────────────────────────────
+        // Overlap condition: existing booking overlaps if (start < existing.End) AND (end > existing.Start)
+        // Status: treat legacy 'Confirmed' the same as 'Approved' (both block the slot)
+        bool hasOverlap;
+        try
+        {
+            _logger.LogInformation(
+                "[Availability] Overlap query — propertyId={PropertyId} start={Start:yyyy-MM-dd} end={End:yyyy-MM-dd}",
+                foundId, start, end);
 
-        return !hasOverlap;
+            hasOverlap = await _context.Bookings
+                .AsNoTracking()
+                .AnyAsync(b =>
+                    b.PropertyId == foundId &&
+                    (b.Status == Approved || b.Status == Confirmed) &&
+                    start < b.EndDate &&
+                    end > b.StartDate,
+                    ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "[Availability] DB ERROR in overlap query — propertyId={PropertyId} start={Start:yyyy-MM-dd} end={End:yyyy-MM-dd} msg={Msg}",
+                foundId, start, end, ex.Message);
+            return (false, "حدث خطأ أثناء التحقق من توفر العقار");
+        }
+
+        _logger.LogInformation(
+            "[Availability] DONE — propertyId={PropertyId} hasOverlap={HasOverlap} available={Available}",
+            foundId, hasOverlap, !hasOverlap);
+
+        return (!hasOverlap, hasOverlap ? "الفترة المحددة محجوزة مسبقاً" : null);
     }
 
     public async Task<IReadOnlyList<BookingResponse>> GetMineAsync(Guid userId, CancellationToken ct = default)

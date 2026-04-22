@@ -221,6 +221,7 @@ export interface BookingResponse {
 
 export interface AvailabilityResponse {
   available: boolean;
+  reason?: string | null;
 }
 
 export interface ListingTypeConfig {

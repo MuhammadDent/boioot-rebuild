@@ -15,12 +15,18 @@ public class PropertiesController : BaseController
     private readonly IPropertyService _propertyService;
     private readonly IBookingService _bookingService;
     private readonly BoiootDbContext _db;
+    private readonly ILogger<PropertiesController> _logger;
 
-    public PropertiesController(IPropertyService propertyService, IBookingService bookingService, BoiootDbContext db)
+    public PropertiesController(
+        IPropertyService propertyService,
+        IBookingService bookingService,
+        BoiootDbContext db,
+        ILogger<PropertiesController> logger)
     {
         _propertyService = propertyService;
-        _bookingService = bookingService;
-        _db = db;
+        _bookingService  = bookingService;
+        _db              = db;
+        _logger          = logger;
     }
 
     [HttpGet]
@@ -45,12 +51,68 @@ public class PropertiesController : BaseController
     [HttpGet("{id:guid}/availability")]
     public async Task<IActionResult> GetAvailability(
         Guid id,
-        [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate,
+        [FromQuery] string? startDate,
+        [FromQuery] string? endDate,
         CancellationToken ct)
     {
-        var available = await _bookingService.IsAvailableAsync(id, startDate, endDate, ct);
-        return Ok(new { available });
+        _logger.LogInformation(
+            "[AvailabilityController] Request — propertyId={PropertyId} rawStart={RawStart} rawEnd={RawEnd}",
+            id, startDate, endDate);
+
+        // ── Step 1: validate presence ──────────────────────────────────────────
+        if (string.IsNullOrWhiteSpace(startDate) || string.IsNullOrWhiteSpace(endDate))
+        {
+            _logger.LogWarning("[AvailabilityController] Missing date params — propertyId={PropertyId}", id);
+            return BadRequest(new { available = false, reason = "تاريخا الوصول والمغادرة مطلوبان" });
+        }
+
+        // ── Step 2: parse dates manually to avoid culture/kind binding issues ─
+        if (!DateTime.TryParse(startDate, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var parsedStart) ||
+            !DateTime.TryParse(endDate, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var parsedEnd))
+        {
+            _logger.LogWarning(
+                "[AvailabilityController] Invalid date format — propertyId={PropertyId} start={Start} end={End}",
+                id, startDate, endDate);
+            return BadRequest(new { available = false, reason = "صيغة التاريخ غير صالحة" });
+        }
+
+        // ── Step 3: normalise to UTC midnight before any comparison ───────────
+        var start = DateTime.SpecifyKind(parsedStart.Date, DateTimeKind.Utc);
+        var end   = DateTime.SpecifyKind(parsedEnd.Date,   DateTimeKind.Utc);
+
+        _logger.LogInformation(
+            "[AvailabilityController] Parsed — start={Start:yyyy-MM-dd}(Kind={SK}) end={End:yyyy-MM-dd}(Kind={EK})",
+            start, start.Kind, end, end.Kind);
+
+        // ── Step 4: guard end > start before hitting the service ──────────────
+        if (end <= start)
+        {
+            _logger.LogWarning(
+                "[AvailabilityController] REJECT end<=start — propertyId={PropertyId} start={Start:yyyy-MM-dd} end={End:yyyy-MM-dd}",
+                id, start, end);
+            return BadRequest(new { available = false, reason = "تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول" });
+        }
+
+        // ── Step 5: delegate to service (already normalised, UTC-kind datetimes) ─
+        try
+        {
+            var (available, reason) = await _bookingService.IsAvailableAsync(id, start, end, ct);
+
+            _logger.LogInformation(
+                "[AvailabilityController] Result — propertyId={PropertyId} available={Available} reason={Reason}",
+                id, available, reason);
+
+            return Ok(new { available, reason });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "[AvailabilityController] EXCEPTION — propertyId={PropertyId} start={Start:yyyy-MM-dd} end={End:yyyy-MM-dd} msg={Msg}",
+                id, start, end, ex.Message);
+            return StatusCode(500, new { available = false, reason = "حدث خطأ أثناء التحقق من توفر العقار" });
+        }
     }
 
     // ── Property creation — two routes, same permission intent ──────────────────
