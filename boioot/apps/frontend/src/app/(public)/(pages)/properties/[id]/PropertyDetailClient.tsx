@@ -178,7 +178,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   }, []);
 
   useEffect(() => {
-    if (property.listingType !== "DailyRent") return;
+    if (property.listingType?.toLowerCase() !== "dailyrent") return;
     ratingsApi.getSummary(property.id)
       .then((s) => { setTopSummary(s); setRatingLoaded(true); })
       .catch(() => { setRatingLoaded(true); });
@@ -324,13 +324,14 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   const hasContactInfo    = !!(property.ownerPhone || (hasRecipient && !isOwn));
   const advertiserName    = property.ownerName ?? property.companyName ?? "المعلن";
   const advertiserPhoto   = property.ownerPhoto ?? property.companyLogoUrl ?? null;
-  const isDailyRent       = property.listingType === "DailyRent";
+  const isDailyRent       = property.listingType?.toLowerCase() === "dailyrent";
   const canBook           = isDailyRent && !isOwn;
   const showRatings       = isDailyRent;
   const hasSelectedDates  = !!bookingForm.startDate && !!bookingForm.endDate;
 
   // DEBUG — temporary console logs to diagnose live rendering. Remove after confirmation.
   useEffect(() => {
+    console.log("LISTING TYPE DEBUG:", property.listingType);
     console.log("[PropertyDetail DEBUG]", {
       id: property.id,
       listingType: property.listingType,

@@ -1166,7 +1166,7 @@ public class PropertyService : IPropertyService
         Currency = p.Currency,
         Area = p.Area,
         Type = p.Type.ToString(),
-        ListingType = p.ListingType,
+        ListingType = NormalizeListingType(p.ListingType),
         Status = p.Status.ToString(),
         Province = p.Province,
         City = p.City,
@@ -1228,5 +1228,21 @@ public class PropertyService : IPropertyService
         CreatedByRole      = p.CreatedByRole,
         CreatedByCompanyId = p.CreatedByCompanyId,
     };
+
+    /// <summary>
+    /// Normalises listingType to a canonical PascalCase value regardless of how
+    /// it was stored in the database (e.g. "dailyrent", "DAILYRENT" → "DailyRent").
+    /// </summary>
+    private static string NormalizeListingType(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return value ?? string.Empty;
+        return value.ToLowerInvariant() switch
+        {
+            "dailyrent"  => "DailyRent",
+            "sale"       => "Sale",
+            "rent"       => "Rent",
+            _            => value,
+        };
+    }
 
 }
