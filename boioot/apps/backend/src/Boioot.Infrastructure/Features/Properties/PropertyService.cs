@@ -335,7 +335,8 @@ public class PropertyService : IPropertyService
             Features = request.Features is { Count: > 0 }
                 ? System.Text.Json.JsonSerializer.Serialize(request.Features)
                 : null,
-            IsBookable = request.IsBookable && string.Equals(request.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase),
+            // DailyRent listings are bookable by default; non-DailyRent listings are never bookable.
+            IsBookable = string.Equals(request.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase),
             // ── Audit — server-side only, never from request body ─────────────
             CreatedByUserId   = userId.ToString(),
             CreatedByRole     = userRole,
@@ -390,7 +391,8 @@ public class PropertyService : IPropertyService
         property.Latitude = request.Latitude;
         property.Longitude = request.Longitude;
         property.AgentId = request.AgentId;
-        property.IsBookable = request.IsBookable && string.Equals(request.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase);
+        // DailyRent listings are bookable by default; non-DailyRent listings are never bookable.
+        property.IsBookable = string.Equals(request.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase);
 
         // Update Features — always overwrite with the latest selection
         property.Features = request.Features is { Count: > 0 }
@@ -783,7 +785,8 @@ public class PropertyService : IPropertyService
                                     ? System.Text.Json.JsonSerializer.Serialize(request.Features)
                                     : null,
             VideoUrl          = request.VideoUrl?.Trim(),
-            IsBookable        = request.IsBookable && string.Equals(request.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase),
+            // DailyRent listings are bookable by default; non-DailyRent listings are never bookable.
+            IsBookable        = string.Equals(request.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase),
             // ── Subscription linkage ──────────────────────────────────────────
             // Set AccountId so limit enforcement (CanCreatePropertyAsync) counts correctly.
             AccountId          = acctId,
@@ -1197,7 +1200,8 @@ public class PropertyService : IPropertyService
                 ? []
                 : System.Text.Json.JsonSerializer.Deserialize<List<string>>(p.Features) ?? []),
         VideoUrl = p.VideoUrl,
-        IsBookable = p.IsBookable,
+        // Legacy fallback: DailyRent properties are always bookable regardless of stored IsBookable value.
+        IsBookable = p.IsBookable || string.Equals(p.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase),
         Images = p.Images
             .OrderByDescending(i => i.IsCover)   // cover first
             .ThenBy(i => i.Order)

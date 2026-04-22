@@ -169,6 +169,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
 
   const [pageUrl, setPageUrl] = useState("");
   const [topSummary, setTopSummary] = useState<{ average: number; count: number } | null>(null);
+  const [ratingLoaded, setRatingLoaded] = useState(false);
 
   const reviewsSectionRef = useRef<HTMLDivElement>(null);
 
@@ -179,8 +180,8 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   useEffect(() => {
     if (property.listingType !== "DailyRent") return;
     ratingsApi.getSummary(property.id)
-      .then((s) => { if (s.count > 0) setTopSummary(s); })
-      .catch(() => {});
+      .then((s) => { setTopSummary(s); setRatingLoaded(true); })
+      .catch(() => { setRatingLoaded(true); });
   }, [property.id, property.listingType]);
 
   useEffect(() => {
@@ -323,8 +324,9 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   const hasContactInfo    = !!(property.ownerPhone || (hasRecipient && !isOwn));
   const advertiserName    = property.ownerName ?? property.companyName ?? "المعلن";
   const advertiserPhoto   = property.ownerPhoto ?? property.companyLogoUrl ?? null;
-  const canBook           = property.isBookable && property.listingType === "DailyRent" && !isOwn;
-  const showRatings       = property.listingType === "DailyRent";
+  const isDailyRent       = property.listingType === "DailyRent";
+  const canBook           = isDailyRent && !isOwn;
+  const showRatings       = isDailyRent;
   const hasSelectedDates  = !!bookingForm.startDate && !!bookingForm.endDate;
 
   // DEBUG — temporary console logs to diagnose live rendering. Remove after confirmation.
@@ -333,14 +335,16 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
       id: property.id,
       listingType: property.listingType,
       isBookable: property.isBookable,
+      isDailyRent,
       isOwn,
       canBook,
       showRatings,
+      ratingLoaded,
       topSummary,
       resolvedRecipient,
       userId: user?.id ?? null,
     });
-  }, [property.id, property.listingType, property.isBookable, isOwn, canBook, showRatings, topSummary, resolvedRecipient, user?.id]);
+  }, [property.id, property.listingType, property.isBookable, isDailyRent, isOwn, canBook, showRatings, ratingLoaded, topSummary, resolvedRecipient, user?.id]);
   const canSubmitBooking  = !bookingLoading && (!hasSelectedDates || availability === "available");
   const bookingNights     = getNightCount(bookingForm.startDate, bookingForm.endDate);
   const bookingTotal      = property.price * bookingNights;
@@ -408,32 +412,50 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
               {property.address && ` — ${property.address}`}
             </p>
 
-            {/* ── Compact rating chip (DailyRent only) — clickable, scrolls to reviews ── */}
-            {topSummary && (
-              <button
-                type="button"
-                onClick={() => reviewsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                style={{
+            {/* ── Compact rating chip (DailyRent only) — always visible after load ── */}
+            {showRatings && ratingLoaded && (
+              topSummary && topSummary.count > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => reviewsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    background: "#fffbeb",
+                    border: "1px solid #fde68a",
+                    borderRadius: "20px",
+                    padding: "0.3rem 0.9rem",
+                    marginBottom: "1.25rem",
+                    cursor: "pointer",
+                    fontSize: "0.88rem",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <span style={{ color: "#f59e0b", fontSize: "1.05rem", lineHeight: 1 }}>★</span>
+                  <strong style={{ color: "#92400e" }}>{topSummary.average.toFixed(1)}</strong>
+                  <span style={{ color: "#a16207" }}>·</span>
+                  <span style={{ color: "#78350f", textDecoration: "underline", textUnderlineOffset: "3px" }}>
+                    {topSummary.count} تقييم
+                  </span>
+                </button>
+              ) : (
+                <p style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "0.4rem",
-                  background: "#fffbeb",
-                  border: "1px solid #fde68a",
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
                   borderRadius: "20px",
                   padding: "0.3rem 0.9rem",
                   marginBottom: "1.25rem",
-                  cursor: "pointer",
-                  fontSize: "0.88rem",
-                  fontFamily: "inherit",
-                }}
-              >
-                <span style={{ color: "#f59e0b", fontSize: "1.05rem", lineHeight: 1 }}>★</span>
-                <strong style={{ color: "#92400e" }}>{topSummary.average.toFixed(1)}</strong>
-                <span style={{ color: "#a16207" }}>·</span>
-                <span style={{ color: "#78350f", textDecoration: "underline", textUnderlineOffset: "3px" }}>
-                  {topSummary.count} تقييم
-                </span>
-              </button>
+                  fontSize: "0.85rem",
+                  color: "#64748b",
+                  margin: "0 0 1.25rem",
+                }}>
+                  لا توجد تقييمات بعد
+                </p>
+              )
             )}
 
             {/* Description */}
@@ -527,27 +549,29 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                 </div>
               </div>
 
-              {/* ── Primary CTA: Booking (DailyRent only) ── */}
-              {canBook && (
+              {/* ── Primary CTA: Booking (DailyRent — always visible, disabled for owner) ── */}
+              {isDailyRent && (
                 <div style={{ marginBottom: "1rem" }}>
                   <button
                     type="button"
-                    onClick={openBooking}
+                    onClick={isOwn ? undefined : openBooking}
+                    disabled={isOwn}
                     style={{
                       width: "100%",
                       height: "56px",
                       border: "none",
                       borderRadius: "12px",
-                      background: "var(--color-primary)",
+                      background: isOwn ? "#94a3b8" : "var(--color-primary)",
                       color: "#fff",
                       fontWeight: 800,
                       fontSize: "17px",
-                      cursor: "pointer",
+                      cursor: isOwn ? "not-allowed" : "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "0.5rem",
-                      boxShadow: "0 4px 14px rgba(37,99,235,0.28)",
+                      boxShadow: isOwn ? "none" : "0 4px 14px rgba(37,99,235,0.28)",
+                      opacity: isOwn ? 0.75 : 1,
                     }}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -556,10 +580,10 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                       <line x1="8" y1="2" x2="8" y2="6"/>
                       <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
-                    أرسل طلب حجز
+                    {isOwn ? "هذا إعلانك" : "أرسل طلب حجز"}
                   </button>
                   <p style={{ margin: "0.4rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)", textAlign: "center" }}>
-                    يمكنك إرسال طلب حجز مباشر للمعلن
+                    {isOwn ? "لا يمكنك حجز إعلانك الخاص" : "يمكنك إرسال طلب حجز مباشر للمعلن"}
                   </p>
                 </div>
               )}
