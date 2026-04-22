@@ -96,7 +96,7 @@ public class BookingsController : BaseController
                    COALESCE(b."GuestCount", 1) AS "GuestCount",
                    b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt"
             FROM "Bookings" b
-            INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
+            INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
             WHERE b."RequestedByUserId" = @userId
             ORDER BY b."CreatedAt" DESC
             """, cmd => AddParameter(cmd, "@userId", GetUserId()), ct);
@@ -119,7 +119,7 @@ public class BookingsController : BaseController
                    COALESCE(b."GuestCount", 1) AS "GuestCount",
                    b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt"
             FROM "Bookings" b
-            INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
+            INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
             WHERE b."PropertyOwnerUserId" = @userIdText OR p."OwnerId" = @userIdText OR p."CreatedByUserId" = @userIdText
             ORDER BY b."CreatedAt" DESC
             """, cmd => AddParameter(cmd, "@userIdText", userIdText), ct);
@@ -334,7 +334,7 @@ public class BookingsController : BaseController
             SELECT b."Id", b."PropertyId", b."RequestedByUserId", b."PropertyOwnerUserId", b."StartDate", b."EndDate", b."Status",
                    p."Title" AS "PropertyTitle", p."OwnerId", p."CreatedByUserId"
             FROM "Bookings" b
-            INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
+            INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
             WHERE b."Id" = @id
             """, cmd => AddParameter(cmd, "@id", bookingId), ct);
 
@@ -372,7 +372,7 @@ public class BookingsController : BaseController
                    COALESCE(b."GuestCount", 1) AS "GuestCount",
                    b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt"
             FROM "Bookings" b
-            INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
+            INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
             WHERE b."Id" = @id
             """, cmd => AddParameter(cmd, "@id", bookingId), ct);
 

@@ -1,0 +1,131 @@
+أريد بناء نظام حجز يدوي كامل (Manual Booking Workflow) فوق النظام الحالي بدون كسر أي شيء موجود.
+
+⚠️ مهم:
+
+* لا تغير database structure إلا إذا ضروري
+* لا تكسر endpoints الحالية
+* التعديل يكون incremental و production-safe
+
+---
+
+🎯 الهدف:
+
+تحويل الحجز من auto-flow إلى manual approval flow كالتالي:
+
+1. المستأجر ينشئ الحجز → status = PendingApproval
+2. المعلن يوافق → status = ApprovedAwaitingPaymentProof
+3. المستأجر يرفع إثبات تحويل + ملاحظة → status = PaymentProofSubmitted
+4. المعلن يؤكد → status = Confirmed
+
+---
+
+🧱 Backend المطلوب:
+
+1. تأكد من وجود الحالات التالية في BookingStatus:
+
+* PendingApproval
+* ApprovedAwaitingPaymentProof
+* PaymentProofSubmitted
+* Confirmed
+* Rejected
+
+---
+
+2. أضف endpoints جديدة:
+
+### ✅ موافقة المعلن:
+
+POST /api/bookings/{id}/approve
+
+* يتحقق أن المستخدم Owner للعقار
+* يغير status إلى:
+  ApprovedAwaitingPaymentProof
+
+---
+
+### ❌ رفض:
+
+POST /api/bookings/{id}/reject
+
+* يغير status إلى Rejected
+
+---
+
+### 📤 رفع إثبات:
+
+POST /api/bookings/{id}/submit-proof
+
+Body:
+
+* files (images)
+
+* note (string)
+
+* يحفظ:
+  PaymentProofUrls[]
+  PaymentProofNote
+  PaymentProofSubmittedAt
+
+* يغير status إلى:
+  PaymentProofSubmitted
+
+---
+
+### ✅ تأكيد نهائي:
+
+POST /api/bookings/{id}/confirm
+
+* فقط للمالك
+* يغير status إلى Confirmed
+* يسجل ConfirmedAt
+
+---
+
+🧱 Frontend المطلوب:
+
+📍 في dashboard/bookings:
+
+## 👤 Owner View:
+
+* Tab: PendingApproval
+  → زر: "موافقة" / "رفض"
+
+* Tab: PaymentProofSubmitted
+  → عرض الصور + الملاحظة
+  → زر: "تأكيد الحجز" / "رفض"
+
+---
+
+## 👤 Tenant View:
+
+* إذا status = ApprovedAwaitingPaymentProof:
+  → يظهر:
+
+  * upload images
+  * textarea note
+  * زر "إرسال إثبات الدفع"
+
+---
+
+🧠 UX مهم:
+
+* رسائل واضحة بالعربي
+* Disable الأزرار أثناء loading
+* Toast success/error
+
+---
+
+🧪 لا تكسر:
+
+* create booking
+* existing API contracts
+
+---
+
+🎯 النتيجة المطلوبة:
+
+* نظام حجز يعمل بالكامل بدون أي 500 errors
+* workflow واضح
+* كل مرحلة لها UI واضح
+
+ابدأ خطوة خطوة وطبق التعديلات.

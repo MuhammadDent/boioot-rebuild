@@ -282,68 +282,41 @@ public class BookingService : IBookingService
 
     public async Task<IReadOnlyList<BookingResponse>> GetMineAsync(Guid userId, CancellationToken ct = default)
     {
-        return await (
-            from booking in _context.Bookings.AsNoTracking()
-            join property in _context.Properties.AsNoTracking() on booking.PropertyId equals property.Id
-            where booking.RequestedByUserId == userId
-            orderby booking.CreatedAt descending
-            select new BookingResponse
-            {
-                Id = booking.Id,
-                PropertyId = booking.PropertyId,
-                PropertyTitle = property.Title,
-                RequestedByUserId = booking.RequestedByUserId,
-                PropertyOwnerUserId = booking.PropertyOwnerUserId,
-                StartDate = booking.StartDate,
-                EndDate = booking.EndDate,
-                GuestName = booking.GuestName,
-                Phone = booking.Phone,
-                Notes = booking.Notes,
-                GuestCount = booking.GuestCount < 1 ? 1 : booking.GuestCount,
-                PricePerNight = booking.PricePerNight,
-                TotalAmount = booking.TotalAmount,
-                CommissionPercent = booking.CommissionPercent,
-                CommissionAmount = booking.CommissionAmount,
-                PaymentStatus = booking.PaymentStatus,
-                Status = booking.Status == Confirmed ? Approved : booking.Status,
-                CreatedAt = booking.CreatedAt
-            })
+        var bookings = await _context.Bookings.AsNoTracking()
+            .Where(b => b.RequestedByUserId == userId)
+            .OrderByDescending(b => b.CreatedAt)
             .ToListAsync(ct);
+
+        var propertyGuids = bookings.Select(b => b.PropertyId).Distinct().ToList();
+        var titles = await _context.Properties.AsNoTracking()
+            .Where(p => propertyGuids.Contains(p.Id))
+            .Select(p => new { p.Id, p.Title })
+            .ToDictionaryAsync(p => p.Id, p => p.Title, ct);
+
+        return bookings.Select(b => Map(b, titles.GetValueOrDefault(b.PropertyId))).ToList();
     }
 
     public async Task<IReadOnlyList<BookingResponse>> GetForMyPropertiesAsync(Guid userId, CancellationToken ct = default)
     {
         var userIdText = userId.ToString();
 
-        return await (
-            from booking in _context.Bookings.AsNoTracking()
-            join property in _context.Properties.AsNoTracking() on booking.PropertyId equals property.Id
-            where booking.PropertyOwnerUserId == userIdText
-               || property.OwnerId == userIdText
-               || property.CreatedByUserId == userIdText
-            orderby booking.CreatedAt descending
-            select new BookingResponse
-            {
-                Id = booking.Id,
-                PropertyId = booking.PropertyId,
-                PropertyTitle = property.Title,
-                RequestedByUserId = booking.RequestedByUserId,
-                PropertyOwnerUserId = booking.PropertyOwnerUserId,
-                StartDate = booking.StartDate,
-                EndDate = booking.EndDate,
-                GuestName = booking.GuestName,
-                Phone = booking.Phone,
-                Notes = booking.Notes,
-                GuestCount = booking.GuestCount < 1 ? 1 : booking.GuestCount,
-                PricePerNight = booking.PricePerNight,
-                TotalAmount = booking.TotalAmount,
-                CommissionPercent = booking.CommissionPercent,
-                CommissionAmount = booking.CommissionAmount,
-                PaymentStatus = booking.PaymentStatus,
-                Status = booking.Status == Confirmed ? Approved : booking.Status,
-                CreatedAt = booking.CreatedAt
-            })
+        var myPropertyGuids = await _context.Properties.AsNoTracking()
+            .Where(p => p.OwnerId == userIdText || p.CreatedByUserId == userIdText)
+            .Select(p => p.Id)
             .ToListAsync(ct);
+
+        var bookings = await _context.Bookings.AsNoTracking()
+            .Where(b => b.PropertyOwnerUserId == userIdText || myPropertyGuids.Contains(b.PropertyId))
+            .OrderByDescending(b => b.CreatedAt)
+            .ToListAsync(ct);
+
+        var propertyGuids = bookings.Select(b => b.PropertyId).Distinct().ToList();
+        var titles = await _context.Properties.AsNoTracking()
+            .Where(p => propertyGuids.Contains(p.Id))
+            .Select(p => new { p.Id, p.Title })
+            .ToDictionaryAsync(p => p.Id, p => p.Title, ct);
+
+        return bookings.Select(b => Map(b, titles.GetValueOrDefault(b.PropertyId))).ToList();
     }
 
     public async Task<BookingResponse> ConfirmAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default)
