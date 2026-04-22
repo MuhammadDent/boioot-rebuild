@@ -18,6 +18,12 @@ public class BookingResponse
     public decimal CommissionPercent { get; set; }
     public decimal CommissionAmount { get; set; }
     public string PaymentStatus { get; set; } = "NotPaid";
-    public string Status { get; set; } = "Pending";
+    public string Status { get; set; } = "PendingApproval";
     public DateTime CreatedAt { get; set; }
+
+    public string? PaymentProofUrls { get; set; }
+    public string? PaymentProofNote { get; set; }
+    public DateTime? PaymentProofSubmittedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime? ConfirmedAt { get; set; }
 }

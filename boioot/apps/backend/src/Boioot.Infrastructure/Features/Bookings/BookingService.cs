@@ -15,10 +15,15 @@ namespace Boioot.Infrastructure.Features.Bookings;
 public class BookingService : IBookingService
 {
     private const string Pending = "Pending";
+    private const string PendingApproval = "PendingApproval";
     private const string Approved = "Approved";
+    private const string ApprovedAwaitingPaymentProof = "ApprovedAwaitingPaymentProof";
+    private const string PaymentProofSubmitted = "PaymentProofSubmitted";
     private const string Confirmed = "Confirmed";
     private const string Rejected = "Rejected";
     private const string Cancelled = "Cancelled";
+    private const string CancelledByTenant = "CancelledByTenant";
+    private const string CancelledByOwner = "CancelledByOwner";
     private const string Completed = "Completed";
     private const string NotPaid = "NotPaid";
     private const string ReadyForPayment = "ReadyForPayment";
@@ -81,8 +86,6 @@ public class BookingService : IBookingService
         if (end <= start)
             throw new BoiootException("تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول", 400);
 
-        await EnsureNoApprovedOverlapAsync(property.Id, start, end, null, ct);
-
         var ownerUserId = !string.IsNullOrWhiteSpace(property.OwnerId)
             ? property.OwnerId
             : property.CreatedByUserId;
@@ -112,7 +115,7 @@ public class BookingService : IBookingService
             CommissionPercent = commissionPercent,
             CommissionAmount = commissionAmount,
             PaymentStatus = NotPaid,
-            Status = Pending
+            Status = PendingApproval
         };
 
         _context.Bookings.Add(booking);
@@ -318,27 +321,28 @@ public class BookingService : IBookingService
 
     public async Task<BookingResponse> ConfirmAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default)
     {
-        return await ApproveAsync(ownerUserId, bookingId, ct);
+        return await OwnerConfirmAsync(ownerUserId, bookingId, ct);
     }
 
     public async Task<BookingResponse> ApproveAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default)
     {
         var (booking, propertyTitle) = await GetOwnedBookingAsync(ownerUserId, bookingId, ct);
 
-        if (!string.Equals(booking.Status, Pending, StringComparison.OrdinalIgnoreCase))
+        var isPending = string.Equals(booking.Status, PendingApproval, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(booking.Status, Pending, StringComparison.OrdinalIgnoreCase);
+        if (!isPending)
             throw new BoiootException("يمكن الموافقة على طلبات الحجز المعلقة فقط", 400);
 
-        await EnsureNoApprovedOverlapAsync(booking.PropertyId, booking.StartDate, booking.EndDate, booking.Id, ct);
-
-        booking.Status = Approved;
+        booking.Status = ApprovedAwaitingPaymentProof;
         booking.PaymentStatus = ReadyForPayment;
+        booking.ApprovedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(ct);
 
         await NotifySafelyAsync(
             booking.RequestedByUserId.ToString(),
             "booking_approved",
-            "تمت الموافقة على طلب الحجز",
-            $"وافق المالك على حجزك للعقار {propertyTitle}. يمكنك متابعة تفاصيل الحجز من لوحة التحكم.",
+            "تمت الموافقة المبدئية على طلب الحجز",
+            $"وافق المالك مبدئياً على حجزك للعقار {propertyTitle}. يرجى رفع إثبات التحويل لإكمال الحجز.",
             propertyTitle,
             booking.Id,
             ct);
@@ -350,8 +354,13 @@ public class BookingService : IBookingService
     {
         var (booking, propertyTitle) = await GetOwnedBookingAsync(ownerUserId, bookingId, ct);
 
-        if (!string.Equals(booking.Status, Pending, StringComparison.OrdinalIgnoreCase))
-            throw new BoiootException("يمكن رفض طلبات الحجز المعلقة فقط", 400);
+        var canReject =
+            string.Equals(booking.Status, PendingApproval, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, Pending, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, ApprovedAwaitingPaymentProof, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, PaymentProofSubmitted, StringComparison.OrdinalIgnoreCase);
+        if (!canReject)
+            throw new BoiootException("لا يمكن رفض هذا الطلب في حالته الحالية", 400);
 
         booking.Status = Rejected;
         await _context.SaveChangesAsync(ct);
@@ -380,10 +389,11 @@ public class BookingService : IBookingService
         if (string.Equals(booking.Status, Completed, StringComparison.OrdinalIgnoreCase))
             throw new BoiootException("لا يمكن إلغاء حجز مكتمل", 400);
 
-        if (string.Equals(booking.Status, Cancelled, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(booking.Status, CancelledByTenant, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, Cancelled, StringComparison.OrdinalIgnoreCase))
             return Map(booking, await GetPropertyTitleAsync(booking.PropertyId, ct));
 
-        booking.Status = Cancelled;
+        booking.Status = CancelledByTenant;
         if (!string.Equals(booking.PaymentStatus, Paid, StringComparison.OrdinalIgnoreCase))
             booking.PaymentStatus = NotPaid;
         await _context.SaveChangesAsync(ct);
@@ -492,12 +502,126 @@ public class BookingService : IBookingService
         CommissionPercent = booking.CommissionPercent,
         CommissionAmount = booking.CommissionAmount,
         PaymentStatus = booking.PaymentStatus,
-        Status = NormalizeStatus(booking.Status),
-        CreatedAt = booking.CreatedAt
+        Status = booking.Status,
+        CreatedAt = booking.CreatedAt,
+        PaymentProofUrls = booking.PaymentProofUrls,
+        PaymentProofNote = booking.PaymentProofNote,
+        PaymentProofSubmittedAt = booking.PaymentProofSubmittedAt,
+        ApprovedAt = booking.ApprovedAt,
+        ConfirmedAt = booking.ConfirmedAt
     };
 
-    private static string NormalizeStatus(string status)
+    public async Task<BookingResponse> SubmitPaymentProofAsync(Guid tenantUserId, Guid bookingId, SubmitPaymentProofRequest request, CancellationToken ct = default)
     {
-        return string.Equals(status, Confirmed, StringComparison.OrdinalIgnoreCase) ? Approved : status;
+        var booking = await _context.Bookings
+            .FirstOrDefaultAsync(b => b.Id == bookingId && b.RequestedByUserId == tenantUserId, ct)
+            ?? throw new BoiootException("طلب الحجز غير موجود", 404);
+
+        var canSubmit =
+            string.Equals(booking.Status, ApprovedAwaitingPaymentProof, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, Approved, StringComparison.OrdinalIgnoreCase);
+        if (!canSubmit)
+            throw new BoiootException("لا يمكن رفع إثبات الدفع في الحالة الحالية للطلب. يجب أن يكون الطلب في حالة 'بانتظار إثبات الدفع'.", 400);
+
+        if (request.ProofUrls == null || request.ProofUrls.Count == 0)
+            throw new BoiootException("يرجى رفع صورة إثبات الدفع", 400);
+
+        booking.PaymentProofUrls = System.Text.Json.JsonSerializer.Serialize(request.ProofUrls);
+        booking.PaymentProofNote = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+        booking.PaymentProofSubmittedAt = DateTime.UtcNow;
+        booking.Status = PaymentProofSubmitted;
+        await _context.SaveChangesAsync(ct);
+
+        var propertyTitle = await GetPropertyTitleAsync(booking.PropertyId, ct);
+
+        await NotifySafelyAsync(
+            booking.PropertyOwnerUserId,
+            "payment_proof_submitted",
+            "تم رفع إثبات الدفع",
+            $"قام المستأجر برفع إثبات الدفع للعقار {propertyTitle}. يرجى المراجعة والتأكيد.",
+            propertyTitle,
+            booking.Id,
+            ct);
+
+        return Map(booking, propertyTitle);
+    }
+
+    public async Task<BookingResponse> OwnerConfirmAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default)
+    {
+        var (booking, propertyTitle) = await GetOwnedBookingAsync(ownerUserId, bookingId, ct);
+
+        if (!string.Equals(booking.Status, PaymentProofSubmitted, StringComparison.OrdinalIgnoreCase))
+            throw new BoiootException("يمكن تأكيد الحجز بعد رفع إثبات الدفع فقط", 400);
+
+        booking.Status = Confirmed;
+        booking.ConfirmedAt = DateTime.UtcNow;
+        booking.PaymentStatus = Paid;
+        await _context.SaveChangesAsync(ct);
+
+        await NotifySafelyAsync(
+            booking.RequestedByUserId.ToString(),
+            "booking_confirmed",
+            "تم تأكيد حجزك",
+            $"تم تأكيد حجزك للعقار {propertyTitle}. نتمنى لك إقامة ممتازة.",
+            propertyTitle,
+            booking.Id,
+            ct);
+
+        return Map(booking, propertyTitle);
+    }
+
+    public async Task<BookingResponse> RejectProofAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default)
+    {
+        var (booking, propertyTitle) = await GetOwnedBookingAsync(ownerUserId, bookingId, ct);
+
+        if (!string.Equals(booking.Status, PaymentProofSubmitted, StringComparison.OrdinalIgnoreCase))
+            throw new BoiootException("لا توجد وثيقة دفع لمراجعتها في هذا الطلب", 400);
+
+        booking.Status = ApprovedAwaitingPaymentProof;
+        booking.PaymentProofUrls = null;
+        booking.PaymentProofNote = null;
+        booking.PaymentProofSubmittedAt = null;
+        await _context.SaveChangesAsync(ct);
+
+        await NotifySafelyAsync(
+            booking.RequestedByUserId.ToString(),
+            "payment_proof_rejected",
+            "يرجى مراجعة إثبات الدفع",
+            $"طلب المالك مراجعة إثبات الدفع للعقار {propertyTitle}. يرجى رفع صورة واضحة.",
+            propertyTitle,
+            booking.Id,
+            ct);
+
+        return Map(booking, propertyTitle);
+    }
+
+    public async Task<BookingResponse> OwnerCancelAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default)
+    {
+        var (booking, propertyTitle) = await GetOwnedBookingAsync(ownerUserId, bookingId, ct);
+
+        var alreadyDone =
+            string.Equals(booking.Status, Confirmed, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, Completed, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, CancelledByTenant, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, CancelledByOwner, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, Cancelled, StringComparison.OrdinalIgnoreCase);
+        if (alreadyDone)
+            throw new BoiootException("لا يمكن إلغاء هذا الحجز في حالته الحالية", 400);
+
+        booking.Status = CancelledByOwner;
+        if (!string.Equals(booking.PaymentStatus, Paid, StringComparison.OrdinalIgnoreCase))
+            booking.PaymentStatus = NotPaid;
+        await _context.SaveChangesAsync(ct);
+
+        await NotifySafelyAsync(
+            booking.RequestedByUserId.ToString(),
+            "booking_cancelled_owner",
+            "تم إلغاء الحجز من قبل المالك",
+            $"تم إلغاء حجزك للعقار {propertyTitle} من قبل المالك.",
+            propertyTitle,
+            booking.Id,
+            ct);
+
+        return Map(booking, propertyTitle);
     }
 }

@@ -40,11 +40,6 @@ public class BookingsController : BaseController
         try { await EnsurePaymentStatusColumnAsync(ct); } catch (Exception ex) { _logger.LogWarning(ex, "[BookingsController] EnsurePaymentStatus non-critical failure"); }
         try
         {
-            var start = DateTime.SpecifyKind(request.StartDate.Date, DateTimeKind.Utc);
-            var end   = DateTime.SpecifyKind(request.EndDate.Date,   DateTimeKind.Utc);
-            if (end > start && await HasBlockingOverlapAsync(request.PropertyId, start, end, null, ct))
-                return Conflict(new { message = "هذه الفترة محجوزة مسبقاً لهذا العقار" });
-
             var result = await _bookingService.CreateAsync(GetUserId(), request, ct);
             return StatusCode(201, result);
         }
@@ -74,9 +69,10 @@ public class BookingsController : BaseController
                    COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
                    COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
                    COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
-                   CASE WHEN b."Status" = 'Confirmed' THEN 'Approved' ELSE b."Status" END AS "Status",
+                   b."Status",
                    b."CreatedAt",
-                   COALESCE(b."GuestCount", 1) AS "GuestCount"
+                   COALESCE(b."GuestCount", 1) AS "GuestCount",
+                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
             WHERE b."RequestedByUserId" = @userId
@@ -96,9 +92,10 @@ public class BookingsController : BaseController
                    COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
                    COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
                    COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
-                   CASE WHEN b."Status" = 'Confirmed' THEN 'Approved' ELSE b."Status" END AS "Status",
+                   b."Status",
                    b."CreatedAt",
-                   COALESCE(b."GuestCount", 1) AS "GuestCount"
+                   COALESCE(b."GuestCount", 1) AS "GuestCount",
+                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
             WHERE b."PropertyOwnerUserId" = @userIdText OR p."OwnerId" = @userIdText OR p."CreatedByUserId" = @userIdText
@@ -110,7 +107,15 @@ public class BookingsController : BaseController
     [HttpPost("{id:guid}/confirm")]
     public async Task<IActionResult> Confirm(Guid id, CancellationToken ct)
     {
-        return await Approve(id, ct);
+        try
+        {
+            var result = await _bookingService.OwnerConfirmAsync(GetUserId(), id, ct);
+            return Ok(result);
+        }
+        catch (Boioot.Application.Exceptions.BoiootException ex)
+        {
+            return StatusCode(ex.StatusCode, new { message = ex.Message });
+        }
     }
 
     [HttpPost("{id:guid}/approve")]
@@ -125,23 +130,25 @@ public class BookingsController : BaseController
         if (!CanManage(booking, userIdText))
             return StatusCode(403, new { message = "غير مصرح لك بإدارة هذا الحجز" });
 
-        if (!string.Equals(booking.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+        var isPending =
+            string.Equals(booking.Status, "PendingApproval", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, "Pending", StringComparison.OrdinalIgnoreCase);
+        if (!isPending)
             return BadRequest(new { message = "يمكن الموافقة على طلبات الحجز المعلقة فقط" });
 
-        if (await HasBlockingOverlapAsync(booking.PropertyId, booking.StartDate, booking.EndDate, id, ct))
-            return Conflict(new { message = "هذه الفترة محجوزة مسبقاً لهذا العقار" });
-
+        var now = DateTime.UtcNow;
         await ExecuteAsync("""
             UPDATE "Bookings"
-            SET "Status" = 'Approved', "PaymentStatus" = 'ReadyForPayment', "UpdatedAt" = @updatedAt
+            SET "Status" = 'ApprovedAwaitingPaymentProof', "PaymentStatus" = 'ReadyForPayment', "ApprovedAt" = @approvedAt, "UpdatedAt" = @updatedAt
             WHERE "Id" = @id
             """, cmd =>
         {
             AddParameter(cmd, "@id", id);
-            AddParameter(cmd, "@updatedAt", DateTime.UtcNow);
+            AddParameter(cmd, "@approvedAt", now);
+            AddParameter(cmd, "@updatedAt", now);
         }, ct);
 
-        await NotifySafelyAsync(booking.RequestedByUserId, "booking_approved", "تمت الموافقة على طلب الحجز", $"وافق المالك على حجزك للعقار {booking.PropertyTitle}. يمكنك متابعة تفاصيل الحجز من لوحة التحكم.", booking.PropertyTitle, id, ct);
+        await NotifySafelyAsync(booking.RequestedByUserId, "booking_approved", "تمت الموافقة المبدئية على طلب الحجز", $"وافق المالك مبدئياً على حجزك للعقار {booking.PropertyTitle}. يرجى رفع إثبات التحويل لإكمال الحجز.", booking.PropertyTitle, id, ct);
 
         var result = await GetBookingByIdAsync(id, ct);
         return Ok(result);
@@ -159,8 +166,13 @@ public class BookingsController : BaseController
         if (!CanManage(booking, userIdText))
             return StatusCode(403, new { message = "غير مصرح لك بإدارة هذا الحجز" });
 
-        if (!string.Equals(booking.Status, "Pending", StringComparison.OrdinalIgnoreCase))
-            return BadRequest(new { message = "يمكن رفض طلبات الحجز المعلقة فقط" });
+        var canReject =
+            string.Equals(booking.Status, "PendingApproval", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, "Pending", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, "ApprovedAwaitingPaymentProof", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, "PaymentProofSubmitted", StringComparison.OrdinalIgnoreCase);
+        if (!canReject)
+            return BadRequest(new { message = "لا يمكن رفض هذا الطلب في حالته الحالية" });
 
         await ExecuteAsync("""
             UPDATE "Bookings"
@@ -181,8 +193,71 @@ public class BookingsController : BaseController
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
-        var result = await _bookingService.CancelAsync(GetUserId(), id, ct);
-        return Ok(result);
+        try
+        {
+            var result = await _bookingService.CancelAsync(GetUserId(), id, ct);
+            return Ok(result);
+        }
+        catch (Boioot.Application.Exceptions.BoiootException ex)
+        {
+            return StatusCode(ex.StatusCode, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:guid}/submit-proof")]
+    public async Task<IActionResult> SubmitProof(Guid id, [FromBody] Boioot.Application.Features.Bookings.DTOs.SubmitPaymentProofRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var result = await _bookingService.SubmitPaymentProofAsync(GetUserId(), id, request, ct);
+            return Ok(result);
+        }
+        catch (Boioot.Application.Exceptions.BoiootException ex)
+        {
+            return StatusCode(ex.StatusCode, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:guid}/confirm-payment")]
+    public async Task<IActionResult> ConfirmPayment(Guid id, CancellationToken ct)
+    {
+        try
+        {
+            var result = await _bookingService.OwnerConfirmAsync(GetUserId(), id, ct);
+            return Ok(result);
+        }
+        catch (Boioot.Application.Exceptions.BoiootException ex)
+        {
+            return StatusCode(ex.StatusCode, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:guid}/reject-proof")]
+    public async Task<IActionResult> RejectProof(Guid id, CancellationToken ct)
+    {
+        try
+        {
+            var result = await _bookingService.RejectProofAsync(GetUserId(), id, ct);
+            return Ok(result);
+        }
+        catch (Boioot.Application.Exceptions.BoiootException ex)
+        {
+            return StatusCode(ex.StatusCode, new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:guid}/cancel-owner")]
+    public async Task<IActionResult> CancelOwner(Guid id, CancellationToken ct)
+    {
+        try
+        {
+            var result = await _bookingService.OwnerCancelAsync(GetUserId(), id, ct);
+            return Ok(result);
+        }
+        catch (Boioot.Application.Exceptions.BoiootException ex)
+        {
+            return StatusCode(ex.StatusCode, new { message = ex.Message });
+        }
     }
 
     private async Task EnsurePaymentStatusColumnAsync(CancellationToken ct)
@@ -254,9 +329,10 @@ public class BookingsController : BaseController
                    COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
                    COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
                    COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
-                   CASE WHEN b."Status" = 'Confirmed' THEN 'Approved' ELSE b."Status" END AS "Status",
+                   b."Status",
                    b."CreatedAt",
-                   COALESCE(b."GuestCount", 1) AS "GuestCount"
+                   COALESCE(b."GuestCount", 1) AS "GuestCount",
+                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
             WHERE b."Id" = @id
@@ -319,9 +395,14 @@ public class BookingsController : BaseController
                 reader.GetDecimal(12),
                 reader.GetDecimal(13),
                 reader.GetString(14),
-                NormalizeBookingStatus(reader.GetString(15)),
+                reader.GetString(15),
                 reader.GetDateTime(16),
-                reader.IsDBNull(17) ? 1 : reader.GetInt32(17)));
+                reader.IsDBNull(17) ? 1 : reader.GetInt32(17),
+                reader.IsDBNull(18) ? null : reader.GetString(18),
+                reader.IsDBNull(19) ? null : reader.GetString(19),
+                reader.IsDBNull(20) ? null : reader.GetDateTime(20),
+                reader.IsDBNull(21) ? null : reader.GetDateTime(21),
+                reader.IsDBNull(22) ? null : reader.GetDateTime(22)));
         }
 
         return result;
@@ -383,11 +464,6 @@ public class BookingsController : BaseController
         command.Parameters.Add(parameter);
     }
 
-    private static string NormalizeBookingStatus(string status)
-    {
-        return string.Equals(status, "Confirmed", StringComparison.OrdinalIgnoreCase) ? "Approved" : status;
-    }
-
     private sealed record BookingListItem(
         Guid Id,
         Guid PropertyId,
@@ -406,7 +482,12 @@ public class BookingsController : BaseController
         string PaymentStatus,
         string Status,
         DateTime CreatedAt,
-        int GuestCount = 1);
+        int GuestCount = 1,
+        string? PaymentProofUrls = null,
+        string? PaymentProofNote = null,
+        DateTime? PaymentProofSubmittedAt = null,
+        DateTime? ApprovedAt = null,
+        DateTime? ConfirmedAt = null);
 
     private sealed record OwnerBookingRow(
         Guid Id,

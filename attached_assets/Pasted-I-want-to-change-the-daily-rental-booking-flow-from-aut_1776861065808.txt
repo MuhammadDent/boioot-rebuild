@@ -1,0 +1,243 @@
+I want to change the daily rental booking flow from automatic availability validation to a **manual approval workflow** controlled by the property owner.
+
+The current auto-availability flow is causing unnecessary complexity and errors.
+I want a simpler and more realistic workflow:
+
+## New booking flow
+
+### Step 1 — Tenant submits booking request
+
+The tenant selects:
+
+* check-in date
+* check-out date
+* guest count
+* optional note
+
+Then submits a booking request.
+
+At this stage, do NOT block the request with automatic availability checks.
+The request should simply be created and sent to the property owner for review.
+
+Initial status:
+
+* `PendingApproval`
+
+---
+
+### Step 2 — Owner reviews request
+
+The owner sees incoming booking requests for their property and can:
+
+* Approve initially
+* Reject
+
+If owner approves:
+status becomes:
+
+* `ApprovedAwaitingPaymentProof`
+
+If owner rejects:
+status becomes:
+
+* `Rejected`
+
+---
+
+### Step 3 — Tenant uploads payment proof
+
+After initial approval, the tenant should see a new section in their booking request details page:
+
+* upload one or more images/files as payment proof
+* add an optional note/message
+* submit proof
+
+After submission:
+status becomes:
+
+* `PaymentProofSubmitted`
+
+Important:
+
+* only the tenant who created the booking can upload proof
+* only after owner initial approval
+* do not allow payment proof upload before approval
+
+---
+
+### Step 4 — Owner confirms booking
+
+The owner can review:
+
+* uploaded proof image(s)/file(s)
+* tenant note
+
+Then owner can:
+
+* Confirm booking finally
+* Reject payment proof / send back for correction
+* Cancel booking if needed
+
+If owner confirms:
+status becomes:
+
+* `Confirmed`
+
+---
+
+## Required backend changes
+
+### Booking statuses
+
+Update booking status system to support:
+
+* PendingApproval
+* ApprovedAwaitingPaymentProof
+* PaymentProofSubmitted
+* Confirmed
+* Rejected
+* CancelledByTenant
+* CancelledByOwner
+
+### Booking entity
+
+Extend booking entity if needed with fields like:
+
+* PaymentProofUrls (or related attachment records)
+* PaymentProofNote
+* PaymentProofSubmittedAt
+* ApprovedAt
+* ConfirmedAt
+
+Use a clean scalable structure.
+If attachments already exist elsewhere in the project, reuse the existing upload/storage pattern safely.
+
+### Endpoints
+
+Create/update the necessary endpoints for:
+
+1. Create booking request
+2. Owner approve request initially
+3. Owner reject request
+4. Tenant upload payment proof
+5. Owner confirm booking
+6. Owner reject payment proof / request correction
+7. Tenant cancel request
+
+Also provide endpoints for:
+
+* tenant booking details
+* owner booking details
+* listing bookings / my bookings
+
+---
+
+## Required frontend changes
+
+### Property page
+
+On DailyRent property page:
+
+* remove dependence on real-time availability check
+* keep booking request form
+* on submit, create booking request directly
+* show a clear message that booking is subject to owner approval
+
+### Tenant dashboard / booking details
+
+Tenant should see booking status clearly.
+If status = ApprovedAwaitingPaymentProof:
+
+* show payment proof upload section
+* allow note entry
+* allow submit
+
+### Owner dashboard
+
+Owner should see:
+
+* new booking requests
+* booking details
+* tenant info
+* dates
+* guest count
+* note
+* action buttons:
+
+  * initial approve
+  * reject
+  * confirm after payment proof
+  * reject proof / request correction
+
+---
+
+## UX requirements
+
+### On property page
+
+The main CTA should be:
+
+* "أرسل طلب حجز"
+
+Helper text:
+
+* "سيتم إرسال الطلب إلى المعلن للمراجعة والموافقة"
+
+### After initial approval
+
+Tenant should see a clear notice:
+
+* "تمت الموافقة المبدئية، يرجى رفع إثبات التحويل لإكمال الحجز"
+
+### After final confirmation
+
+Show:
+
+* "تم تأكيد الحجز"
+
+---
+
+## Important business rules
+
+* Do NOT auto-reject based on availability endpoint
+* Do NOT use automatic availability check as a blocker for request creation
+* Owner has the final decision
+* Only owner can approve / confirm
+* Only tenant can upload proof for their own booking
+* Booking proof upload should be restricted to the correct status only
+* Keep all existing auth and permission checks strict
+
+---
+
+## Safety constraints
+
+* Do not redesign the whole app
+* Do not refactor unrelated systems
+* Keep current booking creation flow as the base, but convert it into a manual approval workflow
+* Reuse existing upload infrastructure if possible
+* Keep implementation production-safe and incremental
+
+---
+
+## Final deliverable
+
+At the end give me:
+
+1. exact files changed
+2. new/updated statuses
+3. new endpoints
+4. payment proof upload flow
+5. owner approval flow
+6. what remains for a future phase
+
+---
+
+## Future phase preparation only
+
+Structure the system so later we can add:
+
+* automatic expiry of pending approvals
+* admin dispute resolution
+* real payment integration
+* optional availability calendar
+  but do NOT build those now.

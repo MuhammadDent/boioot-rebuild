@@ -11,4 +11,8 @@ public interface IBookingService
     Task<BookingResponse> ConfirmAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default);
     Task<BookingResponse> RejectAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default);
     Task<BookingResponse> CancelAsync(Guid userId, Guid bookingId, CancellationToken ct = default);
+    Task<BookingResponse> SubmitPaymentProofAsync(Guid tenantUserId, Guid bookingId, SubmitPaymentProofRequest request, CancellationToken ct = default);
+    Task<BookingResponse> OwnerConfirmAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default);
+    Task<BookingResponse> RejectProofAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default);
+    Task<BookingResponse> OwnerCancelAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default);
 }

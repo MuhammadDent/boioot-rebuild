@@ -185,7 +185,18 @@ export interface PropertyResponse {
   moderationStatus?: string;
 }
 
-export type BookingStatus = "Pending" | "Approved" | "Confirmed" | "Rejected" | "Cancelled" | "Completed";
+export type BookingStatus =
+  | "Pending"
+  | "PendingApproval"
+  | "Approved"
+  | "ApprovedAwaitingPaymentProof"
+  | "PaymentProofSubmitted"
+  | "Confirmed"
+  | "Rejected"
+  | "Cancelled"
+  | "CancelledByTenant"
+  | "CancelledByOwner"
+  | "Completed";
 export type BookingPaymentStatus = "NotPaid" | "ReadyForPayment" | "Paid" | "Refunded";
 
 export interface CreateBookingRequest {
@@ -217,6 +228,11 @@ export interface BookingResponse {
   paymentStatus: BookingPaymentStatus | string;
   status: BookingStatus | string;
   createdAt: string;
+  paymentProofUrls?: string | null;
+  paymentProofNote?: string | null;
+  paymentProofSubmittedAt?: string | null;
+  approvedAt?: string | null;
+  confirmedAt?: string | null;
 }
 
 export interface AvailabilityResponse {

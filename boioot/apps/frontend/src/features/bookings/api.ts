@@ -30,4 +30,16 @@ export const bookingsApi = {
   cancel(id: string): Promise<BookingResponse> {
     return api.post<BookingResponse>(`/bookings/${id}/cancel`, {});
   },
+  submitProof(id: string, data: { proofUrls: string[]; note?: string }): Promise<BookingResponse> {
+    return api.post<BookingResponse>(`/bookings/${id}/submit-proof`, { proofUrls: data.proofUrls, note: data.note });
+  },
+  confirmPayment(id: string): Promise<BookingResponse> {
+    return api.post<BookingResponse>(`/bookings/${id}/confirm-payment`, {});
+  },
+  rejectProof(id: string): Promise<BookingResponse> {
+    return api.post<BookingResponse>(`/bookings/${id}/reject-proof`, {});
+  },
+  cancelOwner(id: string): Promise<BookingResponse> {
+    return api.post<BookingResponse>(`/bookings/${id}/cancel-owner`, {});
+  },
 };
