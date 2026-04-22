@@ -1,0 +1,70 @@
+We have fixed booking creation and booking retrieval, but there is still a structural data consistency issue that must be cleaned up safely.
+
+## Confirmed problem
+
+* `Bookings.PropertyId` is stored as native UUID
+* `Properties.Id` is stored as string/varchar
+* Current retrieval fix uses casts like:
+  `b."PropertyId"::text = p."Id"`
+
+This is a fragile workaround, not a clean long-term solution.
+
+## Goal
+
+Perform a safe, minimal, production-aware cleanup plan for Property ID consistency across the system.
+
+## Task
+
+### 1) First, do NOT refactor blindly
+
+I want a precise analysis of all places affected by `Properties.Id` type:
+
+* entity models
+* DTOs
+* controllers
+* services
+* raw SQL
+* frontend routes and links
+* seed/test data
+* any uploads, favorites, ratings, bookings, requests, or messaging references
+
+### 2) Recommend the safest target model
+
+Based on the current codebase, tell me whether the clean long-term source of truth should be:
+
+* all property IDs as UUID
+  or
+* all property IDs as string
+
+Given that bookings already use UUID, I want your recommendation based on the least risky path.
+
+### 3) Produce a migration-safe implementation plan
+
+I do NOT want code changes yet in this step.
+I want a concrete plan that includes:
+
+* what tables/columns would change
+* what code files would change
+* whether legacy IDs need backfill/mapping
+* how to avoid breaking existing URLs and property pages
+* how to avoid breaking ratings, favorites, requests, and bookings
+
+### 4) Temporary stability rule
+
+Until the cleanup is completed, identify every place where type mismatch can still break behavior and patch those safely if needed.
+
+### 5) Final output format
+
+Return only:
+
+1. affected files/modules
+2. recommended target ID type
+3. safest migration strategy
+4. risks to watch
+5. whether we should do this cleanup now or after finishing the booking approval workflow
+
+## Important
+
+* Do not implement the migration yet
+* Do not make broad changes yet
+* This is an architecture and migration planning step only
