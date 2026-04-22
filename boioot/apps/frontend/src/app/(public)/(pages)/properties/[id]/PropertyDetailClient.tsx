@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import VerificationBadge from "@/components/properties/VerificationBadge";
 import ImageSlider from "@/components/properties/ImageSlider";
 import { bookingsApi } from "@/features/bookings/api";
@@ -440,9 +441,13 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
               {/* Photo + name row */}
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.85rem" }}>
                 {advertiserPhoto ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={advertiserPhoto} alt={advertiserName}
-                    style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-border)", flexShrink: 0 }}
+                  <Image
+                    src={advertiserPhoto}
+                    alt={advertiserName}
+                    width={52}
+                    height={52}
+                    loading="lazy"
+                    style={{ borderRadius: "50%", objectFit: "cover", border: "2px solid var(--color-border)", flexShrink: 0 }}
                   />
                 ) : (
                   <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>

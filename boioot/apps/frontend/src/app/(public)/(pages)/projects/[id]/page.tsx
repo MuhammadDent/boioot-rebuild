@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { PropertyDetailSkeleton } from "@/components/properties/PropertyDetailSkeleton";
 import InquiryForm from "@/components/ui/InquiryForm";
 import { projectsApi } from "@/features/projects/api";
@@ -84,12 +85,16 @@ export default function ProjectDetailPage() {
 
         {/* Main image */}
         {activeImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={activeImage.imageUrl}
-            alt={project.title}
-            className="detail-hero"
-          />
+          <div className="detail-hero-wrap" style={{ marginBottom: "2rem" }}>
+            <Image
+              src={activeImage.imageUrl}
+              alt={project.title}
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1280px) 80vw, 960px"
+              style={{ objectFit: "cover", objectPosition: "center" }}
+            />
+          </div>
         ) : (
           <div className="detail-hero-placeholder">🏗️</div>
         )}
@@ -98,14 +103,21 @@ export default function ProjectDetailPage() {
         {images.length > 1 && (
           <div className="gallery-thumbs">
             {images.map((img, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <div
                 key={img.id}
-                src={img.imageUrl}
-                alt={`صورة ${i + 1}`}
                 className={`gallery-thumb${i === selectedImageIdx ? " gallery-thumb--active" : ""}`}
+                style={{ position: "relative", width: 80, height: 60, flexShrink: 0, cursor: "pointer", overflow: "hidden" }}
                 onClick={() => setSelectedImageIdx(i)}
-              />
+              >
+                <Image
+                  src={img.thumbnailUrl ?? img.imageUrl}
+                  alt={`صورة ${i + 1}`}
+                  fill
+                  sizes="80px"
+                  style={{ objectFit: "cover", borderRadius: "var(--radius-md)" }}
+                  loading="lazy"
+                />
+              </div>
             ))}
           </div>
         )}

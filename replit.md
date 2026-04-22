@@ -79,7 +79,8 @@ I prefer simple language. I want iterative development. Ask before making major 
 - Composite indexes applied directly to PostgreSQL: `IX_Properties_Status_CreatedAt`, `IX_Properties_CompanyId_Status_CreatedAt`, `IX_Properties_OwnerId_CreatedAt`, `IX_BuyerRequests_IsPublished_CreatedAt`, `IX_BuyerRequests_UserId_CreatedAt`.
 - Seeder bug fixed: sentinel company `00000000-0000-0000-0000-000000000001` now created before sample properties.
 - Frontend: `PropertyCard` and `ProjectCard` have `loading="lazy"`, `decoding="async"`, `memo()`. `usePropertyLocations` has module-level singleton cache.
-- Frontend image optimization pass: public property/project listing cards now use Next image optimization with responsive sizes, first visible card priority loading, optimized mobile gallery thumbnails, and longer image optimizer/upload cache headers.
+- Frontend image optimization pass (Phase 1): public property/project listing cards now use Next image optimization with responsive sizes, first visible card priority loading, optimized mobile gallery thumbnails, and longer image optimizer/upload cache headers.
+- Frontend image optimization pass (Phase 2): project detail hero and gallery thumbnails converted to next/image (fill + lazy). Advertiser avatar in property detail converted to next/image (52×52, lazy). No dynamic import changes needed — leaflet/RichTextEditor already dynamic, InquiryForm has no heavy deps.
 
 **Production Readiness (Day 14):**
 - CORS: Environment-based (`AllowedOrigins` config key). In production set comma-separated origins; dev/unset = AllowAnyOrigin.
