@@ -58,7 +58,8 @@ public class BookingsController : BaseController
                    COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
                    COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
                    CASE WHEN b."Status" = 'Confirmed' THEN 'Approved' ELSE b."Status" END AS "Status",
-                   b."CreatedAt"
+                   b."CreatedAt",
+                   COALESCE(b."GuestCount", 1) AS "GuestCount"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
             WHERE b."RequestedByUserId" = @userId
@@ -79,7 +80,8 @@ public class BookingsController : BaseController
                    COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
                    COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
                    CASE WHEN b."Status" = 'Confirmed' THEN 'Approved' ELSE b."Status" END AS "Status",
-                   b."CreatedAt"
+                   b."CreatedAt",
+                   COALESCE(b."GuestCount", 1) AS "GuestCount"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
             WHERE b."PropertyOwnerUserId" = @userIdText OR p."OwnerId" = @userIdText OR p."CreatedByUserId" = @userIdText
@@ -209,6 +211,24 @@ public class BookingsController : BaseController
         return items.FirstOrDefault();
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        var booking = await GetBookingByIdAsync(id, ct);
+        if (booking is null)
+            return NotFound(new { message = "طلب الحجز غير موجود" });
+
+        var userIdText = GetUserId().ToString();
+        var isRenter = booking.RequestedByUserId.ToString().Equals(userIdText, StringComparison.OrdinalIgnoreCase);
+        var isOwner = !string.IsNullOrEmpty(booking.PropertyOwnerUserId) &&
+                      booking.PropertyOwnerUserId.Equals(userIdText, StringComparison.OrdinalIgnoreCase);
+
+        if (!isRenter && !isOwner)
+            return StatusCode(403, new { message = "غير مصرح لك بعرض هذا الحجز" });
+
+        return Ok(booking);
+    }
+
     private async Task<BookingListItem?> GetBookingByIdAsync(Guid bookingId, CancellationToken ct)
     {
         var items = await QueryBookingsAsync("""
@@ -218,7 +238,8 @@ public class BookingsController : BaseController
                    COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
                    COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
                    CASE WHEN b."Status" = 'Confirmed' THEN 'Approved' ELSE b."Status" END AS "Status",
-                   b."CreatedAt"
+                   b."CreatedAt",
+                   COALESCE(b."GuestCount", 1) AS "GuestCount"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId" = p."Id"
             WHERE b."Id" = @id
@@ -282,7 +303,8 @@ public class BookingsController : BaseController
                 reader.GetDecimal(13),
                 reader.GetString(14),
                 NormalizeBookingStatus(reader.GetString(15)),
-                reader.GetDateTime(16)));
+                reader.GetDateTime(16),
+                reader.IsDBNull(17) ? 1 : reader.GetInt32(17)));
         }
 
         return result;
@@ -366,7 +388,8 @@ public class BookingsController : BaseController
         decimal CommissionAmount,
         string PaymentStatus,
         string Status,
-        DateTime CreatedAt);
+        DateTime CreatedAt,
+        int GuestCount = 1);
 
     private sealed record OwnerBookingRow(
         Guid Id,

@@ -10,6 +10,7 @@ public class Booking : BaseEntity
     public string GuestName { get; set; } = string.Empty;
     public string? Phone { get; set; }
     public string? Notes { get; set; }
+    public int GuestCount { get; set; } = 1;
     public decimal PricePerNight { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal CommissionPercent { get; set; }

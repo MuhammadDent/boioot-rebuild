@@ -195,6 +195,7 @@ export interface CreateBookingRequest {
   guestName: string;
   phone?: string;
   notes?: string;
+  guestCount?: number;
 }
 
 export interface BookingResponse {
@@ -208,6 +209,7 @@ export interface BookingResponse {
   guestName: string;
   phone?: string | null;
   notes?: string | null;
+  guestCount?: number;
   pricePerNight: number;
   totalAmount: number;
   commissionPercent: number;

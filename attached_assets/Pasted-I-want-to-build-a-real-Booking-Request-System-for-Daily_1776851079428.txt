@@ -1,0 +1,290 @@
+I want to build a real **Booking Request System** for **DailyRent** listings in my Boioot project, in a clean and production-safe way, without breaking the current messaging, listings, or auth systems.
+
+## Goal
+
+Transform DailyRent listings from a simple contact-based flow into a clear booking-request flow.
+
+This is NOT a full payment system yet.
+This phase is only for:
+
+* selecting booking dates
+* guest count
+* sending a booking request
+* managing booking request status
+
+---
+
+## Project context
+
+* Monorepo
+* Frontend: Next.js
+* Backend: ASP.NET Core / .NET
+* Existing systems already exist:
+
+  * auth
+  * listings/properties
+  * messaging
+  * requests section
+  * daily rental listing pages
+
+I want this implemented with minimal risk and no unnecessary refactor.
+
+---
+
+# PHASE 1 — Build Booking Request Flow
+
+## 1) Backend: Create booking request entity
+
+Create a proper entity/model for booking requests for DailyRent listings.
+
+Suggested fields:
+
+* Id
+* ListingId
+* TenantUserId
+* OwnerUserId
+* CheckInDate
+* CheckOutDate
+* GuestCount
+* TotalNights
+* NightlyPriceSnapshot
+* TotalPriceSnapshot
+* Status
+* Notes (optional)
+* CreatedAt
+* UpdatedAt
+
+### Status values
+
+Use clear enum values such as:
+
+* Pending
+* Approved
+* Rejected
+* CancelledByTenant
+* CancelledByOwner
+
+---
+
+## 2) Backend business rules
+
+Implement these rules carefully:
+
+* Booking request is allowed only for listings where `listingType === DailyRent`
+* User must be authenticated
+* User cannot book their own listing
+* Check-in must be before check-out
+* Guest count must be >= 1
+* Total nights must be calculated in backend
+* Price snapshot must be calculated and stored at request time
+* Prevent invalid or empty date ranges
+* Prevent overlapping approved bookings for the same listing
+* For now:
+
+  * allow multiple pending requests if needed
+  * but approved bookings must not overlap
+
+---
+
+## 3) Backend API endpoints
+
+Create or extend API endpoints for booking requests.
+
+Required endpoints:
+
+### Create booking request
+
+POST /api/bookings
+
+Payload example:
+{
+"listingId": "...",
+"checkInDate": "2026-04-25",
+"checkOutDate": "2026-04-28",
+"guestCount": 2,
+"notes": "Optional note"
+}
+
+### Get current user booking requests
+
+GET /api/bookings/my
+
+### Get booking request details
+
+GET /api/bookings/{id}
+
+### Get owner booking requests for their listings
+
+GET /api/bookings/owner
+
+### Owner approves booking
+
+POST /api/bookings/{id}/approve
+
+### Owner rejects booking
+
+POST /api/bookings/{id}/reject
+
+### Tenant cancels booking request
+
+POST /api/bookings/{id}/cancel
+
+---
+
+## 4) Backend validations and permissions
+
+* Tenant can only create/cancel their own requests
+* Owner can only approve/reject requests for their own listing
+* Unauthorized users must be blocked
+* Return clean validation errors
+* Add DB indexes for performance
+* Use proper DTOs and avoid exposing raw entity unnecessarily
+
+---
+
+## 5) Frontend: Property details page booking card
+
+For DailyRent listing page, replace the weak contact-first CTA with a real booking request card.
+
+### Add booking form/card near the top action area:
+
+Fields:
+
+* Check-in date
+* Check-out date
+* Guest count
+* Optional note
+* Summary:
+
+  * nightly price
+  * total nights
+  * total estimated price
+
+### Main CTA:
+
+* "أرسل طلب حجز"
+
+### Secondary actions:
+
+* messaging
+* WhatsApp
+* phone
+
+The booking CTA must be the main visual priority.
+
+---
+
+## 6) Frontend booking UX
+
+When user submits:
+
+* validate required fields
+* show loading state
+* show success toast/message
+* redirect or open booking request details if appropriate
+
+If not logged in:
+
+* redirect to login
+* then return user back to the listing page if possible
+
+If listing is not DailyRent:
+
+* do not show booking card
+
+---
+
+## 7) Frontend pages for booking requests
+
+Create or extend pages for booking management.
+
+### Tenant side
+
+A page or section showing:
+
+* my booking requests
+* listing title
+* dates
+* guest count
+* status
+* created date
+
+### Owner side
+
+A page or section showing:
+
+* booking requests on my listings
+* requester info
+* listing info
+* dates
+* guest count
+* approve/reject actions
+
+Keep UI simple and clean.
+Do not overdesign.
+
+---
+
+## 8) Booking CTA and property page UX
+
+Improve the DailyRent property page so the user clearly understands:
+
+* this property can be requested for booking
+* they can choose dates
+* they can send a request
+* the owner can approve/reject
+
+Keep the compact rating summary near the top if already implemented.
+Do not remove the reviews section below.
+
+---
+
+## 9) Safety constraints
+
+IMPORTANT:
+
+* Do NOT break current messaging flow
+* Do NOT remove WhatsApp / phone / message buttons
+* Do NOT refactor unrelated systems
+* Do NOT build payment now
+* Do NOT build a huge calendar system yet
+* Keep implementation incremental and production-safe
+
+---
+
+## 10) Nice-to-have if easy and safe
+
+If possible without major complexity:
+
+* show “pending / approved / rejected” badges with colors
+* show total nights in booking summary
+* disable owner actions once request is already final
+* keep date handling timezone-safe
+
+---
+
+## 11) Final deliverable
+
+At the end, give me a concise implementation report with:
+
+* files changed
+* new endpoints
+* new database tables/entities
+* key business rules added
+* what still remains for phase 2
+
+---
+
+## 12) Phase 2 preparation only (do not implement fully now)
+
+Prepare architecture so later we can add:
+
+* availability calendar
+* blocked dates
+* overlapping date prevention across all relevant statuses
+* pricing rules
+* payment
+* auto-expiry for pending requests
+* notifications
+
+But in this phase, only implement the real booking request system.

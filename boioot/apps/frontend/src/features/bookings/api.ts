@@ -9,6 +9,9 @@ export const bookingsApi = {
   create(request: CreateBookingRequest): Promise<BookingResponse> {
     return api.post<BookingResponse>("/bookings", request);
   },
+  get(id: string): Promise<BookingResponse> {
+    return api.get<BookingResponse>(`/bookings/${id}`);
+  },
   mine(): Promise<BookingResponse[]> {
     return api.get<BookingResponse[]>("/bookings/mine");
   },

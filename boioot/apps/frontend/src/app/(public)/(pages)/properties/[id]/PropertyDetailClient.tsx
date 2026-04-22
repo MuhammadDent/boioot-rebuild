@@ -164,6 +164,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
     guestName: user?.fullName ?? "",
     phone: "",
     notes: "",
+    guestCount: 1,
   });
 
   const [pageUrl, setPageUrl] = useState("");
@@ -301,6 +302,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
         guestName: bookingForm.guestName.trim(),
         phone: bookingForm.phone.trim() || undefined,
         notes: bookingForm.notes.trim() || undefined,
+        guestCount: bookingForm.guestCount,
       });
       setBookingSuccess("تم إرسال طلب الحجز بنجاح. سيتواصل معك المعلن لتأكيد التفاصيل.");
       setBookingForm((prev) => ({ ...prev, startDate: "", endDate: "", notes: "" }));
@@ -749,6 +751,27 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                 )}
               </div>
             )}
+
+            <div style={{ marginBottom: "0.75rem" }}>
+              <span style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, marginBottom: "0.5rem" }}>عدد الضيوف</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", border: "1px solid var(--color-border)", borderRadius: 10, padding: "0.5rem 0.75rem", width: "fit-content" }}>
+                <button
+                  type="button"
+                  onClick={() => setBookingForm((prev) => ({ ...prev, guestCount: Math.max(1, prev.guestCount - 1) }))}
+                  style={{ width: 32, height: 32, border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", cursor: "pointer", fontWeight: 800, fontSize: "1.1rem" }}
+                >
+                  −
+                </button>
+                <span style={{ minWidth: 24, textAlign: "center", fontWeight: 800, fontSize: "1rem" }}>{bookingForm.guestCount}</span>
+                <button
+                  type="button"
+                  onClick={() => setBookingForm((prev) => ({ ...prev, guestCount: Math.min(50, prev.guestCount + 1) }))}
+                  style={{ width: 32, height: 32, border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", cursor: "pointer", fontWeight: 800, fontSize: "1.1rem" }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
 
             <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, marginBottom: "0.75rem" }}>
               الاسم

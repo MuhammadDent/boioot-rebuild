@@ -22,4 +22,7 @@ public class CreateBookingRequest
 
     [MaxLength(1000)]
     public string? Notes { get; set; }
+
+    [Range(1, 50, ErrorMessage = "يجب أن يكون عدد الضيوف بين 1 و50")]
+    public int GuestCount { get; set; } = 1;
 }

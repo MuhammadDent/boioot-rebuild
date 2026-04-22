@@ -78,6 +78,7 @@ function BookingCard({
 
       <div style={{ marginTop: "0.85rem", display: "grid", gap: "0.35rem", color: "#334155", fontSize: "0.86rem" }}>
         <span>الضيف: {booking.guestName}</span>
+        {(booking.guestCount ?? 1) > 1 && <span>عدد الضيوف: {booking.guestCount}</span>}
         {booking.phone && <span dir="ltr" style={{ textAlign: "right" }}>الهاتف: {booking.phone}</span>}
         {booking.notes && <span>ملاحظات: {booking.notes}</span>}
         <span>السعر: {(nights || 1).toLocaleString("en")} ليلة × {formatMoney(booking.pricePerNight)}</span>
