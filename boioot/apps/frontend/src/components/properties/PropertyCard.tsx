@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { memo, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PropertyResponse } from "@/types";
@@ -70,17 +71,17 @@ function PropertyCardInner({ property, initialIsFavorited = false, priority = fa
         <article className="card property-card">
           <div style={{ position: "relative", overflow: "hidden" }}>
             {mainImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={mainImage.thumbnailUrl ?? mainImage.imageUrl}
                 alt={property.title}
                 className="property-card__img"
-                loading={priority ? "eager" : "lazy"}
-                fetchPriority={priority ? "high" : "auto"}
-                decoding={priority ? "sync" : "async"}
                 width={400}
                 height={200}
-                style={{ display: "block" }}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                priority={priority}
+                loading={priority ? undefined : "lazy"}
+                fetchPriority={priority ? "high" : "auto"}
+                decoding={priority ? "sync" : "async"}
               />
             ) : (
               <div className="property-card__img-placeholder">🏠</div>

@@ -211,8 +211,8 @@ function ProjectsContent() {
         {!loading && !error && projects.length > 0 && (
           <>
             <div className="grid-cards">
-              {projects.map((p) => (
-                <ProjectCard key={p.id} project={p} />
+              {projects.map((p, i) => (
+                <ProjectCard key={p.id} project={p} priority={i === 0} />
               ))}
             </div>
 

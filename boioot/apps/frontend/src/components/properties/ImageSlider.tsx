@@ -125,14 +125,11 @@ export default function ImageSlider({ images }: Props) {
               className={`gallery-strip-thumb${i === currentIndex ? " gallery-strip-thumb--active" : ""}`}
               onClick={() => setCurrentIndex(i)}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={img.thumbnailUrl ?? img.imageUrl}
                 alt={`thumbnail-${i}`}
-                loading="lazy"
-                decoding="async"
-                width={80}
-                height={60}
+                fill
+                sizes="72px"
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             </div>

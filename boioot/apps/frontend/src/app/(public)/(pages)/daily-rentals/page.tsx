@@ -274,8 +274,8 @@ function DailyRentalsContent() {
         {!loading && !error && properties.length > 0 && (
           <>
             <div className="grid-cards">
-              {properties.map((p) => (
-                <PropertyCard key={p.id} property={p} />
+              {properties.map((p, i) => (
+                <PropertyCard key={p.id} property={p} priority={i === 0} />
               ))}
             </div>
 

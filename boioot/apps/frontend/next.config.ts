@@ -5,14 +5,14 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    // Allow images from any HTTPS host (Cloudflare R2, custom domains, etc.)
-    // Wildcard hostname matches *.r2.dev, *.r2.cloudflarestorage.com, images.boioot.net …
     remotePatterns: [
       { protocol: "https", hostname: "**" },
       { protocol: "http",  hostname: "localhost", port: "*" },
     ],
-    // Formats served by Vercel Image Optimization
     formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 86400,
+    deviceSizes: [360, 414, 640, 768, 1024, 1280, 1536],
+    imageSizes: [72, 96, 160, 220, 320, 400],
   },
   allowedDevOrigins: [
     "*.janeway.replit.dev",
@@ -32,6 +32,19 @@ const nextConfig: NextConfig = {
       {
         source: "/uploads/:path*",
         destination: `${process.env.BACKEND_URL ?? "http://localhost:8080"}/uploads/:path*`,
+      },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/uploads/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=2592000",
+          },
+        ],
       },
     ];
   },
