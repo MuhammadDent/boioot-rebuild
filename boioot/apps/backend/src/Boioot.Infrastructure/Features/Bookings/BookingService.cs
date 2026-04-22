@@ -69,8 +69,11 @@ public class BookingService : IBookingService
             throw new BoiootException("هذا العقار غير متاح للحجز المباشر", 400);
 
         var start = DateTime.SpecifyKind(request.StartDate.Date, DateTimeKind.Utc);
-        var end = DateTime.SpecifyKind(request.EndDate.Date, DateTimeKind.Utc);
-        var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+        var end   = DateTime.SpecifyKind(request.EndDate.Date,   DateTimeKind.Utc);
+        var today = DateTime.SpecifyKind(DateTime.UtcNow.Date,   DateTimeKind.Utc);
+
+        _logger.LogDebug("[CreateBooking] Raw request StartDate={StartDate:O} EndDate={EndDate:O} | Normalised start={Start:yyyy-MM-dd} end={End:yyyy-MM-dd} today={Today:yyyy-MM-dd}",
+            request.StartDate, request.EndDate, start, end, today);
 
         if (start < today)
             throw new BoiootException("لا يمكن اختيار تاريخ قديم", 400);
@@ -131,6 +134,9 @@ public class BookingService : IBookingService
 
     public async Task<bool> IsAvailableAsync(Guid propertyId, DateTime startDate, DateTime endDate, CancellationToken ct = default)
     {
+        _logger.LogDebug("[Availability] PropertyId={PropertyId} | Raw startDate={StartDate:O} | Raw endDate={EndDate:O}",
+            propertyId, startDate, endDate);
+
         var property = await _context.Properties
             .AsNoTracking()
             .Where(p => p.Id == propertyId && !p.IsDeleted)
@@ -143,22 +149,46 @@ public class BookingService : IBookingService
             .FirstOrDefaultAsync(ct);
 
         if (property is null)
+        {
+            _logger.LogDebug("[Availability] REJECT — property not found");
             return false;
+        }
 
         if (property.Status != PropertyStatus.Available)
+        {
+            _logger.LogDebug("[Availability] REJECT — status={Status}", property.Status);
             return false;
+        }
 
         if (!string.Equals(property.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogDebug("[Availability] REJECT — listingType={ListingType} is not DailyRent", property.ListingType);
             return false;
+        }
 
         var start = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
-        var end = DateTime.SpecifyKind(endDate.Date, DateTimeKind.Utc);
+        var end   = DateTime.SpecifyKind(endDate.Date,   DateTimeKind.Utc);
         var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
 
-        if (start < today || end <= start)
-            return false;
+        _logger.LogDebug("[Availability] Normalised start={Start:yyyy-MM-dd} end={End:yyyy-MM-dd} today={Today:yyyy-MM-dd}",
+            start, end, today);
 
-        return !await HasApprovedOverlapAsync(property.Id, start, end, null, ct);
+        if (start < today)
+        {
+            _logger.LogDebug("[Availability] REJECT — start {Start:yyyy-MM-dd} is before today {Today:yyyy-MM-dd}", start, today);
+            return false;
+        }
+
+        if (end <= start)
+        {
+            _logger.LogDebug("[Availability] REJECT — end {End:yyyy-MM-dd} <= start {Start:yyyy-MM-dd} (reversed or same-day range)", end, start);
+            return false;
+        }
+
+        var hasOverlap = await HasApprovedOverlapAsync(property.Id, start, end, null, ct);
+        _logger.LogDebug("[Availability] Overlap check result: hasOverlap={HasOverlap}", hasOverlap);
+
+        return !hasOverlap;
     }
 
     public async Task<IReadOnlyList<BookingResponse>> GetMineAsync(Guid userId, CancellationToken ct = default)

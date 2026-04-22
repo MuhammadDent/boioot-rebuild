@@ -1,0 +1,94 @@
+The booking UI is now visible, so that part is fixed.
+
+However, there is a new bug:
+Every selected date range is being marked as unavailable.
+
+## Important observation
+
+The UI shows a selected period like:
+
+* 26/06/2026 to 30/04/2026
+
+This suggests a date parsing / formatting / ordering bug.
+
+I want a strict diagnosis and fix for booking availability logic.
+
+## Tasks
+
+### 1) Diagnose the exact date values end-to-end
+
+Trace the selected booking dates through the full flow:
+
+* date picker UI values
+* frontend state values
+* payload sent to API
+* backend DTO values
+* backend availability check values
+
+Log the exact values in ISO format at each step.
+
+I want to see:
+
+* raw selected check-in
+* raw selected check-out
+* payload values
+* backend parsed values
+* final values used in overlap check
+
+### 2) Check for DD/MM/YYYY vs MM/DD/YYYY bug
+
+Verify whether the frontend displays dates in one format but sends/parses them in another.
+
+Ensure the API receives dates in unambiguous ISO format:
+
+* YYYY-MM-DD
+
+Do not rely on locale-formatted strings.
+
+### 3) Fix availability validation
+
+Inspect the real logic in:
+
+* booking creation
+* availability check
+
+Make sure these rules are correct:
+
+* checkIn < checkOut
+* same-day invalid if that is intended
+* overlap logic only blocks truly overlapping approved/unavailable periods
+* empty bookings should not make everything unavailable
+
+### 4) Add debug logs
+
+Add temporary logs for:
+
+* selected checkIn/checkOut in frontend
+* API payload
+* parsed backend dates
+* overlap query inputs
+* availability decision result and why
+
+### 5) Verify if the bug is in reversed range handling
+
+If the selected range becomes reversed anywhere, fix it safely and show a proper validation message instead of "unavailable".
+
+For example:
+
+* if checkout <= checkin → show "تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول"
+  not "غير متاح"
+
+### 6) Final report
+
+Tell me clearly:
+
+* where the bug was
+* whether it was formatting, parsing, or overlap logic
+* exact files changed
+* an example of the corrected date flow
+
+## Important
+
+* Do not redesign the booking form
+* Fix only the real date/availability bug
+* Keep all debug logs temporary and easy to remove later

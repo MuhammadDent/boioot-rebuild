@@ -34,9 +34,15 @@ function shortRef(id: string) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+  // Append T00:00:00Z so JS always parses as UTC midnight, preventing off-by-one
+  // day errors in negative-UTC-offset timezones.
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
     year: "numeric", month: "numeric", day: "numeric",
   });
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
 }
 
 function getNightCount(startDate: string, endDate: string) {
@@ -203,18 +209,38 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
       return;
     }
 
+    // DEBUG — log selected dates and the payload that would be sent.
+    console.log("[Booking dates DEBUG]", {
+      rawStartDate: bookingForm.startDate,
+      rawEndDate:   bookingForm.endDate,
+      displayStart: formatDate(bookingForm.startDate),
+      displayEnd:   formatDate(bookingForm.endDate),
+      apiPayload:   `startDate=${bookingForm.startDate}&endDate=${bookingForm.endDate}`,
+    });
+
+    // Client-side order validation — avoids an ambiguous "unavailable" from API.
+    if (bookingForm.endDate <= bookingForm.startDate) {
+      setAvailability("error");
+      setAvailabilityError("تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول");
+      console.warn("[Booking dates DEBUG] Reversed range — endDate <= startDate");
+      return;
+    }
+
     let ignore = false;
     setAvailability("checking");
     setAvailabilityError("");
 
     const timeoutId = window.setTimeout(() => {
+      console.log("[Booking availability DEBUG] Calling API with", bookingForm.startDate, "→", bookingForm.endDate);
       bookingsApi.availability(id, bookingForm.startDate, bookingForm.endDate)
         .then((result) => {
           if (ignore) return;
+          console.log("[Booking availability DEBUG] API response:", result);
           setAvailability(result.available ? "available" : "unavailable");
         })
         .catch((err) => {
           if (ignore) return;
+          console.error("[Booking availability DEBUG] API error:", err);
           setAvailability("error");
           setAvailabilityError(normalizeError(err) || "تعذر التحقق من توفر الفترة.");
         });
@@ -763,7 +789,16 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                   required
                   type="date"
                   value={bookingForm.startDate}
-                  onChange={(e) => setBookingForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                  min={todayIso()}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    setBookingForm((prev) => ({
+                      ...prev,
+                      startDate: newStart,
+                      // Clear endDate if it's no longer after the new startDate
+                      endDate: prev.endDate && prev.endDate > newStart ? prev.endDate : "",
+                    }));
+                  }}
                   style={{ width: "100%", marginTop: "0.35rem", padding: "0.7rem", border: "1px solid var(--color-border)", borderRadius: 10 }}
                 />
               </label>
@@ -773,6 +808,14 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                   required
                   type="date"
                   value={bookingForm.endDate}
+                  min={bookingForm.startDate
+                    ? (() => {
+                        // min for checkout = day after checkin
+                        const d = new Date(`${bookingForm.startDate}T00:00:00Z`);
+                        d.setUTCDate(d.getUTCDate() + 1);
+                        return d.toISOString().slice(0, 10);
+                      })()
+                    : todayIso()}
                   onChange={(e) => setBookingForm((prev) => ({ ...prev, endDate: e.target.value }))}
                   style={{ width: "100%", marginTop: "0.35rem", padding: "0.7rem", border: "1px solid var(--color-border)", borderRadius: 10 }}
                 />
