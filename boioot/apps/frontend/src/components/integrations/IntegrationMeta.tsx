@@ -21,17 +21,41 @@ async function fetchActiveIntegrations(): Promise<ActiveIntegration[]> {
 export default async function IntegrationMeta(): Promise<JSX.Element | null> {
   const integrations = await fetchActiveIntegrations();
 
+  const nodes: JSX.Element[] = [];
+
   const gsc = integrations.find((i) => i.key === "google-search-console");
-  if (!gsc) return null;
+  if (gsc?.config.verificationCode) {
+    const raw = gsc.config.verificationCode;
+    const content = raw.startsWith("google-site-verification=")
+      ? raw.replace("google-site-verification=", "")
+      : raw;
+    if (content) {
+      nodes.push(
+        <meta key="gsc" name="google-site-verification" content={content} />
+      );
+    }
+  }
 
-  const raw = gsc.config.verificationCode;
-  if (!raw) return null;
+  const ga = integrations.find((i) => i.key === "google-analytics");
+  const gaId = ga?.config.measurementId;
+  if (gaId) {
+    nodes.push(
+      <script
+        key="ga-src"
+        async
+        src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+      />
+    );
+    nodes.push(
+      <script
+        key="ga-init"
+        dangerouslySetInnerHTML={{
+          __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');`,
+        }}
+      />
+    );
+  }
 
-  const content = raw.startsWith("google-site-verification=")
-    ? raw.replace("google-site-verification=", "")
-    : raw;
-
-  if (!content) return null;
-
-  return <meta name="google-site-verification" content={content} />;
+  if (nodes.length === 0) return null;
+  return <>{nodes}</>;
 }
