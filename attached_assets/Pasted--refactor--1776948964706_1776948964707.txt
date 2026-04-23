@@ -1,0 +1,76 @@
+أريد تشخيصًا وإصلاحًا دقيقًا لمشكلة نظام التقييمات في صفحة تفاصيل العقار بدون refactor كبير.
+
+## الأعراض الحالية
+
+في صفحة تفاصيل عقار، الواجهة تعرض:
+
+* "لا توجد تقييمات بعد"
+
+لكن المستخدم متأكد أنه قيّم هذا العقار سابقًا.
+
+وفي console تظهر حالة شبيهة بـ:
+
+```json
+{ canRate: false, alreadyRated: false, hasCompletedBooking: false }
+```
+
+## المطلوب
+
+1. افحص نظام التقييمات كاملًا لهذا العقار من ناحية backend وfrontend، وحدد بدقة:
+
+   * endpoint جلب تقييمات العقار
+   * endpoint أو logic فحص eligibility:
+
+     * `canRate`
+     * `alreadyRated`
+     * `hasCompletedBooking`
+
+2. تتبع التدفق كاملًا:
+
+   * كيف يتم إنشاء التقييم عند الإرسال
+   * كيف يتم ربطه بـ:
+
+     * `propertyId`
+     * `bookingId`
+     * `reviewerUserId`
+     * `owner/host`
+   * وكيف يتم جلبه لاحقًا في صفحة العقار
+
+3. تحقق من الآتي:
+
+   * هل التقييم يتم حفظه فعلًا في قاعدة البيانات؟
+   * هل يتم حفظه على العقار الصحيح؟
+   * هل يوجد filter يمنع ظهوره (مثلاً approved / visible / status)?
+   * هل query جلب التقييمات يستخدم propertyId الصحيح؟
+   * هل logic `hasCompletedBooking` يعتمد على حالة حجز غير صحيحة أو overly strict؟
+   * هل `alreadyRated` يفشل لأنه يبحث بطريقة مختلفة عن طريقة الحفظ؟
+
+4. أصلح السبب الجذري بأقل تغيير ممكن وبشكل production-safe:
+
+   * إذا كانت queries خاطئة، صححها
+   * إذا كانت شروط eligibility متشددة أو غير متوافقة مع حالات الحجوزات الفعلية، عدّلها
+   * إذا كان الربط بين rating وbooking/property ناقصًا أو خاطئًا، أصلحه
+   * لا تعمل refactor واسع
+
+5. أضف logging واضح ومؤقت في backend حول:
+
+   * propertyId
+   * currentUserId
+   * completed booking check result
+   * already rated check result
+   * count of ratings returned for property
+
+6. بعد الإصلاح:
+
+   * اعطني السبب الحقيقي للمشكلة
+   * أسماء الملفات التي عُدلت
+   * ثم نفّذ:
+
+     * `git add .`
+     * `git commit -m "fix: resolve property ratings visibility and eligibility logic"`
+
+## مهم جدًا
+
+* أريد إصلاح السبب الحقيقي وليس إخفاء الرسالة فقط
+* لا تغيّر UI إلا إذا كان ضروريًا جدًا
+* ركّز على backend queries + eligibility logic + rating retrieval consistency
