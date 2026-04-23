@@ -18,8 +18,7 @@ export const bookingStatusConfig: Record<BookingStatus, { label: string; icon: s
 export function normalizeBookingStatus(status: string): BookingStatus {
   switch (status) {
     case "Pending":    return "PendingApproval";
-    case "Approved":   return "Approved";
-    case "Confirmed":  return "Confirmed";
+    case "Approved":   return "ApprovedAwaitingPaymentProof";
     case "Cancelled":  return "CancelledByTenant";
     default:           return status as BookingStatus;
   }

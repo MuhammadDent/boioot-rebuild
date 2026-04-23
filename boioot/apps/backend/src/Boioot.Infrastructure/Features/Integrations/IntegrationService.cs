@@ -54,6 +54,14 @@ public class ActiveIntegrationResponse
     public Dictionary<string, string> Config { get; init; } = [];
 }
 
+// ── Exceptions ────────────────────────────────────────────────────────────────
+
+public class IntegrationNotFoundException(string key)
+    : Exception($"Integration '{key}' not found");
+
+public class IntegrationValidationException(string message)
+    : Exception(message);
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 public class IntegrationService
@@ -195,7 +203,7 @@ public class IntegrationService
 
     private IntegrationDef GetDef(string key) =>
         _catalog.FirstOrDefault(d => d.Key == key)
-        ?? throw new Exception($"Integration '{key}' not found");
+        ?? throw new IntegrationNotFoundException(key);
 
     private static void Validate(IntegrationDef def, Dictionary<string, string>? config)
     {
@@ -204,7 +212,7 @@ public class IntegrationService
         {
             if (!config.TryGetValue(field.Key, out var val) || string.IsNullOrWhiteSpace(val)) continue;
             if (field.Pattern is not null && !System.Text.RegularExpressions.Regex.IsMatch(val, field.Pattern))
-                throw new Exception($"قيمة الحقل '{field.Label}' غير صالحة");
+                throw new IntegrationValidationException($"قيمة الحقل '{field.Label}' غير صالحة — {field.Hint ?? field.Pattern}");
         }
     }
 
