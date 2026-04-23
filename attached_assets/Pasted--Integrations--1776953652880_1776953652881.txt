@@ -1,0 +1,135 @@
+أريد بناء نظام Integrations ديناميكي واحترافي داخل لوحة تحكم الأدمن، شبيه بفكرة متجر التطبيقات أو إعدادات الربط في سلة، لكن مناسب لمشروعي.
+
+## الهدف
+
+أريد أن أستطيع من لوحة الأدمن ربط وتفعيل وتعطيل تطبيقات وخدمات مثل:
+
+* Google Analytics
+* Google Tag Manager
+* Meta/Facebook Pixel
+* TikTok Pixel
+* Snapchat Pixel
+* Google Search Console
+* Microsoft Clarity
+* Hotjar
+* WhatsApp Chat
+* وغيرها لاحقًا
+
+## المطلوب المعماري
+
+أريد النظام أن يكون ديناميكيًا وقابلًا للتوسع، وليس مجرد حقول ثابتة في الإعدادات.
+
+### أنشئ بنية نظيفة تتضمن:
+
+1. جدول/كيان لتعريف التطبيقات المتاحة (built-in integration definitions)، يحتوي مثلًا:
+
+   * key
+   * name
+   * description
+   * icon
+   * category
+   * config schema json
+   * enabled by default
+   * sort order
+
+2. جدول/كيان لحفظ إعدادات الربط الفعلية لكل تطبيق:
+
+   * integration key
+   * isEnabled
+   * config json
+   * timestamps
+   * updatedBy
+
+3. اجعل إعدادات كل تطبيق تعتمد على schema/config json بحيث يمكن توليد فورم ديناميكي في الواجهة حسب الحقول المطلوبة.
+
+## المطلوب في لوحة الأدمن
+
+1. صفحة جديدة داخل لوحة الأدمن باسم:
+
+   * التطبيقات
+     أو
+   * Integrations
+
+2. تعرض قائمة التطبيقات بشكل بطاقات أو قائمة احترافية:
+
+   * اسم التطبيق
+   * وصف مختصر
+   * الحالة: مفعل / غير مفعل / غير مكتمل
+   * زر إعدادات
+   * زر تفعيل/تعطيل
+
+3. عند فتح أي تطبيق:
+
+   * يظهر modal أو drawer أو صفحة إعدادات
+   * يعرض الحقول المطلوبة حسب schema
+   * يوجد حفظ
+   * يوجد تفعيل/تعطيل
+   * يوجد إلغاء ربط
+
+## التطبيقات الأولية التي أريد دعمها الآن
+
+ابدأ بالآتي:
+
+* Google Analytics (measurementId)
+* Google Tag Manager (containerId)
+* Meta Pixel (pixelId)
+* TikTok Pixel (pixelId)
+* Snapchat Pixel (pixelId)
+* Google Search Console (verification meta tag أو verification code)
+* Microsoft Clarity (projectId)
+
+## المطلوب في الفرونت
+
+1. أنشئ آلية مركزية وآمنة لتحميل integrations المفعلة من backend
+2. حقن السكربتات أو meta tags في الموقع فقط إذا كانت integration مفعلة
+3. اجعل التنفيذ clean وآمن وبدون تكرار injection
+4. لا تكسر SSR أو hydration
+5. لا تضف أي script إذا كانت الإعدادات ناقصة أو التطبيق غير مفعل
+
+## المطلوب في الـ backend
+
+1. API endpoints للإدارة:
+
+   * get all integrations
+   * get integration by key
+   * save/update integration config
+   * enable integration
+   * disable integration
+
+2. validation حسب نوع التطبيق
+
+   * مثال:
+
+     * Google Analytics يجب أن يبدأ بـ G-
+     * GTM يبدأ بـ GTM-
+     * Meta/TikTok/Snapchat pixel IDs تحقق basic validation
+
+3. audit-friendly timestamps
+
+4. authorization للأدمن فقط
+
+## المطلوب في الكود
+
+* بدون refactor واسع
+* بنية قابلة للتوسع
+* code clean
+* production-safe
+* قابل لإضافة تطبيقات جديدة لاحقًا بسهولة
+
+## مهم جدًا
+
+* لا أريد hardcoded fields scattered في الواجهة
+* لا أريد صفحة إعدادات تقليدية فقط
+* أريد foundation صح لنظام integrations
+* ابدأ بما هو عملي وسهل الصيانة
+* إذا احتجت تقسيم التنفيذ إلى مراحل، نفذ المرحلة الأولى الكاملة بشكل usable
+
+## بعد التنفيذ
+
+* أعطني ملخصًا واضحًا للمعمارية
+* الملفات التي تم تعديلها
+* ما الذي تم إنجازه الآن وما الذي بقي كمرحلة ثانية
+* ثم نفّذ:
+
+  * git add .
+  * git commit -m "feat: add dynamic admin integrations management system"

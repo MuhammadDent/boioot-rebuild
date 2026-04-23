@@ -111,6 +111,7 @@ public sealed class DatabaseStartupService
         await ApplyPostgresBookingPatchesAsync(ct);
         await ApplyReviewsPatchAsync(ct);
         await ApplyBookingReviewsPatchAsync(ct);
+        await ApplyIntegrationsPatchAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
         await SyncIsCoverFromIsPrimaryAsync(ct);
@@ -565,6 +566,28 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("[schema-patch] BookingReviews patch failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    private async Task ApplyIntegrationsPatchAsync(CancellationToken ct)
+    {
+        if (!IsPostgres) return;
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS "IntegrationSettings" (
+                    "Key"       varchar(100) PRIMARY KEY,
+                    "IsEnabled" boolean      NOT NULL DEFAULT false,
+                    "ConfigJson" text,
+                    "UpdatedBy" varchar(200),
+                    "UpdatedAt" timestamptz  NOT NULL DEFAULT NOW()
+                )
+                """, ct);
+            _log.LogInformation("[schema-patch] IntegrationSettings table ensured.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] IntegrationSettings patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 

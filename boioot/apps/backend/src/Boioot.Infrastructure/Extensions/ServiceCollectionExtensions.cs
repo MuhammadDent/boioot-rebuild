@@ -158,6 +158,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBillingService, BillingService>();
         services.AddScoped<INotificationService, LoggingNotificationService>();
 
+        // ── Integrations (analytics, marketing, SEO, heatmaps) ───────────────
+        services.AddScoped<Boioot.Infrastructure.Features.Integrations.IntegrationService>();
+
         services.AddScoped<DataSeeder>();
         services.AddScoped<PlanCatalogSeeder>();
         services.AddScoped<SiteContentSeeder>();

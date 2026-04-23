@@ -6,6 +6,7 @@ import { SubscriptionProvider } from "@/context/SubscriptionContext";
 import { AuthGateProvider } from "@/context/AuthGateContext";
 import { ContentProvider } from "@/context/ContentContext";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import IntegrationScripts from "@/components/integrations/IntegrationScripts";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -62,6 +63,7 @@ export default function RootLayout({
           </SubscriptionProvider>
         </AuthProvider>
         <ToastProvider />
+        <IntegrationScripts />
       </body>
     </html>
   );
