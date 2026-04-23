@@ -329,7 +329,7 @@ const CATEGORIES = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminIntegrationsPage() {
-  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["SuperAdmin"] });
+  const { isLoading: authLoading } = useProtectedRoute({ requiredPermission: "settings.manage" });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("all");
