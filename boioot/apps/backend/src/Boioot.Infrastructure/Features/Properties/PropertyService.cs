@@ -69,6 +69,10 @@ public class PropertyService : IPropertyService
                 r.Description = r.Description[..listDescLimit] + "…";
         }
 
+        // Batch-fetch rating summaries — single query, no N+1
+        try { await EnrichWithRatingSummaryAsync(mapped, ct); }
+        catch (Exception ex) { _logger.LogWarning("[PropertyService] Enrich skipped: {Msg}", ex.Message); }
+
         return new PagedResult<PropertyResponse>(mapped, page, pageSize, total);
     }
 
@@ -1228,6 +1232,98 @@ public class PropertyService : IPropertyService
         CreatedByRole      = p.CreatedByRole,
         CreatedByCompanyId = p.CreatedByCompanyId,
     };
+
+    /// <summary>
+    /// Batch-fetches rating summaries for a page of property responses and sets
+    /// AverageRating / RatingsCount on each response.
+    /// Uses two raw SQL queries (Reviews + BookingReviews) — no EF Core model interaction.
+    /// Gracefully no-ops when not on PostgreSQL or when BookingReviews table is absent.
+    /// </summary>
+    private async Task EnrichWithRatingSummaryAsync(
+        List<PropertyResponse> responses,
+        CancellationToken ct)
+    {
+        if (responses.Count == 0) return;
+        if (!_context.Database.IsNpgsql()) return;
+
+        // Build a safe UUID IN list — Guids come from our own DB, not user input.
+        // Reviews.TargetId is stored as varchar (lowercase guid), e.g. "11111111-0000-..."
+        // BookingReviews.PropertyId is stored as uuid native type.
+        var ids    = responses.Select(r => r.Id).ToArray();
+        var idList = string.Join(",", ids.Select(id => $"'{id:D}'"));
+
+        var sumMap = new Dictionary<Guid, (decimal Sum, int Count)>();
+
+        try
+        {
+            await _context.Database.OpenConnectionAsync(ct);
+            var conn = _context.Database.GetDbConnection();
+
+            // ── 1. Reviews table (old ratings system)
+            //    TargetType stored as varchar enum name: 'Property'
+            //    TargetId stored as varchar lowercase guid
+            await using (var cmd1 = conn.CreateCommand())
+            {
+                cmd1.CommandText = $"""
+                    SELECT "TargetId", COALESCE(SUM(CAST("Rating" AS NUMERIC)), 0), COUNT(1)
+                    FROM "Reviews"
+                    WHERE "TargetType" = 'Property'
+                      AND "TargetId" IN ({idList})
+                    GROUP BY "TargetId"
+                    """;
+                await using var r1 = await cmd1.ExecuteReaderAsync(ct);
+                while (await r1.ReadAsync(ct))
+                {
+                    if (Guid.TryParse(r1.GetString(0), out var pid))
+                        sumMap[pid] = (r1.GetDecimal(1), (int)r1.GetInt64(2));
+                }
+            }
+
+            // ── 2. BookingReviews table (new booking review system)
+            //    PropertyId stored as native uuid
+            await using (var cmd2 = conn.CreateCommand())
+            {
+                cmd2.CommandText = $"""
+                    SELECT "PropertyId", COALESCE(SUM("OverallRating"), 0), COUNT(1)
+                    FROM "BookingReviews"
+                    WHERE "PropertyId" IN ({idList})
+                      AND "ReviewType" = 'TenantToProperty'
+                    GROUP BY "PropertyId"
+                    """;
+                await using var r2 = await cmd2.ExecuteReaderAsync(ct);
+                while (await r2.ReadAsync(ct))
+                {
+                    var pid   = r2.GetGuid(0);
+                    var brSum = r2.GetDecimal(1);
+                    var brCnt = (int)r2.GetInt64(2);
+                    if (sumMap.TryGetValue(pid, out var existing))
+                        sumMap[pid] = (existing.Sum + brSum, existing.Count + brCnt);
+                    else
+                        sumMap[pid] = (brSum, brCnt);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                "[PropertyService.Enrich] Rating aggregation skipped — {Msg}", ex.Message);
+            return;
+        }
+        finally
+        {
+            await _context.Database.CloseConnectionAsync();
+        }
+
+        // ── 3. Apply to responses ─────────────────────────────────────────────
+        foreach (var resp in responses)
+        {
+            if (sumMap.TryGetValue(resp.Id, out var s) && s.Count > 0)
+            {
+                resp.AverageRating = Math.Round(s.Sum / s.Count, 1);
+                resp.RatingsCount  = s.Count;
+            }
+        }
+    }
 
     /// <summary>
     /// Normalises listingType to a canonical PascalCase value regardless of how

@@ -181,6 +181,9 @@ export interface PropertyResponse {
   recipientId?: string;
   // Analytics
   viewCount?: number;
+  // Rating summary (from listing endpoint)
+  averageRating?: number;
+  ratingsCount?: number;
   // Moderation (admin-controlled)
   moderationStatus?: string;
 }

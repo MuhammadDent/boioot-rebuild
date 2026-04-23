@@ -64,6 +64,10 @@ public class PropertyResponse
     // Analytics
     public int ViewCount { get; set; }
 
+    // Rating summary (aggregated from Reviews + BookingReviews — set on list endpoints)
+    public decimal? AverageRating { get; set; }
+    public int RatingsCount { get; set; }
+
     // Moderation (admin-controlled)
     public string ModerationStatus { get; set; } = "Active";
 
