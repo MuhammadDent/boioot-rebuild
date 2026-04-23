@@ -94,7 +94,8 @@ public class BookingsController : BaseController
                    b."Status",
                    b."CreatedAt",
                    COALESCE(b."GuestCount", 1) AS "GuestCount",
-                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt"
+                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
+                   b."OwnerNotes", b."RevisionRequestedAt"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
             WHERE b."RequestedByUserId" = @userId
@@ -117,7 +118,8 @@ public class BookingsController : BaseController
                    b."Status",
                    b."CreatedAt",
                    COALESCE(b."GuestCount", 1) AS "GuestCount",
-                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt"
+                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
+                   b."OwnerNotes", b."RevisionRequestedAt"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
             WHERE b."PropertyOwnerUserId" = @userIdText OR p."OwnerId" = @userIdText OR p."CreatedByUserId" = @userIdText
@@ -192,7 +194,8 @@ public class BookingsController : BaseController
             string.Equals(booking.Status, "PendingApproval", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(booking.Status, "Pending", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(booking.Status, "ApprovedAwaitingPaymentProof", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(booking.Status, "PaymentProofSubmitted", StringComparison.OrdinalIgnoreCase);
+            string.Equals(booking.Status, "PaymentProofSubmitted", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, "RevisionRequested", StringComparison.OrdinalIgnoreCase);
         if (!canReject)
             return BadRequest(new { message = "لا يمكن رفض هذا الطلب في حالته الحالية" });
 
@@ -282,6 +285,48 @@ public class BookingsController : BaseController
         }
     }
 
+    [HttpPost("{id:guid}/request-revision")]
+    public async Task<IActionResult> RequestRevision(Guid id, [FromBody] Boioot.Application.Features.Bookings.DTOs.RequestRevisionRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request?.Note))
+            return BadRequest(new { message = "يرجى كتابة ملاحظة توضح المطلوب من المستأجر" });
+
+        await EnsureBookingSchemaAsync(ct);
+
+        var booking = await GetBookingForOwnerActionAsync(id, ct);
+        if (booking is null)
+            return NotFound(new { message = "طلب الحجز غير موجود" });
+
+        var userIdText = GetUserId().ToString();
+        if (!CanManage(booking, userIdText))
+            return StatusCode(403, new { message = "غير مصرح لك بإدارة هذا الحجز" });
+
+        var canRevise = string.Equals(booking.Status, "PaymentProofSubmitted", StringComparison.OrdinalIgnoreCase);
+        if (!canRevise)
+            return BadRequest(new { message = "يمكن طلب التعديل فقط بعد رفع المستأجر لإثبات الدفع" });
+
+        var now = DateTime.UtcNow;
+        await ExecuteAsync("""
+            UPDATE "Bookings"
+            SET "Status" = 'RevisionRequested',
+                "OwnerNotes" = @ownerNotes,
+                "RevisionRequestedAt" = @revisionRequestedAt,
+                "UpdatedAt" = @updatedAt
+            WHERE "Id" = @id
+            """, cmd =>
+        {
+            AddParameter(cmd, "@id", id);
+            AddParameter(cmd, "@ownerNotes", request.Note.Trim());
+            AddParameter(cmd, "@revisionRequestedAt", now);
+            AddParameter(cmd, "@updatedAt", now);
+        }, ct);
+
+        await NotifySafelyAsync(booking.RequestedByUserId, "revision_requested", "طلب تعديل إثبات الدفع", $"طلب المالك تعديل إثبات الدفع للعقار {booking.PropertyTitle}. يرجى مراجعة الملاحظة وإعادة الرفع.", booking.PropertyTitle, id, ct);
+
+        var result = await GetBookingByIdAsync(id, ct);
+        return Ok(result);
+    }
+
     private async Task EnsureBookingSchemaAsync(CancellationToken ct)
     {
         if (!_context.Database.IsNpgsql()) return;
@@ -296,6 +341,8 @@ public class BookingsController : BaseController
         await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "PaymentProofSubmittedAt" timestamp with time zone""", ct);
         await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "ApprovedAt" timestamp with time zone""", ct);
         await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "ConfirmedAt" timestamp with time zone""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "OwnerNotes" character varying(2000)""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "RevisionRequestedAt" timestamp with time zone""", ct);
     }
 
     private async Task EnsurePaymentStatusColumnAsync(CancellationToken ct)
@@ -370,7 +417,8 @@ public class BookingsController : BaseController
                    b."Status",
                    b."CreatedAt",
                    COALESCE(b."GuestCount", 1) AS "GuestCount",
-                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt"
+                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
+                   b."OwnerNotes", b."RevisionRequestedAt"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
             WHERE b."Id" = @id
@@ -440,7 +488,9 @@ public class BookingsController : BaseController
                 reader.IsDBNull(19) ? null : reader.GetString(19),
                 reader.IsDBNull(20) ? null : reader.GetDateTime(20),
                 reader.IsDBNull(21) ? null : reader.GetDateTime(21),
-                reader.IsDBNull(22) ? null : reader.GetDateTime(22)));
+                reader.IsDBNull(22) ? null : reader.GetDateTime(22),
+                reader.IsDBNull(23) ? null : reader.GetString(23),
+                reader.IsDBNull(24) ? null : reader.GetDateTime(24)));
         }
 
         return result;
@@ -525,7 +575,9 @@ public class BookingsController : BaseController
         string? PaymentProofNote = null,
         DateTime? PaymentProofSubmittedAt = null,
         DateTime? ApprovedAt = null,
-        DateTime? ConfirmedAt = null);
+        DateTime? ConfirmedAt = null,
+        string? OwnerNotes = null,
+        DateTime? RevisionRequestedAt = null);
 
     private sealed record OwnerBookingRow(
         Guid Id,

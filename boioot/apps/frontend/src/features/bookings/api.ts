@@ -42,4 +42,7 @@ export const bookingsApi = {
   cancelOwner(id: string): Promise<BookingResponse> {
     return api.post<BookingResponse>(`/bookings/${id}/cancel-owner`, {});
   },
+  requestRevision(id: string, note: string): Promise<BookingResponse> {
+    return api.post<BookingResponse>(`/bookings/${id}/request-revision`, { note });
+  },
 };

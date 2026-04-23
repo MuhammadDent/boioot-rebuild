@@ -6,6 +6,7 @@ export const bookingStatusConfig: Record<BookingStatus, { label: string; icon: s
   Approved:                     { label: "موافق عليه",               icon: "✅", bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0" },
   ApprovedAwaitingPaymentProof: { label: "بانتظار إثبات الدفع",     icon: "💳", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
   PaymentProofSubmitted:        { label: "تم رفع إثبات الدفع",      icon: "📎", bg: "#f0fdf4", color: "#15803d", border: "#bbf7d0" },
+  RevisionRequested:            { label: "طلب تعديل",               icon: "✏️", bg: "#fffbeb", color: "#92400e", border: "#fcd34d" },
   Confirmed:                    { label: "مؤكد",                     icon: "✅", bg: "#f0fdf4", color: "#166534", border: "#bbf7d0" },
   Rejected:                     { label: "مرفوض",                   icon: "❌", bg: "#fef2f2", color: "#b91c1c", border: "#fecaca" },
   Cancelled:                    { label: "ملغى",                    icon: "⚪", bg: "#f1f5f9", color: "#475569", border: "#cbd5e1" },

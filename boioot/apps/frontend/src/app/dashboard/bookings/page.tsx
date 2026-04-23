@@ -16,6 +16,7 @@ const OWNER_TABS: Array<{ status: BookingStatus; label: string }> = [
   { status: "PendingApproval",              label: "طلبات جديدة" },
   { status: "ApprovedAwaitingPaymentProof", label: "بانتظار الدفع" },
   { status: "PaymentProofSubmitted",        label: "مراجعة الدفع" },
+  { status: "RevisionRequested",            label: "طلبات تعديل" },
   { status: "Confirmed",                    label: "مؤكدة" },
   { status: "Rejected",                     label: "مرفوضة" },
   { status: "CancelledByTenant",            label: "ملغاة" },
@@ -144,9 +145,11 @@ function FileRow({
 function ProofUploadSection({
   bookingId,
   onSuccess,
+  headerText,
 }: {
   bookingId: string;
   onSuccess: () => void;
+  headerText?: string;
 }) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -230,7 +233,7 @@ function ProofUploadSection({
   return (
     <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 space-y-3">
       <p className="text-sm font-bold text-blue-700">
-        💳 تمت الموافقة المبدئية — يرجى رفع إثبات التحويل لإكمال الحجز
+        {headerText ?? "💳 تمت الموافقة المبدئية — يرجى رفع إثبات التحويل لإكمال الحجز"}
       </p>
 
       <div
@@ -334,7 +337,6 @@ function BookingCard({
   onApprove,
   onReject,
   onConfirm,
-  onRejectProof,
   onCancel,
   onCancelOwner,
   onRefresh,
@@ -345,21 +347,41 @@ function BookingCard({
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onConfirm?: (id: string) => void;
-  onRejectProof?: (id: string) => void;
   onCancel?: (id: string) => void;
   onCancelOwner?: (id: string) => void;
   onRefresh?: () => void;
 }) {
+  const [revisionOpen, setRevisionOpen] = useState(false);
+  const [revisionNote, setRevisionNote] = useState("");
+  const [revisionBusy, setRevisionBusy] = useState(false);
+
   const normalizedStatus = normalizeBookingStatus(booking.status);
   const nights = getNightCount(booking.startDate, booking.endDate);
   const finalTotal = booking.totalAmount + booking.commissionAmount;
   const proofUrls = parseProofUrls(booking.paymentProofUrls);
 
-  const isPending     = normalizedStatus === "PendingApproval";
-  const isAwaitProof  = normalizedStatus === "ApprovedAwaitingPaymentProof" || normalizedStatus === "Approved";
-  const isProofSub    = normalizedStatus === "PaymentProofSubmitted";
-  const isConfirmed   = normalizedStatus === "Confirmed";
-  const isCancellable = isPending || isAwaitProof || isProofSub;
+  const isPending           = normalizedStatus === "PendingApproval";
+  const isAwaitProof        = normalizedStatus === "ApprovedAwaitingPaymentProof" || normalizedStatus === "Approved";
+  const isProofSub          = normalizedStatus === "PaymentProofSubmitted";
+  const isRevisionRequested = normalizedStatus === "RevisionRequested";
+  const isConfirmed         = normalizedStatus === "Confirmed";
+  const isCancellable       = isPending || isAwaitProof || isProofSub || isRevisionRequested;
+
+  async function handleRevisionSubmit() {
+    if (!revisionNote.trim() || revisionBusy) return;
+    setRevisionBusy(true);
+    try {
+      await bookingsApi.requestRevision(booking.id, revisionNote.trim());
+      toast.success("تم إرسال طلب التعديل للمستأجر");
+      setRevisionOpen(false);
+      setRevisionNote("");
+      onRefresh?.();
+    } catch (err) {
+      toast.error(normalizeError(err) || "تعذّر إرسال طلب التعديل");
+    } finally {
+      setRevisionBusy(false);
+    }
+  }
 
   return (
     <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "1rem", boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
@@ -429,20 +451,67 @@ function BookingCard({
         </div>
       )}
 
-      {mode === "owner" && isProofSub && (
+      {mode === "owner" && isProofSub && !revisionOpen && (
         <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <button onClick={() => onConfirm?.(booking.id)} disabled={busy}
             style={{ border: "none", borderRadius: 9, padding: "0.55rem 1rem", background: "#166534", color: "#fff", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}>
             ✅ تأكيد الحجز
           </button>
-          <button onClick={() => onRejectProof?.(booking.id)} disabled={busy}
-            style={{ border: "1px solid #fde68a", borderRadius: 9, padding: "0.55rem 1rem", background: "#fffbeb", color: "#b45309", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}>
-            طلب مراجعة الدفع
+          <button onClick={() => setRevisionOpen(true)} disabled={busy}
+            style={{ border: "1px solid #fcd34d", borderRadius: 9, padding: "0.55rem 1rem", background: "#fffbeb", color: "#92400e", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}>
+            ✏️ طلب تعديل
           </button>
           <button onClick={() => onReject?.(booking.id)} disabled={busy}
             style={{ border: "1px solid #fecaca", borderRadius: 9, padding: "0.55rem 1rem", background: "#fff", color: "#b91c1c", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}>
             رفض
           </button>
+        </div>
+      )}
+
+      {mode === "owner" && isProofSub && revisionOpen && (
+        <div style={{ marginTop: "1rem", borderRadius: 12, border: "1px solid #fcd34d", background: "#fffbeb", padding: "0.9rem" }}>
+          <p style={{ margin: "0 0 0.6rem", fontSize: "0.88rem", fontWeight: 800, color: "#92400e" }}>
+            ✏️ طلب تعديل إثبات الدفع — اكتب ملاحظتك للمستأجر
+          </p>
+          <textarea
+            value={revisionNote}
+            onChange={(ev) => setRevisionNote(ev.target.value)}
+            placeholder="مثال: الصورة غير واضحة، يرجى إرسال صورة أوضح تظهر اسم المستفيد والمبلغ والتاريخ..."
+            rows={3}
+            maxLength={1000}
+            style={{ width: "100%", borderRadius: 9, border: "1px solid #fcd34d", background: "#fff", padding: "0.55rem 0.75rem", fontSize: "0.86rem", resize: "vertical", outline: "none", boxSizing: "border-box" }}
+          />
+          <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem" }}>
+            <button
+              onClick={handleRevisionSubmit}
+              disabled={!revisionNote.trim() || revisionBusy}
+              style={{ border: "none", borderRadius: 9, padding: "0.55rem 1.1rem", background: !revisionNote.trim() || revisionBusy ? "#d1d5db" : "#d97706", color: "#fff", fontWeight: 800, cursor: !revisionNote.trim() || revisionBusy ? "not-allowed" : "pointer" }}>
+              {revisionBusy ? "جاري الإرسال..." : "إرسال طلب التعديل"}
+            </button>
+            <button
+              onClick={() => { setRevisionOpen(false); setRevisionNote(""); }}
+              disabled={revisionBusy}
+              style={{ border: "1px solid #e2e8f0", borderRadius: 9, padding: "0.55rem 1rem", background: "#fff", color: "#475569", fontWeight: 800, cursor: "pointer" }}>
+              إلغاء
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === "owner" && isRevisionRequested && (
+        <div style={{ marginTop: "0.85rem" }}>
+          <div style={{ border: "1px solid #fcd34d", borderRadius: 10, padding: "0.65rem 0.85rem", background: "#fffbeb", color: "#92400e", fontSize: "0.86rem" }}>
+            <p style={{ margin: "0 0 0.25rem", fontWeight: 800 }}>✏️ في انتظار إعادة رفع الإثبات من المستأجر</p>
+            {booking.ownerNotes && (
+              <p style={{ margin: 0, color: "#78350f" }}>ملاحظتك: {booking.ownerNotes}</p>
+            )}
+          </div>
+          <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
+            <button onClick={() => onReject?.(booking.id)} disabled={busy}
+              style={{ border: "1px solid #fecaca", borderRadius: 9, padding: "0.55rem 1rem", background: "#fff", color: "#b91c1c", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer" }}>
+              رفض الطلب
+            </button>
+          </div>
         </div>
       )}
 
@@ -459,6 +528,22 @@ function BookingCard({
       {mode === "renter" && isProofSub && (
         <div style={{ marginTop: "0.85rem", border: "1px solid #bfdbfe", borderRadius: 10, padding: "0.65rem 0.85rem", background: "#eff6ff", color: "#1d4ed8", fontWeight: 800, fontSize: "0.86rem" }}>
           📎 تم إرسال إثبات الدفع — في انتظار مراجعة المالك
+        </div>
+      )}
+
+      {mode === "renter" && isRevisionRequested && onRefresh && (
+        <div style={{ marginTop: "0.85rem" }}>
+          <div style={{ border: "1px solid #fcd34d", borderRadius: 10, padding: "0.65rem 0.85rem", background: "#fffbeb", color: "#92400e", fontSize: "0.86rem", marginBottom: "0.75rem" }}>
+            <p style={{ margin: "0 0 0.3rem", fontWeight: 800 }}>✏️ يطلب المالك تعديل إثبات الدفع</p>
+            {booking.ownerNotes && (
+              <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>ملاحظة المالك: {booking.ownerNotes}</p>
+            )}
+          </div>
+          <ProofUploadSection
+            bookingId={booking.id}
+            onSuccess={onRefresh}
+            headerText="📎 يرجى إعادة رفع إثبات الدفع مع مراعاة ملاحظة المالك"
+          />
         </div>
       )}
 
@@ -501,14 +586,13 @@ export default function DashboardBookingsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function updateBooking(id: string, action: "approve" | "reject" | "confirm" | "rejectProof" | "cancel" | "cancelOwner") {
+  async function updateBooking(id: string, action: "approve" | "reject" | "confirm" | "cancel" | "cancelOwner") {
     setBusyId(id);
     setError("");
     try {
       if (action === "approve")      await bookingsApi.approve(id);
       if (action === "reject")       await bookingsApi.reject(id);
       if (action === "confirm")      await bookingsApi.confirmPayment(id);
-      if (action === "rejectProof")  await bookingsApi.rejectProof(id);
       if (action === "cancel")       await bookingsApi.cancel(id);
       if (action === "cancelOwner")  await bookingsApi.cancelOwner(id);
       await load();
@@ -571,8 +655,8 @@ export default function DashboardBookingsPage() {
                 onApprove={(id) => updateBooking(id, "approve")}
                 onReject={(id) => updateBooking(id, "reject")}
                 onConfirm={(id) => updateBooking(id, "confirm")}
-                onRejectProof={(id) => updateBooking(id, "rejectProof")}
                 onCancelOwner={(id) => updateBooking(id, "cancelOwner")}
+                onRefresh={load}
               />
             ))}
           </div>

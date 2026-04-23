@@ -26,4 +26,6 @@ public class BookingResponse
     public DateTime? PaymentProofSubmittedAt { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public DateTime? ConfirmedAt { get; set; }
+    public string? OwnerNotes { get; set; }
+    public DateTime? RevisionRequestedAt { get; set; }
 }

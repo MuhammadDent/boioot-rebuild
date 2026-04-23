@@ -19,6 +19,7 @@ public class BookingService : IBookingService
     private const string Approved = "Approved";
     private const string ApprovedAwaitingPaymentProof = "ApprovedAwaitingPaymentProof";
     private const string PaymentProofSubmitted = "PaymentProofSubmitted";
+    private const string RevisionRequested = "RevisionRequested";
     private const string Confirmed = "Confirmed";
     private const string Rejected = "Rejected";
     private const string Cancelled = "Cancelled";
@@ -508,7 +509,9 @@ public class BookingService : IBookingService
         PaymentProofNote = booking.PaymentProofNote,
         PaymentProofSubmittedAt = booking.PaymentProofSubmittedAt,
         ApprovedAt = booking.ApprovedAt,
-        ConfirmedAt = booking.ConfirmedAt
+        ConfirmedAt = booking.ConfirmedAt,
+        OwnerNotes = booking.OwnerNotes,
+        RevisionRequestedAt = booking.RevisionRequestedAt
     };
 
     public async Task<BookingResponse> SubmitPaymentProofAsync(Guid tenantUserId, Guid bookingId, SubmitPaymentProofRequest request, CancellationToken ct = default)
@@ -519,9 +522,10 @@ public class BookingService : IBookingService
 
         var canSubmit =
             string.Equals(booking.Status, ApprovedAwaitingPaymentProof, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(booking.Status, Approved, StringComparison.OrdinalIgnoreCase);
+            string.Equals(booking.Status, Approved, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(booking.Status, RevisionRequested, StringComparison.OrdinalIgnoreCase);
         if (!canSubmit)
-            throw new BoiootException("لا يمكن رفع إثبات الدفع في الحالة الحالية للطلب. يجب أن يكون الطلب في حالة 'بانتظار إثبات الدفع'.", 400);
+            throw new BoiootException("لا يمكن رفع إثبات الدفع في الحالة الحالية للطلب.", 400);
 
         if (request.ProofUrls == null || request.ProofUrls.Count == 0)
             throw new BoiootException("يرجى رفع صورة إثبات الدفع", 400);

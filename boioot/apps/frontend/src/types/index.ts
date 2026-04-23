@@ -191,6 +191,7 @@ export type BookingStatus =
   | "Approved"
   | "ApprovedAwaitingPaymentProof"
   | "PaymentProofSubmitted"
+  | "RevisionRequested"
   | "Confirmed"
   | "Rejected"
   | "Cancelled"
@@ -233,6 +234,8 @@ export interface BookingResponse {
   paymentProofSubmittedAt?: string | null;
   approvedAt?: string | null;
   confirmedAt?: string | null;
+  ownerNotes?: string | null;
+  revisionRequestedAt?: string | null;
 }
 
 export interface AvailabilityResponse {
