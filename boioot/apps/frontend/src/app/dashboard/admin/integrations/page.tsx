@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { api } from "@/lib/api";
-import { toast } from "@/components/ui/ToastProvider";
+import { toast } from "sonner";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,12 +101,12 @@ function SettingsModal({
         `/admin/integrations/${integration.key}/settings`,
         { config: values }
       );
-      toast({ type: "success", message: "تم حفظ الإعدادات بنجاح" });
+      toast.success("تم حفظ الإعدادات بنجاح");
       onSaved(updated);
       onClose();
     } catch (e: unknown) {
       const err = e as { message?: string };
-      toast({ type: "error", message: err?.message ?? "فشل حفظ الإعدادات" });
+      toast.error(err?.message ?? "فشل حفظ الإعدادات");
     } finally {
       setSaving(false);
     }
@@ -117,11 +117,11 @@ function SettingsModal({
     setDisconnecting(true);
     try {
       const updated = await api.post<Integration>(`/admin/integrations/${integration.key}/disconnect`, {});
-      toast({ type: "success", message: "تم إزالة الإعدادات" });
+      toast.success("تم إزالة الإعدادات");
       onSaved(updated);
       onClose();
     } catch {
-      toast({ type: "error", message: "فشل إزالة الإعدادات" });
+      toast.error("فشل إزالة الإعدادات");
     } finally {
       setDisconnecting(false);
     }
@@ -329,7 +329,7 @@ const CATEGORIES = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminIntegrationsPage() {
-  const { loading: authLoading } = useProtectedRoute({ requiredRole: "SuperAdmin" });
+  const { isLoading: authLoading } = useProtectedRoute({ allowedRoles: ["SuperAdmin"] });
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("all");
@@ -341,7 +341,7 @@ export default function AdminIntegrationsPage() {
       const data = await api.get<Integration[]>("/admin/integrations");
       setIntegrations(data);
     } catch {
-      toast({ type: "error", message: "فشل تحميل التطبيقات المدمجة" });
+      toast.error("فشل تحميل التطبيقات المدمجة");
     } finally {
       setLoading(false);
     }
@@ -355,12 +355,9 @@ export default function AdminIntegrationsPage() {
     try {
       const updated = await api.post<Integration>(`/admin/integrations/${integration.key}/${action}`, {});
       setIntegrations((prev) => prev.map((i) => (i.key === updated.key ? updated : i)));
-      toast({
-        type: "success",
-        message: updated.isEnabled ? `تم تفعيل ${updated.name}` : `تم إيقاف ${updated.name}`,
-      });
+      toast.success(updated.isEnabled ? `تم تفعيل ${updated.name}` : `تم إيقاف ${updated.name}`);
     } catch {
-      toast({ type: "error", message: "فشلت العملية" });
+      toast.error("فشلت العملية");
     } finally {
       setToggling(null);
     }
