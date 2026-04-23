@@ -7,6 +7,7 @@ import { AuthGateProvider } from "@/context/AuthGateContext";
 import { ContentProvider } from "@/context/ContentContext";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import IntegrationScripts from "@/components/integrations/IntegrationScripts";
+import IntegrationMeta from "@/components/integrations/IntegrationMeta";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -50,6 +51,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={cairo.variable} suppressHydrationWarning>
       <head>
+        <IntegrationMeta />
         {/* Preconnect to Unsplash CDN so hero background images load faster */}
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
