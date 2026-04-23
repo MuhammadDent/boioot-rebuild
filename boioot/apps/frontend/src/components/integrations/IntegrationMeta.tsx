@@ -56,6 +56,24 @@ export default async function IntegrationMeta(): Promise<JSX.Element | null> {
     );
   }
 
+  const gtm = integrations.find((i) => i.key === "google-tag-manager");
+  const gtmId = gtm?.config.containerId;
+  if (gtmId && gtmId.startsWith("GTM-")) {
+    nodes.push(
+      <script
+        key="gtm-init"
+        dangerouslySetInnerHTML={{
+          __html:
+            `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':` +
+            `new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],` +
+            `j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;` +
+            `j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;` +
+            `f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`,
+        }}
+      />
+    );
+  }
+
   if (nodes.length === 0) return null;
   return <>{nodes}</>;
 }

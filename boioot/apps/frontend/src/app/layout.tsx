@@ -8,6 +8,7 @@ import { ContentProvider } from "@/context/ContentContext";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import IntegrationScripts from "@/components/integrations/IntegrationScripts";
 import IntegrationMeta from "@/components/integrations/IntegrationMeta";
+import IntegrationBody from "@/components/integrations/IntegrationBody";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -57,6 +58,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
       <body suppressHydrationWarning>
+        <IntegrationBody />
         <AuthProvider>
           <SubscriptionProvider>
             <ContentProvider>
