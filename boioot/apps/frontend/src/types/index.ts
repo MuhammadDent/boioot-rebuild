@@ -1166,3 +1166,62 @@ export interface CreateRatingRequest {
   score: number;
   comment?: string;
 }
+
+export interface TenantReviewData {
+  id: string;
+  bookingId: string;
+  propertyId: string;
+  reviewType: "TenantToProperty";
+  reviewerUserId: string;
+  reviewedUserId?: string | null;
+  comment?: string | null;
+  cleanliness?: number | null;
+  accuracy?: number | null;
+  facilities?: number | null;
+  communication?: number | null;
+  contractCommitment?: number | null;
+  valueForMoney?: number | null;
+  overallRating: number;
+  createdAt: string;
+}
+
+export interface OwnerReviewData {
+  id: string;
+  bookingId: string;
+  propertyId: string;
+  reviewType: "OwnerToTenant";
+  reviewerUserId: string;
+  reviewedUserId?: string | null;
+  comment?: string | null;
+  communication?: number | null;
+  contractCommitment?: number | null;
+  respectProperty?: number | null;
+  timeliness?: number | null;
+  overallRating: number;
+  createdAt: string;
+}
+
+export interface BookingReviewStatus {
+  hasTenantReview: boolean;
+  hasOwnerReview: boolean;
+  tenantReview?: TenantReviewData | null;
+  ownerReview?: OwnerReviewData | null;
+}
+
+export interface CreateTenantReviewRequest {
+  cleanliness: number;
+  accuracy: number;
+  facilities: number;
+  communication: number;
+  contractCommitment: number;
+  valueForMoney: number;
+  comment?: string;
+}
+
+export interface CreateOwnerReviewRequest {
+  communication: number;
+  contractCommitment: number;
+  respectProperty: number;
+  timeliness: number;
+  comment?: string;
+}

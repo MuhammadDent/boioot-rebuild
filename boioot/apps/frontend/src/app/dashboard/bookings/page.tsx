@@ -5,10 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
 import { bookingsApi } from "@/features/bookings/api";
+import { reviewsApi } from "@/features/reviews/api";
 import { getBookingStatusConfig, normalizeBookingStatus } from "@/features/bookings/bookingStatusConfig";
 import { normalizeError } from "@/lib/api";
 import { api } from "@/lib/api";
-import type { BookingResponse, BookingStatus } from "@/types";
+import type { BookingResponse, BookingStatus, BookingReviewStatus, TenantReviewData, OwnerReviewData } from "@/types";
 import Spinner from "@/components/ui/Spinner";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 
@@ -330,6 +331,115 @@ function ProofUploadSection({
   );
 }
 
+// ─── Star rating input (1-5 clickable dots) ────────────────────────────────
+
+function StarInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.55rem" }}>
+      <span style={{ minWidth: 160, fontSize: "0.84rem", color: "#475569", flexShrink: 0 }}>{label}</span>
+      <div style={{ display: "flex", gap: "0.3rem" }}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            aria-label={`${n} نجمة`}
+            style={{
+              width: 28, height: 28, border: "none", borderRadius: "50%", cursor: "pointer",
+              background: n <= value ? "#f59e0b" : "#e2e8f0",
+              color: n <= value ? "#fff" : "#94a3b8",
+              fontWeight: 800, fontSize: "0.78rem",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.15s",
+            }}
+          >
+            {n <= value ? "★" : "☆"}
+          </button>
+        ))}
+      </div>
+      {value > 0 && (
+        <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{value}/5</span>
+      )}
+    </div>
+  );
+}
+
+// ─── Display a submitted review (criteria + overall) ────────────────────────
+
+function TenantReviewDisplay({ review }: { review: TenantReviewData }) {
+  const criteria: Array<[string, number | null | undefined]> = [
+    ["النظافة", review.cleanliness],
+    ["دقة الوصف", review.accuracy],
+    ["جودة المرافق", review.facilities],
+    ["التواصل مع المالك", review.communication],
+    ["الالتزام بالاتفاق", review.contractCommitment],
+    ["القيمة مقابل السعر", review.valueForMoney],
+  ];
+  return (
+    <div style={{ marginTop: "0.85rem", border: "1px solid #bbf7d0", borderRadius: 10, padding: "0.85rem", background: "#f0fdf4" }}>
+      <p style={{ margin: "0 0 0.5rem", fontWeight: 800, color: "#166534", fontSize: "0.9rem" }}>⭐ تقييمك للإقامة</p>
+      <p style={{ margin: "0 0 0.6rem", color: "#15803d", fontSize: "0.95rem", fontWeight: 800 }}>
+        التقييم العام: {Number(review.overallRating).toFixed(1)} / 5
+      </p>
+      <div>
+        {criteria.map(([lbl, val]) =>
+          val != null ? (
+            <div key={lbl} style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem", fontSize: "0.83rem", color: "#475569" }}>
+              <span style={{ minWidth: 150 }}>{lbl}:</span>
+              <span>{"★".repeat(val)}{"☆".repeat(5 - val)}</span>
+              <span>{val}/5</span>
+            </div>
+          ) : null
+        )}
+      </div>
+      {review.comment && (
+        <p style={{ margin: "0.6rem 0 0", fontSize: "0.84rem", color: "#64748b", fontStyle: "italic" }}>"{review.comment}"</p>
+      )}
+    </div>
+  );
+}
+
+function OwnerReviewDisplay({ review }: { review: OwnerReviewData }) {
+  const criteria: Array<[string, number | null | undefined]> = [
+    ["التواصل", review.communication],
+    ["الالتزام بالشروط", review.contractCommitment],
+    ["احترام العقار", review.respectProperty],
+    ["الالتزام بالمواعيد", review.timeliness],
+  ];
+  return (
+    <div style={{ marginTop: "0.85rem", border: "1px solid #ddd6fe", borderRadius: 10, padding: "0.85rem", background: "#faf5ff" }}>
+      <p style={{ margin: "0 0 0.5rem", fontWeight: 800, color: "#6d28d9", fontSize: "0.9rem" }}>⭐ تقييمك للمستأجر</p>
+      <p style={{ margin: "0 0 0.6rem", color: "#7c3aed", fontSize: "0.95rem", fontWeight: 800 }}>
+        التقييم العام: {Number(review.overallRating).toFixed(1)} / 5
+      </p>
+      <div>
+        {criteria.map(([lbl, val]) =>
+          val != null ? (
+            <div key={lbl} style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem", fontSize: "0.83rem", color: "#475569" }}>
+              <span style={{ minWidth: 150 }}>{lbl}:</span>
+              <span>{"★".repeat(val)}{"☆".repeat(5 - val)}</span>
+              <span>{val}/5</span>
+            </div>
+          ) : null
+        )}
+      </div>
+      {review.comment && (
+        <p style={{ margin: "0.6rem 0 0", fontSize: "0.84rem", color: "#64748b", fontStyle: "italic" }}>"{review.comment}"</p>
+      )}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 function BookingCard({
   booking,
   mode,
@@ -355,6 +465,13 @@ function BookingCard({
   const [revisionNote, setRevisionNote] = useState("");
   const [revisionBusy, setRevisionBusy] = useState(false);
 
+  const [reviewStatus, setReviewStatus]     = useState<BookingReviewStatus | null>(null);
+  const [reviewOpen, setReviewOpen]         = useState(false);
+  const [reviewComment, setReviewComment]   = useState("");
+  const [reviewBusy, setReviewBusy]         = useState(false);
+  const [tenantScores, setTenantScores]     = useState({ cleanliness: 0, accuracy: 0, facilities: 0, communication: 0, contractCommitment: 0, valueForMoney: 0 });
+  const [ownerScores, setOwnerScores]       = useState({ communication: 0, contractCommitment: 0, respectProperty: 0, timeliness: 0 });
+
   const normalizedStatus = normalizeBookingStatus(booking.status);
   const nights = getNightCount(booking.startDate, booking.endDate);
   const finalTotal = booking.totalAmount + booking.commissionAmount;
@@ -365,6 +482,8 @@ function BookingCard({
   const isProofSub          = normalizedStatus === "PaymentProofSubmitted";
   const isRevisionRequested = normalizedStatus === "RevisionRequested";
   const isConfirmed         = normalizedStatus === "Confirmed";
+  const isCompleted         = normalizedStatus === "Completed";
+  const isReviewable        = isConfirmed || isCompleted;
   const isCancellable       = isPending || isAwaitProof || isProofSub || isRevisionRequested;
 
   async function handleRevisionSubmit() {
@@ -380,6 +499,53 @@ function BookingCard({
       toast.error(normalizeError(err) || "تعذّر إرسال طلب التعديل");
     } finally {
       setRevisionBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!isReviewable) return;
+    reviewsApi.getBookingReviews(booking.id)
+      .then(setReviewStatus)
+      .catch(() => {});
+  }, [booking.id, isReviewable]);
+
+  async function handleTenantReviewSubmit() {
+    const scores = tenantScores;
+    if (Object.values(scores).some((v) => v < 1)) {
+      toast.error("يرجى تقييم جميع المحاور");
+      return;
+    }
+    setReviewBusy(true);
+    try {
+      await reviewsApi.submitTenantReview(booking.id, { ...scores, comment: reviewComment.trim() || undefined });
+      toast.success("تم حفظ تقييمك بنجاح ✨");
+      const updated = await reviewsApi.getBookingReviews(booking.id);
+      setReviewStatus(updated);
+      setReviewOpen(false);
+    } catch (err) {
+      toast.error(normalizeError(err) || "تعذّر إرسال التقييم");
+    } finally {
+      setReviewBusy(false);
+    }
+  }
+
+  async function handleOwnerReviewSubmit() {
+    const scores = ownerScores;
+    if (Object.values(scores).some((v) => v < 1)) {
+      toast.error("يرجى تقييم جميع المحاور");
+      return;
+    }
+    setReviewBusy(true);
+    try {
+      await reviewsApi.submitOwnerReview(booking.id, { ...scores, comment: reviewComment.trim() || undefined });
+      toast.success("تم حفظ تقييمك للمستأجر ✨");
+      const updated = await reviewsApi.getBookingReviews(booking.id);
+      setReviewStatus(updated);
+      setReviewOpen(false);
+    } catch (err) {
+      toast.error(normalizeError(err) || "تعذّر إرسال التقييم");
+    } finally {
+      setReviewBusy(false);
     }
   }
 
@@ -515,9 +681,106 @@ function BookingCard({
         </div>
       )}
 
-      {mode === "renter" && isConfirmed && (
+      {mode === "owner" && isReviewable && reviewStatus && !reviewStatus.hasOwnerReview && !reviewOpen && (
+        <div style={{ marginTop: "0.85rem" }}>
+          <button
+            type="button"
+            onClick={() => setReviewOpen(true)}
+            style={{ border: "1px solid #ddd6fe", borderRadius: 9, padding: "0.55rem 1.1rem", background: "#faf5ff", color: "#6d28d9", fontWeight: 800, cursor: "pointer", fontSize: "0.86rem" }}>
+            ⭐ قيّم المستأجر
+          </button>
+        </div>
+      )}
+
+      {mode === "owner" && isReviewable && reviewStatus?.hasOwnerReview && reviewStatus.ownerReview && (
+        <OwnerReviewDisplay review={reviewStatus.ownerReview} />
+      )}
+
+      {mode === "owner" && isReviewable && reviewOpen && !reviewStatus?.hasOwnerReview && (
+        <div style={{ marginTop: "0.85rem", border: "1px solid #ddd6fe", borderRadius: 12, padding: "0.9rem", background: "#faf5ff" }}>
+          <p style={{ margin: "0 0 0.75rem", fontWeight: 800, color: "#6d28d9", fontSize: "0.9rem" }}>⭐ قيّم المستأجر</p>
+          <StarInput label="التواصل" value={ownerScores.communication} onChange={(v) => setOwnerScores((s) => ({ ...s, communication: v }))} />
+          <StarInput label="الالتزام بالشروط" value={ownerScores.contractCommitment} onChange={(v) => setOwnerScores((s) => ({ ...s, contractCommitment: v }))} />
+          <StarInput label="احترام العقار" value={ownerScores.respectProperty} onChange={(v) => setOwnerScores((s) => ({ ...s, respectProperty: v }))} />
+          <StarInput label="الالتزام بالمواعيد" value={ownerScores.timeliness} onChange={(v) => setOwnerScores((s) => ({ ...s, timeliness: v }))} />
+          <textarea
+            placeholder="تعليق إضافي (اختياري)"
+            value={reviewComment}
+            onChange={(e) => setReviewComment(e.target.value)}
+            rows={2}
+            maxLength={500}
+            style={{ width: "100%", borderRadius: 9, border: "1px solid #ddd6fe", background: "#fff", padding: "0.55rem 0.75rem", fontSize: "0.84rem", resize: "vertical", outline: "none", boxSizing: "border-box", marginTop: "0.5rem" }}
+          />
+          <div style={{ marginTop: "0.65rem", display: "flex", gap: "0.5rem" }}>
+            <button
+              type="button"
+              onClick={handleOwnerReviewSubmit}
+              disabled={reviewBusy || Object.values(ownerScores).some((v) => v < 1)}
+              style={{ border: "none", borderRadius: 9, padding: "0.55rem 1.2rem", background: reviewBusy || Object.values(ownerScores).some((v) => v < 1) ? "#d1d5db" : "#6d28d9", color: "#fff", fontWeight: 800, cursor: reviewBusy ? "not-allowed" : "pointer" }}>
+              {reviewBusy ? "جاري الإرسال..." : "إرسال التقييم"}
+            </button>
+            <button type="button" onClick={() => setReviewOpen(false)} disabled={reviewBusy}
+              style={{ border: "1px solid #e2e8f0", borderRadius: 9, padding: "0.55rem 1rem", background: "#fff", color: "#475569", fontWeight: 800, cursor: "pointer" }}>
+              إلغاء
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === "renter" && isReviewable && reviewStatus && !reviewStatus.hasTenantReview && !reviewOpen && (
+        <div style={{ marginTop: "0.85rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ border: "1px solid #bbf7d0", borderRadius: 10, padding: "0.65rem 0.85rem", background: "#f0fdf4", color: "#166534", fontWeight: 800, fontSize: "0.86rem", flex: 1 }}>
+            ✅ تم تأكيد الحجز
+          </div>
+          <button
+            type="button"
+            onClick={() => setReviewOpen(true)}
+            style={{ border: "1px solid #fbbf24", borderRadius: 9, padding: "0.55rem 1.1rem", background: "#fffbeb", color: "#92400e", fontWeight: 800, cursor: "pointer", fontSize: "0.86rem", whiteSpace: "nowrap" }}>
+            ⭐ قيّم إقامتك
+          </button>
+        </div>
+      )}
+
+      {mode === "renter" && isReviewable && !reviewStatus && (
         <div style={{ marginTop: "0.85rem", border: "1px solid #bbf7d0", borderRadius: 10, padding: "0.65rem 0.85rem", background: "#f0fdf4", color: "#166534", fontWeight: 800, fontSize: "0.86rem" }}>
           ✅ تم تأكيد الحجز
+        </div>
+      )}
+
+      {mode === "renter" && isReviewable && reviewStatus?.hasTenantReview && reviewStatus.tenantReview && (
+        <TenantReviewDisplay review={reviewStatus.tenantReview} />
+      )}
+
+      {mode === "renter" && isReviewable && reviewOpen && !reviewStatus?.hasTenantReview && (
+        <div style={{ marginTop: "0.85rem", border: "1px solid #fbbf24", borderRadius: 12, padding: "0.9rem", background: "#fffbeb" }}>
+          <p style={{ margin: "0 0 0.75rem", fontWeight: 800, color: "#92400e", fontSize: "0.9rem" }}>⭐ قيّم تجربة إقامتك</p>
+          <StarInput label="النظافة" value={tenantScores.cleanliness} onChange={(v) => setTenantScores((s) => ({ ...s, cleanliness: v }))} />
+          <StarInput label="دقة الوصف" value={tenantScores.accuracy} onChange={(v) => setTenantScores((s) => ({ ...s, accuracy: v }))} />
+          <StarInput label="جودة المرافق" value={tenantScores.facilities} onChange={(v) => setTenantScores((s) => ({ ...s, facilities: v }))} />
+          <StarInput label="التواصل مع المالك" value={tenantScores.communication} onChange={(v) => setTenantScores((s) => ({ ...s, communication: v }))} />
+          <StarInput label="الالتزام بالاتفاق" value={tenantScores.contractCommitment} onChange={(v) => setTenantScores((s) => ({ ...s, contractCommitment: v }))} />
+          <StarInput label="القيمة مقابل السعر" value={tenantScores.valueForMoney} onChange={(v) => setTenantScores((s) => ({ ...s, valueForMoney: v }))} />
+          <textarea
+            placeholder="تعليق إضافي (اختياري)"
+            value={reviewComment}
+            onChange={(e) => setReviewComment(e.target.value)}
+            rows={2}
+            maxLength={500}
+            style={{ width: "100%", borderRadius: 9, border: "1px solid #fbbf24", background: "#fff", padding: "0.55rem 0.75rem", fontSize: "0.84rem", resize: "vertical", outline: "none", boxSizing: "border-box", marginTop: "0.5rem" }}
+          />
+          <div style={{ marginTop: "0.65rem", display: "flex", gap: "0.5rem" }}>
+            <button
+              type="button"
+              onClick={handleTenantReviewSubmit}
+              disabled={reviewBusy || Object.values(tenantScores).some((v) => v < 1)}
+              style={{ border: "none", borderRadius: 9, padding: "0.55rem 1.2rem", background: reviewBusy || Object.values(tenantScores).some((v) => v < 1) ? "#d1d5db" : "#d97706", color: "#fff", fontWeight: 800, cursor: reviewBusy ? "not-allowed" : "pointer" }}>
+              {reviewBusy ? "جاري الإرسال..." : "إرسال التقييم"}
+            </button>
+            <button type="button" onClick={() => setReviewOpen(false)} disabled={reviewBusy}
+              style={{ border: "1px solid #e2e8f0", borderRadius: 9, padding: "0.55rem 1rem", background: "#fff", color: "#475569", fontWeight: 800, cursor: "pointer" }}>
+              إلغاء
+            </button>
+          </div>
         </div>
       )}
 
