@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "sonner";
 import { bookingsApi } from "@/features/bookings/api";
 import { getBookingStatusConfig, normalizeBookingStatus } from "@/features/bookings/bookingStatusConfig";
 import { normalizeError } from "@/lib/api";
@@ -51,6 +52,95 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function UploadSpinner() {
+  return (
+    <svg
+      className="animate-spin h-4 w-4 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} كيلوبايت`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} ميغابايت`;
+}
+
+function fileIcon(mimeType: string): string {
+  if (mimeType === "application/pdf") return "📄";
+  if (mimeType.startsWith("image/")) return "🖼️";
+  return "📎";
+}
+
+type FileEntry = {
+  id: string;
+  file: File;
+  status: "uploading" | "done" | "error";
+  url?: string;
+  errorMsg?: string;
+};
+
+function FileRow({
+  entry,
+  onRemove,
+}: {
+  entry: FileEntry;
+  onRemove: () => void;
+}) {
+  return (
+    <li className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition-all">
+      <span className="text-xl shrink-0" aria-hidden="true">
+        {fileIcon(entry.file.type)}
+      </span>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-slate-700 truncate">{entry.file.name}</p>
+        <p className="text-xs text-slate-400 mt-0.5">{formatFileSize(entry.file.size)}</p>
+      </div>
+
+      <div className="shrink-0 flex items-center gap-2">
+        {entry.status === "uploading" && (
+          <span className="text-blue-500 flex items-center gap-1 text-xs font-medium">
+            <UploadSpinner />
+            جاري الرفع
+          </span>
+        )}
+        {entry.status === "done" && (
+          <span className="flex items-center gap-1 text-xs font-bold text-emerald-600">
+            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+            </svg>
+            مرفوع
+          </span>
+        )}
+        {entry.status === "error" && (
+          <span className="text-red-500 text-xs font-medium max-w-[120px] truncate" title={entry.errorMsg}>
+            {entry.errorMsg ?? "خطأ"}
+          </span>
+        )}
+
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="حذف الملف"
+          disabled={entry.status === "uploading"}
+          className="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+          </svg>
+        </button>
+      </div>
+    </li>
+  );
+}
+
 function ProofUploadSection({
   bookingId,
   onSuccess,
@@ -58,111 +148,180 @@ function ProofUploadSection({
   bookingId: string;
   onSuccess: () => void;
 }) {
-  const [files, setFiles] = useState<File[]>([]);
-  const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
+  const [entries, setEntries] = useState<FileEntry[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [note, setNote] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleUploadFiles() {
-    if (files.length === 0) return;
-    setUploading(true);
-    setError("");
+  function uid(): string {
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  async function uploadEntry(entry: FileEntry) {
+    setEntries((prev) =>
+      prev.map((e) => (e.id === entry.id ? { ...e, status: "uploading" } : e))
+    );
     try {
-      const newUrls: string[] = [];
-      for (const file of files) {
-        const form = new FormData();
-        form.append("file", file);
-        const { url } = await api.upload<{ url: string; fileName: string }>("/upload/proof", form);
-        newUrls.push(url);
-      }
-      setUploadedUrls((prev) => [...prev, ...newUrls]);
-      setFiles([]);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      const form = new FormData();
+      form.append("file", entry.file);
+      const { url } = await api.upload<{ url: string; fileName: string }>("/upload/proof", form);
+      setEntries((prev) =>
+        prev.map((e) => (e.id === entry.id ? { ...e, status: "done", url } : e))
+      );
     } catch (err) {
-      setError(normalizeError(err) || "تعذّر رفع الملف");
-    } finally {
-      setUploading(false);
+      const msg = normalizeError(err) || "تعذّر رفع الملف";
+      setEntries((prev) =>
+        prev.map((e) => (e.id === entry.id ? { ...e, status: "error", errorMsg: msg } : e))
+      );
+      toast.error(msg);
     }
   }
 
+  function addFiles(incoming: File[]) {
+    if (incoming.length === 0) return;
+    const newEntries: FileEntry[] = incoming.map((file) => ({
+      id: uid(),
+      file,
+      status: "uploading" as const,
+    }));
+    setEntries((prev) => [...prev, ...newEntries]);
+    newEntries.forEach((e) => { void uploadEntry(e); });
+  }
+
+  function handleInputChange(ev: React.ChangeEvent<HTMLInputElement>) {
+    addFiles(Array.from(ev.target.files ?? []));
+    ev.target.value = "";
+  }
+
+  function handleDrop(ev: React.DragEvent<HTMLDivElement>) {
+    ev.preventDefault();
+    setIsDragOver(false);
+    addFiles(Array.from(ev.dataTransfer.files));
+  }
+
+  function handleDragOver(ev: React.DragEvent<HTMLDivElement>) {
+    ev.preventDefault();
+    setIsDragOver(true);
+  }
+
+  function removeEntry(id: string) {
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  const uploadedUrls = entries.filter((e) => e.status === "done").map((e) => e.url!);
+  const anyUploading = entries.some((e) => e.status === "uploading");
+  const canSubmit = uploadedUrls.length > 0 && !submitting && !anyUploading;
+
   async function handleSubmit() {
-    if (uploadedUrls.length === 0) {
-      setError("يرجى رفع صورة إثبات الدفع أولاً");
-      return;
-    }
+    if (!canSubmit) return;
     setSubmitting(true);
-    setError("");
     try {
-      await bookingsApi.submitProof(bookingId, { proofUrls: uploadedUrls, note: note || undefined });
+      await bookingsApi.submitProof(bookingId, { proofUrls: uploadedUrls, note: note.trim() || undefined });
+      toast.success("تم إرسال إثبات الدفع بنجاح");
       onSuccess();
     } catch (err) {
-      setError(normalizeError(err) || "تعذّر إرسال إثبات الدفع");
+      toast.error(normalizeError(err) || "تعذّر إرسال إثبات الدفع");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div style={{ marginTop: "1rem", border: "1px solid #bfdbfe", borderRadius: 12, padding: "1rem", background: "#eff6ff" }}>
-      <p style={{ margin: "0 0 0.75rem", fontWeight: 800, color: "#1d4ed8", fontSize: "0.9rem" }}>
+    <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50/60 p-4 space-y-3">
+      <p className="text-sm font-bold text-blue-700">
         💳 تمت الموافقة المبدئية — يرجى رفع إثبات التحويل لإكمال الحجز
       </p>
 
-      {uploadedUrls.length > 0 && (
-        <div style={{ marginBottom: "0.75rem" }}>
-          <p style={{ margin: "0 0 0.4rem", fontSize: "0.82rem", color: "#1d4ed8", fontWeight: 700 }}>الصور المرفوعة:</p>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            {uploadedUrls.map((url, i) => (
-              <div key={i} style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", border: "1px solid #bfdbfe" }}>
-                <Image src={url} alt={`إثبات ${i + 1}`} fill style={{ objectFit: "cover" }} sizes="72px" unoptimized />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: "0.6rem" }}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,.pdf"
-          multiple
-          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-          style={{ fontSize: "0.82rem", marginBottom: "0.4rem", display: "block" }}
-        />
-        {files.length > 0 && (
-          <button
-            type="button"
-            onClick={handleUploadFiles}
-            disabled={uploading}
-            style={{ border: "1px solid #93c5fd", borderRadius: 8, padding: "0.4rem 0.85rem", background: "#fff", color: "#1d4ed8", fontWeight: 800, cursor: uploading ? "not-allowed" : "pointer", fontSize: "0.82rem" }}
-          >
-            {uploading ? "جاري الرفع..." : `رفع ${files.length} ملف`}
-          </button>
-        )}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="منطقة رفع ملف إثبات الدفع"
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && inputRef.current?.click()}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={() => setIsDragOver(false)}
+        className={[
+          "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer",
+          "py-8 px-4 text-center select-none transition-all duration-200",
+          isDragOver
+            ? "border-blue-500 bg-blue-100 scale-[1.01]"
+            : "border-blue-300 bg-white hover:border-blue-400 hover:bg-blue-50",
+        ].join(" ")}
+      >
+        <svg
+          className="h-9 w-9 text-blue-400"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+        </svg>
+        <p className="text-sm font-semibold text-slate-600">
+          اضغط لرفع الملف أو اسحبه هنا
+        </p>
+        <p className="text-xs text-slate-400">JPG · PNG · PDF — حد 5 ميغابايت</p>
       </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,application/pdf"
+        multiple
+        className="hidden"
+        onChange={handleInputChange}
+        aria-label="اختر ملف إثبات الدفع"
+      />
+
+      {entries.length > 0 && (
+        <ul className="space-y-2">
+          {entries.map((entry) => (
+            <FileRow
+              key={entry.id}
+              entry={entry}
+              onRemove={() => removeEntry(entry.id)}
+            />
+          ))}
+        </ul>
+      )}
 
       <textarea
         placeholder="ملاحظة للمالك (اختياري)"
         value={note}
-        onChange={(e) => setNote(e.target.value)}
+        onChange={(ev) => setNote(ev.target.value)}
         rows={2}
         maxLength={500}
-        style={{ width: "100%", padding: "0.55rem 0.7rem", border: "1px solid #bfdbfe", borderRadius: 8, fontSize: "0.82rem", marginBottom: "0.6rem", resize: "vertical" }}
+        className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2.5 text-sm resize-y transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent placeholder:text-slate-400"
       />
-
-      {error && <p style={{ margin: "0 0 0.6rem", color: "#b91c1c", fontSize: "0.82rem" }}>{error}</p>}
 
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={submitting || uploadedUrls.length === 0}
-        style={{ border: "none", borderRadius: 9, padding: "0.55rem 1.1rem", background: uploadedUrls.length === 0 ? "#94a3b8" : "var(--color-primary)", color: "#fff", fontWeight: 800, cursor: (submitting || uploadedUrls.length === 0) ? "not-allowed" : "pointer", fontSize: "0.85rem" }}
+        disabled={!canSubmit}
+        className={[
+          "w-full flex items-center justify-center gap-2 rounded-xl py-3 px-5",
+          "text-sm font-bold text-white transition-all duration-200",
+          canSubmit
+            ? "bg-blue-600 hover:bg-blue-700 active:scale-[0.98] shadow-sm"
+            : "bg-slate-300 cursor-not-allowed",
+        ].join(" ")}
       >
-        {submitting ? "جاري الإرسال..." : "إرسال إثبات الدفع"}
+        {submitting ? (
+          <>
+            <UploadSpinner />
+            جاري الإرسال...
+          </>
+        ) : anyUploading ? (
+          <>
+            <UploadSpinner />
+            جاري رفع الملفات...
+          </>
+        ) : (
+          "إرسال إثبات الدفع"
+        )}
       </button>
     </div>
   );
