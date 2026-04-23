@@ -233,13 +233,11 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
       setMsgError("لا يمكنك مراسلة نفسك");
       return;
     }
-    console.log("[PropertyMessage] click", { propertyId: id, recipientId, currentUserId: usr.id });
     setMsgLoading(true);
     setMsgError("");
     setMsgIsConvLimit(false);
     try {
       const conv = await messagingApi.getOrCreateConversation({ recipientId, propertyId: id });
-      console.log("[PropertyMessage] API response", conv);
       router.push(`/dashboard/messages/${conv.id}`);
     } catch (err) {
       console.error("[PropertyMessage] conversation error", err);
@@ -304,29 +302,6 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   const showRatings       = isDailyRent;
   const hasSelectedDates  = !!bookingForm.startDate && !!bookingForm.endDate;
 
-  // DEBUG — temporary console logs to diagnose live rendering. Remove after confirmation.
-  useEffect(() => {
-    console.log("LISTING TYPE DEBUG:", property.listingType);
-    console.log("BOOKING DEBUG:", {
-      listingType: property.listingType,
-      isBookable: property.isBookable,
-      isDailyRent,
-      canBook,
-    });
-    console.log("[PropertyDetail DEBUG]", {
-      id: property.id,
-      listingType: property.listingType,
-      isBookable: property.isBookable,
-      isDailyRent,
-      isOwn,
-      canBook,
-      showRatings,
-      ratingLoaded,
-      topSummary,
-      resolvedRecipient,
-      userId: user?.id ?? null,
-    });
-  }, [property.id, property.listingType, property.isBookable, isDailyRent, isOwn, canBook, showRatings, ratingLoaded, topSummary, resolvedRecipient, user?.id]);
   const bookingNights     = getNightCount(bookingForm.startDate, bookingForm.endDate);
   const canSubmitBooking  = !bookingLoading && bookingNights > 0;
   const bookingTotal      = property.price * bookingNights;
