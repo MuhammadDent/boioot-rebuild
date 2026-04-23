@@ -84,48 +84,73 @@ public class BookingsController : BaseController
     [HttpGet("mine")]
     public async Task<IActionResult> Mine(CancellationToken ct)
     {
-        await EnsurePaymentStatusColumnAsync(ct);
-        var result = await QueryBookingsAsync("""
-            SELECT b."Id", b."PropertyId", p."Title" AS "PropertyTitle", b."RequestedByUserId", b."PropertyOwnerUserId",
-                   b."StartDate", b."EndDate", b."GuestName", b."Phone", b."Notes",
-                   COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
-                   COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
-                   COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
-                   b."Status",
-                   b."CreatedAt",
-                   COALESCE(b."GuestCount", 1) AS "GuestCount",
-                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
-                   b."OwnerNotes", b."RevisionRequestedAt"
-            FROM "Bookings" b
-            INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
-            WHERE b."RequestedByUserId" = @userId
-            ORDER BY b."CreatedAt" DESC
-            """, cmd => AddParameter(cmd, "@userId", GetUserId()), ct);
-        return Ok(result);
+        var userId = GetUserId();
+        _logger.LogInformation("[Mine] START userId={UserId}", userId);
+        try
+        {
+            _logger.LogInformation("[Mine] EnsurePaymentStatusColumn…");
+            await EnsurePaymentStatusColumnAsync(ct);
+            _logger.LogInformation("[Mine] Running query…");
+            var result = await QueryBookingsAsync("""
+                SELECT b."Id", b."PropertyId", p."Title" AS "PropertyTitle", b."RequestedByUserId", b."PropertyOwnerUserId",
+                       b."StartDate", b."EndDate", b."GuestName", b."Phone", b."Notes",
+                       COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
+                       COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
+                       COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
+                       b."Status",
+                       b."CreatedAt",
+                       COALESCE(b."GuestCount", 1) AS "GuestCount",
+                       b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
+                       b."OwnerNotes", b."RevisionRequestedAt"
+                FROM "Bookings" b
+                INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
+                WHERE b."RequestedByUserId" = @userId
+                ORDER BY b."CreatedAt" DESC
+                """, cmd => AddParameter(cmd, "@userId", userId), ct);
+            _logger.LogInformation("[Mine] OK — returned {Count} rows", result.Count);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Mine] FAILED userId={UserId} — {Message}", userId, ex.Message);
+            return StatusCode(500, new { message = "حدث خطأ أثناء تحميل حجوزاتك", detail = ex.Message });
+        }
     }
 
     [HttpGet("for-my-properties")]
     public async Task<IActionResult> ForMyProperties(CancellationToken ct)
     {
-        await EnsurePaymentStatusColumnAsync(ct);
         var userIdText = GetUserId().ToString();
-        var result = await QueryBookingsAsync("""
-            SELECT b."Id", b."PropertyId", p."Title" AS "PropertyTitle", b."RequestedByUserId", b."PropertyOwnerUserId",
-                   b."StartDate", b."EndDate", b."GuestName", b."Phone", b."Notes",
-                   COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
-                   COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
-                   COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
-                   b."Status",
-                   b."CreatedAt",
-                   COALESCE(b."GuestCount", 1) AS "GuestCount",
-                   b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
-                   b."OwnerNotes", b."RevisionRequestedAt"
-            FROM "Bookings" b
-            INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
-            WHERE b."PropertyOwnerUserId" = @userIdText OR p."OwnerId" = @userIdText OR p."CreatedByUserId" = @userIdText
-            ORDER BY b."CreatedAt" DESC
-            """, cmd => AddParameter(cmd, "@userIdText", userIdText), ct);
-        return Ok(result);
+        _logger.LogInformation("[ForMyProperties] START userId={UserId}", userIdText);
+        try
+        {
+            _logger.LogInformation("[ForMyProperties] EnsurePaymentStatusColumn…");
+            await EnsurePaymentStatusColumnAsync(ct);
+            _logger.LogInformation("[ForMyProperties] Running query…");
+            var result = await QueryBookingsAsync("""
+                SELECT b."Id", b."PropertyId", p."Title" AS "PropertyTitle", b."RequestedByUserId", b."PropertyOwnerUserId",
+                       b."StartDate", b."EndDate", b."GuestName", b."Phone", b."Notes",
+                       COALESCE(b."PricePerNight", 0) AS "PricePerNight", COALESCE(b."TotalAmount", 0) AS "TotalAmount",
+                       COALESCE(b."CommissionPercent", 0) AS "CommissionPercent", COALESCE(b."CommissionAmount", 0) AS "CommissionAmount",
+                       COALESCE(b."PaymentStatus", 'NotPaid') AS "PaymentStatus",
+                       b."Status",
+                       b."CreatedAt",
+                       COALESCE(b."GuestCount", 1) AS "GuestCount",
+                       b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
+                       b."OwnerNotes", b."RevisionRequestedAt"
+                FROM "Bookings" b
+                INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
+                WHERE b."PropertyOwnerUserId" = @userIdText OR p."OwnerId" = @userIdText OR p."CreatedByUserId" = @userIdText
+                ORDER BY b."CreatedAt" DESC
+                """, cmd => AddParameter(cmd, "@userIdText", userIdText), ct);
+            _logger.LogInformation("[ForMyProperties] OK — returned {Count} rows", result.Count);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ForMyProperties] FAILED userId={UserId} — {Message}", userIdText, ex.Message);
+            return StatusCode(500, new { message = "حدث خطأ أثناء تحميل حجوزات عقاراتك", detail = ex.Message });
+        }
     }
 
     [HttpPost("{id:guid}/confirm")]
