@@ -32,6 +32,7 @@ public class DataSeeder
         await SeedSamplePropertiesAsync();
         await SeedPropertyAmenitiesAsync();
         await SeedOfficeTestUserAsync();
+        await SeedMasterDataAsync();
     }
 
     private async Task SeedPropertyAmenitiesAsync()
@@ -546,5 +547,56 @@ public class DataSeeder
         _context.Properties.AddRange(properties);
         await _context.SaveChangesAsync();
         _logger.LogInformation("Sample properties seeded.");
+    }
+
+    // ── Master data (ListingTypes / PropertyTypes / OwnershipTypes) ───────────
+
+    private async Task SeedMasterDataAsync()
+    {
+        // ── Listing types ─────────────────────────────────────────────────────
+        if (!await _context.PropertyListingTypes.AnyAsync())
+        {
+            var listingTypes = new List<PropertyListingType>
+            {
+                new() { Value = "Sale",      Label = "بيع",        Order = 1, IsActive = true },
+                new() { Value = "Rent",      Label = "إيجار",      Order = 2, IsActive = true },
+                new() { Value = "DailyRent", Label = "إيجار يومي", Order = 3, IsActive = true },
+            };
+            _context.PropertyListingTypes.AddRange(listingTypes);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("[seed] Seeded {Count} listing types", listingTypes.Count);
+        }
+
+        // ── Property types ────────────────────────────────────────────────────
+        if (!await _context.PropertyTypeConfigs.AnyAsync())
+        {
+            var propertyTypes = new List<PropertyTypeConfig>
+            {
+                new() { Value = "Apartment", Label = "شقة",          Icon = "🏢", Order = 1, IsActive = true },
+                new() { Value = "Villa",     Label = "فيلا",          Icon = "🏡", Order = 2, IsActive = true },
+                new() { Value = "Office",    Label = "مكتب",          Icon = "🏬", Order = 3, IsActive = true },
+                new() { Value = "Shop",      Label = "محل تجاري",     Icon = "🏪", Order = 4, IsActive = true },
+                new() { Value = "Land",      Label = "أرض",           Icon = "🌍", Order = 5, IsActive = true },
+                new() { Value = "Building",  Label = "بناء كامل",     Icon = "🏗️", Order = 6, IsActive = true },
+            };
+            _context.PropertyTypeConfigs.AddRange(propertyTypes);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("[seed] Seeded {Count} property types", propertyTypes.Count);
+        }
+
+        // ── Ownership types ───────────────────────────────────────────────────
+        if (!await _context.OwnershipTypeConfigs.AnyAsync())
+        {
+            var ownershipTypes = new List<OwnershipTypeConfig>
+            {
+                new() { Value = "Freehold",     Label = "تمليك حر",          Order = 1, IsActive = true },
+                new() { Value = "LongLease",    Label = "إيجار طويل الأمد",  Order = 2, IsActive = true },
+                new() { Value = "Usufruct",     Label = "حق انتفاع",         Order = 3, IsActive = true },
+                new() { Value = "Cooperative",  Label = "تعاوني",            Order = 4, IsActive = true },
+            };
+            _context.OwnershipTypeConfigs.AddRange(ownershipTypes);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("[seed] Seeded {Count} ownership types", ownershipTypes.Count);
+        }
     }
 }

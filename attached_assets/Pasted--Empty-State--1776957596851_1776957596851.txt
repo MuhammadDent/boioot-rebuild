@@ -1,0 +1,104 @@
+أريد منك تشخيص وحل مشكلة ظهور صفحات الإعدادات في لوحة التحكم بدون بيانات (Empty State)، خصوصًا:
+
+* /dashboard/admin/listing-types
+* /dashboard/admin/property-types
+* /dashboard/admin/integrations (تعطي 404)
+
+📌 الحالة الحالية:
+
+* صفحة "أنواع الإدراج" تظهر:
+  "لا توجد أنواع إدراج — أضف أول نوع الآن"
+* صفحة integrations تعطي 404
+* بقية النظام يعمل بشكل طبيعي
+
+---
+
+🎯 المطلوب (بشكل دقيق):
+
+## 1. التشخيص
+
+حدد السبب الحقيقي بدقة:
+
+* هل الجداول فارغة في قاعدة البيانات؟
+* هل هناك مشكلة في API (fetch لا يعمل)؟
+* هل هناك مشكلة routing في Next.js (صفحة integrations غير مربوطة أو غير موجودة)؟
+* هل المشكلة بسبب عدم عمل seed للبيانات الأساسية؟
+
+---
+
+## 2. إصلاح integrations (مهم جدًا)
+
+* تأكد أن الصفحة موجودة:
+  pages/dashboard/admin/integrations/page.tsx
+* تأكد أن route يعمل بدون 404
+* تأكد أن الرابط في sidebar.config.ts صحيح:
+  /dashboard/admin/integrations
+* تأكد أن الصلاحيات لا تمنع عرض الصفحة
+
+---
+
+## 3. إصلاح البيانات الفارغة (Master Data)
+
+إذا الجداول فارغة:
+
+* أضف seed data احترافي للبيانات الأساسية:
+
+  * ListingTypes
+  * PropertyTypes
+  * OwnershipTypes (إن وجد)
+
+📌 شروط مهمة:
+
+* لا تكرر البيانات (idempotent)
+* لا تمسح أي بيانات موجودة
+* أضف فقط إذا الجدول فارغ
+
+---
+
+## 4. تأكد من API
+
+* تأكد أن endpoints ترجع بيانات:
+  GET /api/admin/listing-types
+  GET /api/admin/property-types
+
+* إذا لا يوجد data:
+  اربطها بالـ seed
+
+---
+
+## 5. تحقق من الـ frontend
+
+* تأكد أن الصفحات:
+
+  * تعرض loading state
+  * تعرض empty state فقط إذا data فعلاً فارغة
+* تأكد أن fetch يتم بدون error
+
+---
+
+## 6. بعد الإصلاح
+
+أعطني تقرير واضح:
+
+* ما سبب المشكلة الحقيقي؟
+* ما الذي تم إصلاحه؟
+* هل كانت المشكلة:
+  (routing / database / API / frontend)
+* ما الملفات التي تم تعديلها؟
+
+---
+
+## 7. تنفيذ النشر
+
+في النهاية نفّذ:
+
+git add .
+git commit -m "fix: resolve admin empty data and integrations routing + add seed data"
+git push origin main
+
+---
+
+🚨 مهم:
+لا تعمل refactor كبير
+ولا تغيّر structure المشروع
+فقط أصلح المشكلة بشكل نظيف وآمن
