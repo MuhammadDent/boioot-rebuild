@@ -48,52 +48,6 @@ public class BookingReviewsController : BaseController
         _logger  = logger;
     }
 
-    // ─── Schema bootstrap ─────────────────────────────────────────────────────
-
-    private static volatile bool _schemaReady;
-
-    private async Task EnsureSchemaAsync(CancellationToken ct)
-    {
-        if (_schemaReady) return;
-
-        await ExecuteAsync("""
-            CREATE TABLE IF NOT EXISTS "BookingReviews" (
-                "Id"                  uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
-                "BookingId"           uuid         NOT NULL,
-                "PropertyId"          uuid         NOT NULL,
-                "ReviewType"          varchar(30)  NOT NULL,
-                "ReviewerUserId"      uuid         NOT NULL,
-                "ReviewedUserId"      uuid,
-                "Comment"             text,
-                "Cleanliness"         int,
-                "Accuracy"            int,
-                "Facilities"          int,
-                "Communication"       int,
-                "ContractCommitment"  int,
-                "ValueForMoney"       int,
-                "RespectProperty"     int,
-                "Timeliness"          int,
-                "OverallRating"       numeric(4,2) NOT NULL,
-                "CreatedAt"           timestamptz  NOT NULL DEFAULT NOW()
-            );
-            CREATE UNIQUE INDEX IF NOT EXISTS "UX_BookingReviews_Booking_Type"
-                ON "BookingReviews"("BookingId", "ReviewType");
-            CREATE INDEX IF NOT EXISTS "IX_BookingReviews_PropertyId"
-                ON "BookingReviews"("PropertyId");
-
-            CREATE TABLE IF NOT EXISTS "AppSettings" (
-                "Key"       varchar(200) PRIMARY KEY,
-                "Value"     text         NOT NULL,
-                "UpdatedAt" timestamptz  NOT NULL DEFAULT NOW()
-            );
-            INSERT INTO "AppSettings"("Key","Value","UpdatedAt")
-            VALUES ('reviews.publicVisibilityEnabled','false',NOW())
-            ON CONFLICT DO NOTHING;
-            """, _ => { }, ct);
-
-        _schemaReady = true;
-    }
-
     // ─── POST /api/bookings/{id}/reviews/tenant ───────────────────────────────
 
     [HttpPost("bookings/{id:guid}/reviews/tenant")]
@@ -102,7 +56,6 @@ public class BookingReviewsController : BaseController
         [FromBody] CreateTenantReviewRequest request,
         CancellationToken ct)
     {
-        await EnsureSchemaAsync(ct);
 
         int[] scores =
         [
@@ -172,7 +125,6 @@ public class BookingReviewsController : BaseController
         [FromBody] CreateOwnerReviewRequest request,
         CancellationToken ct)
     {
-        await EnsureSchemaAsync(ct);
 
         int[] scores =
         [
@@ -237,7 +189,6 @@ public class BookingReviewsController : BaseController
     [HttpGet("bookings/{id:guid}/reviews")]
     public async Task<IActionResult> GetBookingReviews(Guid id, CancellationToken ct)
     {
-        await EnsureSchemaAsync(ct);
 
         var userId    = GetUserId();
         var userIdStr = userId.ToString("D");
@@ -280,7 +231,6 @@ public class BookingReviewsController : BaseController
     [HttpGet("properties/{id:guid}/reviews")]
     public async Task<IActionResult> GetPropertyReviews(Guid id, CancellationToken ct)
     {
-        await EnsureSchemaAsync(ct);
 
         var visible = await IsPublicVisibilityEnabledAsync(ct);
         if (!visible)
@@ -326,7 +276,6 @@ public class BookingReviewsController : BaseController
         if (GetUserRole() != "Admin")
             return StatusCode(403, new { message = "غير مصرح" });
 
-        await EnsureSchemaAsync(ct);
         var visible = await IsPublicVisibilityEnabledAsync(ct);
         return Ok(new { publicVisibilityEnabled = visible });
     }
@@ -341,7 +290,6 @@ public class BookingReviewsController : BaseController
         if (GetUserRole() != "Admin")
             return StatusCode(403, new { message = "غير مصرح" });
 
-        await EnsureSchemaAsync(ct);
 
         await ExecuteAsync("""
             INSERT INTO "AppSettings"("Key","Value","UpdatedAt")

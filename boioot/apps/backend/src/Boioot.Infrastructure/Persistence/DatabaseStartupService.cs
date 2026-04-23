@@ -110,6 +110,7 @@ public sealed class DatabaseStartupService
         await ApplyPostgresColumnFixesAsync(ct);
         await ApplyPostgresBookingPatchesAsync(ct);
         await ApplyReviewsPatchAsync(ct);
+        await ApplyBookingReviewsPatchAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
         await SyncIsCoverFromIsPrimaryAsync(ct);
@@ -496,6 +497,72 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("[schema-patch] Reviews patch failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Idempotent schema patch for the Booking Reviews feature.
+    /// Creates BookingReviews and AppSettings tables at startup (not lazily),
+    /// using individual ExecuteSqlRawAsync calls to avoid multi-statement
+    /// connection-state corruption that caused HTTP 500 on for-my-properties.
+    /// </summary>
+    private async Task ApplyBookingReviewsPatchAsync(CancellationToken ct)
+    {
+        if (!IsPostgres) return;
+
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS "BookingReviews" (
+                    "Id"                  uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
+                    "BookingId"           uuid         NOT NULL,
+                    "PropertyId"          uuid         NOT NULL,
+                    "ReviewType"          varchar(30)  NOT NULL,
+                    "ReviewerUserId"      uuid         NOT NULL,
+                    "ReviewedUserId"      uuid,
+                    "Comment"             text,
+                    "Cleanliness"         int,
+                    "Accuracy"            int,
+                    "Facilities"          int,
+                    "Communication"       int,
+                    "ContractCommitment"  int,
+                    "ValueForMoney"       int,
+                    "RespectProperty"     int,
+                    "Timeliness"          int,
+                    "OverallRating"       numeric(4,2) NOT NULL,
+                    "CreatedAt"           timestamptz  NOT NULL DEFAULT NOW()
+                )
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE UNIQUE INDEX IF NOT EXISTS "UX_BookingReviews_Booking_Type"
+                    ON "BookingReviews"("BookingId", "ReviewType")
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE INDEX IF NOT EXISTS "IX_BookingReviews_PropertyId"
+                    ON "BookingReviews"("PropertyId")
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS "AppSettings" (
+                    "Key"       varchar(200) PRIMARY KEY,
+                    "Value"     text         NOT NULL,
+                    "UpdatedAt" timestamptz  NOT NULL DEFAULT NOW()
+                )
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync("""
+                INSERT INTO "AppSettings"("Key","Value","UpdatedAt")
+                VALUES ('reviews.publicVisibilityEnabled','false',NOW())
+                ON CONFLICT DO NOTHING
+                """, ct);
+
+            _log.LogInformation("[schema-patch] BookingReviews patch applied.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] BookingReviews patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 
