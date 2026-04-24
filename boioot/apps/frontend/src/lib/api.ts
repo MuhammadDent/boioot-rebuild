@@ -166,6 +166,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (!ok) terminateSession();
   }
 
+  // ── Snapshot the token BEFORE the request fires ───────────────────────────
+  // This avoids a race condition: if a concurrent request calls terminateSession()
+  // and clears localStorage between our request send and the 401 response
+  // arriving, we still know whether WE sent an Authorization header.
+  const tokenSentWithRequest = tokenStorage.getToken();
+
   const executeRequest = async (): Promise<Response> => {
     const token = tokenStorage.getToken();
 
@@ -189,15 +195,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   let res = await executeRequest();
 
-  // ── 401 with a stored access token → try refresh once → retry ────────────
+  // ── 401 handling ──────────────────────────────────────────────────────────
   //
-  // If we had a stored token the cookie-based refresh should be able to renew
-  // it. If the cookie is also expired/absent the refresh will return 401 and
-  // we terminateSession() (redirect to login).
+  // We use `tokenSentWithRequest` (captured BEFORE the request) instead of
+  // re-reading localStorage NOW.  A concurrent request may have already called
+  // terminateSession() and cleared the token, which would wrongly make us
+  // think this was an unauthenticated request and show "wrong credentials".
   if (res.status === 401) {
-    const hadToken = !!tokenStorage.getToken();
+    const hadToken = !!tokenSentWithRequest;
 
     if (hadToken) {
+      // We sent a token but the server rejected it — try a silent refresh once.
+      // If the HttpOnly refresh-cookie is still valid the backend will rotate
+      // the access token; otherwise the session is truly dead.
       const refreshed = await silentRefresh();
 
       if (refreshed) {
@@ -213,7 +223,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         terminateSession();
       }
     } else {
-      // No access token stored → unauthenticated request (e.g. login failure)
+      // No token was sent.
+      // Two sub-cases:
+      //   a) Genuine unauthenticated call (e.g. the login form itself) — show a
+      //      "wrong credentials" message so the caller can surface it.
+      //   b) Concurrent terminateSession() already cleared localStorage and
+      //      started navigating to /login — we still throw so the caller's
+      //      catch block runs, but if navigation is already in progress the
+      //      error will be swallowed naturally.
       const message = await extractErrorMessage(res, "بيانات الدخول غير صحيحة");
       throw new ApiError(message, 401, null);
     }

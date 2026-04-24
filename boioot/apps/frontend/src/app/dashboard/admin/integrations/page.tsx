@@ -3,8 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { toast } from "sonner";
+
+const SESSION_ENDED_MSG = "انتهت الجلسة، يرجى تسجيل الدخول مجدداً";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,6 +107,10 @@ function SettingsModal({
       onSaved(updated);
       onClose();
     } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 401) {
+        toast.error(SESSION_ENDED_MSG);
+        return;
+      }
       const err = e as { message?: string };
       toast.error(err?.message ?? "فشل حفظ الإعدادات");
     } finally {
@@ -120,7 +126,11 @@ function SettingsModal({
       toast.success("تم إزالة الإعدادات");
       onSaved(updated);
       onClose();
-    } catch {
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 401) {
+        toast.error(SESSION_ENDED_MSG);
+        return;
+      }
       toast.error("فشل إزالة الإعدادات");
     } finally {
       setDisconnecting(false);
@@ -356,7 +366,11 @@ export default function AdminIntegrationsPage() {
       const updated = await api.post<Integration>(`/admin/integrations/${integration.key}/${action}`, {});
       setIntegrations((prev) => prev.map((i) => (i.key === updated.key ? updated : i)));
       toast.success(updated.isEnabled ? `تم تفعيل ${updated.name}` : `تم إيقاف ${updated.name}`);
-    } catch {
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 401) {
+        toast.error(SESSION_ENDED_MSG);
+        return;
+      }
       toast.error("فشلت العملية");
     } finally {
       setToggling(null);
