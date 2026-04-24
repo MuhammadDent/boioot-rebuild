@@ -37,42 +37,73 @@ function groupLabel(key?: string) {
   return FEATURE_GROUP_LABELS[key] ?? key;
 }
 
-// ── Shared styles ─────────────────────────────────────────────────────────────
+// ── Scoped styles (light theme) ────────────────────────────────────────────────
+
+const SCOPED_CSS = `
+  .feature-catalog-light {
+    background: #f8fafc;
+    color: #1e293b;
+  }
+  .feature-catalog-light .cat-table-row:nth-child(even) {
+    background: #f9fafb;
+  }
+  .feature-catalog-light .cat-table-row:hover {
+    background: #eef2ff !important;
+  }
+  .feature-catalog-light .cat-edit-btn:hover {
+    background: #e0e7ff !important;
+    border-color: #6366f1 !important;
+    color: #4f46e5 !important;
+  }
+  .feature-catalog-light .cat-form-label {
+    font-size: 12px;
+    color: #6b7280;
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+`;
+
+// ── Shared style constants (light) ─────────────────────────────────────────────
 
 const card: React.CSSProperties = {
-  background: "#1a1a2e",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
   borderRadius: 12,
   overflow: "hidden",
   marginBottom: 32,
+  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
 };
 
 const thStyle: React.CSSProperties = {
-  padding: "10px 14px",
+  padding: "12px 16px",
   textAlign: "right",
   fontSize: 12,
   fontWeight: 600,
-  color: "rgba(255,255,255,0.45)",
+  color: "#64748b",
   letterSpacing: "0.03em",
-  borderBottom: "1px solid rgba(255,255,255,0.06)",
-  background: "rgba(255,255,255,0.03)",
+  borderBottom: "1px solid #e2e8f0",
+  background: "#f1f5f9",
+  whiteSpace: "nowrap",
 };
 
 const tdStyle: React.CSSProperties = {
-  padding: "11px 14px",
+  padding: "14px 16px",
   textAlign: "right",
   fontSize: 13,
-  color: "rgba(255,255,255,0.85)",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
+  color: "#1e293b",
+  borderBottom: "1px solid #e2e8f0",
+  verticalAlign: "middle",
 };
 
 const codeStyle: React.CSSProperties = {
   fontFamily: "monospace",
   fontSize: 12,
-  background: "rgba(255,255,255,0.08)",
+  background: "#f1f5f9",
   padding: "2px 7px",
   borderRadius: 4,
-  color: "#a78bfa",
+  color: "#6366f1",
+  border: "1px solid #e2e8f0",
 };
 
 const btnPrimary: React.CSSProperties = {
@@ -87,19 +118,23 @@ const btnPrimary: React.CSSProperties = {
 };
 
 const btnSecondary: React.CSSProperties = {
-  background: "rgba(255,255,255,0.07)",
-  color: "rgba(255,255,255,0.7)",
-  border: "1px solid rgba(255,255,255,0.12)",
+  background: "#f8fafc",
+  color: "#475569",
+  border: "1px solid #e2e8f0",
   borderRadius: 8,
   padding: "7px 14px",
   fontSize: 13,
   cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  whiteSpace: "nowrap",
 };
 
 const btnDanger: React.CSSProperties = {
-  background: "rgba(239,68,68,0.12)",
-  color: "#f87171",
-  border: "1px solid rgba(239,68,68,0.25)",
+  background: "#fef2f2",
+  color: "#dc2626",
+  border: "1px solid #fecaca",
   borderRadius: 8,
   padding: "5px 12px",
   fontSize: 12,
@@ -109,13 +144,55 @@ const btnDanger: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "9px 12px",
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(255,255,255,0.12)",
+  background: "#ffffff",
+  border: "1px solid #e2e8f0",
   borderRadius: 8,
-  color: "#fff",
+  color: "#1e293b",
   fontSize: 13,
   outline: "none",
 };
+
+// ── Badge helpers ─────────────────────────────────────────────────────────────
+
+function typeBadge(label: string) {
+  return (
+    <span style={{ fontSize: 11, background: "#ede9fe", color: "#6d28d9", borderRadius: 5, padding: "2px 8px", fontWeight: 600 }}>
+      {label}
+    </span>
+  );
+}
+
+function scopeBadge(label: string) {
+  return (
+    <span style={{ fontSize: 11, background: "#f0fdfa", color: "#0f766e", borderRadius: 5, padding: "2px 8px", fontWeight: 600 }}>
+      {label}
+    </span>
+  );
+}
+
+function groupBadge(label: string) {
+  return (
+    <span style={{ fontSize: 11, background: "#f5f3ff", color: "#7c3aed", borderRadius: 5, padding: "2px 8px", fontWeight: 600 }}>
+      {label}
+    </span>
+  );
+}
+
+function statusBadge(isActive: boolean, activeText: string, inactiveText: string) {
+  return (
+    <span style={{
+      fontSize: 11,
+      borderRadius: 5,
+      padding: "3px 10px",
+      fontWeight: 600,
+      background: isActive ? "#f0fdf4" : "#f8fafc",
+      color: isActive ? "#16a34a" : "#94a3b8",
+      border: `1px solid ${isActive ? "#bbf7d0" : "#e2e8f0"}`,
+    }}>
+      {isActive ? activeText : inactiveText}
+    </span>
+  );
+}
 
 // ── Feature Section ───────────────────────────────────────────────────────────
 
@@ -282,30 +359,29 @@ function FeatureSection({
 
   return (
     <div style={card}>
-      <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+      {/* Header */}
+      <div style={{ padding: "18px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #e2e8f0", background: "#fff" }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: "#fff" }}>تعريفات الميزات</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>تعريفات الميزات</div>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 3 }}>
             {items.length} تعريف — المفاتيح والنوع والنطاق ثابتة بعد الإنشاء
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          style={btnPrimary}>
+        <button onClick={openCreate} style={btnPrimary}>
           + إضافة ميزة
         </button>
       </div>
 
       {/* Inline form */}
       {showForm && (
-        <div style={{ padding: 20, background: "rgba(109,40,217,0.06)", borderBottom: "1px solid rgba(109,40,217,0.15)" }}>
-          <div style={{ fontWeight: 600, fontSize: 14, color: "#a78bfa", marginBottom: 14 }}>
+        <div style={{ padding: 22, background: "#faf5ff", borderBottom: "1px solid #ddd6fe" }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: "#7c3aed", marginBottom: 14 }}>
             {mode === "create" ? "إضافة تعريف ميزة جديد" : "تعديل تعريف الميزة"}
           </div>
 
           {/* System feature notice */}
           {mode === "edit" && editItem?.isSystem && (
-            <div style={{ marginBottom: 12, padding: "8px 12px", background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.2)", borderRadius: 8, fontSize: 12, color: "#fbbf24" }}>
+            <div style={{ marginBottom: 12, padding: "8px 12px", background: "#fefce8", border: "1px solid #fde68a", borderRadius: 8, fontSize: 12, color: "#92400e" }}>
               🔒 ميزة نظامية مدمجة — الاسم والوصف والمجموعة والأيقونة وترتيب العرض قابلة للتعديل. النوع والنطاق والمفتاح ثابتة.
             </div>
           )}
@@ -315,9 +391,7 @@ function FeatureSection({
             {/* Key — create only */}
             {mode === "create" && (
               <div>
-                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                  المفتاح (key) *
-                </label>
+                <label className="cat-form-label">المفتاح (key) *</label>
                 <input
                   dir="ltr"
                   value={form.key}
@@ -330,9 +404,7 @@ function FeatureSection({
 
             {/* Name */}
             <div>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                الاسم *
-              </label>
+              <label className="cat-form-label">الاسم *</label>
               <input
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -344,9 +416,7 @@ function FeatureSection({
             {/* Type */}
             {mode === "create" ? (
               <div>
-                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                  النوع (Type) *
-                </label>
+                <label className="cat-form-label">النوع (Type) *</label>
                 <select
                   value={form.type}
                   onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
@@ -358,10 +428,8 @@ function FeatureSection({
               </div>
             ) : (
               <div>
-                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                  النوع (Type)
-                </label>
-                <div style={{ ...inputStyle, background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.45)", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 6 }}>
+                <label className="cat-form-label">النوع (Type)</label>
+                <div style={{ ...inputStyle, background: "#f9fafb", color: "#94a3b8", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 6 }}>
                   🔒 {typeLabel(form.type)}
                 </div>
               </div>
@@ -370,9 +438,7 @@ function FeatureSection({
             {/* Scope */}
             {mode === "create" ? (
               <div>
-                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                  النطاق (Scope) *
-                </label>
+                <label className="cat-form-label">النطاق (Scope) *</label>
                 <select
                   value={form.scope}
                   onChange={e => setForm(f => ({ ...f, scope: e.target.value }))}
@@ -384,10 +450,8 @@ function FeatureSection({
               </div>
             ) : (
               <div>
-                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                  النطاق (Scope)
-                </label>
-                <div style={{ ...inputStyle, background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.45)", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 6 }}>
+                <label className="cat-form-label">النطاق (Scope)</label>
+                <div style={{ ...inputStyle, background: "#f9fafb", color: "#94a3b8", cursor: "not-allowed", display: "flex", alignItems: "center", gap: 6 }}>
                   🔒 {scopeLabel(form.scope)}
                 </div>
               </div>
@@ -395,9 +459,7 @@ function FeatureSection({
 
             {/* Icon */}
             <div>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                الأيقونة (إيموجي)
-              </label>
+              <label className="cat-form-label">الأيقونة (إيموجي)</label>
               <input
                 value={form.icon}
                 onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
@@ -409,9 +471,7 @@ function FeatureSection({
 
             {/* Feature Group */}
             <div>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                المجموعة
-              </label>
+              <label className="cat-form-label">المجموعة</label>
               <select
                 value={form.featureGroup}
                 onChange={e => setForm(f => ({ ...f, featureGroup: e.target.value }))}
@@ -425,9 +485,7 @@ function FeatureSection({
 
             {/* Sort Order */}
             <div>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                ترتيب العرض
-              </label>
+              <label className="cat-form-label">ترتيب العرض</label>
               <input
                 type="number"
                 dir="ltr"
@@ -440,9 +498,7 @@ function FeatureSection({
 
             {/* Description */}
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                الوصف
-              </label>
+              <label className="cat-form-label">الوصف</label>
               <input
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -460,9 +516,7 @@ function FeatureSection({
                   checked={form.isActive}
                   onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
                 />
-                <label
-                  htmlFor="featActive"
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", cursor: "pointer" }}>
+                <label htmlFor="featActive" style={{ fontSize: 13, color: "#374151", cursor: "pointer" }}>
                   مفعّلة
                 </label>
               </div>
@@ -476,9 +530,7 @@ function FeatureSection({
               style={{ ...btnPrimary, opacity: (mode === "create" ? isCreateDisabled : isEditDisabled) ? 0.6 : 1 }}>
               {saving ? "جاري الحفظ…" : mode === "create" ? "إضافة" : "حفظ التعديلات"}
             </button>
-            <button
-              onClick={cancel}
-              style={btnSecondary}>
+            <button onClick={cancel} style={btnSecondary}>
               إلغاء
             </button>
           </div>
@@ -491,8 +543,8 @@ function FeatureSection({
           <thead>
             <tr>
               <th style={thStyle}>المفتاح</th>
-              <th style={thStyle}>الاسم</th>
-              <th style={{ ...thStyle, textAlign: "center", width: 44 }}>أيقونة</th>
+              <th style={thStyle}>الاسم والوصف</th>
+              <th style={{ ...thStyle, textAlign: "center", width: 48 }}>أيقونة</th>
               <th style={thStyle}>النوع</th>
               <th style={thStyle}>النطاق</th>
               <th style={thStyle}>المجموعة</th>
@@ -504,71 +556,59 @@ function FeatureSection({
           <tbody>
             {items.length === 0 && (
               <tr>
-                <td
-                  colSpan={9}
-                  style={{ ...tdStyle, textAlign: "center", color: "rgba(255,255,255,0.35)", padding: 28 }}>
+                <td colSpan={9} style={{ ...tdStyle, textAlign: "center", color: "#94a3b8", padding: 36 }}>
                   لا توجد تعريفات بعد
                 </td>
               </tr>
             )}
             {items.map(item => (
-              <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
+              <tr key={item.id} className="cat-table-row" style={{ opacity: item.isActive ? 1 : 0.55 }}>
                 <td style={tdStyle}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span style={codeStyle}>{item.key}</span>
                     {item.isSystem && (
-                      <span style={{ fontSize: 10, background: "rgba(234,179,8,0.12)", color: "#fbbf24", borderRadius: 4, padding: "1px 5px" }}>
+                      <span style={{ fontSize: 10, background: "#fefce8", color: "#92400e", borderRadius: 4, padding: "1px 6px", border: "1px solid #fde68a", fontWeight: 600 }}>
                         🔒 نظام
                       </span>
                     )}
                   </div>
                 </td>
-                <td style={tdStyle}>{item.name}</td>
-                <td style={{ ...tdStyle, textAlign: "center", fontSize: "1.2rem" }}>
-                  {item.icon ?? "—"}
+                <td style={tdStyle}>
+                  <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 13 }}>{item.name}</div>
+                  {item.description && (
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3, lineHeight: 1.4 }}>{item.description}</div>
+                  )}
+                </td>
+                <td style={{ ...tdStyle, textAlign: "center", fontSize: "1.25rem" }}>
+                  {item.icon ?? <span style={{ color: "#cbd5e1" }}>—</span>}
                 </td>
                 <td style={tdStyle}>
-                  <span style={{ fontSize: 11, background: "rgba(99,102,241,0.12)", color: "#818cf8", borderRadius: 4, padding: "2px 7px" }}>
-                    {typeLabel(item.type)}
-                  </span>
+                  {typeBadge(typeLabel(item.type))}
                 </td>
                 <td style={tdStyle}>
-                  <span style={{ fontSize: 11, background: "rgba(20,184,166,0.12)", color: "#2dd4bf", borderRadius: 4, padding: "2px 7px" }}>
-                    {scopeLabel(item.scope)}
-                  </span>
+                  {scopeBadge(scopeLabel(item.scope))}
                 </td>
                 <td style={tdStyle}>
-                  {item.featureGroup ? (
-                    <span style={{ fontSize: 11, background: "rgba(167,139,250,0.12)", color: "#a78bfa", borderRadius: 4, padding: "2px 7px" }}>
-                      {groupLabel(item.featureGroup)}
-                    </span>
-                  ) : "—"}
+                  {item.featureGroup ? groupBadge(groupLabel(item.featureGroup)) : <span style={{ color: "#cbd5e1" }}>—</span>}
                 </td>
                 <td style={{ ...tdStyle, textAlign: "center" }}>
-                  <span style={{
-                    fontSize: 11,
-                    borderRadius: 4,
-                    padding: "2px 8px",
-                    background: item.isActive ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
-                    color: item.isActive ? "#34d399" : "#f87171",
-                  }}>
-                    {item.isActive ? "مفعّلة" : "معطّلة"}
-                  </span>
+                  {statusBadge(item.isActive, "مفعّلة", "معطّلة")}
                 </td>
-                <td style={{ ...tdStyle, textAlign: "center", fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                <td style={{ ...tdStyle, textAlign: "center" }}>
                   {item.planFeatureCount > 0 ? (
-                    <span style={{ color: "#a78bfa", fontWeight: 600 }}>{item.planFeatureCount}</span>
-                  ) : "0"}
+                    <span style={{ color: "#6d28d9", fontWeight: 700, fontSize: 13 }}>{item.planFeatureCount}</span>
+                  ) : <span style={{ color: "#cbd5e1" }}>0</span>}
                 </td>
                 <td style={{ ...tdStyle, textAlign: "center" }}>
-                  <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                  <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
                     <button
                       onClick={() => openEdit(item)}
+                      className="cat-edit-btn"
                       style={btnSecondary}>
-                      تعديل
+                      ✏️ تعديل
                     </button>
                     {item.isSystem ? (
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", padding: "5px 8px" }}>
+                      <span style={{ fontSize: 11, color: "#cbd5e1", padding: "5px 8px" }}>
                         🔒 محمي
                       </span>
                     ) : confirmDelete?.id === item.id ? (
@@ -729,32 +769,29 @@ function LimitSection({ items, onReload, setGlobalError, setGlobalSuccess }: Lim
 
   return (
     <div style={card}>
-      <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+      {/* Header */}
+      <div style={{ padding: "18px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #e2e8f0", background: "#fff" }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: "#fff" }}>تعريفات الحدود الكمية</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>تعريفات الحدود الكمية</div>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 3 }}>
             {items.length} تعريف — -1 يعني بلا حدود
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          style={btnPrimary}>
+        <button onClick={openCreate} style={btnPrimary}>
           + إضافة حد
         </button>
       </div>
 
       {/* Inline form */}
       {showForm && (
-        <div style={{ padding: 20, background: "rgba(79,70,229,0.06)", borderBottom: "1px solid rgba(79,70,229,0.15)" }}>
-          <div style={{ fontWeight: 600, fontSize: 14, color: "#818cf8", marginBottom: 14 }}>
+        <div style={{ padding: 22, background: "#f5f3ff", borderBottom: "1px solid #ddd6fe" }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: "#6d28d9", marginBottom: 14 }}>
             {mode === "create" ? "إضافة تعريف حد جديد" : "تعديل تعريف الحد"}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {mode === "create" && (
               <div>
-                <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                  المفتاح (key) *
-                </label>
+                <label className="cat-form-label">المفتاح (key) *</label>
                 <input
                   dir="ltr"
                   value={form.key}
@@ -765,9 +802,7 @@ function LimitSection({ items, onReload, setGlobalError, setGlobalSuccess }: Lim
               </div>
             )}
             <div>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                الاسم *
-              </label>
+              <label className="cat-form-label">الاسم *</label>
               <input
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -776,9 +811,7 @@ function LimitSection({ items, onReload, setGlobalError, setGlobalSuccess }: Lim
               />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                الوحدة
-              </label>
+              <label className="cat-form-label">الوحدة</label>
               <input
                 value={form.unit}
                 onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
@@ -787,9 +820,7 @@ function LimitSection({ items, onReload, setGlobalError, setGlobalSuccess }: Lim
               />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                نوع القيمة
-              </label>
+              <label className="cat-form-label">نوع القيمة</label>
               <select
                 value={form.valueType}
                 onChange={e => setForm(f => ({ ...f, valueType: e.target.value }))}
@@ -799,9 +830,7 @@ function LimitSection({ items, onReload, setGlobalError, setGlobalSuccess }: Lim
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                نطاق التطبيق
-              </label>
+              <label className="cat-form-label">نطاق التطبيق</label>
               <select
                 value={form.appliesToScope}
                 onChange={e => setForm(f => ({ ...f, appliesToScope: e.target.value }))}
@@ -812,9 +841,7 @@ function LimitSection({ items, onReload, setGlobalError, setGlobalSuccess }: Lim
               </select>
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", display: "block", marginBottom: 5 }}>
-                الوصف
-              </label>
+              <label className="cat-form-label">الوصف</label>
               <input
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -830,7 +857,7 @@ function LimitSection({ items, onReload, setGlobalError, setGlobalSuccess }: Lim
                   checked={form.isActive}
                   onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
                 />
-                <label htmlFor="limitActive" style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", cursor: "pointer" }}>
+                <label htmlFor="limitActive" style={{ fontSize: 13, color: "#374151", cursor: "pointer" }}>
                   مفعَّل
                 </label>
               </div>
@@ -843,9 +870,7 @@ function LimitSection({ items, onReload, setGlobalError, setGlobalSuccess }: Lim
               style={{ ...btnPrimary, opacity: saving ? 0.6 : 1 }}>
               {saving ? "جاري الحفظ…" : mode === "create" ? "إضافة" : "حفظ التعديلات"}
             </button>
-            <button
-              onClick={cancel}
-              style={btnSecondary}>
+            <button onClick={cancel} style={btnSecondary}>
               إلغاء
             </button>
           </div>
@@ -869,47 +894,45 @@ function LimitSection({ items, onReload, setGlobalError, setGlobalSuccess }: Lim
           <tbody>
             {items.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ ...tdStyle, textAlign: "center", color: "rgba(255,255,255,0.35)", padding: 28 }}>
+                <td colSpan={7} style={{ ...tdStyle, textAlign: "center", color: "#94a3b8", padding: 36 }}>
                   لا توجد تعريفات بعد
                 </td>
               </tr>
             )}
             {items.map(item => (
-              <tr key={item.id} style={{ opacity: item.isActive ? 1 : 0.5 }}>
+              <tr key={item.id} className="cat-table-row" style={{ opacity: item.isActive ? 1 : 0.55 }}>
                 <td style={tdStyle}>
                   <span style={codeStyle}>{item.key}</span>
                 </td>
-                <td style={tdStyle}>{item.name}</td>
-                <td style={{ ...tdStyle, fontSize: 12 }}>
-                  {item.unit ?? "—"}
+                <td style={tdStyle}>
+                  <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 13 }}>{item.name}</div>
+                  {item.description && (
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>{item.description}</div>
+                  )}
                 </td>
-                <td style={{ ...tdStyle, fontSize: 12 }}>
+                <td style={{ ...tdStyle, fontSize: 12, color: "#475569" }}>
+                  {item.unit ?? <span style={{ color: "#cbd5e1" }}>—</span>}
+                </td>
+                <td style={tdStyle}>
                   {item.appliesToScope ? (
-                    <span style={{ fontSize: 11, background: "rgba(129,140,248,0.12)", color: "#818cf8", borderRadius: 4, padding: "2px 8px" }}>
+                    <span style={{ fontSize: 11, background: "#ede9fe", color: "#6d28d9", borderRadius: 5, padding: "2px 8px", fontWeight: 600 }}>
                       {item.appliesToScope}
                     </span>
-                  ) : "—"}
+                  ) : <span style={{ color: "#cbd5e1" }}>—</span>}
                 </td>
-                <td style={{ ...tdStyle, color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
-                  {item.description ?? "—"}
-                </td>
-                <td style={{ ...tdStyle, textAlign: "center" }}>
-                  <span style={{
-                    fontSize: 11,
-                    borderRadius: 4,
-                    padding: "2px 8px",
-                    background: item.isActive ? "rgba(52,211,153,0.12)" : "rgba(239,68,68,0.12)",
-                    color: item.isActive ? "#34d399" : "#f87171",
-                  }}>
-                    {item.isActive ? "مفعَّل" : "معطَّل"}
-                  </span>
+                <td style={{ ...tdStyle, color: "#64748b", fontSize: 12 }}>
+                  {item.description ?? <span style={{ color: "#cbd5e1" }}>—</span>}
                 </td>
                 <td style={{ ...tdStyle, textAlign: "center" }}>
-                  <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                  {statusBadge(item.isActive, "مفعَّل", "معطَّل")}
+                </td>
+                <td style={{ ...tdStyle, textAlign: "center" }}>
+                  <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
                     <button
                       onClick={() => openEdit(item)}
+                      className="cat-edit-btn"
                       style={btnSecondary}>
-                      تعديل
+                      ✏️ تعديل
                     </button>
                     {confirmDelete?.id === item.id ? (
                       <div style={{ display: "flex", gap: 4 }}>
@@ -985,14 +1008,17 @@ export default function AdminPlanCatalogPage() {
   }
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1100, margin: "0 auto" }}>
+    <div className="feature-catalog-light" style={{ padding: "24px 32px", maxWidth: 1100, margin: "0 auto", minHeight: "100%" }}>
+      {/* Scoped styles — light theme + hover/zebra effects */}
+      <style>{SCOPED_CSS}</style>
+
       <DashboardBackLink href="/dashboard/admin/plans" label="العودة إلى الخطط" />
 
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#fff" }}>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#0f172a" }}>
           كتالوج الباقات
         </h1>
-        <p style={{ margin: "6px 0 0", fontSize: 14, color: "rgba(255,255,255,0.5)" }}>
+        <p style={{ margin: "6px 0 0", fontSize: 14, color: "#64748b" }}>
           إدارة تعريفات الميزات والحدود الكمية المتاحة للخطط
         </p>
       </div>
