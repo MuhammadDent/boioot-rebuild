@@ -202,8 +202,8 @@ function PermissionPreview({ permissions }: { permissions: string[] }) {
   if (permissions.length === 0) return null;
 
   const grouped = permissions.reduce<Record<string, string[]>>((acc, key) => {
-    const module = key.split(".")[0];
-    (acc[module] ||= []).push(key);
+    const modName = key.split(".")[0];
+    (acc[modName] ||= []).push(key);
     return acc;
   }, {});
 

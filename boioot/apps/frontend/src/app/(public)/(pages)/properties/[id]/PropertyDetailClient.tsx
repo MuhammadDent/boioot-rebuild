@@ -216,9 +216,12 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   }, [user, openAuthModal, doToggleFav]);
 
   const propertyRef = useRef(property);
-  propertyRef.current = property;
   const userRef = useRef(user);
-  userRef.current = user;
+
+  useEffect(() => {
+    propertyRef.current = property;
+    userRef.current = user;
+  }, [property, user]);
 
   const doOpenChat = useCallback(async () => {
     const prop = propertyRef.current;

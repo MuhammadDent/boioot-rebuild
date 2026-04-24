@@ -97,8 +97,6 @@ export default function AdminRequestsPage() {
   useEffect(() => { if (!isLoading && user) load(); }, [isLoading, user, load]);
   useEffect(() => { setPage(1); }, [baseFilters, isolation]);
 
-  if (isLoading || !user) return null;
-
   // ── Derived: enriched ─────────────────────────────────────────────────────
   const enriched = useMemo(() => allRequests.map(enrichRequest), [allRequests]);
 
@@ -117,10 +115,8 @@ export default function AdminRequestsPage() {
     [baseFiltered, isolation],
   );
 
-  // ── Derived: sorted + paginated ───────────────────────────────────────────
-  const sorted     = useMemo(() => sortRequests(fullyFiltered, baseFilters.sortBy), [fullyFiltered, baseFilters.sortBy]);
-  const totalPages = Math.max(1, Math.ceil(sorted.length / ADMIN_PAGE_SIZE));
-  const paginated  = sorted.slice((page - 1) * ADMIN_PAGE_SIZE, page * ADMIN_PAGE_SIZE);
+  // ── Derived: sorted ───────────────────────────────────────────────────────
+  const sorted = useMemo(() => sortRequests(fullyFiltered, baseFilters.sortBy), [fullyFiltered, baseFilters.sortBy]);
 
   // ── Derived: KPI counts (from fullyFiltered) ──────────────────────────────
   const kpis = useMemo(() => {
@@ -128,6 +124,12 @@ export default function AdminRequestsPage() {
     for (const s of REQUEST_STATUS_OPTIONS) c[s] = fullyFiltered.filter(r => r.status === s).length;
     return c;
   }, [fullyFiltered]);
+
+  if (isLoading || !user) return null;
+
+  // ── Paginated (non-hook, safe after early return) ─────────────────────────
+  const totalPages = Math.max(1, Math.ceil(sorted.length / ADMIN_PAGE_SIZE));
+  const paginated  = sorted.slice((page - 1) * ADMIN_PAGE_SIZE, page * ADMIN_PAGE_SIZE);
 
   // ── Analytics handlers ────────────────────────────────────────────────────
   function handleSegmentClick(rawValue: string) {

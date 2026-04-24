@@ -42,33 +42,35 @@ interface Options {
  * Auth-only (no role/permission restriction):
  *   const { user, isLoading } = useProtectedRoute();
  *
- * Options are stabilized internally to prevent re-render loops.
+ * Options are stabilized via a ref to prevent re-render loops.
  */
 export function useProtectedRoute(options: Options = {}) {
   const optionsRef = useRef(options);
-
-  const {
-    redirectTo           = "/login",
-    requiredPermission,
-    allowedRoles,
-    unauthorizedRedirect = "/dashboard",
-  } = optionsRef.current;
 
   const { user, isAuthenticated, isLoading, logout, hasPermission } = useAuth();
   const router = useRouter();
   const [isUnauthorized, setIsUnauthorized] = useState(false);
 
   useEffect(() => {
+    optionsRef.current = options;
+  });
+
+  useEffect(() => {
     if (isLoading) return;
 
+    const {
+      redirectTo           = "/login",
+      requiredPermission,
+      allowedRoles,
+      unauthorizedRedirect = "/dashboard",
+    } = optionsRef.current;
+
     if (!isAuthenticated) {
-      // Persist the current page so /login can redirect back after authentication.
       if (redirectTo === "/login") saveRedirectTarget();
       router.replace(redirectTo);
       return;
     }
 
-    // Permission-based guard (preferred for admin pages)
     if (requiredPermission !== undefined) {
       if (!hasPermission(requiredPermission)) {
         setIsUnauthorized(true);
@@ -77,12 +79,11 @@ export function useProtectedRoute(options: Options = {}) {
       return;
     }
 
-    // Role-based guard (legacy, for platform-facing pages)
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
       setIsUnauthorized(true);
       router.replace(unauthorizedRedirect);
     }
-  }, [isLoading, isAuthenticated, user, router, redirectTo, allowedRoles, unauthorizedRedirect, requiredPermission, hasPermission]);
+  }, [isLoading, isAuthenticated, user, router, hasPermission]);
 
   return { user, isLoading, isAuthenticated, isUnauthorized, logout };
 }

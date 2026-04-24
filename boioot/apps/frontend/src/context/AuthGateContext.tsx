@@ -507,16 +507,17 @@ export function AuthGateProvider({ children }: { children: ReactNode }) {
 
   const closeAuthModal = useCallback(() => {
     setOpen(false);
-    callbackRef.current = undefined;
   }, []);
 
-  // Capture the callback at render time (before closeAuthModal clears it).
-  // This ensures the form's onSuccess prop holds the real function
-  // even though the form calls onClose() first.
-  const pendingCb = callbackRef.current;
-  const wrappedSuccess = pendingCb
-    ? () => { _clear(); pendingCb(); }
-    : () => { _clear(); };
+  // Read callbackRef inside the callback (not during render) to avoid the
+  // refs-during-render lint rule.  The ref is cleared here after being consumed
+  // so the next openAuthModal call always starts fresh.
+  const wrappedSuccess = useCallback(() => {
+    _clear();
+    const cb = callbackRef.current;
+    callbackRef.current = undefined;
+    cb?.();
+  }, []);
 
   return (
     <AuthGateContext.Provider value={{ openAuthModal, closeAuthModal }}>

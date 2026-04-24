@@ -928,6 +928,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     limitValues,
   });
 
+  // eslint-disable-next-line react-hooks/refs
   const isDirty = formSnapshot !== initialSnapshot.current;
 
   useEffect(() => {
@@ -1015,7 +1016,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       setSaving(false);
     }
   }
-  doSaveRef.current = doSave;
+  useEffect(() => { doSaveRef.current = doSave; });
 
   function handleCloseModal() {
     if (isDirty) {
