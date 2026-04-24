@@ -147,12 +147,8 @@ public class UploadController : BaseController
     {
         try
         {
-            Console.WriteLine("[UploadImage] >>> Handler entered");
-
             if (file is null || file.Length == 0)
                 return BadRequest(new { error = "لم يتم اختيار ملف" });
-
-            Console.WriteLine($"[UploadImage] FileName={file.FileName} ContentType={file.ContentType} Size={file.Length}");
 
             if (file.Length > MaxImageBytes)
                 return BadRequest(new { error = "حجم الصورة يتجاوز 10MB" });
@@ -162,7 +158,6 @@ public class UploadController : BaseController
                 return BadRequest(new { error = "نوع الملف غير مدعوم. المدعومة: JPG، PNG، GIF، WebP، SVG" });
 
             var userId = GetUserId();
-            Console.WriteLine($"[UploadImage] UserId={userId} StorageType={_storage.GetType().Name}");
             UserImage userImage;
 
             if (_imageProcessor.CanProcess(contentType))

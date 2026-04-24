@@ -299,9 +299,7 @@ export default function PostAdWizard({
       }));
 
       try {
-        console.log(`[PostAdWizard/images] ▶ Uploading: "${file.name}" (${file.size}B)`);
         const result = await imagesService.uploadViaDirect(file, token);
-        console.log(`[PostAdWizard/images] ✓ Done: imageId=${result.id}`);
 
         // Swap blob placeholder with real R2 entry
         setData((prev) => {
@@ -420,28 +418,6 @@ export default function PostAdWizard({
   async function handleSubmit() {
     const err = validateStep(step, data);
     if (err) { setStepError(err); return; }
-
-    // ─── Full payload diagnostics before submit ────────────────────────────
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("[PostAdWizard] ▶ SUBMIT clicked (step 7 — review)");
-    console.log("[PostAdWizard] ── Step validation for step", step, "→ PASSED (no frontend block)");
-    console.log("[PostAdWizard] Full wizard data snapshot:");
-    console.log("  title       :", JSON.stringify(data.title));
-    console.log("  description :", JSON.stringify(data.description));
-    console.log("  propertyType:", JSON.stringify(data.propertyType));
-    console.log("  listingType :", JSON.stringify(data.listingType));
-    console.log("  price       :", data.price, "  currency:", data.currency);
-    console.log("  area        :", data.area);
-    console.log("  city        :", JSON.stringify(data.city));
-    console.log("  province    :", JSON.stringify(data.province));
-    console.log("  latitude    :", data.latitude, "  longitude:", data.longitude);
-    console.log("  uploadedImages count:", data.uploadedImages.length);
-    data.uploadedImages.forEach((img, i) => {
-      console.log(`  image[${i}]  : imageId=${img.imageId} url=${img.url}`);
-    });
-    console.log("  videoUrl    :", JSON.stringify(data.videoUrl));
-    console.log("  features    :", data.features);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     await onSubmit(data);
   }
@@ -632,7 +608,6 @@ export default function PostAdWizard({
                 value={data.price}
                 onChange={(e) => {
                   const val = e.target.value;
-                  console.log("[PostAdWizard] price state:", JSON.stringify(val));
                   setData((prev) => ({ ...prev, price: val }));
                   setStepError(null);
                 }}
@@ -769,7 +744,6 @@ export default function PostAdWizard({
               onChange={(val) => { set("province", val); set("city", ""); set("neighborhood", ""); }} />
             <CitySelect label="المدينة" required value={data.city} province={data.province} disabled={disabled}
               onChange={(val) => {
-                console.log("[PostAdWizard] city state:", JSON.stringify(val));
                 setData((prev) => ({ ...prev, city: val, neighborhood: "" }));
                 setStepError(null);
               }}

@@ -33,10 +33,6 @@ function resolveApiUrl(): string {
 
 const API_URL = resolveApiUrl();
 
-if (process.env.NODE_ENV !== "production") {
-  console.log(`[api-config] baseUrl resolved to: ${API_URL}`);
-}
-
 export const apiConfig = {
   baseUrl: API_URL,
   liveBackend: LIVE_BACKEND,

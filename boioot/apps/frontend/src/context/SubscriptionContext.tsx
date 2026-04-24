@@ -83,18 +83,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const fetchSubscription = useCallback(async () => {
     if (!isAuthenticated || isAdminBypass) {
-      if (isAdminBypass) console.log("[subscription] Admin/Staff bypass — skipping plan fetch for role:", user?.role);
       setSubscription(null);
       return;
     }
-    console.log("[subscription] Fetching plan for:", user?.email, "| role:", user?.role);
     setIsLoading(true);
     try {
       const data = await subscriptionApi.getCurrent();
-      console.log("[subscription] Plan loaded:", data?.planCode ?? "none", "| active:", data?.isActive);
       setSubscription(data);
-    } catch (err) {
-      console.warn("[subscription] Failed to fetch subscription:", err);
+    } catch {
       setSubscription(null);
     } finally {
       setIsLoading(false);

@@ -1153,74 +1153,45 @@ function ProfileAvatarTab({
   const [loadingMsg, setLoadingMsg] = useState("جارٍ الحفظ…");
   const [banner,     setBanner]     = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  // ── Debug: log mount ──────────────────────────────────────────────────────
-  useEffect(() => {
-    console.log("[ProfileAvatar] ▶ Uploader mounted. avatarUrl:", profile.avatarUrl ?? "(none)");
-  }, [profile.avatarUrl]);
-
   // ── Trigger file picker ───────────────────────────────────────────────────
   function pickFile() {
-    console.log("[ProfileAvatar] pickFile() called. fileRef.current:", fileRef.current);
-    if (!fileRef.current) {
-      console.error("[ProfileAvatar] fileRef.current is null — input not mounted yet!");
-      return;
-    }
+    if (!fileRef.current) return;
     fileRef.current.click();
-    console.log("[ProfileAvatar] fileRef.current.click() triggered");
   }
 
   // ── File selected → compress → upload immediately ─────────────────────────
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    console.log("[ProfileAvatar] onFileChange triggered. files:", e.target.files);
-
     const file = e.target.files?.[0];
-    if (!file) {
-      console.warn("[ProfileAvatar] onFileChange: e.target.files?.[0] is null/undefined — early return");
-      return;
-    }
-
-    console.log("[ProfileAvatar] File selected:", {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      lastModified: file.lastModified,
-    });
+    if (!file) return;
 
     setBanner(null);
 
     // 1. Type check
     const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) {
-      console.warn("[ProfileAvatar] Rejected — unsupported type:", file.type, "(allowed:", allowed.join(", "), ")");
       setBanner({ type: "error", msg: "نوع الملف غير مدعوم. الأنواع المقبولة: JPG، PNG، WebP." });
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
-    console.log("[ProfileAvatar] Type check ✓:", file.type);
 
     // 2. Size check (5 MB hard limit)
     const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
     if (file.size > 5 * 1024 * 1024) {
-      console.warn("[ProfileAvatar] Rejected — file too large:", sizeMB, "MB (limit: 5 MB)");
       setBanner({ type: "error", msg: `حجم الصورة (${sizeMB} MB) كبير جداً. الحد الأقصى 5MB.` });
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
-    console.log("[ProfileAvatar] Size check ✓:", sizeMB, "MB");
 
     // 3. Compress → 4. Upload immediately (auto-save — no extra button click needed)
     setLoading(true);
     setLoadingMsg("جارٍ معالجة الصورة…");
     try {
-      console.log("[ProfileAvatar] Step 1: Compressing to JPEG (max 800px, q=0.80)…");
       const { dataUrl } = await compressImage(file, 800, 0.80);
-      console.log("[ProfileAvatar] Step 1 ✓ Compression OK. Data URL length:", dataUrl.length, "chars");
 
       // Show preview immediately so user sees feedback
       setPreview(dataUrl);
 
       // Step 2: Upload to API right away (no manual save button needed)
-      console.log("[ProfileAvatar] Step 2: Starting upload → PUT /api/auth/profile");
       setLoadingMsg("جارٍ الرفع…");
 
       const updated = await api.put<UserProfileResponse>("/auth/profile", {
@@ -1229,7 +1200,6 @@ function ProfileAvatarTab({
         profileImageUrl: dataUrl,
       });
 
-      console.log("[ProfileAvatar] Step 2 ✓ Upload OK. Updated profile id:", (updated as { id?: string }).id);
       onUpdate(updated);
       setBanner({ type: "success", msg: "تم تحديث الصورة الشخصية بنجاح ✓" });
     } catch (err: unknown) {
@@ -1244,29 +1214,22 @@ function ProfileAvatarTab({
 
   // ── Remove image ──────────────────────────────────────────────────────────
   function removeImage() {
-    console.log("[ProfileAvatar] removeImage() called");
     setPreview(null);
     if (fileRef.current) fileRef.current.value = "";
   }
 
   // ── Re-save current preview (retry) ──────────────────────────────────────
   async function handleSave() {
-    console.log("[ProfileAvatar] handleSave() called. preview length:", preview?.length ?? 0);
-    if (!preview) {
-      console.warn("[ProfileAvatar] handleSave: preview is null — nothing to save");
-      return;
-    }
+    if (!preview) return;
     setBanner(null);
     setLoading(true);
     setLoadingMsg("جارٍ الحفظ…");
     try {
-      console.log("[ProfileAvatar] handleSave: Starting upload → PUT /api/auth/profile");
       const updated = await api.put<UserProfileResponse>("/auth/profile", {
         fullName:        raw.fullName,
         phone:           raw.phone,
         profileImageUrl: preview,
       });
-      console.log("[ProfileAvatar] handleSave ✓ Upload OK");
       onUpdate(updated);
       setBanner({ type: "success", msg: "تم تحديث الصورة الشخصية بنجاح ✓" });
     } catch (err: unknown) {

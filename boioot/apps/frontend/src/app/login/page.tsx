@@ -46,22 +46,17 @@ export default function LoginPage() {
     setDebugDetail("");
     setSubmitting(true);
 
-    console.log("[login] Attempting login for:", email);
-
     try {
       const res = await authApi.login({ email, password, rememberMe });
-      console.log("[login] Login succeeded. Role:", res.user.role, "Permissions:", res.user.permissions?.length ?? 0);
       justLoggedIn.current = true;
       login(res.token, res.user, res.expiresAt);
       const target = consumeRedirectTarget();
       const category = getRoleCategory(res.user.role);
       const isStaffOrAdmin = category === "admin" || category === "staff";
       const dest = target ?? (isStaffOrAdmin ? "/dashboard/admin" : "/");
-      console.log("[login] Role category:", category, "→ redirecting to:", dest);
       router.push(dest);
     } catch (err) {
       const msg = normalizeError(err);
-      console.error("[login] Login failed:", err);
       setError(msg);
       if (IS_DEV && err instanceof Error) {
         setDebugDetail(`${err.name}: ${err.message}`);

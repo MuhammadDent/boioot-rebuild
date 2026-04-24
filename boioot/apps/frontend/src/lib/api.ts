@@ -77,7 +77,6 @@ async function silentRefresh(): Promise<boolean> {
 
   refreshPromise = (async (): Promise<boolean> => {
     const refreshUrl = `${apiConfig.baseUrl}/auth/refresh`;
-    console.log("[api] Silent refresh →", refreshUrl);
     try {
       const res = await fetch(refreshUrl, {
         method: "POST",
@@ -86,7 +85,6 @@ async function silentRefresh(): Promise<boolean> {
         // Same-origin — cookie is sent automatically; no credentials override needed.
       });
 
-      console.log("[api] Silent refresh ←", res.status);
       if (!res.ok) return false;
 
       const data = await res.json();
@@ -130,12 +128,10 @@ async function extractErrorMessage(res: Response, fallback: string): Promise<str
 
     // ASP.NET DataAnnotations validation errors: { errors: { Field: ["msg1"] }, title: "..." }
     if (payload?.errors && typeof payload.errors === "object") {
-      console.log("[api] Validation errors from backend:", JSON.stringify(payload.errors, null, 2));
       const allMsgs = Object.entries(payload.errors as Record<string, string[]>)
         .flatMap(([field, msgs]) => (msgs ?? []).map((m: string) => m ? `[${field}] ${m}` : null))
         .filter(Boolean) as string[];
       if (allMsgs.length > 0) {
-        console.log("[api] Field errors joined:", allMsgs.join(" | "));
         return allMsgs.join(" | ");
       }
     }
@@ -182,10 +178,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    console.log(`[api] → ${method} ${fullUrl}`);
     try {
       const response = await fetch(fullUrl, { ...options, headers });
-      console.log(`[api] ← ${method} ${fullUrl} ${response.status}`);
       return response;
     } catch (err) {
       console.error(`[api] ✗ ${method} ${fullUrl}`, err);
@@ -346,14 +340,12 @@ export const api = {
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    console.log(`[api] → ${method} ${fullUrl} (upload)`);
     return fetch(fullUrl, {
       method,
       headers,
       body: formData,
     })
       .then(async (res) => {
-        console.log(`[api] ← ${method} ${fullUrl} ${res.status}`);
         if (!res.ok) {
           const message = await extractErrorMessage(res, "فشل رفع الملف");
           throw new ApiError(message, res.status);

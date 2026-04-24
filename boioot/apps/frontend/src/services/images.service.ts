@@ -83,7 +83,6 @@ export const imagesService = {
   },
 
   async upload(file: File, token: string): Promise<UploadedImageInfo> {
-    console.log(`[images:upload] ▶ POST ${BASE}/upload/image — file="${file.name}" size=${file.size}B`);
     const fd = new FormData();
     fd.append("file", file);
     const res = await fetch(`${BASE}/upload/image`, {
@@ -93,9 +92,7 @@ export const imagesService = {
       headers:     { Authorization: `Bearer ${token}` },
     });
     await throwIfError(res, "فشل رفع الصورة");
-    const result = await res.json() as UploadedImageInfo;
-    console.log(`[images:upload] ✓ Upload complete — id="${result.id}" url="${result.url}"`);
-    return result;
+    return await res.json() as UploadedImageInfo;
   },
 
   // ── Attach ────────────────────────────────────────────────────────────────

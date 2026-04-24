@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import type { PublicPricingItem } from "@/features/pricing/types";
 import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
@@ -461,7 +462,7 @@ export default function PricingPage() {
           <p style={{ fontSize: "0.9rem", color: "var(--color-text-secondary)", maxWidth: "600px", margin: "0 auto", lineHeight: 1.7 }}>
             جميع الباقات تشمل حماية البيانات وإمكانية الإلغاء في أي وقت.
             للاستفسارات تواصل معنا عبر صفحة{" "}
-            <a href="/requests" style={{ color: "var(--color-primary)", fontWeight: 600 }}>الطلبات</a>.
+            <Link href="/requests" style={{ color: "var(--color-primary)", fontWeight: 600 }}>الطلبات</Link>.
           </p>
         </section>
       )}

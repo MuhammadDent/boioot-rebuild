@@ -41,7 +41,6 @@ export default function ListingRatings({ listingId }: ListingRatingsProps) {
     setSummaryError(false);
     try {
       const s = await ratingsApi.getSummary(listingId);
-      console.log("[Ratings] summary:", s);
       setSummary(s);
     } catch (err) {
       console.warn("[Ratings] summary fetch failed:", err);
@@ -62,7 +61,6 @@ export default function ListingRatings({ listingId }: ListingRatingsProps) {
         pageSize: PAGE_SIZE,
         sort: s,
       });
-      console.log(`[Ratings] reviews (page=${p}, sort=${s}):`, result);
       setPaged(result);
     } catch (err) {
       console.warn("[Ratings] reviews fetch failed:", err);
@@ -75,12 +73,10 @@ export default function ListingRatings({ listingId }: ListingRatingsProps) {
   // ── Check eligibility (requires auth) ────────────────────────────────────────
   const fetchCanRate = useCallback(async () => {
     if (!isAuthenticated) {
-      console.log("[Ratings] canRate: skipped (not authenticated)");
       return;
     }
     try {
       const result = await ratingsApi.canRate(listingId);
-      console.log("[Ratings] canRate response:", result);
       setCanRate(result.canRate);
     } catch (err) {
       console.warn("[Ratings] canRate fetch failed:", err);

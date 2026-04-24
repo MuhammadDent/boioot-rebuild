@@ -63,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // ── App startup cleanup ────────────────────────────────────────────────
     const hadNoSession = cleanExpiredSession();
     if (hadNoSession) {
-      console.log("[auth] Startup: no session found — cleared");
       setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
       return;
     }
@@ -75,15 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token && userRaw) {
       try {
         const user = JSON.parse(userRaw) as UserProfileResponse;
-        console.log("[auth] Startup: session restored →", user.email, "| role:", user.role, "| perms:", user.permissions?.length ?? 0);
         setState({ user, token, isLoading: false, isAuthenticated: true });
       } catch {
-        console.warn("[auth] Startup: corrupt session — cleared");
         tokenStorage.clear();
         setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
       }
     } else {
-      console.log("[auth] Startup: no stored session");
       setState((s) => ({ ...s, isLoading: false }));
     }
   }, []);
@@ -93,14 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tokenStorage.setToken(token);
       tokenStorage.setUser(user);
       if (expiresAt) tokenStorage.setExpiresAt(expiresAt);
-      console.log("[auth] login() → email:", user.email, "| role:", user.role, "| perms:", user.permissions?.length ?? 0, "| expires:", expiresAt ?? "not set");
       setState({ user, token, isLoading: false, isAuthenticated: true });
     },
     []
   );
 
   const logout = useCallback(() => {
-    console.log("[auth] logout() called — clearing session");
     // Best-effort server-side revocation (server reads HttpOnly cookie)
     authApi.logout().catch(() => {});
     tokenStorage.clear();

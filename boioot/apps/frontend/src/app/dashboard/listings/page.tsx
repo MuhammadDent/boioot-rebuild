@@ -72,7 +72,6 @@ export default function ListingsPage() {
       const listRes = await api.get<{ items?: PropertyResponse[]; total?: number } | PropertyResponse[]>(
         "/properties/my-listings"
       );
-      console.log("[listings] response:", listRes);
       const items = Array.isArray(listRes)
         ? listRes
         : (listRes as { items?: PropertyResponse[] })?.items ?? [];
@@ -88,7 +87,6 @@ export default function ListingsPage() {
     setStatsError("");
     try {
       const statsRes = await api.get<{ used: number; limit: number }>("/properties/my-listings/stats");
-      console.log("[listings] stats:", statsRes);
       setStats(statsRes ?? null);
     } catch (e) {
       console.warn("[listings] stats endpoint failed:", e);
