@@ -75,3 +75,8 @@ externalPort = 3000
 [[ports]]
 localPort = 8080
 externalPort = 8080
+
+[userenv]
+
+[userenv.shared]
+NEXT_PUBLIC_GTM_ID = "GTM-kdjfvuyf"

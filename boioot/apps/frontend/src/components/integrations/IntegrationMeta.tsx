@@ -23,6 +23,7 @@ export default async function IntegrationMeta(): Promise<JSX.Element | null> {
 
   const nodes: JSX.Element[] = [];
 
+  // ── Google Search Console ──────────────────────────────────────────────────
   const gsc = integrations.find((i) => i.key === "google-search-console");
   if (gsc?.config.verificationCode) {
     const raw = gsc.config.verificationCode;
@@ -36,8 +37,10 @@ export default async function IntegrationMeta(): Promise<JSX.Element | null> {
     }
   }
 
+  // ── Google Analytics ───────────────────────────────────────────────────────
   const ga = integrations.find((i) => i.key === "google-analytics");
-  const gaId = ga?.config.measurementId;
+  const gaId =
+    ga?.config.measurementId || process.env.NEXT_PUBLIC_GA_ID;
   if (gaId) {
     nodes.push(
       <script
@@ -56,8 +59,14 @@ export default async function IntegrationMeta(): Promise<JSX.Element | null> {
     );
   }
 
-  const gtm = integrations.find((i) => i.key === "google-tag-manager");
-  const gtmId = gtm?.config.containerId;
+  // ── Google Tag Manager ─────────────────────────────────────────────────────
+  // Primary source: backend API.  Fallback: NEXT_PUBLIC_GTM_ID env variable.
+  const gtmApi = integrations.find((i) => i.key === "google-tag-manager");
+  const gtmId =
+    (gtmApi?.config.containerId && gtmApi.config.containerId.startsWith("GTM-")
+      ? gtmApi.config.containerId
+      : null) ?? process.env.NEXT_PUBLIC_GTM_ID ?? null;
+
   if (gtmId && gtmId.startsWith("GTM-")) {
     nodes.push(
       <script

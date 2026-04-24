@@ -21,8 +21,12 @@ async function fetchActiveIntegrations(): Promise<ActiveIntegration[]> {
 export default async function IntegrationBody(): Promise<JSX.Element | null> {
   const integrations = await fetchActiveIntegrations();
 
-  const gtm = integrations.find((i) => i.key === "google-tag-manager");
-  const gtmId = gtm?.config.containerId;
+  // Primary source: backend API.  Fallback: NEXT_PUBLIC_GTM_ID env variable.
+  const gtmApi = integrations.find((i) => i.key === "google-tag-manager");
+  const gtmId =
+    (gtmApi?.config.containerId && gtmApi.config.containerId.startsWith("GTM-")
+      ? gtmApi.config.containerId
+      : null) ?? process.env.NEXT_PUBLIC_GTM_ID ?? null;
 
   if (!gtmId || !gtmId.startsWith("GTM-")) return null;
 
