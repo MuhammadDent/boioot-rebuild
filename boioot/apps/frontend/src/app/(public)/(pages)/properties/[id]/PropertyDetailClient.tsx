@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -162,7 +163,6 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
   const [bookingOpen, setBookingOpen]       = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError]     = useState("");
-  const [bookingSuccess, setBookingSuccess] = useState("");
   const [bookingForm, setBookingForm] = useState({
     startDate: "",
     endDate: "",
@@ -261,17 +261,16 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
 
   const openBooking = useCallback(() => {
     setBookingError("");
-    setBookingSuccess("");
     if (!user) { openAuthModal(() => setBookingOpen(true)); return; }
     setBookingOpen(true);
   }, [user, openAuthModal]);
 
   const submitBooking = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (bookingLoading) return;
     if (!user) { openAuthModal(() => setBookingOpen(true)); return; }
     setBookingLoading(true);
     setBookingError("");
-    setBookingSuccess("");
     try {
       await bookingsApi.create({
         propertyId: id,
@@ -282,14 +281,24 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
         notes: bookingForm.notes.trim() || undefined,
         guestCount: bookingForm.guestCount,
       });
-      setBookingSuccess("تم إرسال طلب الحجز بنجاح. سيتواصل معك المعلن لتأكيد التفاصيل.");
-      setBookingForm((prev) => ({ ...prev, startDate: "", endDate: "", notes: "" }));
+      setBookingOpen(false);
+      setBookingForm({
+        startDate: "",
+        endDate: "",
+        guestName: user?.fullName ?? "",
+        phone: "",
+        notes: "",
+        guestCount: 1,
+      });
+      toast.success("تم إرسال طلب الحجز بنجاح، سيتواصل معك المعلن قريبًا", {
+        duration: 6000,
+      });
     } catch (err) {
       setBookingError(normalizeError(err) || "تعذر إرسال طلب الحجز، حاول مجدداً.");
     } finally {
       setBookingLoading(false);
     }
-  }, [bookingForm, id, openAuthModal, user]);
+  }, [bookingForm, bookingLoading, id, openAuthModal, user]);
 
   const sortedImages = property.images;
   const shares       = shareUrls(pageUrl, property.title);
@@ -821,7 +830,6 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
             </label>
 
             {bookingError && <p style={{ color: "#dc2626", fontSize: "0.85rem", margin: "0 0 0.75rem" }}>{bookingError}</p>}
-            {bookingSuccess && <p style={{ color: "#166534", fontSize: "0.85rem", margin: "0 0 0.75rem" }}>{bookingSuccess}</p>}
 
             <button
               type="submit"
