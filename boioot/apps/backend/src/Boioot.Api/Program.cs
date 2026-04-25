@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Boioot.Api.Authorization;
+using Boioot.Api.Services;
 using Boioot.Api.Hubs;
 using Microsoft.OpenApi.Models;
 using Boioot.Application.Exceptions;
@@ -115,6 +116,12 @@ builder.Services.Configure<BookingOptions>(
     builder.Configuration.GetSection(BookingOptions.SectionName));
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMemoryCache();
+
+// ── GA4 Analytics service (non-blocking HTTP proxy to Google Analytics Data API) ──
+// Credentials are read from GA4_PROPERTY_ID / GA4_CLIENT_EMAIL / GA4_PRIVATE_KEY env vars.
+// When credentials are absent the service returns all-zero summary — never throws.
+builder.Services.AddHttpClient<IGa4Service, Ga4Service>();
+
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
 builder.Services.AddScoped<INotificationRealtimePublisher, SignalRNotificationRealtimePublisher>();
