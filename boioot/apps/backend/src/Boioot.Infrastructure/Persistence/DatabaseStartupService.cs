@@ -594,36 +594,44 @@ public sealed class DatabaseStartupService
 
     // ── Messaging schema patch ────────────────────────────────────────────────
     // Ensures Conversations and Messages tables exist even on databases that
-    // were provisioned before these tables were introduced (i.e. the startup
-    // service took the "existing DB, inject all migrations" path and never
-    // ran InitialSchema.Up() which contains both CREATE TABLE statements).
+    // were provisioned before these tables were introduced.
     //
-    // All statements use IF NOT EXISTS — completely safe to run on databases
-    // where the tables already exist.
+    // IMPORTANT: This project uses a global GuidToStringConverter
+    // (BoiootDbContext line 17). Every Guid property — including Id, User1Id,
+    // User2Id, etc. — is stored as character varying(36), NOT as uuid.
+    // Using uuid here would cause a FK type-mismatch error when Users.Id is
+    // varchar(36), silently swallowing the error and leaving the tables
+    // uncreated. All ID columns MUST be character varying(36) to match.
+    //
+    // All statements use IF NOT EXISTS — safe to run on DBs that already
+    // have these tables (no-op for existing tables).
     private async Task ApplyMessagingPatchAsync(CancellationToken ct)
     {
         if (!IsPostgres) return;
         try
         {
             // 1. Conversations table
+            // character varying(36) for all ID/FK columns — matches GuidToStringConverter.
+            // No DEFAULT gen_random_uuid() — that returns uuid; EF Core sets the Id
+            // via the SaveChanges hook before INSERT.
             await _db.Database.ExecuteSqlRawAsync("""
                 CREATE TABLE IF NOT EXISTS "Conversations" (
-                    "Id"            uuid         NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-                    "User1Id"       uuid         NOT NULL
+                    "Id"            character varying(36)  NOT NULL PRIMARY KEY,
+                    "User1Id"       character varying(36)  NOT NULL
                                     REFERENCES "Users"("Id") ON DELETE RESTRICT,
-                    "User2Id"       uuid         NOT NULL
+                    "User2Id"       character varying(36)  NOT NULL
                                     REFERENCES "Users"("Id") ON DELETE RESTRICT,
-                    "PropertyId"    uuid
+                    "PropertyId"    character varying(36)
                                     REFERENCES "Properties"("Id") ON DELETE SET NULL,
-                    "ProjectId"     uuid
-                                    REFERENCES "Projects"("Id")    ON DELETE SET NULL,
-                    "LastMessageAt" timestamptz,
-                    "CreatedAt"     timestamptz  NOT NULL DEFAULT NOW(),
-                    "UpdatedAt"     timestamptz  NOT NULL DEFAULT NOW()
+                    "ProjectId"     character varying(36)
+                                    REFERENCES "Projects"("Id") ON DELETE SET NULL,
+                    "LastMessageAt" timestamp with time zone,
+                    "CreatedAt"     timestamp with time zone NOT NULL DEFAULT NOW(),
+                    "UpdatedAt"     timestamp with time zone NOT NULL DEFAULT NOW()
                 )
                 """, ct);
 
-            // Indexes for the FK columns (no-op if they already exist)
+            // Indexes — no-op if they already exist
             await _db.Database.ExecuteSqlRawAsync("""
                 CREATE INDEX IF NOT EXISTS "IX_Conversations_User1Id"
                     ON "Conversations" ("User1Id")
@@ -636,21 +644,29 @@ public sealed class DatabaseStartupService
                 CREATE INDEX IF NOT EXISTS "IX_Conversations_LastMessageAt"
                     ON "Conversations" ("LastMessageAt")
                 """, ct);
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE INDEX IF NOT EXISTS "IX_Conversations_ProjectId"
+                    ON "Conversations" ("ProjectId")
+                """, ct);
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE INDEX IF NOT EXISTS "IX_Conversations_PropertyId"
+                    ON "Conversations" ("PropertyId")
+                """, ct);
 
             // 2. Messages table
             await _db.Database.ExecuteSqlRawAsync("""
                 CREATE TABLE IF NOT EXISTS "Messages" (
-                    "Id"             uuid          NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-                    "ConversationId" uuid          NOT NULL
+                    "Id"             character varying(36)    NOT NULL PRIMARY KEY,
+                    "ConversationId" character varying(36)    NOT NULL
                                      REFERENCES "Conversations"("Id") ON DELETE CASCADE,
-                    "SenderId"       uuid          NOT NULL
+                    "SenderId"       character varying(36)    NOT NULL
                                      REFERENCES "Users"("Id") ON DELETE RESTRICT,
-                    "Content"        varchar(2000) NOT NULL DEFAULT '',
-                    "IsRead"         boolean       NOT NULL DEFAULT false,
+                    "Content"        character varying(2000)  NOT NULL DEFAULT '',
+                    "IsRead"         boolean                  NOT NULL DEFAULT false,
                     "AttachmentData" text,
                     "AttachmentName" text,
-                    "CreatedAt"      timestamptz   NOT NULL DEFAULT NOW(),
-                    "UpdatedAt"      timestamptz   NOT NULL DEFAULT NOW()
+                    "CreatedAt"      timestamp with time zone NOT NULL DEFAULT NOW(),
+                    "UpdatedAt"      timestamp with time zone NOT NULL DEFAULT NOW()
                 )
                 """, ct);
 
@@ -658,12 +674,16 @@ public sealed class DatabaseStartupService
                 CREATE INDEX IF NOT EXISTS "IX_Messages_ConversationId_CreatedAt"
                     ON "Messages" ("ConversationId", "CreatedAt")
                 """, ct);
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE INDEX IF NOT EXISTS "IX_Messages_SenderId"
+                    ON "Messages" ("SenderId")
+                """, ct);
 
             _log.LogInformation("[schema-patch] Messaging tables (Conversations, Messages) ensured.");
         }
         catch (Exception ex)
         {
-            _log.LogWarning("[schema-patch] Messaging patch failed (non-critical): {Msg}", ex.Message);
+            _log.LogError(ex, "[schema-patch] Messaging patch FAILED — tables may be missing: {Msg}", ex.Message);
         }
     }
 
