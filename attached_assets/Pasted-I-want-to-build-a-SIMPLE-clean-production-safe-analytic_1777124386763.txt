@@ -1,0 +1,133 @@
+I want to build a SIMPLE, clean, production-safe analytics dashboard.
+
+IMPORTANT:
+- Do NOT modify backend logic
+- Do NOT introduce heavy analytics systems
+- Do NOT add complex charts libraries unless lightweight
+- Use existing tracking events only
+- Keep it minimal and fast
+- This is READ-ONLY dashboard
+
+GOAL:
+Create a basic insights dashboard using existing tracking events.
+
+---
+
+ROUTE:
+Create new page:
+ /dashboard/insights
+
+---
+
+UI STRUCTURE:
+
+SECTION 1: Overview Cards (top)
+
+Create 4 small cards:
+
+1. Total Property Views
+   (view_property count)
+
+2. Booking Submissions
+   (booking_submit count)
+
+3. WhatsApp Clicks
+   (click_whatsapp count)
+
+4. Listings Created
+   (listing_created count)
+
+---
+
+SECTION 2: Conversion Funnel
+
+Display simple funnel (can be stacked bars or vertical list):
+
+view_property
+↓
+click_whatsapp
+↓
+booking_start
+↓
+booking_submit
+
+Show:
+- count
+- percentage drop between steps
+
+NO complex charts needed (simple UI is fine)
+
+---
+
+SECTION 3: Top Performers
+
+Show simple lists:
+
+- Top Properties (by views)
+- Top Cities (if available)
+- Top Property Types
+
+Limit to top 5
+
+---
+
+SECTION 4: Monetization
+
+Show:
+
+- upgrade_prompt_viewed
+- upgrade_clicked
+- conversion rate %
+
+---
+
+DATA SOURCE (IMPORTANT):
+
+OPTION A (Preferred for now):
+Use Google Analytics (if accessible via frontend events cache)
+
+OPTION B:
+Create a temporary mock aggregation function using in-memory or simple API (NO heavy DB work)
+
+OPTION C (fallback):
+Use static placeholder + TODO comment for future real data
+
+---
+
+IMPLEMENTATION RULES:
+
+- Use lightweight components (no heavy libraries)
+- Use existing design system
+- Keep consistent with light UI (no dark theme)
+- Mobile responsive
+- No blocking calls
+
+---
+
+FILES TO CREATE:
+
+- /app/dashboard/insights/page.tsx (or equivalent)
+- /components/dashboard/InsightCard.tsx
+- /components/dashboard/Funnel.tsx
+- /components/dashboard/TopList.tsx
+
+---
+
+TRACKING SAFETY:
+
+- Do NOT depend on tracking to render UI
+- If data fails → show "No data yet"
+- No crashes allowed
+
+---
+
+FINAL OUTPUT:
+
+Return:
+1. Files created
+2. Components structure
+3. How data is currently mocked or fetched
+4. Where to plug real data later
+
+GOAL:
+A clean, minimal, business-focused dashboard ready for future analytics monetization.
