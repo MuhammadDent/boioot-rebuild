@@ -579,7 +579,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
                     </button>
                   )}
 
-                  {property.ownerPhone && (
+                  {property.ownerPhone && property.ownerHasWhatsappContact !== false && (
                     <a
                       href={waLink(
                         property.ownerPhone,

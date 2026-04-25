@@ -255,6 +255,16 @@ export default function HomePageClient({ initialHeroImage }: { initialHeroImage:
       .catch(() => setFavoriteIds(new Set()));
   }, [isAuthenticated]);
 
+  // ── Load homepage-featured listings once on mount ────────────────────────────
+
+  useEffect(() => {
+    propertiesApi.getHomepageFeatured(8)
+      .then((res) => setHomepageFeatured(res.items))
+      .catch(() => setHomepageFeatured([]))
+      .finally(() => setHomepageFeaturedLoaded(true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Load properties when tab or applied filters change ──────────────────────
 
   useEffect(() => {
@@ -509,6 +519,30 @@ export default function HomePageClient({ initialHeroImage }: { initialHeroImage:
           <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none" }}>🔍</span>
         </div>
       </div>
+
+      {/* ── HOMEPAGE-FEATURED LISTINGS ───────────────────────────────────────── */}
+      {homepageFeaturedLoaded && homepageFeatured.length > 0 && (
+        <div style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #fefce8 100%)", borderBottom: "1px solid #d1fae5", padding: "1.5rem 1.25rem" }}>
+          <div style={{ maxWidth: "var(--max-width)", margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
+              <span style={{ fontSize: "1.25rem" }}>⭐</span>
+              <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "var(--color-primary)" }}>
+                إعلانات مميزة على الصفحة الرئيسية
+              </h2>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem" }}>
+              {homepageFeatured.map((p, i) => (
+                <PropertyCard
+                  key={p.id}
+                  property={p}
+                  initialIsFavorited={favoriteIds.has(p.id)}
+                  priority={i === 0}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── MAIN CONTENT ─────────────────────────────────────────────────────── */}
       <div style={{ maxWidth: "var(--max-width)", margin: "0 auto", padding: "1.5rem 1.25rem" }} className="home-main-wrap">

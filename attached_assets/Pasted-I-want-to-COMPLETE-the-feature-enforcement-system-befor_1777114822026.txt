@@ -1,0 +1,99 @@
+I want to COMPLETE the feature enforcement system before continuing any other feature (like booking or new flows).
+
+IMPORTANT:
+- STOP working on booking or unrelated features
+- Focus ONLY on Plan Catalog feature enforcement
+- Do NOT refactor existing working systems
+- Do NOT break current functionality
+
+GOAL:
+All plan features must be fully connected and enforced across backend + frontend.
+
+---
+
+PHASE 1: Fix missing critical features
+
+Implement FULL behavior for:
+
+1. featured_listings:
+- Ensure Listings table has IsFeatured
+- Add logic:
+  Only users with feature can mark listing as featured
+- Modify queries:
+  Featured listings appear first in search and listing pages
+
+---
+
+2. homepage_exposure:
+- Ensure Listings table has IsHomepageFeatured
+- Add logic:
+  Only users with feature can enable it
+- Create API support:
+  filter homepageFeatured=true
+- Update homepage UI:
+  show these listings in a dedicated section
+
+---
+
+3. whatsapp_contact:
+- Add backend flag:
+  hasWhatsappContact based on plan
+- In frontend:
+  show WhatsApp button ONLY if feature is enabled
+
+---
+
+4. priority_support:
+- Add priority flag in support system
+- If user has feature:
+  mark support requests as HIGH priority
+
+---
+
+PHASE 2: Fix partial features
+
+- multiple_photos:
+  Remove boolean dependency
+  rely ONLY on max_images limit
+
+- verified_badge:
+  Ensure it is either:
+  - plan-based auto verification OR
+  - admin-controlled but clearly separated
+
+- analytics_dashboard:
+  enforce access using guards on frontend routes
+
+---
+
+PHASE 3: Standardize feature usage
+
+Ensure every feature follows:
+
+- Backend:
+  PlanEntitlementService is used
+
+- API:
+  Feature flags included in responses
+
+- Frontend:
+  FeatureGate or checks applied
+
+---
+
+PHASE 4: Clean validation
+
+For each feature:
+- Test with user WITH feature
+- Test with user WITHOUT feature
+- Ensure behavior actually changes
+
+---
+
+FINAL RULE:
+Do NOT add new features
+Do NOT modify booking system
+Do NOT refactor architecture
+
+Goal:
+Finish feature system as a production-ready control layer

@@ -9,6 +9,7 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { normalizeError } from "@/lib/api";
+import { usePlanCapabilities, FeatureKeys } from "@/hooks/usePlanCapabilities";
 import type { ConversationSummary } from "@/types";
 
 // ─── UUID validation helper ───────────────────────────────────────────────────
@@ -26,6 +27,7 @@ function MessagesPageInner() {
   const { user, isLoading } = useProtectedRoute();
   const router       = useRouter();
   const searchParams = useSearchParams();
+  const caps         = usePlanCapabilities();
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [fetching,      setFetching]      = useState(true);
@@ -86,6 +88,43 @@ function MessagesPageInner() {
   }, [isLoading, user]);
 
   if (isLoading || !user) return null;
+
+  // ── Feature gate: internal_chat (admins always pass) ─────────────────────
+  const isAdmin = user?.role === "Admin";
+  if (!caps.loading && !isAdmin && !caps.canUse(FeatureKeys.internalChat)) {
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
+        <div style={{ maxWidth: 720, margin: "0 auto" }}>
+          <DashboardBackLink href="/dashboard" label="← لوحة التحكم" />
+          <div style={{
+            marginTop: "2rem", padding: "2.5rem 2rem", textAlign: "center",
+            background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
+          }}>
+            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>💬</div>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "0.5rem" }}>
+              المراسلة الداخلية
+            </h2>
+            <p style={{ color: "var(--color-text-secondary)", marginBottom: "1.5rem", lineHeight: 1.7 }}>
+              ميزة المراسلة الداخلية متاحة للباقات المدفوعة فقط.
+              قم بترقية اشتراكك للتواصل مع العملاء وأصحاب العقارات مباشرةً عبر التطبيق.
+            </p>
+            <Link
+              href="/dashboard/subscription"
+              style={{
+                display: "inline-block", padding: "0.65rem 2rem",
+                background: "var(--color-primary)", color: "#fff",
+                borderRadius: 8, fontWeight: 700, textDecoration: "none",
+                fontSize: "0.95rem",
+              }}
+            >
+              ترقية الاشتراك
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Contact administration (مراسلة الإدارة — Admin role) ─────────────────
 
