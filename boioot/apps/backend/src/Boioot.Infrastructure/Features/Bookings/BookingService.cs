@@ -402,27 +402,6 @@ public class BookingService : IBookingService
         return Map(booking, await GetPropertyTitleAsync(booking.PropertyId, ct));
     }
 
-    private async Task EnsureNoApprovedOverlapAsync(Guid propertyId, DateTime start, DateTime end, Guid? excludedBookingId, CancellationToken ct)
-    {
-        var hasConflict = await HasApprovedOverlapAsync(propertyId, start, end, excludedBookingId, ct);
-
-        if (hasConflict)
-            throw new BoiootException("هذه الفترة محجوزة مسبقاً لهذا العقار", 409);
-    }
-
-    private async Task<bool> HasApprovedOverlapAsync(Guid propertyId, DateTime start, DateTime end, Guid? excludedBookingId, CancellationToken ct)
-    {
-        return await _context.Bookings
-            .AsNoTracking()
-            .AnyAsync(b =>
-                b.PropertyId == propertyId &&
-                (b.Status == Confirmed ? Approved : b.Status) == Approved &&
-                (!excludedBookingId.HasValue || b.Id != excludedBookingId.Value) &&
-                start < b.EndDate &&
-                end > b.StartDate,
-                ct);
-    }
-
     private async Task<(Booking Booking, string PropertyTitle)> GetOwnedBookingAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct)
     {
         var booking = await _context.Bookings

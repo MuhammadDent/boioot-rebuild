@@ -379,27 +379,6 @@ public class BookingsController : BaseController
             ct);
     }
 
-    private async Task<bool> HasBlockingOverlapAsync(Guid propertyId, DateTime start, DateTime end, Guid? excludedBookingId, CancellationToken ct)
-    {
-        var count = await ExecuteScalarAsync("""
-            SELECT COUNT(1)
-            FROM "Bookings"
-            WHERE "PropertyId" = @propertyId
-              AND CASE WHEN "Status" = 'Confirmed' THEN 'Approved' ELSE "Status" END = 'Approved'
-              AND (@excludedBookingId IS NULL OR "Id" <> @excludedBookingId)
-              AND @start < "EndDate"
-              AND @end > "StartDate"
-            """, cmd =>
-        {
-            AddParameter(cmd, "@propertyId", propertyId);
-            AddParameter(cmd, "@excludedBookingId", excludedBookingId.HasValue ? excludedBookingId.Value : DBNull.Value);
-            AddParameter(cmd, "@start", start);
-            AddParameter(cmd, "@end", end);
-        }, ct);
-
-        return Convert.ToInt32(count) > 0;
-    }
-
     private async Task<OwnerBookingRow?> GetBookingForOwnerActionAsync(Guid bookingId, CancellationToken ct)
     {
         var items = await QueryOwnerBookingsAsync("""
