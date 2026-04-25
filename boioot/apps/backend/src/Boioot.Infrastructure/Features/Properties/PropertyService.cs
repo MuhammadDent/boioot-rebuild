@@ -55,7 +55,8 @@ public class PropertyService : IPropertyService
         var total = await query.CountAsync(ct);
 
         var items = await query
-            .OrderByDescending(p => p.CreatedAt)
+            .OrderByDescending(p => p.IsFeatured)   // featured listings float to top
+            .ThenByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
@@ -182,6 +183,18 @@ public class PropertyService : IPropertyService
         }
 
         response.RecipientId = resolvedRecipientId;
+
+        // ── Resolve whatsapp_contact plan entitlement for this listing's owner ──
+        // If no AccountId (legacy/admin listing), default to true (show button).
+        if (property.AccountId.HasValue)
+        {
+            response.OwnerHasWhatsappContact =
+                await _entitlement.HasFeatureAsync(property.AccountId.Value, SubscriptionKeys.WhatsappContact, ct);
+        }
+        else
+        {
+            response.OwnerHasWhatsappContact = true;
+        }
 
         return response;
     }
@@ -346,6 +359,13 @@ public class PropertyService : IPropertyService
             CreatedByRole     = userRole,
             CreatedByCompanyId = companyId,
         };
+
+        // ── Plan-driven visibility flags (company listing path) ───────────────
+        if (accountId.HasValue)
+        {
+            property.IsFeatured         = await _entitlement.HasFeatureAsync(accountId.Value, SubscriptionKeys.FeaturedListings,  ct);
+            property.IsHomepageFeatured = await _entitlement.HasFeatureAsync(accountId.Value, SubscriptionKeys.HomepageExposure, ct);
+        }
 
         _context.Properties.Add(property);
         await _context.SaveChangesAsync(ct);
@@ -800,6 +820,13 @@ public class PropertyService : IPropertyService
             CreatedByCompanyId = creatorCompanyId,   // null if user has no company
         };
 
+        // ── Plan-driven visibility flags (personal listing path) ──────────────
+        if (acctId.HasValue)
+        {
+            property.IsFeatured         = await _entitlement.HasFeatureAsync(acctId.Value, SubscriptionKeys.FeaturedListings,  ct);
+            property.IsHomepageFeatured = await _entitlement.HasFeatureAsync(acctId.Value, SubscriptionKeys.HomepageExposure, ct);
+        }
+
         _context.Properties.Add(property);
         await _context.SaveChangesAsync(ct);
 
@@ -948,6 +975,12 @@ public class PropertyService : IPropertyService
 
         if (filters.MinBathrooms.HasValue)
             query = query.Where(p => p.Bathrooms >= filters.MinBathrooms.Value);
+
+        if (filters.HomepageFeatured == true)
+            query = query.Where(p => p.IsHomepageFeatured);
+
+        if (filters.FeaturedOnly == true)
+            query = query.Where(p => p.IsFeatured);
 
         return query;
     }
@@ -1224,6 +1257,10 @@ public class PropertyService : IPropertyService
             })
             .ToList(),
         ViewCount = p.ViewCount,
+        IsFeatured         = p.IsFeatured,
+        IsHomepageFeatured = p.IsHomepageFeatured,
+        // OwnerHasWhatsappContact defaults to true in list view; detail view resolves per-owner
+        OwnerHasWhatsappContact = true,
         ModerationStatus = p.ModerationStatus.ToString(),
         CreatedAt = p.CreatedAt,
         UpdatedAt = p.UpdatedAt,

@@ -1,0 +1,110 @@
+I want to convert the Plan Catalog into a fully functional feature enforcement system across the platform.
+
+IMPORTANT:
+- This is a controlled implementation
+- Do NOT refactor unrelated code
+- Do NOT rename feature keys
+- Do NOT break existing working features
+
+GOAL:
+Every feature must control real behavior in backend + frontend.
+
+---
+
+PHASE 1: Create a centralized Feature Access Service
+
+Ensure PlanEntitlementService is the single source of truth.
+
+Add methods like:
+
+- HasFeature(userId, featureKey)
+- GetFeatureLimit(userId, featureKey)
+- CanAccessFeature(userId, featureKey)
+
+All backend logic must go through this service.
+
+---
+
+PHASE 2: Fix CRITICAL catalog-only features
+
+Implement real behavior:
+
+1. featured_listings:
+- Add IsFeatured BOOLEAN to Listings table
+- Allow marking listing as featured ONLY if user has feature
+- Modify listing queries:
+  Featured listings appear first (ORDER BY IsFeatured DESC)
+
+---
+
+2. homepage_exposure:
+- Add IsHomepageFeatured BOOLEAN
+- When user has feature → allow flag
+- Add API:
+  GET /properties?homepageFeatured=true
+- Update homepage:
+  Show these listings in a dedicated section
+
+---
+
+3. whatsapp_contact:
+- Add hasWhatsappContact check in API response
+- In frontend:
+  Show WhatsApp button ONLY if feature is enabled
+
+---
+
+4. priority_support:
+- Add priority flag in support tickets
+- If user has feature:
+  Set priority = HIGH
+- Use it in support sorting
+
+---
+
+PHASE 3: Fix PARTIAL features
+
+- verified_badge:
+  Connect plan → auto-verify OR keep admin + show conditionally
+
+- multiple_photos:
+  Remove boolean dependency
+  Use ONLY numeric limit (max_images)
+
+- analytics_dashboard:
+  Enforce route protection + UI guard
+
+---
+
+PHASE 4: Frontend Feature Guards
+
+Create reusable system:
+
+- FeatureGate component
+- useFeatureAccess hook
+
+Example:
+
+if (!hasFeature("video_upload")) {
+  hide component
+}
+
+---
+
+PHASE 5: Ensure consistency
+
+For EVERY feature:
+- Backend enforces
+- API exposes
+- Frontend respects
+- UI reflects
+
+---
+
+FINAL OUTPUT:
+- Implement ONLY missing connections
+- Do NOT rewrite system
+- Keep everything stable
+
+Goal:
+Turn Plan Catalog into a real product engine, not just admin configuration

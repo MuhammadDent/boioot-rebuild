@@ -68,6 +68,13 @@ public class PropertyResponse
     public decimal? AverageRating { get; set; }
     public int RatingsCount { get; set; }
 
+    // Plan-driven visibility flags
+    public bool IsFeatured         { get; set; } = false;
+    public bool IsHomepageFeatured { get; set; } = false;
+
+    // Advertiser plan: whatsapp_contact feature (gated per-owner subscription)
+    public bool OwnerHasWhatsappContact { get; set; } = true;
+
     // Moderation (admin-controlled)
     public string ModerationStatus { get; set; } = "Active";
 

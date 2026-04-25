@@ -164,6 +164,10 @@ export default function HomePageClient({ initialHeroImage }: { initialHeroImage:
   // Favorites
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
+  // Homepage-featured listings (IsHomepageFeatured = true)
+  const [homepageFeatured, setHomepageFeatured] = useState<PropertyResponse[]>([]);
+  const [homepageFeaturedLoaded, setHomepageFeaturedLoaded] = useState(false);
+
   // showHero flag — initialize from defaults (true), then sync from store on mount.
   const [showHero, setShowHero] = useState(PAGE_SECTIONS_DEFAULTS.showHero);
 

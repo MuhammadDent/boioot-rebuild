@@ -184,6 +184,11 @@ export interface PropertyResponse {
   // Rating summary (from listing endpoint)
   averageRating?: number;
   ratingsCount?: number;
+  // Plan-driven visibility flags
+  isFeatured?: boolean;
+  isHomepageFeatured?: boolean;
+  // Advertiser plan: whatsapp_contact feature
+  ownerHasWhatsappContact?: boolean;
   // Moderation (admin-controlled)
   moderationStatus?: string;
 }

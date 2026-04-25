@@ -23,6 +23,8 @@ export interface PropertiesListParams {
   maxPrice?: number;
   minBedrooms?: number;
   minBathrooms?: number;
+  homepageFeatured?: boolean;
+  featuredOnly?: boolean;
 }
 
 export const propertiesApi = {
@@ -33,5 +35,15 @@ export const propertiesApi = {
 
   getById(id: string): Promise<PropertyResponse> {
     return api.get<PropertyResponse>(`/properties/${id}`);
+  },
+
+  getHomepageFeatured(pageSize = 8): Promise<PagedResult<PropertyResponse>> {
+    const qs = buildQueryString({ homepageFeatured: true, pageSize } as Record<string, string | number | boolean | null | undefined>);
+    return api.get<PagedResult<PropertyResponse>>(`/properties${qs}`);
+  },
+
+  getFeatured(pageSize = 8): Promise<PagedResult<PropertyResponse>> {
+    const qs = buildQueryString({ featuredOnly: true, pageSize } as Record<string, string | number | boolean | null | undefined>);
+    return api.get<PagedResult<PropertyResponse>>(`/properties${qs}`);
   },
 };

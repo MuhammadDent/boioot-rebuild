@@ -95,7 +95,9 @@ public sealed class SchemaEvolutionService
         await TryAlter("Properties", "CreatedByUserId",   "TEXT NOT NULL DEFAULT ''",      ct);
         await TryAlter("Properties", "CreatedByRole",     "TEXT NOT NULL DEFAULT ''",      ct);
         await TryAlter("Properties", "CreatedByCompanyId","TEXT",                          ct);
-        await TryAlter("Properties", "IsBookable",        "INTEGER NOT NULL DEFAULT 0",    ct);
+        await TryAlter("Properties", "IsBookable",          "INTEGER NOT NULL DEFAULT 0",    ct);
+        await TryAlter("Properties", "IsFeatured",         "INTEGER NOT NULL DEFAULT 0",    ct);
+        await TryAlter("Properties", "IsHomepageFeatured", "INTEGER NOT NULL DEFAULT 0",    ct);
     }
 
     private async Task ApplyLocationPatchesAsync(CancellationToken ct)

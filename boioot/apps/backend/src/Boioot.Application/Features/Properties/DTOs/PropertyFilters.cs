@@ -15,4 +15,8 @@ public class PropertyFilters
     public int? MinBathrooms { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 12;
+
+    // Plan-driven filters
+    public bool? HomepageFeatured { get; set; }
+    public bool? FeaturedOnly     { get; set; }
 }
