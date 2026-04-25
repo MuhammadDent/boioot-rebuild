@@ -1,0 +1,87 @@
+I want to audit and validate the entire Plan Catalog feature system, not only `homepage_exposure`.
+
+Goal:
+Every feature in the Plan Catalog must be either:
+1. Functionally connected to real backend/frontend behavior, or
+2. Clearly marked as catalog-only / not implemented yet.
+
+IMPORTANT RULES:
+- Audit only first.
+- Do NOT implement changes yet.
+- Do NOT refactor.
+- Do NOT rename feature keys.
+- Do NOT change database, API contracts, routes, or UI.
+- Produce a technical report only.
+
+Scope:
+Admin Plan Catalog features, including but not limited to:
+- featured_listings
+- homepage_exposure
+- verified_badge
+- multiple_photos
+- video_upload
+- analytics_dashboard
+- and any other feature keys found in the catalog.
+
+Tasks:
+
+1. Find all Plan Catalog feature keys
+Search the codebase and list every feature key defined in the system.
+
+2. For each feature key, check:
+- Where it is defined
+- Whether it is stored in DB / migrations / seed data
+- Whether it is attached to subscription plans
+- Whether user/listing entitlement is calculated from it
+- Whether backend enforces it
+- Whether frontend reads it
+- Whether it changes real product behavior
+
+3. Create a feature status table with columns:
+- Feature key
+- Display name
+- Type
+- Scope
+- Defined in catalog? yes/no
+- Used in backend? yes/no
+- Used in frontend? yes/no
+- Enforced? yes/no
+- Functional status:
+  - Fully functional
+  - Partially connected
+  - Catalog-only
+  - Missing implementation
+- Evidence: file paths + function names
+
+4. Specifically verify these real behaviors:
+- `featured_listings`: Does it make listings featured or affect sorting/visibility?
+- `homepage_exposure`: Does it make listings appear on the homepage?
+- `verified_badge`: Does it display a verified badge based on real verification or plan entitlement?
+- `multiple_photos`: Does it limit or allow multiple photo uploads?
+- `video_upload`: Does it allow or block video upload?
+- `analytics_dashboard`: Does it expose analytics only to eligible users/plans?
+
+5. Identify missing connections:
+For each feature that is catalog-only or partially connected, explain exactly what is missing:
+- backend entitlement check
+- API response field
+- frontend condition
+- database field
+- service logic
+- UI rendering logic
+
+6. Recommend a safe implementation plan:
+Create a phased plan:
+Phase 1: Audit and mapping
+Phase 2: Backend entitlement service
+Phase 3: Frontend feature guards
+Phase 4: Enforcement and tests
+Phase 5: Admin visibility/reporting
+
+7. Final output:
+Return a clear technical report.
+Do not change files.
+Do not implement anything until I approve.
+
+Expected result:
+I want to know which Plan Catalog features are truly working and which are only visual/configuration entries.
