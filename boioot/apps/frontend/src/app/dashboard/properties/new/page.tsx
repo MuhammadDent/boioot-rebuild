@@ -12,6 +12,7 @@ import type { CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
 import { imagesService } from "@/services/images.service";
 import type { PendingImageUpload } from "@/components/dashboard/properties/PropertyImageUploader";
 import { tokenStorage } from "@/lib/token";
+import { trackEvent } from "@/lib/track";
 
 const COMPANY_ROLES = ["Admin", "CompanyOwner"];
 
@@ -54,6 +55,11 @@ export default function NewPropertyPage() {
       } else {
         property = await dashboardPropertiesApi.postUserListing(payload);
       }
+      trackEvent("listing_created", {
+        property_id: property.id,
+        listing_type: payload.listingType,
+        property_type: payload.type,
+      });
 
       // Attach, order, and set-cover for any uploaded images
       if (pendingUploads && pendingUploads.length > 0) {

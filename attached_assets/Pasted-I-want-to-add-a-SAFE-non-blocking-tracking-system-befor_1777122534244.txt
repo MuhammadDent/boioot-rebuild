@@ -1,0 +1,143 @@
+I want to add a SAFE, non-blocking tracking system before launch.
+
+IMPORTANT RULES:
+- Do NOT change business logic
+- Do NOT refactor existing systems
+- Do NOT block user actions if tracking fails
+- Do NOT store sensitive personal data
+- Do NOT break Google Analytics setup
+- Tracking must be additive only
+
+GOAL:
+Add lightweight production-safe tracking for user behavior and future business insights.
+
+---
+
+PHASE 1: Create centralized tracking utility
+
+Create a single frontend utility:
+
+trackEvent(eventName, properties)
+
+Requirements:
+- Use GA4 / gtag if available
+- If gtag is not available, silently skip
+- Wrap in try/catch
+- Never throw errors
+- Never block UI
+- Use async/non-blocking behavior
+
+Example behavior:
+- tracking failure must NOT affect booking
+- tracking failure must NOT affect login
+- tracking failure must NOT affect property creation
+
+---
+
+PHASE 2: Standard event naming
+
+Use snake_case only.
+
+Start with these events:
+
+Property:
+- view_property
+- click_whatsapp
+- click_phone
+- click_contact
+
+Booking:
+- booking_start
+- booking_submit
+- booking_success
+- booking_failed
+
+Upgrade / Plans:
+- view_pricing
+- upgrade_prompt_viewed
+- upgrade_clicked
+
+Listings:
+- listing_created
+- listing_published
+
+---
+
+PHASE 3: Safe metadata only
+
+Allowed metadata:
+- propertyId
+- propertyType
+- city
+- priceRange
+- userType
+- planKey
+- featureKey
+- source
+- timestamp
+
+Forbidden metadata:
+- phone numbers
+- email
+- full name
+- exact address
+- payment details
+- document IDs
+- uploaded file URLs
+
+---
+
+PHASE 4: Add tracking in safe places only
+
+Add tracking to:
+- property detail page load
+- WhatsApp/contact button clicks
+- booking start/submit/success/failure
+- pricing page view
+- upgrade prompt shown/clicked
+- listing created/published
+
+Do NOT add tracking inside critical backend validation logic.
+
+---
+
+PHASE 5: Optional backend event endpoint
+
+If useful, add a lightweight backend endpoint:
+
+POST /api/tracking/events
+
+Rules:
+- Must be fire-and-forget
+- Must not affect frontend flow
+- Must validate eventName
+- Must reject forbidden sensitive fields
+- Must store anonymized userId only if available
+- Must fail silently on frontend
+
+If backend storage feels risky or too large, skip database storage for now and only send to GA4.
+
+---
+
+PHASE 6: Testing
+
+Verify:
+- Site still works if GA is blocked
+- Site still works if tracking endpoint fails
+- Booking still works
+- Listing creation still works
+- No console crashes
+- No sensitive data is sent
+
+---
+
+FINAL OUTPUT:
+Return:
+1. Files changed
+2. Events added
+3. Where each event fires
+4. Confirmation that tracking is non-blocking
+5. Confirmation that no sensitive data is tracked
+
+Goal:
+Production-safe tracking before launch without risking the website.

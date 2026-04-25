@@ -13,6 +13,7 @@ import {
   getAudienceTypeForUser,
   filterPlansForAudience,
 } from "@/features/pricing/planCompatibility";
+import { trackEvent } from "@/lib/track";
 import BillingToggle, { type BillingCycle } from "@/components/pricing/BillingToggle";
 import PricingCard from "@/components/pricing/PricingCard";
 import PricingComparisonTable from "@/components/pricing/PricingComparisonTable";
@@ -240,6 +241,12 @@ export default function PricingPage() {
 
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [detailPlan,      setDetailPlan]      = useState<PublicPricingItem | null>(null);
+
+  // ── Page-view tracking ──────────────────────────────────────────────────────
+
+  useEffect(() => {
+    trackEvent("view_pricing");
+  }, []);
 
   // ── Fetch public plans ──────────────────────────────────────────────────────
 

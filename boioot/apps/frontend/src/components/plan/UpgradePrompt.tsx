@@ -15,9 +15,11 @@
 //   <UpgradePrompt message="..." />   — custom message, no feature key
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { FEATURE_META } from "@/features/plan/plans.config";
 import type { FeatureKey } from "@/features/plan/types";
+import { trackEvent } from "@/lib/track";
 
 const UPGRADE_HREF = "/dashboard/subscription/plans";
 
@@ -43,6 +45,12 @@ export default function UpgradePrompt({
   const label    = meta?.label ?? "هذه الميزة";
   const desc     = message ?? meta?.description ?? "قم بترقية باقتك للوصول إلى هذه الميزة";
   const benefits = meta?.benefits ?? [];
+
+  useEffect(() => {
+    if (compact) return;
+    trackEvent("upgrade_prompt_viewed", { feature: feature ?? "unknown" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Compact badge ────────────────────────────────────────────────────────
   if (compact) {
@@ -98,6 +106,7 @@ export default function UpgradePrompt({
         </div>
         <Link
           href={UPGRADE_HREF}
+          onClick={() => trackEvent("upgrade_clicked", { feature: feature ?? "unknown", variant: "inline" })}
           style={{
             flexShrink: 0,
             display: "inline-flex",
@@ -169,7 +178,7 @@ export default function UpgradePrompt({
       {benefits.length > 0 && (
         <ul style={{
           margin: 0,
-          padding: 0,
+          padding: "0.75rem 1rem",
           listStyle: "none",
           display: "flex",
           flexDirection: "column",
@@ -179,7 +188,6 @@ export default function UpgradePrompt({
           background: "#fff",
           border: "1px solid #fde68a",
           borderRadius: 9,
-          padding: "0.75rem 1rem",
         }}>
           {benefits.map((b, i) => (
             <li key={i} style={{
@@ -199,6 +207,7 @@ export default function UpgradePrompt({
       {/* CTA */}
       <Link
         href={UPGRADE_HREF}
+        onClick={() => trackEvent("upgrade_clicked", { feature: feature ?? "unknown", variant: "full" })}
         style={{
           display: "inline-flex",
           alignItems: "center",
