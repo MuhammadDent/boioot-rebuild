@@ -10,6 +10,7 @@ import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { FEATURES_LIST } from "@/features/properties/constants";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useFeature } from "@/hooks/useFeature";
+import UpgradePrompt from "@/components/plan/UpgradePrompt";
 import type { ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
 
 const FLOOR_OPTIONS = [
@@ -944,31 +945,7 @@ export default function PostAdWizard({
             </label>
 
             {!videoAllowed ? (
-              <div style={{
-                background: "#fffbeb",
-                border: "1.5px solid #fcd34d",
-                borderRadius: 10,
-                padding: "0.9rem 1.1rem",
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "0.65rem",
-              }}>
-                <span style={{ fontSize: "1.25rem", lineHeight: 1.3 }}>🔒</span>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 700, color: "#92400e", fontSize: "0.88rem" }}>
-                    رفع الفيديو غير متاح في باقتك الحالية
-                  </p>
-                  <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "#78350f" }}>
-                    قم بترقية خطتك إلى Gold أو أعلى لإضافة فيديو لإعلانك.{" "}
-                    <Link
-                      href="/dashboard/subscription/plans"
-                      style={{ color: "#b45309", fontWeight: 700 }}
-                    >
-                      ترقية الخطة ←
-                    </Link>
-                  </p>
-                </div>
-              </div>
+              <UpgradePrompt feature="video_upload" inline />
             ) : (
             <>
             {/* Mode toggle */}

@@ -13,6 +13,7 @@ import { canAccessFeature } from "@/features/access/featureAccess";
 import { formatPrice, LISTING_TYPE_LABELS } from "@/features/properties/constants";
 import type { DashboardSummary, DashboardAnalytics, FavoriteResponse } from "@/types";
 import { api, ApiError } from "@/lib/api";
+import UpgradePrompt from "@/components/plan/UpgradePrompt";
 
 // Management roles that see the KPI/analytics section.
 // "Broker" shows listing/request KPIs only — المشاريع/الوكلاء are hidden separately.
@@ -352,36 +353,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : analyticsGated ? (
-              <div style={{
-                background: "#fffbeb",
-                border: "1.5px solid #fcd34d",
-                borderRadius: 12,
-                padding: "1.5rem 1.25rem",
-                textAlign: "center",
-              }}>
-                <div style={{ fontSize: "2rem", marginBottom: "0.4rem" }}>📊</div>
-                <p style={{ margin: "0 0 0.25rem", fontWeight: 700, color: "#92400e", fontSize: "0.95rem" }}>
-                  لوحة التحليلات غير متاحة في باقتك الحالية
-                </p>
-                <p style={{ margin: "0 0 0.85rem", fontSize: "0.8rem", color: "#78350f" }}>
-                  قم بترقية خطتك إلى Gold أو أعلى للوصول إلى تقارير الأداء والإحصائيات التفصيلية.
-                </p>
-                <Link
-                  href="/dashboard/subscription/plans"
-                  style={{
-                    display: "inline-block",
-                    background: "#d97706",
-                    color: "#fff",
-                    padding: "0.5rem 1.25rem",
-                    borderRadius: 8,
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    textDecoration: "none",
-                  }}
-                >
-                  ترقية الخطة ←
-                </Link>
-              </div>
+              <UpgradePrompt feature="analytics_dashboard" />
             ) : analyticsError ? (
               <div style={{
                 background: "#fef2f2", border: "1.5px solid #fecaca",

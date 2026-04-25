@@ -21,6 +21,7 @@ import { normalizeError } from "@/lib/api";
 import { hasPermission } from "@/lib/permissions";
 import { usePlan } from "@/context/SubscriptionContext";
 import { useFeature } from "@/hooks/useFeature";
+import UpgradePrompt from "@/components/plan/UpgradePrompt";
 import type { DashboardProjectItem } from "@/types";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -107,32 +108,10 @@ export default function DashboardProjectsPage() {
   if (!planLoading && !hasProjectManagement) {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <DashboardBackLink href="/dashboard" label="← لوحة التحكم" />
-          <div style={{
-            marginTop: "2rem", padding: "2.5rem 2rem", textAlign: "center",
-            background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.06)"
-          }}>
-            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🏗️</div>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "0.5rem" }}>
-              إدارة المشاريع
-            </h2>
-            <p style={{ color: "var(--color-text-secondary)", marginBottom: "1.5rem", lineHeight: 1.7 }}>
-              ميزة إدارة المشاريع العقارية متاحة للباقات المدفوعة فقط.
-              قم بترقية اشتراكك لإضافة مشاريعك وعرضها للعملاء.
-            </p>
-            <Link
-              href="/dashboard/subscription"
-              style={{
-                display: "inline-block", padding: "0.65rem 2rem",
-                background: "var(--color-primary)", color: "#fff",
-                borderRadius: 8, fontWeight: 700, textDecoration: "none",
-                fontSize: "0.95rem",
-              }}
-            >
-              ترقية الاشتراك
-            </Link>
+          <div style={{ marginTop: "2rem" }}>
+            <UpgradePrompt feature="project_management" />
           </div>
         </div>
       </div>

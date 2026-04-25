@@ -17,6 +17,7 @@ import {
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { useFeature } from "@/hooks/useFeature";
+import UpgradePrompt from "@/components/plan/UpgradePrompt";
 import { api } from "@/lib/api";
 import PropertyImageUploader, { type PendingImageUpload } from "./PropertyImageUploader";
 
@@ -790,31 +791,7 @@ export default function PropertyForm({
           </label>
 
           {!videoAllowed ? (
-            <div style={{
-              background: "#fffbeb",
-              border: "1.5px solid #fcd34d",
-              borderRadius: 10,
-              padding: "0.9rem 1.1rem",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "0.65rem",
-            }}>
-              <span style={{ fontSize: "1.25rem", lineHeight: 1.3 }}>🔒</span>
-              <div>
-                <p style={{ margin: 0, fontWeight: 700, color: "#92400e", fontSize: "0.88rem" }}>
-                  رفع الفيديو غير متاح في باقتك الحالية
-                </p>
-                <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "#78350f" }}>
-                  قم بترقية خطتك إلى Gold أو أعلى لإضافة فيديو لإعلانك.{" "}
-                  <Link
-                    href="/dashboard/subscription/plans"
-                    style={{ color: "#b45309", fontWeight: 700 }}
-                  >
-                    ترقية الخطة ←
-                  </Link>
-                </p>
-              </div>
-            </div>
+            <UpgradePrompt feature="video_upload" inline />
           ) : (
           <>
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>

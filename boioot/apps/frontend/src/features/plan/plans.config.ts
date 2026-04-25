@@ -20,51 +20,103 @@ export interface FeatureMeta {
   label: string;
   description: string;
   icon: string;
+  /** Short benefit bullets shown in the upgrade prompt (max 3). */
+  benefits?: string[];
 }
 
 export const FEATURE_META: Record<FeatureKey, FeatureMeta> = {
   analytics_dashboard: {
     key: "analytics_dashboard",
     label: "لوحة الإحصاءات",
-    description: "تحليلات وإحصاءات تفصيلية لإعلاناتك ومشاريعك",
+    description: "احصل على تقارير مفصّلة عن أداء إعلاناتك وفرص التحسين",
     icon: "📊",
+    benefits: [
+      "تقارير مفصّلة عن مشاهدات كل إعلان",
+      "إحصاءات الطلبات والتواصل الوارد",
+      "تتبّع الأداء العام لحسابك",
+    ],
   },
   video_upload: {
     key: "video_upload",
     label: "رفع الفيديو",
-    description: "إضافة مقاطع فيديو للإعلانات العقارية",
+    description: "اجذب مزيدًا من المشترين بجولة مرئية مقنعة لعقارك",
     icon: "🎥",
+    benefits: [
+      "جولة مرئية تُبرز مميزات العقار بوضوح",
+      "زيادة التفاعل مع إعلانك",
+      "تميّز عن الإعلانات الأخرى",
+    ],
   },
   featured_listings: {
     key: "featured_listings",
     label: "الإعلانات المميزة",
-    description: "إبراز إعلاناتك في نتائج البحث وقوائم الترشيح",
+    description: "ضع إعلانك في المقدمة وزد فرص البيع بشكل ملحوظ",
     icon: "⭐",
+    benefits: [
+      "إعلانك في أعلى نتائج البحث",
+      "ظهور مميز في قوائم التصفح",
+      "وصول أسرع لأكبر عدد من المشترين",
+    ],
   },
   whatsapp_contact: {
     key: "whatsapp_contact",
     label: "التواصل عبر واتساب",
-    description: "زر واتساب مباشر في إعلاناتك لسرعة التواصل",
+    description: "أتح التواصل الفوري مع العملاء بزر واتساب مباشر في إعلانك",
     icon: "💬",
+    benefits: [
+      "زر واتساب يظهر مباشرةً في صفحة إعلانك",
+      "تواصل فوري مع المهتمين دون تأخير",
+      "زيادة معدل الاستفسارات الواردة",
+    ],
   },
   verified_badge: {
     key: "verified_badge",
     label: "شارة الموثوقية",
-    description: "شارة توثيق موثوقة تُظهر مصداقيتك للمشترين",
+    description: "شارة توثيق تُظهر مصداقيتك وتزيد ثقة المشترين",
     icon: "✅",
+    benefits: [
+      "شارة موثوقية بارزة على جميع إعلاناتك",
+      "مصداقية أعلى لدى المشترين والمستأجرين",
+    ],
   },
   homepage_exposure: {
     key: "homepage_exposure",
     label: "الظهور في الصفحة الرئيسية",
-    description: "عرض إعلاناتك في واجهة الموقع الرئيسية لأكبر انتشار",
+    description: "ضع إعلانك أمام أكبر عدد من الزوار في الصفحة الرئيسية",
     icon: "🏠",
+    benefits: [
+      "إعلانك في واجهة الموقع الرئيسية",
+      "أعلى نسبة مشاهدات لإعلانك",
+      "وصول فوري لزوار الموقع الجدد",
+    ],
   },
   project_management: {
     key: "project_management",
     label: "إدارة المشاريع",
-    description: "إنشاء وإدارة مشاريع عقارية متكاملة مع وحدات وخيارات",
+    description: "أنشئ وروّج لمشاريعك العقارية بشكل احترافي مع وحدات وخيارات متعددة",
     icon: "🏗️",
+    benefits: [
+      "إنشاء مشاريع بوحدات وأسعار متعددة",
+      "عرض احترافي للمشاريع للمستثمرين والعملاء",
+      "إدارة مركزية لجميع مشاريعك",
+    ],
   },
+  internal_chat: {
+    key: "internal_chat",
+    label: "المراسلة الداخلية",
+    description: "تواصل مباشرةً مع العملاء وأصحاب العقارات داخل التطبيق",
+    icon: "💬",
+    benefits: [
+      "تواصل مباشر مع العملاء داخل التطبيق",
+      "ردود سريعة على استفسارات المهتمين",
+      "سجل محادثات منظم في مكان واحد",
+    ],
+  },
+  priority_support:  { key: "priority_support",  label: "الدعم المتقدم",        description: "دعم ذو أولوية عالية من فريقنا",                      icon: "🎧" },
+  multiple_photos:   { key: "multiple_photos",   label: "صور متعددة",           description: "رفع عدد أكبر من الصور لكل إعلان",                   icon: "🖼️" },
+  advanced_reports:  { key: "advanced_reports",  label: "التقارير المتقدمة",    description: "تقارير أداء متقدمة ومفصّلة",                         icon: "📈" },
+  lead_tracking:     { key: "lead_tracking",     label: "تتبع العملاء المحتملين", description: "تتبع ومتابعة العملاء المحتملين الواردين",            icon: "🎯" },
+  lead_assignment:   { key: "lead_assignment",   label: "توزيع العملاء",        description: "توزيع العملاء المحتملين على وكلاء المبيعات",         icon: "👥" },
 };
 
 // ── Limit display metadata ─────────────────────────────────────────────────────
