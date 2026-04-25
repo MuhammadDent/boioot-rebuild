@@ -55,7 +55,7 @@ public class PropertyService : IPropertyService
         var total = await query.CountAsync(ct);
 
         var items = await query
-            .OrderByDescending(p => p.IsFeatured)   // featured listings float to top
+            .OrderByDescending(p => p.Features != null && p.Features.Contains("featured_listings"))   // featured listings float to top
             .ThenByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -361,11 +361,8 @@ public class PropertyService : IPropertyService
         };
 
         // ── Plan-driven visibility flags (company listing path) ───────────────
-        if (accountId.HasValue)
-        {
-            property.IsFeatured         = await _entitlement.HasFeatureAsync(accountId.Value, SubscriptionKeys.FeaturedListings,  ct);
-            property.IsHomepageFeatured = await _entitlement.HasFeatureAsync(accountId.Value, SubscriptionKeys.HomepageExposure, ct);
-        }
+        // IsFeatured and IsHomepageFeatured are no longer DB columns — featured status
+        // is derived from the Features JSON array at query time.
 
         _context.Properties.Add(property);
         await _context.SaveChangesAsync(ct);
@@ -821,11 +818,8 @@ public class PropertyService : IPropertyService
         };
 
         // ── Plan-driven visibility flags (personal listing path) ──────────────
-        if (acctId.HasValue)
-        {
-            property.IsFeatured         = await _entitlement.HasFeatureAsync(acctId.Value, SubscriptionKeys.FeaturedListings,  ct);
-            property.IsHomepageFeatured = await _entitlement.HasFeatureAsync(acctId.Value, SubscriptionKeys.HomepageExposure, ct);
-        }
+        // IsFeatured and IsHomepageFeatured are no longer DB columns — featured status
+        // is derived from the Features JSON array at query time.
 
         _context.Properties.Add(property);
         await _context.SaveChangesAsync(ct);
@@ -977,10 +971,10 @@ public class PropertyService : IPropertyService
             query = query.Where(p => p.Bathrooms >= filters.MinBathrooms.Value);
 
         if (filters.HomepageFeatured == true)
-            query = query.Where(p => p.IsHomepageFeatured);
+            query = query.Where(p => p.Features != null && p.Features.Contains("homepage_exposure"));
 
         if (filters.FeaturedOnly == true)
-            query = query.Where(p => p.IsFeatured);
+            query = query.Where(p => p.Features != null && p.Features.Contains("featured_listings"));
 
         return query;
     }
@@ -1257,8 +1251,8 @@ public class PropertyService : IPropertyService
             })
             .ToList(),
         ViewCount = p.ViewCount,
-        IsFeatured         = p.IsFeatured,
-        IsHomepageFeatured = p.IsHomepageFeatured,
+        IsFeatured         = p.Features != null && p.Features.Contains("featured_listings"),
+        IsHomepageFeatured = p.Features != null && p.Features.Contains("homepage_exposure"),
         // OwnerHasWhatsappContact defaults to true in list view; detail view resolves per-owner
         OwnerHasWhatsappContact = true,
         ModerationStatus = p.ModerationStatus.ToString(),

@@ -63,9 +63,9 @@ public class Property : BaseEntity, ISoftDeletable
     // Moderation (admin-controlled visibility control)
     public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.Active;
 
-    // Plan-driven visibility flags (auto-set from subscription entitlement on publish)
-    public bool IsFeatured         { get; set; } = false;
-    public bool IsHomepageFeatured { get; set; } = false;
+    // Plan-driven visibility flags — both removed from DB, now derived from Features array:
+    //   IsFeatured        → Features.Contains("featured_listings")
+    //   IsHomepageFeatured → Features.Contains("homepage_exposure")
 
     // Analytics
     public int ViewCount { get; set; } = 0;
