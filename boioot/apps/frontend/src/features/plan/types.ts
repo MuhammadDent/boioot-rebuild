@@ -17,7 +17,13 @@ export type FeatureKey =
   | "whatsapp_contact"
   | "verified_badge"
   | "homepage_exposure"
-  | "project_management";
+  | "project_management"
+  | "internal_chat"
+  | "priority_support"
+  | "multiple_photos"
+  | "advanced_reports"
+  | "lead_tracking"
+  | "lead_assignment";
 
 // ── Limit keys ────────────────────────────────────────────────────────────────
 // Backend source: LimitDefinition.Key (stable — never rename after seeding)

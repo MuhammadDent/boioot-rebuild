@@ -19,7 +19,8 @@ import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { canAccessProjects } from "@/features/sidebar/sidebar.config";
 import { normalizeError } from "@/lib/api";
 import { hasPermission } from "@/lib/permissions";
-import { usePlanCapabilities, FeatureKeys } from "@/hooks/usePlanCapabilities";
+import { usePlan } from "@/context/SubscriptionContext";
+import { useFeature } from "@/hooks/useFeature";
 import type { DashboardProjectItem } from "@/types";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -29,7 +30,8 @@ export default function DashboardProjectsPage() {
   const { user, isLoading } = useProtectedRoute({
     allowedRoles: ["Admin", "CompanyOwner"],
   });
-  const caps = usePlanCapabilities();
+  const { isLoading: planLoading } = usePlan();
+  const hasProjectManagement = useFeature("project_management");
 
   const [projects, setProjects] = useState<DashboardProjectItem[]>([]);
   const [page, setPage] = useState(1);
@@ -99,9 +101,10 @@ export default function DashboardProjectsPage() {
 
   if (isLoading || !user) return null;
 
-  // ── Feature gate: project_management (admins always pass) ────────────────
-  const isAdmin = user?.role === "Admin";
-  if (!caps.loading && !isAdmin && !caps.canUse(FeatureKeys.projectManagement)) {
+  // ── Feature gate: project_management ─────────────────────────────────────
+  // Wait for plan to resolve before showing the locked state (prevents flash).
+  // useFeature + usePlan admin bypass covers all roles internally.
+  if (!planLoading && !hasProjectManagement) {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>

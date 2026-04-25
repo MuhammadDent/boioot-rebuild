@@ -9,7 +9,8 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { normalizeError } from "@/lib/api";
-import { usePlanCapabilities, FeatureKeys } from "@/hooks/usePlanCapabilities";
+import { usePlan } from "@/context/SubscriptionContext";
+import { useFeature } from "@/hooks/useFeature";
 import type { ConversationSummary } from "@/types";
 
 // ─── UUID validation helper ───────────────────────────────────────────────────
@@ -27,7 +28,8 @@ function MessagesPageInner() {
   const { user, isLoading } = useProtectedRoute();
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const caps         = usePlanCapabilities();
+  const { isLoading: planLoading } = usePlan();
+  const hasInternalChat = useFeature("internal_chat");
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [fetching,      setFetching]      = useState(true);
@@ -89,9 +91,10 @@ function MessagesPageInner() {
 
   if (isLoading || !user) return null;
 
-  // ── Feature gate: internal_chat (admins always pass) ─────────────────────
-  const isAdmin = user?.role === "Admin";
-  if (!caps.loading && !isAdmin && !caps.canUse(FeatureKeys.internalChat)) {
+  // ── Feature gate: internal_chat ───────────────────────────────────────────
+  // Wait for plan to resolve before showing the locked state (prevents flash).
+  // useFeature + usePlan admin bypass covers all roles internally.
+  if (!planLoading && !hasInternalChat) {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "var(--color-bg)", padding: "2rem 1rem" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>

@@ -9,7 +9,7 @@ import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/das
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { FEATURES_LIST } from "@/features/properties/constants";
 import { useSubscription } from "@/hooks/useSubscription";
-import type { CurrentSubscriptionResponse } from "@/features/subscription/types";
+import { useFeature } from "@/hooks/useFeature";
 import type { ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
 
 const FLOOR_OPTIONS = [
@@ -168,20 +168,9 @@ export default function PostAdWizard({
 }: PostAdWizardProps) {
   const { subscription } = useSubscription();
 
-  // ── Subscription feature/limit helpers ────────────────────────────────────
-  // Safe accessors — handle null AND undefined (API may return undefined for
-  // accounts without a plan).
-  //
-  // Default policy when subscription is null/undefined:
-  //   hasFeature → false   (locked — require a plan)
-  //   getLimit   → value from the free-tier defaults defined below
-  //
-  // Call pattern: `hasFeature("hasVideoUpload")` or `getLimit("maxImagesPerListing", 5)`
-
-  function hasFeature(key: keyof CurrentSubscriptionResponse): boolean {
-    return subscription?.[key] === true;
-  }
-
+  // ── Subscription limit helper ──────────────────────────────────────────────
+  // Reads numeric limits from the raw subscription response.
+  // Falls back to freeTierDefault when the user has no active plan.
   function getLimit(
     key: "maxActiveListings" | "maxImagesPerListing" | "maxAgents" | "maxFeaturedSlots",
     freeTierDefault: number,
@@ -189,8 +178,8 @@ export default function PostAdWizard({
     return (subscription?.[key] as number | undefined) ?? freeTierDefault;
   }
 
-  // Video upload: requires an active subscription with hasVideoUpload = true.
-  const videoAllowed = hasFeature("hasVideoUpload");
+  // ── Feature check — unified via useFeature ────────────────────────────────
+  const videoAllowed = useFeature("video_upload");
 
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(EMPTY);

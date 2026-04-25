@@ -16,7 +16,7 @@ import {
 } from "@/features/properties/constants";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
-import { useSubscription } from "@/hooks/useSubscription";
+import { useFeature } from "@/hooks/useFeature";
 import { api } from "@/lib/api";
 import PropertyImageUploader, { type PendingImageUpload } from "./PropertyImageUploader";
 
@@ -173,8 +173,7 @@ export default function PropertyForm({
   hideCompany = false,
   submitLabel,
 }: PropertyFormProps) {
-  const { subscription } = useSubscription();
-  const videoAllowed = subscription === null || subscription.hasVideoUpload;
+  const videoAllowed = useFeature("video_upload");
 
   const [fields, setFields] = useState<FormFields>(
     initialData ? fromInitial(initialData) : EMPTY_FIELDS
