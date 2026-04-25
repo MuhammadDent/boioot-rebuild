@@ -34,6 +34,13 @@ public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
         builder.HasIndex(c => c.User2Id);
         builder.HasIndex(c => c.LastMessageAt);
 
-        builder.HasQueryFilter(c => !c.User1.IsDeleted && !c.User2.IsDeleted);
+        // Use a direct-property filter rather than a navigation-property filter.
+        // Navigation-property filters interact with the User's own HasQueryFilter
+        // (which also gates on IsDeleted) causing EF Core to return null User1/User2
+        // navigation properties via Include() while the conversation itself is still
+        // in the result set — leading to NullReferenceException in MapToSummary.
+        // Filtering deleted conversations is handled explicitly in MessagingService
+        // queries (WHERE User1Id / User2Id) so this global filter is not needed.
+        // Left as a no-op override to document the intentional removal.
     }
 }

@@ -112,6 +112,7 @@ public sealed class DatabaseStartupService
         await ApplyReviewsPatchAsync(ct);
         await ApplyBookingReviewsPatchAsync(ct);
         await ApplyIntegrationsPatchAsync(ct);
+        await ApplyMessagingPatchAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
         await SyncIsCoverFromIsPrimaryAsync(ct);
@@ -588,6 +589,81 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("[schema-patch] IntegrationSettings patch failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    // ── Messaging schema patch ────────────────────────────────────────────────
+    // Ensures Conversations and Messages tables exist even on databases that
+    // were provisioned before these tables were introduced (i.e. the startup
+    // service took the "existing DB, inject all migrations" path and never
+    // ran InitialSchema.Up() which contains both CREATE TABLE statements).
+    //
+    // All statements use IF NOT EXISTS — completely safe to run on databases
+    // where the tables already exist.
+    private async Task ApplyMessagingPatchAsync(CancellationToken ct)
+    {
+        if (!IsPostgres) return;
+        try
+        {
+            // 1. Conversations table
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS "Conversations" (
+                    "Id"            uuid         NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+                    "User1Id"       uuid         NOT NULL
+                                    REFERENCES "Users"("Id") ON DELETE RESTRICT,
+                    "User2Id"       uuid         NOT NULL
+                                    REFERENCES "Users"("Id") ON DELETE RESTRICT,
+                    "PropertyId"    uuid
+                                    REFERENCES "Properties"("Id") ON DELETE SET NULL,
+                    "ProjectId"     uuid
+                                    REFERENCES "Projects"("Id")    ON DELETE SET NULL,
+                    "LastMessageAt" timestamptz,
+                    "CreatedAt"     timestamptz  NOT NULL DEFAULT NOW(),
+                    "UpdatedAt"     timestamptz  NOT NULL DEFAULT NOW()
+                )
+                """, ct);
+
+            // Indexes for the FK columns (no-op if they already exist)
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE INDEX IF NOT EXISTS "IX_Conversations_User1Id"
+                    ON "Conversations" ("User1Id")
+                """, ct);
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE INDEX IF NOT EXISTS "IX_Conversations_User2Id"
+                    ON "Conversations" ("User2Id")
+                """, ct);
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE INDEX IF NOT EXISTS "IX_Conversations_LastMessageAt"
+                    ON "Conversations" ("LastMessageAt")
+                """, ct);
+
+            // 2. Messages table
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE TABLE IF NOT EXISTS "Messages" (
+                    "Id"             uuid          NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+                    "ConversationId" uuid          NOT NULL
+                                     REFERENCES "Conversations"("Id") ON DELETE CASCADE,
+                    "SenderId"       uuid          NOT NULL
+                                     REFERENCES "Users"("Id") ON DELETE RESTRICT,
+                    "Content"        varchar(2000) NOT NULL DEFAULT '',
+                    "IsRead"         boolean       NOT NULL DEFAULT false,
+                    "AttachmentData" text,
+                    "AttachmentName" text,
+                    "CreatedAt"      timestamptz   NOT NULL DEFAULT NOW(),
+                    "UpdatedAt"      timestamptz   NOT NULL DEFAULT NOW()
+                )
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync("""
+                CREATE INDEX IF NOT EXISTS "IX_Messages_ConversationId_CreatedAt"
+                    ON "Messages" ("ConversationId", "CreatedAt")
+                """, ct);
+
+            _log.LogInformation("[schema-patch] Messaging tables (Conversations, Messages) ensured.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] Messaging patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 

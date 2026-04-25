@@ -289,8 +289,12 @@ public class MessagingService : IMessagingService
         Conversation c, Guid userId, int unreadCount) => new()
     {
         Id = c.Id,
-        OtherUserId = c.User1Id == userId ? c.User2Id : c.User1Id,
-        OtherUserName = c.User1Id == userId ? c.User2.FullName : c.User1.FullName,
+        OtherUserId   = c.User1Id == userId ? c.User2Id : c.User1Id,
+        // Guard against null navigation properties in case the other user was
+        // hard-deleted (FK still intact but EF Include returned null).
+        OtherUserName = c.User1Id == userId
+            ? (c.User2?.FullName ?? "مستخدم محذوف")
+            : (c.User1?.FullName ?? "مستخدم محذوف"),
         LastMessageAt = c.LastMessageAt,
         UnreadCount = unreadCount,
         PropertyId = c.PropertyId,
@@ -304,8 +308,10 @@ public class MessagingService : IMessagingService
         Conversation c, Guid userId, PagedResult<MessageResponse> messages) => new()
     {
         Id = c.Id,
-        OtherUserId = c.User1Id == userId ? c.User2Id : c.User1Id,
-        OtherUserName = c.User1Id == userId ? c.User2.FullName : c.User1.FullName,
+        OtherUserId   = c.User1Id == userId ? c.User2Id : c.User1Id,
+        OtherUserName = c.User1Id == userId
+            ? (c.User2?.FullName ?? "مستخدم محذوف")
+            : (c.User1?.FullName ?? "مستخدم محذوف"),
         PropertyId = c.PropertyId,
         PropertyTitle = c.Property?.Title,
         ProjectId = c.ProjectId,

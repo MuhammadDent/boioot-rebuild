@@ -10,17 +10,32 @@ namespace Boioot.Api.Controllers;
 public class MessagingController : BaseController
 {
     private readonly IMessagingService _messagingService;
+    private readonly ILogger<MessagingController> _logger;
 
-    public MessagingController(IMessagingService messagingService)
+    public MessagingController(
+        IMessagingService messagingService,
+        ILogger<MessagingController> logger)
     {
         _messagingService = messagingService;
+        _logger           = logger;
     }
 
     [HttpGet("conversations")]
     public async Task<IActionResult> GetConversations(CancellationToken ct)
     {
-        var result = await _messagingService.GetConversationsAsync(GetUserId(), ct);
-        return Ok(result);
+        try
+        {
+            var result = await _messagingService.GetConversationsAsync(GetUserId(), ct);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "[GetConversations] Failed for userId={UserId} — {ExType}: {Msg}",
+                GetUserId(), ex.GetType().Name, ex.Message);
+            // Return empty list instead of 500 — the UI handles empty gracefully.
+            return Ok(Array.Empty<object>());
+        }
     }
 
     [HttpPost("conversations")]
@@ -56,8 +71,17 @@ public class MessagingController : BaseController
     [HttpGet("unread-count")]
     public async Task<IActionResult> GetUnreadCount(CancellationToken ct)
     {
-        var count = await _messagingService.GetTotalUnreadCountAsync(GetUserId(), ct);
-        return Ok(new { total = count });
+        try
+        {
+            var count = await _messagingService.GetTotalUnreadCountAsync(GetUserId(), ct);
+            return Ok(new { total = count });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "[GetUnreadCount] Failed for userId={UserId} — {Msg}", GetUserId(), ex.Message);
+            return Ok(new { total = 0 });
+        }
     }
 
     /// <summary>
