@@ -1,0 +1,79 @@
+Fix the dark UI on the admin verification requests page completely.
+
+SCOPE:
+- ONLY page: /dashboard/admin/verification-requests
+- Do NOT touch backend
+- Do NOT change API logic
+- Do NOT change routes
+- Do NOT refactor unrelated admin pages
+
+PROBLEM:
+The page background is light, but the verification requests table and request modal are still dark.
+I want this page to be fully light theme, consistent with the rest of the admin dashboard.
+
+TASKS:
+
+1. Find the components used by:
+   /dashboard/admin/verification-requests
+
+2. Convert ALL dark containers on this page to light UI:
+   - table/card container
+   - table header
+   - table rows
+   - modal overlay content
+   - document list cards
+   - status badges area
+   - filters/search controls
+   - pagination
+
+3. Replace dark classes such as:
+   bg-slate-900
+   bg-slate-800
+   bg-gray-900
+   bg-gray-800
+   text-white
+   border-slate-700
+   border-gray-700
+
+With light equivalents:
+   bg-white
+   bg-slate-50
+   text-slate-900
+   text-slate-600
+   border-slate-200
+
+4. Modal:
+   - modal card must be white
+   - modal text must be dark
+   - modal background overlay can stay semi-transparent black only behind the modal
+   - document cards inside modal must be light
+   - close button visible
+
+5. Table:
+   - table background white
+   - header bg-slate-50
+   - rows bg-white
+   - borders border-slate-200
+   - hover bg-slate-50
+
+6. Buttons:
+   - keep primary buttons green/blue
+   - review button should remain visible on light background
+
+7. Add a page-level wrapper class if needed:
+   verification-requests-light
+
+8. Ensure there are ZERO dark theme classes remaining inside verification requests page/components except the modal backdrop overlay.
+
+9. Test:
+   - open /dashboard/admin/verification-requests
+   - open a request modal
+   - verify the page and modal are fully light
+   - no text is invisible
+   - no layout broken
+
+FINAL OUTPUT:
+Return:
+- files changed
+- dark classes removed
+- confirmation that verification requests table and modal are fully light

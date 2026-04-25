@@ -72,13 +72,13 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  Draft:         { bg: "#1f2937", text: "#9ca3af" },
-  Submitted:     { bg: "#1e3a5f", text: "#60a5fa" },
-  UnderReview:   { bg: "#1c3461", text: "#93c5fd" },
-  NeedsMoreInfo: { bg: "#3b2d00", text: "#fbbf24" },
-  Approved:      { bg: "#14532d", text: "#4ade80" },
-  Rejected:      { bg: "#450a0a", text: "#f87171" },
-  Cancelled:     { bg: "#1f2937", text: "#6b7280" },
+  Draft:         { bg: "#f1f5f9", text: "#475569" },
+  Submitted:     { bg: "#eff6ff", text: "#2563eb" },
+  UnderReview:   { bg: "#dbeafe", text: "#1d4ed8" },
+  NeedsMoreInfo: { bg: "#fef3c7", text: "#d97706" },
+  Approved:      { bg: "#dcfce7", text: "#15803d" },
+  Rejected:      { bg: "#fee2e2", text: "#dc2626" },
+  Cancelled:     { bg: "#f1f5f9", text: "#64748b" },
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -87,11 +87,10 @@ const TYPE_LABELS: Record<string, string> = {
   Both:     "هوية + سجل",
 };
 
-
 const DOC_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  Pending:  { bg: "#1e3a5f", text: "#60a5fa" },
-  Accepted: { bg: "#14532d", text: "#4ade80" },
-  Rejected: { bg: "#450a0a", text: "#f87171" },
+  Pending:  { bg: "#eff6ff", text: "#2563eb" },
+  Accepted: { bg: "#dcfce7", text: "#15803d" },
+  Rejected: { bg: "#fee2e2", text: "#dc2626" },
 };
 
 const REVIEW_STATUS_OPTIONS = [
@@ -129,7 +128,7 @@ function fmtDate(s?: string | null) {
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const c = STATUS_COLORS[status] ?? { bg: "#1f2937", text: "#9ca3af" };
+  const c = STATUS_COLORS[status] ?? { bg: "#f1f5f9", text: "#475569" };
   return (
     <span style={{
       display: "inline-block",
@@ -188,28 +187,30 @@ function DetailPanel({
   return (
     <div style={{
       position: "fixed", inset: 0,
-      backgroundColor: "rgba(0,0,0,0.75)",
+      backgroundColor: "rgba(0,0,0,0.5)",
       zIndex: 1000,
       display: "flex", justifyContent: "center", alignItems: "flex-start",
       padding: "2rem 1rem",
       overflowY: "auto",
     }}>
+      {/* Modal card — fully light */}
       <div style={{
-        backgroundColor: "#111827",
-        border: "1px solid rgba(255,255,255,0.1)",
+        backgroundColor: "#ffffff",
+        border: "1px solid #e2e8f0",
         borderRadius: 12,
         padding: "1.5rem",
         width: "100%",
         maxWidth: 680,
         direction: "rtl",
+        boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
       }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
           <div>
-            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#f9fafb" }}>
+            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#0f172a" }}>
               طلب التوثيق — {TYPE_LABELS[req.verificationType] ?? req.verificationType}
             </div>
-            <div style={{ fontSize: "0.78rem", color: "#6b7280", marginTop: 2 }}>
+            <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: 2 }}>
               {req.userFullName ?? "—"} &bull; {req.userEmail ?? "—"}
             </div>
           </div>
@@ -217,7 +218,16 @@ function DetailPanel({
             <StatusBadge status={req.status} />
             <button
               onClick={onClose}
-              style={{ background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: "1.2rem", padding: 4 }}
+              style={{
+                background: "#f1f5f9",
+                border: "1px solid #e2e8f0",
+                color: "#475569",
+                cursor: "pointer",
+                fontSize: "1rem",
+                padding: "4px 8px",
+                borderRadius: 6,
+                lineHeight: 1,
+              }}
             >✕</button>
           </div>
         </div>
@@ -226,7 +236,8 @@ function DetailPanel({
         <div style={{
           display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
           gap: "0.75rem", marginBottom: "1.25rem",
-          backgroundColor: "#1f2937", borderRadius: 8, padding: "0.75rem 1rem",
+          backgroundColor: "#f8fafc", borderRadius: 8, padding: "0.75rem 1rem",
+          border: "1px solid #e2e8f0",
         }}>
           {[
             ["تاريخ الإنشاء", fmtDate(req.createdAt)],
@@ -234,36 +245,39 @@ function DetailPanel({
             ["تاريخ المراجعة", fmtDate(req.reviewedAt)],
           ].map(([label, val]) => (
             <div key={label}>
-              <div style={{ fontSize: "0.7rem", color: "#6b7280", marginBottom: 2 }}>{label}</div>
-              <div style={{ fontSize: "0.82rem", color: "#d1d5db" }}>{val}</div>
+              <div style={{ fontSize: "0.7rem", color: "#64748b", marginBottom: 2 }}>{label}</div>
+              <div style={{ fontSize: "0.82rem", color: "#1e293b", fontWeight: 500 }}>{val}</div>
             </div>
           ))}
         </div>
 
         {/* User notes */}
         {req.userNotes && (
-          <div style={{ backgroundColor: "#1f2937", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1.25rem" }}>
-            <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 4 }}>ملاحظات المستخدم</div>
-            <div style={{ fontSize: "0.84rem", color: "#d1d5db" }}>{req.userNotes}</div>
+          <div style={{
+            backgroundColor: "#f8fafc", borderRadius: 8, padding: "0.75rem 1rem",
+            marginBottom: "1.25rem", border: "1px solid #e2e8f0",
+          }}>
+            <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: 4 }}>ملاحظات المستخدم</div>
+            <div style={{ fontSize: "0.84rem", color: "#1e293b" }}>{req.userNotes}</div>
           </div>
         )}
 
         {/* Documents */}
         <div style={{ marginBottom: "1.25rem" }}>
-          <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#9ca3af", marginBottom: "0.5rem" }}>
+          <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#475569", marginBottom: "0.5rem" }}>
             المستندات ({req.documents.length})
           </div>
           {req.documents.length === 0 ? (
-            <div style={{ fontSize: "0.8rem", color: "#4b5563", fontStyle: "italic" }}>لا توجد مستندات مرفقة</div>
+            <div style={{ fontSize: "0.8rem", color: "#94a3b8", fontStyle: "italic" }}>لا توجد مستندات مرفقة</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
               {req.documents.map((doc) => {
-                const dc = DOC_STATUS_COLORS[doc.status] ?? { bg: "#1f2937", text: "#9ca3af" };
+                const dc = DOC_STATUS_COLORS[doc.status] ?? { bg: "#f1f5f9", text: "#475569" };
                 return (
                   <div key={doc.id} style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
-                    backgroundColor: "#1a2332", borderRadius: 7, padding: "0.5rem 0.75rem",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    backgroundColor: "#f8fafc", borderRadius: 7, padding: "0.5rem 0.75rem",
+                    border: "1px solid #e2e8f0",
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                       <span style={{
@@ -274,10 +288,10 @@ function DetailPanel({
                         {doc.status === "Pending" ? "معلّق" : doc.status === "Accepted" ? "مقبول" : "مرفوض"}
                       </span>
                       <div>
-                        <div style={{ fontSize: "0.8rem", color: "#d1d5db" }}>
+                        <div style={{ fontSize: "0.8rem", color: "#1e293b" }}>
                           {DOCUMENT_TYPE_LABELS[doc.documentType] ?? doc.documentType}
                         </div>
-                        <div style={{ fontSize: "0.7rem", color: "#6b7280" }}>{doc.fileName}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b" }}>{doc.fileName}</div>
                       </div>
                     </div>
                     {doc.fileUrl && (
@@ -286,11 +300,12 @@ function DetailPanel({
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
-                          fontSize: "0.74rem", color: "#60a5fa",
+                          fontSize: "0.74rem", color: "#2563eb",
                           textDecoration: "none",
                           padding: "3px 10px",
-                          border: "1px solid #1e3a5f",
+                          border: "1px solid #bfdbfe",
                           borderRadius: 6,
+                          backgroundColor: "#eff6ff",
                         }}
                       >
                         عرض
@@ -306,24 +321,24 @@ function DetailPanel({
         {/* Review section */}
         {canReview && (
           <div style={{
-            backgroundColor: "#1f2937", borderRadius: 10, padding: "1rem",
-            border: "1px solid rgba(255,255,255,0.07)",
+            backgroundColor: "#f8fafc", borderRadius: 10, padding: "1rem",
+            border: "1px solid #e2e8f0",
           }}>
-            <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#9ca3af", marginBottom: "0.75rem" }}>
+            <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#475569", marginBottom: "0.75rem" }}>
               مراجعة الطلب
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
               <div>
-                <label style={{ fontSize: "0.72rem", color: "#6b7280", display: "block", marginBottom: 4 }}>
+                <label style={{ fontSize: "0.72rem", color: "#64748b", display: "block", marginBottom: 4 }}>
                   القرار
                 </label>
                 <select
                   value={reviewStatus}
                   onChange={(e) => setReviewStatus(e.target.value)}
                   style={{
-                    width: "100%", backgroundColor: "#111827", color: "#f9fafb",
-                    border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7,
+                    width: "100%", backgroundColor: "#ffffff", color: "#1e293b",
+                    border: "1px solid #e2e8f0", borderRadius: 7,
                     padding: "0.4rem 0.6rem", fontSize: "0.82rem",
                   }}
                 >
@@ -335,15 +350,15 @@ function DetailPanel({
 
               {reviewStatus === "Approved" && (
                 <div>
-                  <label style={{ fontSize: "0.72rem", color: "#6b7280", display: "block", marginBottom: 4 }}>
+                  <label style={{ fontSize: "0.72rem", color: "#64748b", display: "block", marginBottom: 4 }}>
                     مستوى التوثيق
                   </label>
                   <select
                     value={verificationLevel}
                     onChange={(e) => setVerificationLevel(e.target.value)}
                     style={{
-                      width: "100%", backgroundColor: "#111827", color: "#f9fafb",
-                      border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7,
+                      width: "100%", backgroundColor: "#ffffff", color: "#1e293b",
+                      border: "1px solid #e2e8f0", borderRadius: 7,
                       padding: "0.4rem 0.6rem", fontSize: "0.82rem",
                     }}
                   >
@@ -354,7 +369,7 @@ function DetailPanel({
                   {verificationLevel !== "" && (() => {
                     const hint = VERIFICATION_LEVEL_OPTIONS.find(o => o.value === verificationLevel)?.title;
                     return hint ? (
-                      <p style={{ margin: "4px 0 0", fontSize: "0.71rem", color: "#9ca3af", lineHeight: 1.4 }}>
+                      <p style={{ margin: "4px 0 0", fontSize: "0.71rem", color: "#64748b", lineHeight: 1.4 }}>
                         {hint}
                       </p>
                     ) : null;
@@ -365,15 +380,15 @@ function DetailPanel({
 
             {reviewStatus === "Approved" && (
               <div style={{ marginBottom: "0.75rem" }}>
-                <label style={{ fontSize: "0.72rem", color: "#6b7280", display: "block", marginBottom: 4 }}>
+                <label style={{ fontSize: "0.72rem", color: "#64748b", display: "block", marginBottom: 4 }}>
                   حالة التوثيق بعد القبول
                 </label>
                 <select
                   value={verificationStatus}
                   onChange={(e) => setVerificationStatus(e.target.value)}
                   style={{
-                    width: "100%", backgroundColor: "#111827", color: "#f9fafb",
-                    border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7,
+                    width: "100%", backgroundColor: "#ffffff", color: "#1e293b",
+                    border: "1px solid #e2e8f0", borderRadius: 7,
                     padding: "0.4rem 0.6rem", fontSize: "0.82rem",
                   }}
                 >
@@ -386,7 +401,7 @@ function DetailPanel({
 
             {reviewStatus === "Rejected" && (
               <div style={{ marginBottom: "0.75rem" }}>
-                <label style={{ fontSize: "0.72rem", color: "#6b7280", display: "block", marginBottom: 4 }}>
+                <label style={{ fontSize: "0.72rem", color: "#64748b", display: "block", marginBottom: 4 }}>
                   سبب الرفض
                 </label>
                 <textarea
@@ -395,8 +410,8 @@ function DetailPanel({
                   rows={2}
                   placeholder="اذكر سبب الرفض للمستخدم..."
                   style={{
-                    width: "100%", backgroundColor: "#111827", color: "#f9fafb",
-                    border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7,
+                    width: "100%", backgroundColor: "#ffffff", color: "#1e293b",
+                    border: "1px solid #e2e8f0", borderRadius: 7,
                     padding: "0.4rem 0.6rem", fontSize: "0.82rem", resize: "vertical",
                     boxSizing: "border-box",
                   }}
@@ -405,7 +420,7 @@ function DetailPanel({
             )}
 
             <div style={{ marginBottom: "0.75rem" }}>
-              <label style={{ fontSize: "0.72rem", color: "#6b7280", display: "block", marginBottom: 4 }}>
+              <label style={{ fontSize: "0.72rem", color: "#64748b", display: "block", marginBottom: 4 }}>
                 ملاحظات الإدارة (اختياري)
               </label>
               <textarea
@@ -414,8 +429,8 @@ function DetailPanel({
                 rows={2}
                 placeholder="ملاحظات داخلية للمراجع..."
                 style={{
-                  width: "100%", backgroundColor: "#111827", color: "#f9fafb",
-                  border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7,
+                  width: "100%", backgroundColor: "#ffffff", color: "#1e293b",
+                  border: "1px solid #e2e8f0", borderRadius: 7,
                   padding: "0.4rem 0.6rem", fontSize: "0.82rem", resize: "vertical",
                   boxSizing: "border-box",
                 }}
@@ -447,15 +462,21 @@ function DetailPanel({
 
         {/* Previous decision (if already decided) */}
         {!canReview && req.adminNotes && (
-          <div style={{ backgroundColor: "#1f2937", borderRadius: 8, padding: "0.75rem 1rem", marginTop: "0.75rem" }}>
-            <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 4 }}>ملاحظات الإدارة</div>
-            <div style={{ fontSize: "0.84rem", color: "#d1d5db" }}>{req.adminNotes}</div>
+          <div style={{
+            backgroundColor: "#f8fafc", borderRadius: 8, padding: "0.75rem 1rem",
+            marginTop: "0.75rem", border: "1px solid #e2e8f0",
+          }}>
+            <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: 4 }}>ملاحظات الإدارة</div>
+            <div style={{ fontSize: "0.84rem", color: "#1e293b" }}>{req.adminNotes}</div>
           </div>
         )}
         {!canReview && req.rejectionReason && (
-          <div style={{ backgroundColor: "#1f1010", borderRadius: 8, padding: "0.75rem 1rem", marginTop: "0.5rem" }}>
-            <div style={{ fontSize: "0.72rem", color: "#f87171", marginBottom: 4 }}>سبب الرفض</div>
-            <div style={{ fontSize: "0.84rem", color: "#fca5a5" }}>{req.rejectionReason}</div>
+          <div style={{
+            backgroundColor: "#fef2f2", borderRadius: 8, padding: "0.75rem 1rem",
+            marginTop: "0.5rem", border: "1px solid #fecaca",
+          }}>
+            <div style={{ fontSize: "0.72rem", color: "#dc2626", marginBottom: 4 }}>سبب الرفض</div>
+            <div style={{ fontSize: "0.84rem", color: "#991b1b" }}>{req.rejectionReason}</div>
           </div>
         )}
       </div>
@@ -531,10 +552,10 @@ export default function AdminVerificationRequestsPage() {
       <DashboardBackLink href="/dashboard/admin" label="العودة للوحة التحكم" />
 
       <div style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#f9fafb", margin: 0 }}>
+        <h1 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#0f172a", margin: 0 }}>
           طلبات التوثيق
         </h1>
-        <p style={{ fontSize: "0.82rem", color: "#6b7280", margin: "0.25rem 0 0" }}>
+        <p style={{ fontSize: "0.82rem", color: "#64748b", margin: "0.25rem 0 0" }}>
           مراجعة وقبول/رفض طلبات توثيق الهوية والسجلات التجارية
         </p>
       </div>
@@ -551,8 +572,8 @@ export default function AdminVerificationRequestsPage() {
           onChange={(e) => { setFilterSearch(e.target.value); setPage(1); }}
           style={{
             flex: "1 1 180px", minWidth: 180,
-            backgroundColor: "#1f2937", color: "#f9fafb",
-            border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
+            backgroundColor: "#ffffff", color: "#1e293b",
+            border: "1px solid #e2e8f0", borderRadius: 8,
             padding: "0.4rem 0.75rem", fontSize: "0.82rem",
           }}
         />
@@ -560,8 +581,8 @@ export default function AdminVerificationRequestsPage() {
           value={filterStatus}
           onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
           style={{
-            backgroundColor: "#1f2937", color: "#f9fafb",
-            border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
+            backgroundColor: "#ffffff", color: "#1e293b",
+            border: "1px solid #e2e8f0", borderRadius: 8,
             padding: "0.4rem 0.6rem", fontSize: "0.82rem",
           }}
         >
@@ -574,8 +595,8 @@ export default function AdminVerificationRequestsPage() {
           value={filterType}
           onChange={(e) => { setFilterType(e.target.value); setPage(1); }}
           style={{
-            backgroundColor: "#1f2937", color: "#f9fafb",
-            border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8,
+            backgroundColor: "#ffffff", color: "#1e293b",
+            border: "1px solid #e2e8f0", borderRadius: 8,
             padding: "0.4rem 0.6rem", fontSize: "0.82rem",
           }}
         >
@@ -598,24 +619,24 @@ export default function AdminVerificationRequestsPage() {
       {fetchError && <InlineBanner type="error" message={fetchError} onDismiss={() => setFetchError("")} />}
 
       {/* Summary */}
-      <div style={{ fontSize: "0.78rem", color: "#6b7280", marginBottom: "0.75rem" }}>
+      <div style={{ fontSize: "0.78rem", color: "#64748b", marginBottom: "0.75rem" }}>
         {fetching ? "جاري التحميل…" : `${totalCount} طلب`}
       </div>
 
       {/* Table */}
       <div style={{
-        backgroundColor: "#111827",
-        border: "1px solid rgba(255,255,255,0.07)",
+        backgroundColor: "#ffffff",
+        border: "1px solid #e2e8f0",
         borderRadius: 10,
         overflow: "hidden",
       }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ backgroundColor: "#1f2937", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
               {["المستخدم", "النوع", "الحالة", "المستندات", "تاريخ التقديم", ""].map((h) => (
                 <th key={h} style={{
                   padding: "0.65rem 1rem", textAlign: "right",
-                  fontSize: "0.73rem", fontWeight: 600, color: "#6b7280",
+                  fontSize: "0.73rem", fontWeight: 600, color: "#64748b",
                 }}>
                   {h}
                 </th>
@@ -625,13 +646,13 @@ export default function AdminVerificationRequestsPage() {
           <tbody>
             {fetching ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem", color: "#6b7280", fontSize: "0.85rem" }}>
+                <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b", fontSize: "0.85rem" }}>
                   جاري التحميل…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem", color: "#4b5563", fontSize: "0.85rem" }}>
+                <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8", fontSize: "0.85rem" }}>
                   لا توجد طلبات توثيق
                 </td>
               </tr>
@@ -639,30 +660,30 @@ export default function AdminVerificationRequestsPage() {
               <tr
                 key={item.id}
                 style={{
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
+                  borderBottom: "1px solid #f1f5f9",
                   cursor: "pointer",
                   transition: "background-color 0.1s",
                 }}
                 onClick={() => openDetail(item.id)}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "rgba(255,255,255,0.03)"; }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "#f8fafc"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "transparent"; }}
               >
                 <td style={{ padding: "0.7rem 1rem" }}>
-                  <div style={{ fontSize: "0.84rem", fontWeight: 600, color: "#f3f4f6" }}>
+                  <div style={{ fontSize: "0.84rem", fontWeight: 600, color: "#1e293b" }}>
                     {item.userFullName ?? "—"}
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "#6b7280" }}>{item.userEmail ?? "—"}</div>
+                  <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{item.userEmail ?? "—"}</div>
                 </td>
-                <td style={{ padding: "0.7rem 1rem", fontSize: "0.8rem", color: "#d1d5db" }}>
+                <td style={{ padding: "0.7rem 1rem", fontSize: "0.8rem", color: "#334155" }}>
                   {TYPE_LABELS[item.verificationType] ?? item.verificationType}
                 </td>
                 <td style={{ padding: "0.7rem 1rem" }}>
                   <StatusBadge status={item.status} />
                 </td>
-                <td style={{ padding: "0.7rem 1rem", fontSize: "0.8rem", color: "#9ca3af" }}>
+                <td style={{ padding: "0.7rem 1rem", fontSize: "0.8rem", color: "#64748b" }}>
                   {item.documentCount} مستند
                 </td>
-                <td style={{ padding: "0.7rem 1rem", fontSize: "0.78rem", color: "#6b7280" }}>
+                <td style={{ padding: "0.7rem 1rem", fontSize: "0.78rem", color: "#64748b" }}>
                   {fmtDate(item.submittedAt ?? item.createdAt)}
                 </td>
                 <td style={{ padding: "0.7rem 1rem", textAlign: "left" }}>
@@ -671,12 +692,13 @@ export default function AdminVerificationRequestsPage() {
                     disabled={loadingDetail}
                     style={{
                       padding: "3px 12px",
-                      backgroundColor: "transparent",
-                      color: "#60a5fa",
-                      border: "1px solid #1e3a5f",
+                      backgroundColor: "#eff6ff",
+                      color: "#2563eb",
+                      border: "1px solid #bfdbfe",
                       borderRadius: 6,
                       fontSize: "0.74rem",
                       cursor: "pointer",
+                      fontWeight: 500,
                     }}
                   >
                     مراجعة
