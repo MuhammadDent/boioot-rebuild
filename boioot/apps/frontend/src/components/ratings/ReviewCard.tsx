@@ -25,45 +25,6 @@ function initials(name: string): string {
     : (parts[0][0] ?? "").toUpperCase();
 }
 
-function ScoreBar({ score }: { score: number }) {
-  const pct = (score / 5) * 100;
-  const color = score >= 4 ? "#22c55e" : score >= 3 ? "#f59e0b" : "#ef4444";
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flex: 1 }}>
-      <div
-        style={{
-          flex: 1,
-          height: 5,
-          borderRadius: 3,
-          background: "var(--color-border)",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            width: `${pct}%`,
-            height: "100%",
-            background: color,
-            borderRadius: 3,
-            transition: "width 0.3s ease",
-          }}
-        />
-      </div>
-      <span
-        style={{
-          fontSize: "0.74rem",
-          fontWeight: 600,
-          color,
-          minWidth: 22,
-          textAlign: "center",
-        }}
-      >
-        {score}/5
-      </span>
-    </div>
-  );
-}
-
 function OverallStars({ score }: { score: number }) {
   return (
     <div
@@ -73,11 +34,11 @@ function OverallStars({ score }: { score: number }) {
       {[1, 2, 3, 4, 5].map((i) => (
         <svg
           key={i}
-          width={14}
-          height={14}
+          width={13}
+          height={13}
           viewBox="0 0 24 24"
           fill={i <= score ? "#f59e0b" : "none"}
-          stroke={i <= score ? "#f59e0b" : "var(--color-border)"}
+          stroke={i <= score ? "#f59e0b" : "#d1d5db"}
           strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -85,24 +46,14 @@ function OverallStars({ score }: { score: number }) {
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       ))}
-      <span
-        style={{
-          fontSize: "0.78rem",
-          fontWeight: 700,
-          color: "#f59e0b",
-          marginRight: 2,
-        }}
-      >
+      <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#f59e0b", marginRight: 3 }}>
         {score}
       </span>
     </div>
   );
 }
 
-const BREAKDOWN_FIELDS: Array<{
-  key: keyof RatingResponse;
-  label: string;
-}> = [
+const BREAKDOWN_FIELDS: Array<{ key: keyof RatingResponse; label: string }> = [
   { key: "cleanlinessRating",   label: "النظافة" },
   { key: "accuracyRating",      label: "دقة الوصف" },
   { key: "facilitiesRating",    label: "جودة المرافق" },
@@ -111,10 +62,28 @@ const BREAKDOWN_FIELDS: Array<{
   { key: "valueRating",         label: "القيمة مقابل السعر" },
 ];
 
-export default function ReviewCard({ review }: ReviewCardProps) {
-  const activeFields = BREAKDOWN_FIELDS.filter(
-    (f) => review[f.key] != null
+function ScoreChip({ score }: { score: number }) {
+  const good = score >= 4;
+  return (
+    <span
+      style={{
+        fontSize: "0.76rem",
+        fontWeight: 600,
+        color:      good ? "var(--color-primary)" : "#94a3b8",
+        background: good ? "color-mix(in srgb, var(--color-primary) 10%, transparent)" : "#f1f5f9",
+        borderRadius: 6,
+        padding: "1px 8px",
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+      }}
+    >
+      {score}/5
+    </span>
   );
+}
+
+export default function ReviewCard({ review }: ReviewCardProps) {
+  const activeFields = BREAKDOWN_FIELDS.filter((f) => review[f.key] != null);
   const hasBreakdown = activeFields.length > 0;
 
   return (
@@ -126,10 +95,10 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         borderRadius: "var(--radius-lg)",
         display: "flex",
         flexDirection: "column",
-        gap: "0.75rem",
+        gap: "0.7rem",
       }}
     >
-      {/* ── Header: avatar + name + date + overall stars ── */}
+      {/* Header: avatar + name + date + overall stars */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <div
           style={{
@@ -159,7 +128,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         <OverallStars score={review.score} />
       </div>
 
-      {/* ── Comment ── */}
+      {/* Comment */}
       {review.comment && (
         <p
           style={{
@@ -173,40 +142,42 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         </p>
       )}
 
-      {/* ── Detailed breakdown ── */}
+      {/* Sub-rating breakdown — vertical list in a light box */}
       {hasBreakdown && (
         <div
           style={{
-            borderTop: "1px solid var(--color-border)",
-            paddingTop: "0.65rem",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-            gap: "0.45rem 1.25rem",
+            background: "#f8fafc",
+            border: "1px solid #e9edf2",
+            borderRadius: 10,
+            padding: "0.6rem 0.9rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: 0,
           }}
         >
-          {activeFields.map(({ key, label }) => {
+          {activeFields.map(({ key, label }, idx) => {
             const val = review[key] as number;
+            const last = idx === activeFields.length - 1;
             return (
               <div
                 key={key}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "0.5rem",
+                  justifyContent: "space-between",
+                  padding: "0.35rem 0",
+                  borderBottom: last ? "none" : "1px solid #edf0f4",
                 }}
               >
                 <span
                   style={{
-                    fontSize: "0.76rem",
+                    fontSize: "0.8rem",
                     color: "var(--color-text-secondary)",
-                    whiteSpace: "nowrap",
-                    minWidth: 110,
-                    flexShrink: 0,
                   }}
                 >
                   {label}
                 </span>
-                <ScoreBar score={val} />
+                <ScoreChip score={val} />
               </div>
             );
           })}
