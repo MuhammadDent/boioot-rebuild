@@ -33,7 +33,7 @@ function getIcon(type: string): string {
 
 // ─── Admin-specific routing ───────────────────────────────────────────────────
 
-function resolveAdminTarget(notification: NotificationItem): string | null {
+function resolveAdminTarget(notification: NotificationItem): string {
   const { type, relatedEntityId, relatedEntityType } = notification;
 
   if (
@@ -68,11 +68,47 @@ function resolveAdminTarget(notification: NotificationItem): string | null {
 
   if (type === "system_alert") return "/dashboard/admin";
 
+  if (
+    type === "subscription_request" ||
+    type === "subscription_approved" ||
+    type === "subscription_rejected" ||
+    type === "subscription_missing_info" ||
+    type === "subscription_activated" ||
+    relatedEntityType === "SubscriptionPaymentRequest"
+  ) {
+    return "/dashboard/admin/subscriptions";
+  }
+
+  if (
+    type === "payment_proof" ||
+    type === "payment_submitted" ||
+    type === "payment_received" ||
+    type === "payment_pending" ||
+    relatedEntityType === "Payment"
+  ) {
+    return "/dashboard/admin/payment-requests";
+  }
+
+  if (type === "new_request" || relatedEntityType === "SpecialRequest") {
+    return relatedEntityId
+      ? `/dashboard/admin/special-requests/${relatedEntityId}`
+      : "/dashboard/admin/special-requests";
+  }
+
+  if (
+    type === "buyer_request_matched" ||
+    relatedEntityType === "BuyerRequest"
+  ) {
+    return relatedEntityId
+      ? `/dashboard/admin/buyer-requests/${relatedEntityId}`
+      : "/dashboard/admin/buyer-requests";
+  }
+
   if (relatedEntityType === "Property" && relatedEntityId) {
     return `/dashboard/admin/properties/${relatedEntityId}`;
   }
 
-  return null;
+  return "/dashboard/admin";
 }
 
 // ─── Time helper ──────────────────────────────────────────────────────────────
@@ -137,8 +173,7 @@ export default function AdminNotificationBell() {
     (notification: NotificationItem) => {
       if (!notification.isRead) markAsRead(notification.id);
       setOpen(false);
-      const target = resolveAdminTarget(notification);
-      if (target) router.push(target);
+      router.push(resolveAdminTarget(notification));
     },
     [markAsRead, router]
   );
@@ -440,7 +475,7 @@ export default function AdminNotificationBell() {
                 type="button"
                 onClick={() => {
                   setOpen(false);
-                  router.push("/notifications");
+                  router.push("/dashboard/admin");
                 }}
                 style={{
                   background: "none",

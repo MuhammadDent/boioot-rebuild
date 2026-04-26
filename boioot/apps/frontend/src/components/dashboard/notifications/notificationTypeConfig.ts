@@ -72,6 +72,7 @@ export function shouldOpenSubscriptionRequestModal(notification: NotificationIte
 export function resolveNotificationTarget(notification: NotificationItem): string | null {
   const { relatedEntityId, relatedEntityType, type } = notification;
 
+  // Subscription types open a modal — return null so the caller handles them
   if (
     relatedEntityType === "SubscriptionPaymentRequest" ||
     type === "subscription_approved" ||
@@ -82,15 +83,67 @@ export function resolveNotificationTarget(notification: NotificationItem): strin
     return null;
   }
 
+  // Entity-id-based routes (highest specificity)
   if (relatedEntityType && relatedEntityId) {
-    if (relatedEntityType === "BuyerRequest") return `/requests/${relatedEntityId}`;
-    if (relatedEntityType === "Property") return `/dashboard/properties/${relatedEntityId}`;
-    if (relatedEntityType === "SpecialRequest") return `/dashboard/requests/${relatedEntityId}`;
+    if (relatedEntityType === "BuyerRequest")        return `/requests/${relatedEntityId}`;
+    if (relatedEntityType === "Property")            return `/dashboard/properties/${relatedEntityId}`;
+    if (relatedEntityType === "SpecialRequest")      return `/dashboard/requests/${relatedEntityId}`;
     if (relatedEntityType === "VerificationRequest") return `/dashboard/verification/${relatedEntityId}`;
+    if (relatedEntityType === "Booking")             return `/dashboard/bookings`;
   }
 
+  // Type-based routes
   if (type === "new_message") return "/dashboard/messages";
-  if ((type === "request_comment" || type === "request_reply") && relatedEntityId) return `/requests/${relatedEntityId}`;
+
+  if (type === "request_comment" || type === "request_reply" || type === "request_discussion_activity") {
+    return relatedEntityId ? `/requests/${relatedEntityId}` : "/dashboard/requests";
+  }
+
+  if (
+    type === "booking_update"    ||
+    type === "booking_confirmed" ||
+    type === "booking_rejected"  ||
+    type === "booking_cancelled" ||
+    type === "booking_approved_awaiting_payment" ||
+    type === "booking_payment_submitted"
+  ) {
+    return "/dashboard/bookings";
+  }
+
+  if (
+    type === "verification_update"     ||
+    type === "verification_approved"   ||
+    type === "verification_rejected"   ||
+    type === "verification_needs_info" ||
+    type === "verification_updated"
+  ) {
+    return relatedEntityId
+      ? `/dashboard/verification/${relatedEntityId}`
+      : "/dashboard/verification";
+  }
+
+  if (type === "subscription_update") return "/dashboard/subscription";
+
+  if (
+    type === "listing_approved" ||
+    type === "listing_rejected" ||
+    type === "listing_featured" ||
+    type === "property_update"
+  ) {
+    return relatedEntityId
+      ? `/dashboard/properties/${relatedEntityId}`
+      : "/dashboard/properties";
+  }
+
+  if (type === "buyer_request_matched" || type === "new_request") {
+    return relatedEntityId ? `/requests/${relatedEntityId}` : "/dashboard/requests";
+  }
+
+  if (type === "trial_warning" || type === "trial_limit_reached") {
+    return "/dashboard/subscription";
+  }
+
+  if (type === "system_alert") return "/dashboard";
 
   return null;
 }

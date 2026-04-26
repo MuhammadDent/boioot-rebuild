@@ -1,0 +1,82 @@
+Fix notification click behavior across all accounts.
+
+Problem:
+When clicking a specific notification, it does not open the related page/item. It only stays on the same page.
+
+Goal:
+Every notification should navigate to the correct related page when clicked.
+
+Scope:
+- Admin notifications
+- Public/user notifications
+- All account types
+
+Rules:
+- Do NOT break existing notification UI
+- Do NOT remove notification dropdown
+- Do NOT change unrelated routes
+- Keep behavior safe if target data is missing
+
+Tasks:
+
+1. Add a standard notification target model:
+Each notification should support:
+- type
+- title
+- body
+- createdAt
+- read/unread
+- targetUrl
+- targetId optional
+- targetLabel optional
+
+2. Map notification types to target URLs:
+
+Admin:
+- verification_request → /dashboard/admin/verification-requests
+- new_message → /dashboard/admin/messages
+- new_user → /dashboard/admin/users
+- property_flagged → /dashboard/admin/properties
+- subscription_request → /dashboard/admin/subscription-requests
+- payment_proof → /dashboard/admin/bookings or related payment/proof page
+- system_alert → /dashboard/admin
+
+User:
+- new_message → /dashboard/messages
+- booking_update → /dashboard/bookings
+- verification_update → /dashboard/verification
+- subscription_update → /dashboard/subscription
+- property_update → /dashboard/properties or /properties/{propertyId}
+
+3. Make each notification item clickable:
+- On click:
+  a) mark notification as read
+  b) close dropdown
+  c) navigate to notification.targetUrl
+
+4. Use Next.js router:
+- router.push(targetUrl)
+
+5. If targetUrl is missing:
+- fallback to a safe page based on notification type
+- never do nothing silently
+
+6. Add visual behavior:
+- cursor pointer
+- hover state
+- keyboard accessible button/link
+- title or aria-label
+
+7. Keep “Mark all as read” behavior unchanged.
+
+8. Test:
+- Click verification notification → opens /dashboard/admin/verification-requests
+- Click message notification → opens /dashboard/admin/messages or /dashboard/messages depending on role
+- Click user/property notification → opens correct admin page
+- After click, unread count decreases
+- Dropdown closes
+
+Return:
+- files changed
+- notification type mapping
+- confirmation click navigation works
