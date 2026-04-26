@@ -37,3 +37,25 @@ export const apiConfig = {
   baseUrl: API_URL,
   liveBackend: LIVE_BACKEND,
 } as const;
+
+/**
+ * Resolve a file/document URL returned by the backend.
+ *
+ * The backend stores relative paths like `/uploads/docs/file.png`.
+ * In production the frontend domain (www.boioot.net) does NOT serve those
+ * files — they live on the backend server.  This helper ensures:
+ *   - Absolute http(s) URLs  → returned as-is
+ *   - Relative /uploads/…    → prepended with the backend *origin*
+ *                               (i.e. liveBackend minus the trailing /api)
+ *   - Empty / null / invalid → returns ""
+ */
+export function resolveFileUrl(raw: string | null | undefined): string {
+  if (!raw || typeof raw !== "string") return "";
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  // Strip trailing "/api" segment so we get the bare backend origin
+  const origin = LIVE_BACKEND.replace(/\/api\/?$/, "");
+  const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return `${origin}${path}`;
+}

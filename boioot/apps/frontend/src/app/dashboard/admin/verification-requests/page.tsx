@@ -6,6 +6,7 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { api, normalizeError } from "@/lib/api";
+import { resolveFileUrl } from "@/lib/api-config";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/document-types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -294,23 +295,36 @@ function DetailPanel({
                         <div style={{ fontSize: "0.7rem", color: "#64748b" }}>{doc.fileName}</div>
                       </div>
                     </div>
-                    {doc.fileUrl && (
-                      <a
-                        href={doc.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          fontSize: "0.74rem", color: "#2563eb",
-                          textDecoration: "none",
+                    {(() => {
+                      const resolvedUrl = resolveFileUrl(doc.fileUrl);
+                      return resolvedUrl ? (
+                        <a
+                          href={resolvedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontSize: "0.74rem", color: "#2563eb",
+                            textDecoration: "none",
+                            padding: "3px 10px",
+                            border: "1px solid #bfdbfe",
+                            borderRadius: 6,
+                            backgroundColor: "#eff6ff",
+                          }}
+                        >
+                          عرض
+                        </a>
+                      ) : (
+                        <span style={{
+                          fontSize: "0.72rem", color: "#94a3b8",
                           padding: "3px 10px",
-                          border: "1px solid #bfdbfe",
+                          border: "1px solid #e2e8f0",
                           borderRadius: 6,
-                          backgroundColor: "#eff6ff",
-                        }}
-                      >
-                        عرض
-                      </a>
-                    )}
+                          backgroundColor: "#f8fafc",
+                        }}>
+                          الرابط غير متوفر
+                        </span>
+                      );
+                    })()}
                   </div>
                 );
               })}

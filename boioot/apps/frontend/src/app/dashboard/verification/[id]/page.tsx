@@ -7,6 +7,7 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { api, normalizeError } from "@/lib/api";
+import { resolveFileUrl } from "@/lib/api-config";
 import {
   DOCUMENT_TYPE_OPTIONS,
   DOCUMENT_TYPE_LABELS,
@@ -81,13 +82,6 @@ function fmtDate(s?: string | null) {
   } catch { return s; }
 }
 
-function getFileUrl(raw: string): string {
-  if (!raw) return "";
-  if (raw.startsWith("http")) return raw;
-  const base = process.env.NEXT_PUBLIC_API_URL || "";
-  return `${base}${raw}`;
-}
-
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
@@ -118,7 +112,7 @@ function DocRow({
 }) {
   const docLabel = DOCUMENT_TYPE_LABELS[doc.documentType] ?? doc.documentType;
   const isPdf    = doc.mimeType === "application/pdf" || doc.fileUrl?.endsWith(".pdf");
-  const fileUrl  = getFileUrl(doc.fileUrl);
+  const fileUrl  = resolveFileUrl(doc.fileUrl);
 
   return (
     <div style={{
@@ -159,7 +153,7 @@ function DocRow({
         {doc.status === "Rejected" && (
           <span style={{ fontSize: "0.72rem", color: "#991b1b", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "2px 8px" }}>مرفوض</span>
         )}
-        {fileUrl && (
+        {fileUrl ? (
           <a
             href={fileUrl}
             target="_blank"
@@ -175,6 +169,16 @@ function DocRow({
           >
             عرض
           </a>
+        ) : (
+          <span style={{
+            fontSize: "0.73rem", color: "#94a3b8",
+            padding: "3px 10px",
+            border: "1px solid #e2e8f0",
+            borderRadius: 6,
+            background: "#f8fafc",
+          }}>
+            الرابط غير متوفر
+          </span>
         )}
         {canRemove && (
           <button
