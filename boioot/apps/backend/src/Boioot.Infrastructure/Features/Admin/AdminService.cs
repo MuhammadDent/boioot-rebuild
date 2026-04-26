@@ -92,9 +92,17 @@ public class AdminService : IAdminService
         if (!string.IsNullOrWhiteSpace(tag))
         {
             var tagLower = tag.ToLowerInvariant().Replace("'", "''");
-            var taggedUserIdStrs = await _context.Database
-                .SqlQueryRaw<string>($"SELECT UserId FROM UserTags WHERE lower(Tag) = '{tagLower}'")
-                .ToListAsync(ct);
+            List<string> taggedUserIdStrs = [];
+            try
+            {
+                taggedUserIdStrs = await _context.Database
+                    .SqlQueryRaw<string>($"""SELECT "UserId" FROM "UserTags" WHERE lower("Tag") = '{tagLower}'""")
+                    .ToListAsync(ct);
+            }
+            catch
+            {
+                // UserTags table may not exist yet; treat as no matches
+            }
             var taggedGuids = taggedUserIdStrs
                 .Select(s => Guid.TryParse(s, out var g) ? g : (Guid?)null)
                 .Where(g => g.HasValue)

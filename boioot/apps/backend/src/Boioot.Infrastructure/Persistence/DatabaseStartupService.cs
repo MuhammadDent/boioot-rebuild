@@ -113,6 +113,7 @@ public sealed class DatabaseStartupService
         await ApplyBookingReviewsPatchAsync(ct);
         await ApplyIntegrationsPatchAsync(ct);
         await ApplyMessagingPatchAsync(ct);
+        await ApplyUserTagsPatchAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
         await SyncIsCoverFromIsPrimaryAsync(ct);
@@ -717,6 +718,46 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("Could not inject migration record: {msg}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Creates the UserTags table on PostgreSQL if it does not already exist.
+    /// UserTags has no EF Core entity so EnsureCreated()/MigrateAsync() never
+    /// creates it. SchemaEvolutionService only runs on SQLite. This patch fills
+    /// the gap for the production (Fly.io) PostgreSQL database.
+    ///
+    /// Columns use text / varchar types to match the raw SQL queries in
+    /// AdminService which pass UUID values as plain string literals (no ::uuid cast).
+    /// The unique index on (UserId, Tag) enables ON CONFLICT DO NOTHING in inserts.
+    /// </summary>
+    private async Task ApplyUserTagsPatchAsync(CancellationToken ct)
+    {
+        if (!IsPostgres) return;
+
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS "UserTags" (
+                    "Id"        text NOT NULL PRIMARY KEY,
+                    "UserId"    text NOT NULL,
+                    "Tag"       character varying(50) NOT NULL,
+                    "CreatedAt" text NOT NULL DEFAULT ''
+                )
+                """, ct);
+
+            await _db.Database.ExecuteSqlRawAsync(
+                """CREATE INDEX IF NOT EXISTS "IX_UserTags_UserId" ON "UserTags" ("UserId")""", ct);
+
+            await _db.Database.ExecuteSqlRawAsync(
+                """CREATE UNIQUE INDEX IF NOT EXISTS "IX_UserTags_UserId_Tag" ON "UserTags" ("UserId", "Tag")""", ct);
+
+            _log.LogInformation("[schema-patch] UserTags patch applied.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] UserTags patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 }
