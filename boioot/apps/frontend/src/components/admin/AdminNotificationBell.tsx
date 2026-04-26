@@ -20,8 +20,11 @@ const ADMIN_ICONS: Record<string, string> = {
   listing_approved:          "✅",
   listing_rejected:          "❌",
   listing_featured:          "⭐",
+  payment_proof_submitted:   "📤",
   payment_received:          "💳",
   payment_submitted:         "📤",
+  subscription_receipt_uploaded: "🧾",
+  subscription_request_created:  "📋",
   subscription_approved:     "🎉",
   subscription_rejected:     "❌",
   new_request:               "📨",
@@ -69,24 +72,34 @@ function resolveAdminTarget(notification: NotificationItem): string {
   if (type === "system_alert") return "/dashboard/admin";
 
   if (
-    type === "subscription_request" ||
-    type === "subscription_approved" ||
-    type === "subscription_rejected" ||
-    type === "subscription_missing_info" ||
-    type === "subscription_activated" ||
-    relatedEntityType === "SubscriptionPaymentRequest"
+    type === "subscription_request"         ||
+    type === "subscription_request_created" ||
+    type === "subscription_approved"        ||
+    type === "subscription_rejected"        ||
+    type === "subscription_missing_info"    ||
+    type === "subscription_activated"
   ) {
     return "/dashboard/admin/subscriptions";
   }
 
-  if (
-    type === "payment_proof" ||
-    type === "payment_submitted" ||
-    type === "payment_received" ||
-    type === "payment_pending" ||
-    relatedEntityType === "Payment"
-  ) {
-    return "/dashboard/admin/payment-requests";
+  // Payment proof / payment receipt — always route to payment-requests with ID
+  const isPaymentType =
+    type === "payment_proof_submitted"   ||
+    type === "payment_proof"             ||
+    type === "payment_submitted"         ||
+    type === "payment_received"          ||
+    type === "payment_pending"           ||
+    type === "subscription_receipt_uploaded";
+
+  const isPaymentEntity =
+    relatedEntityType === "Payment"                  ||
+    relatedEntityType === "SubscriptionPaymentRequest" ||
+    (relatedEntityType === "Booking" && isPaymentType);
+
+  if (isPaymentType || isPaymentEntity) {
+    return relatedEntityId
+      ? `/dashboard/admin/payment-requests?id=${relatedEntityId}`
+      : "/dashboard/admin/payment-requests";
   }
 
   if (type === "new_request" || relatedEntityType === "SpecialRequest") {
@@ -171,9 +184,18 @@ export default function AdminNotificationBell() {
 
   const handleNotificationClick = useCallback(
     (notification: NotificationItem) => {
+      const target = resolveAdminTarget(notification);
+
+      if (process.env.NODE_ENV === "development") {
+        console.debug(
+          "[AdminNotificationBell] click",
+          { type: notification.type, relatedEntityType: notification.relatedEntityType, relatedEntityId: notification.relatedEntityId, target }
+        );
+      }
+
       if (!notification.isRead) markAsRead(notification.id);
       setOpen(false);
-      router.push(resolveAdminTarget(notification));
+      router.push(target);
     },
     [markAsRead, router]
   );

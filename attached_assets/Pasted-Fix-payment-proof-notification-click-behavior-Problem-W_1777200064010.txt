@@ -1,0 +1,63 @@
+Fix payment proof notification click behavior.
+
+Problem:
+When clicking the "payment proof submitted" notification in the admin notification dropdown, the notification disappears/marks as read, but no useful details page opens for the admin.
+
+Scope:
+- Admin notification bell
+- Payment proof / payment submitted notifications only
+- Do NOT change unrelated notification types
+
+Expected behavior:
+When admin clicks a payment proof notification:
+1. Mark it as read
+2. Close the dropdown
+3. Navigate to the correct admin payment review page
+4. If the notification has an entity id, include it in the route or query string
+
+Required route:
+Use the existing admin page if available:
+- /dashboard/admin/payment-requests
+
+If notification has targetId / relatedEntityId:
+- /dashboard/admin/payment-requests?id={id}
+or
+- /dashboard/admin/payment-requests?highlight={id}
+
+Tasks:
+1. Inspect notification object shape for payment proof notifications.
+2. Identify available fields:
+   - id
+   - targetId
+   - relatedEntityId
+   - entityId
+   - bookingId
+   - paymentRequestId
+3. Update admin notification routing so these types always route to payment review:
+   - payment_proof
+   - payment_submitted
+   - payment_received
+   - payment_pending
+   - payment_proof_submitted
+   - SubscriptionPaymentRequest
+4. Do NOT allow these types to fallback silently to current page.
+5. Add console debug only in development:
+   - clicked notification type
+   - resolved target URL
+6. If no ID exists, still route to:
+   /dashboard/admin/payment-requests
+7. Ensure unread count decreases only after navigation target is resolved.
+8. Test:
+   - Open admin notifications
+   - Click "payment proof submitted"
+   - Must open /dashboard/admin/payment-requests or highlight the related record
+   - Dropdown closes
+   - Notification count decreases
+   - No generic modal opens
+   - No silent no-op
+
+Return:
+- root cause
+- notification fields found
+- files changed
+- final route used for payment proof notifications

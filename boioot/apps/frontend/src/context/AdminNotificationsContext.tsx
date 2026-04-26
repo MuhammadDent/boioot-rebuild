@@ -45,10 +45,12 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
   },
   {
     id: "mock-4",
-    type: "new_message",
-    title: "رسالة جديدة من مستخدم",
-    body: "لديك رسالة جديدة تحتاج إلى رد في صندوق الوارد",
-    isRead: true,
+    type: "payment_proof_submitted",
+    title: "إثبات دفع جديد بانتظار المراجعة",
+    body: "قام المستأجر برفع إثبات الدفع لحجز عقار — يرجى المراجعة والتأكيد",
+    isRead: false,
+    relatedEntityId: "00000000-0000-0000-0000-000000000001",
+    relatedEntityType: "Booking",
     createdAt: new Date(Date.now() - 65 * 60_000).toISOString(),
   },
   {
