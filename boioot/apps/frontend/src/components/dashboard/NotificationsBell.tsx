@@ -8,12 +8,8 @@ import { notificationsApi, type NotificationItem as NotificationModel } from "@/
 import { useNotificationsRealtime } from "@/features/notifications/useNotificationsRealtime";
 import NotificationItem from "@/components/dashboard/notifications/NotificationItem";
 import {
-  getNotificationTypeConfig,
-  relativeNotificationTime,
   resolveNotificationTarget,
-  shouldOpenSubscriptionRequestModal,
 } from "@/components/dashboard/notifications/notificationTypeConfig";
-import SubscriptionRequestDetailModal from "./SubscriptionRequestDetailModal";
 
 export { resolveNotificationTarget } from "@/components/dashboard/notifications/notificationTypeConfig";
 
@@ -30,87 +26,6 @@ function BellIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-function NotificationDetailModal({
-  notification,
-  onClose,
-}: {
-  notification: NotificationModel;
-  onClose: () => void;
-}) {
-  const router = useRouter();
-  const target = resolveNotificationTarget(notification);
-  const config = getNotificationTypeConfig(notification.type);
-
-  return (
-    <div
-      style={{
-        position: "fixed", inset: 0,
-        background: "rgba(0,0,0,0.45)",
-        zIndex: 99999,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "16px",
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: "#fff", borderRadius: "16px",
-          boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
-          maxWidth: "440px", width: "100%",
-          padding: "24px", direction: "rtl",
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-          <span style={{ fontSize: "28px" }}>{config.icon}</span>
-          <div>
-            <p style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#111827", lineHeight: 1.4 }}>
-              {notification.title}
-            </p>
-            <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#9ca3af" }}>
-              {relativeNotificationTime(notification.createdAt)}
-            </p>
-          </div>
-        </div>
-        <div style={{ height: "1px", background: "#f3f4f6", margin: "12px 0" }} />
-        <p style={{ margin: 0, fontSize: "13px", color: "#374151", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-          {notification.body || "لا يوجد محتوى إضافي."}
-        </p>
-        <div style={{ display: "flex", gap: "8px", marginTop: "20px", justifyContent: "flex-end" }}>
-          <button
-            type="button" onClick={onClose}
-            style={{
-              padding: "8px 16px", borderRadius: "8px",
-              border: "1px solid #e5e7eb", background: "#fff",
-              color: "#374151", fontSize: "13px", fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            إغلاق
-          </button>
-          {target && (
-            <button
-              type="button"
-              onClick={() => { onClose(); router.push(target); }}
-              style={{
-                padding: "8px 16px", borderRadius: "8px",
-                border: "none", background: "#16a34a",
-                color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer",
-              }}
-            >
-              عرض التفاصيل
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type ModalState =
-  | { kind: "none" }
-  | { kind: "subscription_request"; requestId: string }
-  | { kind: "generic"; notification: NotificationModel };
-
 export default function NotificationsBell() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -120,7 +35,6 @@ export default function NotificationsBell() {
   const [loading, setLoading] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const panelRef = useRef<HTMLDivElement>(null);
 
   const fetchUnread = useCallback(async () => {
@@ -173,7 +87,7 @@ export default function NotificationsBell() {
   };
 
   useEffect(() => {
-    if (!open || modal.kind !== "none") return;
+    if (!open) return;
     const handler = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         setOpen(false);
@@ -181,7 +95,7 @@ export default function NotificationsBell() {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open, modal]);
+  }, [open]);
 
   const handleMarkRead = async (id: string) => {
     try { await notificationsApi.markRead(id); } catch { /* still update UI */ }
@@ -191,21 +105,8 @@ export default function NotificationsBell() {
 
   const handleNotificationClick = (notification: NotificationModel) => {
     if (!notification.isRead) handleMarkRead(notification.id);
-
     setOpen(false);
-
-    if (shouldOpenSubscriptionRequestModal(notification) && notification.relatedEntityId) {
-      setModal({ kind: "subscription_request", requestId: notification.relatedEntityId });
-      return;
-    }
-
-    const target = resolveNotificationTarget(notification);
-    if (target) {
-      router.push(target);
-      return;
-    }
-
-    setModal({ kind: "generic", notification });
+    router.push(resolveNotificationTarget(notification));
   };
 
   const handleMarkAll = async () => {
@@ -216,8 +117,6 @@ export default function NotificationsBell() {
       setUnread(0);
     } finally { setMarkingAll(false); }
   };
-
-  const closeModal = () => setModal({ kind: "none" });
 
   return (
     <>
@@ -323,20 +222,6 @@ export default function NotificationsBell() {
           </div>
         )}
       </div>
-
-      {modal.kind === "subscription_request" && (
-        <SubscriptionRequestDetailModal
-          requestId={modal.requestId}
-          onClose={closeModal}
-        />
-      )}
-
-      {modal.kind === "generic" && (
-        <NotificationDetailModal
-          notification={modal.notification}
-          onClose={closeModal}
-        />
-      )}
     </>
   );
 }

@@ -69,18 +69,21 @@ export function shouldOpenSubscriptionRequestModal(notification: NotificationIte
   return notification.relatedEntityType === "SubscriptionPaymentRequest" && Boolean(notification.relatedEntityId);
 }
 
-export function resolveNotificationTarget(notification: NotificationItem): string | null {
+export function resolveNotificationTarget(notification: NotificationItem): string {
   const { relatedEntityId, relatedEntityType, type } = notification;
 
-  // Subscription types open a modal — return null so the caller handles them
+  // Subscription types → user's subscription page
   if (
     relatedEntityType === "SubscriptionPaymentRequest" ||
-    type === "subscription_approved" ||
-    type === "subscription_rejected" ||
+    type === "subscription_approved"    ||
+    type === "subscription_rejected"    ||
     type === "subscription_missing_info" ||
-    type === "subscription_activated"
+    type === "subscription_activated"   ||
+    type === "subscription_request"     ||
+    type === "subscription_payment"     ||
+    type === "subscription_update"
   ) {
-    return null;
+    return "/dashboard/subscription";
   }
 
   // Entity-id-based routes (highest specificity)
@@ -122,8 +125,6 @@ export function resolveNotificationTarget(notification: NotificationItem): strin
       : "/dashboard/verification";
   }
 
-  if (type === "subscription_update") return "/dashboard/subscription";
-
   if (
     type === "listing_approved" ||
     type === "listing_rejected" ||
@@ -145,7 +146,7 @@ export function resolveNotificationTarget(notification: NotificationItem): strin
 
   if (type === "system_alert") return "/dashboard";
 
-  return null;
+  return "/dashboard";
 }
 
 export function relativeNotificationTime(dateStr: string): string {
