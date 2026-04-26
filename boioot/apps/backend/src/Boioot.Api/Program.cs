@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -235,6 +236,21 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler
 
 var app = builder.Build();
 
+// ── Storage path diagnostics ─────────────────────────────────────────────────
+{
+    var webRoot     = app.Environment.WebRootPath ?? "(null)";
+    var contentRoot = app.Environment.ContentRootPath;
+    var docsDir     = Path.Combine(webRoot, "uploads", "docs");
+    Console.WriteLine($"[STARTUP] ContentRootPath  = {contentRoot}");
+    Console.WriteLine($"[STARTUP] WebRootPath      = {webRoot}");
+    Console.WriteLine($"[STARTUP] uploads/docs dir = {docsDir}  exists={Directory.Exists(docsDir)}");
+    if (Directory.Exists(docsDir))
+    {
+        var count = Directory.GetFiles(docsDir).Length;
+        Console.WriteLine($"[STARTUP] uploads/docs file count = {count}");
+    }
+}
+
 // ── Forwarded Headers (must be FIRST) ────────────────────────────────────────
 // Required for Fly.io and any reverse proxy: makes the app see the real
 // client IP and the original scheme (https) instead of the internal proxy's.
@@ -314,9 +330,59 @@ app.UseExceptionHandler(errorApp =>
 });
 
 app.UseCors();
+
+// ── Static files: default wwwroot ─────────────────────────────────────────────
 app.UseStaticFiles();
+
+// ── Static files: explicit /uploads mount ────────────────────────────────────
+// Belt-and-suspenders: serves /uploads/* even when WebRootPath is not the
+// canonical location of uploaded files (e.g. custom contentroot on Fly.io).
+// The physical path is resolved relative to ContentRootPath as a fallback.
+{
+    var webRoot      = app.Environment.WebRootPath ?? app.Environment.ContentRootPath;
+    var uploadsDir   = Path.Combine(webRoot, "uploads");
+    Directory.CreateDirectory(uploadsDir);
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(uploadsDir),
+        RequestPath  = "/uploads",
+        OnPrepareResponse = ctx =>
+        {
+            ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=86400";
+        },
+    });
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
+
+// ── Debug endpoint: inspect storage paths and uploaded files ─────────────────
+// Returns WebRootPath, ContentRootPath, and a listing of uploads/docs/*.
+// Useful for diagnosing ephemeral-storage issues on Fly.io.
+app.MapGet("/api/debug/storage", (IWebHostEnvironment env) =>
+{
+    var webRoot     = env.WebRootPath ?? env.ContentRootPath;
+    var contentRoot = env.ContentRootPath;
+    var docsDir     = Path.Combine(webRoot, "uploads", "docs");
+    var docsExists  = Directory.Exists(docsDir);
+    var files       = docsExists
+        ? Directory.GetFiles(docsDir)
+                   .Select(f => new { name = Path.GetFileName(f), sizeBytes = new FileInfo(f).Length })
+                   .OrderByDescending(f => f.sizeBytes)
+                   .ToArray()
+        : [];
+
+    return Results.Ok(new
+    {
+        webRootPath       = webRoot,
+        contentRootPath   = contentRoot,
+        uploadsDocsPath   = docsDir,
+        uploadsDocsExists = docsExists,
+        fileCount         = files.Length,
+        files,
+    });
+}).AllowAnonymous();
 
 app.MapGet("/",           () => "Boioot API is running on Fly 🚀");
 app.MapGet("/health",     () => Results.Ok(new { status = "healthy" }));
