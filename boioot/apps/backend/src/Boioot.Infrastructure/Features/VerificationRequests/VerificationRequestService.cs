@@ -218,6 +218,29 @@ public class VerificationRequestService : IVerificationRequestService
         return await GetRequestByIdCoreAsync(requestId, ct);
     }
 
+    public async Task<VerificationRequestResponse> UpdateUserNotesAsync(
+        Guid userId, Guid requestId, UpdateUserNotesDto dto, CancellationToken ct = default)
+    {
+        var request = await _context.Set<VerificationRequest>()
+            .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId, ct)
+            ?? throw new BoiootException("الطلب غير موجود", 404);
+
+        if (request.Status != VerificationRequestStatus.Draft)
+            throw new BoiootException("لا يمكن تعديل الملاحظات بعد تقديم الطلب", 400);
+
+        var trimmed = dto.UserNotes?.Trim();
+        if (trimmed is { Length: > 1000 })
+            throw new BoiootException("الملاحظة لا يمكن أن تتجاوز 1000 حرف", 400);
+
+        request.UserNotes = string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+        request.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation("User {UserId} updated notes for verification request {RequestId}", userId, requestId);
+
+        return await GetRequestByIdCoreAsync(requestId, ct);
+    }
+
     // ── Admin-side ────────────────────────────────────────────────────────────
 
     public async Task<PagedResult<VerificationRequestSummary>> GetAllRequestsAsync(

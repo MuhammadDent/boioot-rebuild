@@ -80,4 +80,14 @@ public class VerificationController : BaseController
         var result = await _service.RemoveDocumentAsync(userId, id, docId, ct);
         return Ok(result);
     }
+
+    /// <summary>Update user notes on a Draft request (owner only)</summary>
+    [HttpPut("requests/{id:guid}/notes")]
+    public async Task<IActionResult> UpdateNotes(
+        Guid id, [FromBody] UpdateUserNotesDto dto, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        var result = await _service.UpdateUserNotesAsync(userId, id, dto, ct);
+        return Ok(result);
+    }
 }

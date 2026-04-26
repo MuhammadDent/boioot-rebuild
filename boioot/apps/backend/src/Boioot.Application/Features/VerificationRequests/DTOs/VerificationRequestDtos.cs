@@ -8,6 +8,11 @@ public class CreateVerificationRequestDto
     public string? UserNotes { get; set; }
 }
 
+public class UpdateUserNotesDto
+{
+    public string? UserNotes { get; set; }
+}
+
 public class AddDocumentDto
 {
     public string DocumentType { get; set; } = string.Empty;

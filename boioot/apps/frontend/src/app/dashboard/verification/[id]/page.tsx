@@ -434,10 +434,13 @@ export default function VerificationDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm]   = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm]   = useState(false);
 
-  // Edit notes state
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [notes, setNotes]               = useState("");
-  const [savingNotes, setSavingNotes]   = useState(false);
+  // Notes state
+  const [notes, setNotes]             = useState("");
+  const [savedNotes, setSavedNotes]   = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesBanner, setNotesBanner] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+
+  const notesDirty = notes !== savedNotes;
 
   const isDraft   = request?.status === "Draft";
   const canEdit   = isDraft || request?.status === "NeedsMoreInfo";
@@ -449,7 +452,9 @@ export default function VerificationDetailPage() {
     try {
       const res: VRequestResponse = await api.get(`/verification/requests/${id}`);
       setRequest(res);
-      setNotes(res.userNotes ?? "");
+      const n = res.userNotes ?? "";
+      setNotes(n);
+      setSavedNotes(n);
     } catch (e) {
       setError(normalizeError(e));
     } finally {
@@ -459,9 +464,36 @@ export default function VerificationDetailPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  async function handleSaveNotes() {
+    if (!notesDirty || savingNotes) return;
+    const trimmed = notes.trim();
+    if (trimmed.length > 1000) {
+      setNotesBanner({ type: "err", msg: "الملاحظة لا يمكن أن تتجاوز 1000 حرف" });
+      return;
+    }
+    setSavingNotes(true); setNotesBanner(null);
+    try {
+      const res: VRequestResponse = await api.put(`/verification/requests/${id}/notes`, { userNotes: trimmed || null });
+      setRequest(res);
+      const saved = res.userNotes ?? "";
+      setNotes(saved);
+      setSavedNotes(saved);
+      setNotesBanner({ type: "ok", msg: "تم حفظ الملاحظة بنجاح" });
+      setTimeout(() => setNotesBanner(null), 3000);
+    } catch (e) {
+      setNotesBanner({ type: "err", msg: normalizeError(e) });
+    } finally {
+      setSavingNotes(false);
+    }
+  }
+
   async function handleSubmit() {
     setSubmitting(true); setError(""); setSuccess("");
     try {
+      // Auto-save notes if they changed before submitting
+      if (notesDirty && notes.trim() !== (request?.userNotes ?? "")) {
+        await api.put(`/verification/requests/${id}/notes`, { userNotes: notes.trim() || null });
+      }
       const res: VRequestResponse = await api.post(`/verification/requests/${id}/submit`, {});
       setRequest(res);
       setSuccess("تم تقديم الطلب بنجاح. سيتم مراجعته من قبل الإدارة.");
@@ -625,70 +657,73 @@ export default function VerificationDetailPage() {
           marginBottom: "1rem",
           boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
-            <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#475569" }}>
-              ملاحظاتك للإدارة
-            </div>
-            {isDraft && !editingNotes && (
-              <button
-                onClick={() => setEditingNotes(true)}
-                style={{
-                  fontSize: "0.77rem", color: "#0369a1", background: "none",
-                  border: "none", cursor: "pointer", padding: 0,
-                  textDecoration: "underline",
-                }}
-              >
-                تعديل
-              </button>
-            )}
+          <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#475569", marginBottom: "0.6rem" }}>
+            ملاحظاتك للإدارة
           </div>
 
-          {editingNotes ? (
+          {isDraft ? (
             <div>
               <textarea
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                placeholder="معلومات إضافية تريد إخبار الإدارة بها…"
+                onChange={(e) => { setNotes(e.target.value); setNotesBanner(null); }}
+                rows={4}
+                maxLength={1000}
+                placeholder="اكتب أي ملاحظة تريد إرسالها للإدارة..."
                 style={{
-                  width: "100%", border: "1px solid #e2e8f0", borderRadius: 8,
-                  padding: "0.5rem 0.75rem", fontSize: "0.85rem", color: "#1e293b",
+                  width: "100%", border: `1px solid ${notesDirty ? "#93c5fd" : "#e2e8f0"}`,
+                  borderRadius: 8, padding: "0.55rem 0.8rem",
+                  fontSize: "0.85rem", color: "#1e293b",
                   resize: "vertical", boxSizing: "border-box", outline: "none",
-                  marginBottom: "0.6rem",
+                  marginBottom: "0.35rem", lineHeight: 1.7,
+                  transition: "border-color 0.15s",
+                  background: "#fafbfc",
+                  direction: "rtl",
                 }}
               />
-              <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-                <button
-                  onClick={() => { setEditingNotes(false); setNotes(request.userNotes ?? ""); }}
-                  style={{ padding: "0.4rem 0.9rem", border: "1px solid #e2e8f0", borderRadius: 7, background: "#fff", color: "#64748b", fontSize: "0.8rem", cursor: "pointer" }}
-                >
-                  إلغاء
-                </button>
-                <button
-                  onClick={async () => {
-                    setSavingNotes(true);
-                    try {
-                      // Note: there's no dedicated notes update endpoint yet
-                      // We store notes locally and include them when creating a new request
-                      setRequest((prev) => prev ? { ...prev, userNotes: notes } : prev);
-                      setEditingNotes(false);
-                    } finally {
-                      setSavingNotes(false);
-                    }
-                  }}
-                  disabled={savingNotes}
-                  style={{
-                    padding: "0.4rem 1rem", background: "var(--color-primary)",
-                    color: "#fff", border: "none", borderRadius: 7,
-                    fontSize: "0.8rem", fontWeight: 600, cursor: "pointer",
-                  }}
-                >
-                  {savingNotes ? "جاري الحفظ…" : "حفظ"}
-                </button>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{
+                  fontSize: "0.72rem",
+                  color: notes.length > 950 ? "#dc2626" : "#94a3b8",
+                }}>
+                  {notes.length} / 1000
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  {notesBanner && (
+                    <span style={{
+                      fontSize: "0.76rem",
+                      color: notesBanner.type === "ok" ? "#166534" : "#dc2626",
+                      background: notesBanner.type === "ok" ? "#f0fdf4" : "#fef2f2",
+                      border: `1px solid ${notesBanner.type === "ok" ? "#bbf7d0" : "#fecaca"}`,
+                      borderRadius: 6, padding: "2px 10px",
+                    }}>
+                      {notesBanner.msg}
+                    </span>
+                  )}
+                  <button
+                    onClick={handleSaveNotes}
+                    disabled={!notesDirty || savingNotes}
+                    style={{
+                      padding: "0.38rem 1.1rem",
+                      background: notesDirty ? "var(--color-primary)" : "#e2e8f0",
+                      color: notesDirty ? "#fff" : "#94a3b8",
+                      border: "none", borderRadius: 7,
+                      fontSize: "0.8rem", fontWeight: 600,
+                      cursor: notesDirty && !savingNotes ? "pointer" : "not-allowed",
+                      transition: "background 0.15s, color 0.15s",
+                    }}
+                  >
+                    {savingNotes ? "جاري الحفظ…" : "حفظ الملاحظة"}
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: "0.86rem", color: request.userNotes ? "#475569" : "#cbd5e1", fontStyle: request.userNotes ? "normal" : "italic" }}>
+            <div style={{
+              fontSize: "0.86rem",
+              color: request.userNotes ? "#475569" : "#cbd5e1",
+              fontStyle: request.userNotes ? "normal" : "italic",
+              lineHeight: 1.7,
+            }}>
               {request.userNotes || "لا توجد ملاحظات"}
             </div>
           )}
