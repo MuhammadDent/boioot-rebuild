@@ -10,7 +10,13 @@ public record RatingResponse(
     string ReviewerName,
     int Score,
     string? Comment,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int? CleanlinessRating   = null,
+    int? AccuracyRating      = null,
+    int? FacilitiesRating    = null,
+    int? CommunicationRating = null,
+    int? CommitmentRating    = null,
+    int? ValueRating         = null);
 
 public record RatingSummaryResponse(
     decimal Average,

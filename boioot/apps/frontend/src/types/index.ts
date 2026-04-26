@@ -1149,6 +1149,12 @@ export interface RatingResponse {
   score: number;
   comment?: string | null;
   createdAt: string;
+  cleanlinessRating?:   number | null;
+  accuracyRating?:      number | null;
+  facilitiesRating?:    number | null;
+  communicationRating?: number | null;
+  commitmentRating?:    number | null;
+  valueRating?:         number | null;
 }
 
 export interface RatingSummaryResponse {

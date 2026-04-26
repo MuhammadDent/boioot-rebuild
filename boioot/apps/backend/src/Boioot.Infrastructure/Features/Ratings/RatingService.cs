@@ -102,17 +102,31 @@ public sealed class RatingService : IRatingService
         pageSize = Math.Clamp(pageSize, 1, 50);
 
         // Old Reviews table (EF Core)
-        var efItems = await _db.Reviews
+        // Legacy Reviews table — no sub-ratings; project to anonymous type first,
+        // then construct RatingResponse in memory (avoids CS0854 expression-tree limitation
+        // with optional record constructor parameters).
+        var efRaw = await _db.Reviews
             .Include(r => r.Reviewer)
             .Where(r => r.TargetType == ReviewTargetType.Property
                      && r.TargetId   == listingId)
+            .Select(r => new
+            {
+                r.Id,
+                ReviewerName = r.Reviewer.FullName,
+                Score        = r.Rating,
+                r.Comment,
+                r.CreatedAt,
+            })
+            .ToListAsync(ct);
+
+        var efItems = efRaw
             .Select(r => new RatingResponse(
                 r.Id,
-                r.Reviewer.FullName,
-                r.Rating,
+                r.ReviewerName,
+                r.Score,
                 r.Comment,
                 r.CreatedAt))
-            .ToListAsync(ct);
+            .ToList();
 
         // BookingReviews table (raw SQL — TenantToProperty reviews for this property)
         var bookingItems = await GetBookingReviewItemsForPropertyAsync(listingId, ct);
@@ -292,7 +306,13 @@ public sealed class RatingService : IRatingService
                        COALESCE(u."FullName", 'مستخدم') AS "ReviewerName",
                        CAST(ROUND(br."OverallRating") AS int)  AS "Score",
                        br."Comment",
-                       br."CreatedAt"
+                       br."CreatedAt",
+                       br."Cleanliness",
+                       br."Accuracy",
+                       br."Facilities",
+                       br."Communication",
+                       br."ContractCommitment",
+                       br."ValueForMoney"
                 FROM "BookingReviews" br
                 LEFT JOIN "Users" u ON u."Id" = br."ReviewerUserId"::text
                 WHERE br."PropertyId" = @pid AND br."ReviewType" = 'TenantToProperty'
@@ -308,8 +328,14 @@ public sealed class RatingService : IRatingService
                     reader.GetGuid(0),
                     reader.GetString(1),
                     reader.GetInt32(2),
-                    reader.IsDBNull(3) ? null : reader.GetString(3),
-                    reader.GetDateTime(4)));
+                    reader.IsDBNull(3)  ? null : reader.GetString(3),
+                    reader.GetDateTime(4),
+                    CleanlinessRating:   reader.IsDBNull(5)  ? null : reader.GetInt32(5),
+                    AccuracyRating:      reader.IsDBNull(6)  ? null : reader.GetInt32(6),
+                    FacilitiesRating:    reader.IsDBNull(7)  ? null : reader.GetInt32(7),
+                    CommunicationRating: reader.IsDBNull(8)  ? null : reader.GetInt32(8),
+                    CommitmentRating:    reader.IsDBNull(9)  ? null : reader.GetInt32(9),
+                    ValueRating:         reader.IsDBNull(10) ? null : reader.GetInt32(10)));
             }
             return items;
         }
