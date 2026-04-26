@@ -149,7 +149,7 @@ export default function MainHeader() {
                   onClick={handleMessagesClick}
                   size={34}
                 />
-                <NotificationsBell />
+                {!isAdminOrStaff && <NotificationsBell />}
 
                 <Link
                   href={profileHref}
