@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { messagingApi } from "@/features/dashboard/messages/api";
+import AdminNotificationBell from "@/components/admin/AdminNotificationBell";
 
 export default function AdminToolbar() {
   const { user, logout } = useAuth();
@@ -151,6 +152,9 @@ export default function AdminToolbar() {
           </span>
         )}
       </Link>
+
+      {/* Notifications bell */}
+      <AdminNotificationBell />
 
       {/* View website */}
       <a

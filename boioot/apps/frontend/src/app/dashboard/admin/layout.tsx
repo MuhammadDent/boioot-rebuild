@@ -8,6 +8,7 @@ import { saveRedirectTarget } from "@/lib/authRedirect";
 import AppSidebar from "@/components/dashboard/AppSidebar";
 import AdminToolbar from "@/components/admin/AdminToolbar";
 import AdminBreadcrumb from "@/components/admin/AdminBreadcrumb";
+import { AdminNotificationsProvider } from "@/context/AdminNotificationsContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -59,6 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (isLoading || !user) return null;
 
   return (
+    <AdminNotificationsProvider>
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       {/* ── Top toolbar ── */}
       <AdminToolbar />
@@ -92,5 +94,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
     </div>
+    </AdminNotificationsProvider>
   );
 }
