@@ -80,9 +80,9 @@ async function silentRefresh(): Promise<boolean> {
     try {
       const res = await fetch(refreshUrl, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
-        // Same-origin — cookie is sent automatically; no credentials override needed.
       });
 
       if (!res.ok) return false;
