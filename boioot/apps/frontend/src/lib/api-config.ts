@@ -41,21 +41,36 @@ export const apiConfig = {
 /**
  * Resolve a file/document URL returned by the backend.
  *
- * The backend stores relative paths like `/uploads/docs/file.png`.
- * In production the frontend domain (www.boioot.net) does NOT serve those
- * files — they live on the backend server.  This helper ensures:
- *   - Absolute http(s) URLs  → returned as-is
- *   - Relative /uploads/…    → prepended with the backend *origin*
- *                               (i.e. liveBackend minus the trailing /api)
- *   - Empty / null / invalid → returns ""
+ * The backend MUST serve all /uploads/* files. The stored URL might be:
+ *   - A relative path:           /uploads/docs/file.png
+ *   - Absolute with correct host: https://backend-bold-snowflake-8206.fly.dev/uploads/…
+ *   - Absolute with WRONG host:  https://www.boioot.net/uploads/…  ← 404 in production
+ *
+ * Rule: any URL whose path starts with /uploads/ is ALWAYS rewritten to point
+ * at the backend origin, regardless of what host is currently in the URL.
+ * Only non-upload absolute URLs (e.g. third-party images) are returned as-is.
  */
+const BACKEND_ORIGIN = LIVE_BACKEND.replace(/\/api\/?$/, "");
+
 export function resolveFileUrl(raw: string | null | undefined): string {
   if (!raw || typeof raw !== "string") return "";
   const trimmed = raw.trim();
   if (!trimmed) return "";
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
-  // Strip trailing "/api" segment so we get the bare backend origin
-  const origin = LIVE_BACKEND.replace(/\/api\/?$/, "");
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.pathname.startsWith("/uploads/")) {
+        // Rewrite host to backend, keep path + query as-is
+        return `${BACKEND_ORIGIN}${parsed.pathname}${parsed.search}`;
+      }
+    } catch {
+      // malformed absolute URL — return as-is
+    }
+    return trimmed;
+  }
+
+  // Relative path — prepend backend origin
   const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return `${origin}${path}`;
+  return `${BACKEND_ORIGIN}${path}`;
 }

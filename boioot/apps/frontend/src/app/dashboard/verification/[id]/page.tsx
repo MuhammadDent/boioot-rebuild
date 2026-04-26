@@ -114,6 +114,9 @@ function DocRow({
   const isPdf    = doc.mimeType === "application/pdf" || doc.fileUrl?.endsWith(".pdf");
   const fileUrl  = resolveFileUrl(doc.fileUrl);
 
+  console.log("[DocRow] raw url:", doc.fileUrl);
+  console.log("[DocRow] resolved url:", fileUrl);
+
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "space-between",
