@@ -235,7 +235,7 @@ function DetailPanel({
 
         {/* Meta */}
         <div style={{
-          display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
+          display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
           gap: "0.75rem", marginBottom: "1.25rem",
           backgroundColor: "#f8fafc", borderRadius: 8, padding: "0.75rem 1rem",
           border: "1px solid #e2e8f0",
@@ -647,7 +647,8 @@ export default function AdminVerificationRequestsPage() {
         borderRadius: 10,
         overflow: "hidden",
       }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 540 }}>
           <thead>
             <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
               {["المستخدم", "النوع", "الحالة", "المستندات", "تاريخ التقديم", ""].map((h) => (
@@ -725,6 +726,7 @@ export default function AdminVerificationRequestsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} />

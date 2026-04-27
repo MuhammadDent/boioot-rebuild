@@ -1,0 +1,69 @@
+Fix mobile responsive layout issues in dashboard/admin pages.
+
+Problem:
+On mobile, dashboard pages render badly:
+- content is shifted horizontally
+- page width exceeds viewport
+- sidebar/drawer overlaps content
+- admin toolbar/header items overflow
+- user profile page becomes unreadable on phone
+
+Goal:
+Make all dashboard and admin pages fully responsive on mobile without breaking desktop layout.
+
+Tasks:
+1. Audit dashboard layouts:
+   - /dashboard/*
+   - /dashboard/admin/*
+   - AppSidebar
+   - AdminToolbar
+   - dashboard layout wrappers
+
+2. Fix horizontal overflow:
+   - ensure root dashboard containers use max-width: 100vw
+   - add overflow-x-hidden where appropriate
+   - remove fixed widths that exceed mobile viewport
+   - replace min-width tables/cards with responsive wrappers
+
+3. Mobile sidebar behavior:
+   - sidebar should be hidden by default on screens < 768px
+   - hamburger opens a drawer overlay
+   - drawer width must be max 85vw or 320px
+   - closing drawer should restore normal page width
+   - no content should remain shifted after closing
+
+4. Header/toolbar mobile behavior:
+   - prevent buttons from overlapping
+   - allow wrapping or hide secondary labels on small screens
+   - keep only essential icons visible
+   - make notification and message icons accessible
+
+5. Content layout:
+   - forms, tabs, cards, tables must fit inside mobile width
+   - use responsive grid: 1 column on mobile, 2+ on desktop
+   - tables should scroll inside their own container, not the whole page
+   - inputs and buttons should be full-width where needed
+
+6. Add CSS safety rules:
+   html, body {
+     max-width: 100%;
+     overflow-x: hidden;
+   }
+
+   dashboard containers should not use width larger than viewport.
+
+7. Test specifically:
+   - /dashboard/profile
+   - /dashboard/bookings
+   - /dashboard/admin
+   - /dashboard/admin/verification-requests
+   - /dashboard/admin/subscriptions
+
+8. Verify on mobile viewport 390px wide and 430px wide.
+
+Return:
+- root cause
+- files changed
+- exact responsive fixes
+- before/after behavior
+- whether deploy is needed

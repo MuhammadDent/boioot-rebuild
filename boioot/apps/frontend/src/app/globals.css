@@ -13,6 +13,8 @@
 html {
   direction: rtl;
   lang: ar;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -21,6 +23,8 @@ body {
   color: var(--color-text);
   background-color: var(--color-background);
   -webkit-font-smoothing: antialiased;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 a {
@@ -147,6 +151,8 @@ a {
   background-color: #f8fafc;
   align-items: stretch;
   position: relative;
+  overflow-x: hidden;
+  min-width: 0;
 }
 
 /* Sidebar: sticky on desktop, fixed drawer on mobile */
@@ -212,7 +218,7 @@ a {
     top: 0 !important;
     right: 0 !important;
     height: 100vh !important;
-    width: 280px !important;
+    width: min(280px, 85vw) !important;
     z-index: 200 !important;
     /* No !important on transform — JS inline style must win after hydration */
     transform: translateX(100%);
@@ -387,4 +393,54 @@ a {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
+}
+
+/* ── Mobile responsive safety rules ─────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  /* Prevent any dashboard container from overflowing the viewport */
+  .dash-shell__content,
+  .admin-layout > main {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* All tables inside dashboard pages scroll horizontally on mobile */
+  .dash-shell__content table,
+  .admin-layout table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* Forms and inputs take full width on mobile */
+  .dash-shell__content input,
+  .dash-shell__content select,
+  .dash-shell__content textarea,
+  .admin-layout input,
+  .admin-layout select,
+  .admin-layout textarea {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Cards and panels must not exceed mobile width */
+  .dash-shell__content > * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra-small phones: reduce content padding further */
+  .dash-shell__content {
+    padding: 0.75rem;
+  }
+
+  /* Reduce admin sidebar hamburger offset */
+  .admin-hamburger {
+    top: 58px;
+    left: 10px;
+  }
 }

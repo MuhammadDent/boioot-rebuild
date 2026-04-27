@@ -1491,17 +1491,22 @@
   display: flex;
   flex-direction: column;
   background: #f4f6f4;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 .dash-shell__body {
   flex: 1;
   display: flex;
   min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
 }
 .dash-shell__content {
   flex: 1;
   min-width: 0;
   padding: 1.75rem;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ── Dashboard Header ── */
@@ -1745,14 +1750,22 @@
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
+  .dash-hdr {
+    max-width: 100vw;
+    overflow: hidden;
+  }
   .dash-hdr__menu-btn {
     display: flex;
+  }
+  .dash-hdr__logo {
+    font-size: 1.1rem;
   }
   .dash-sbar {
     position: fixed;
     top: 60px;
     right: 0;
     height: calc(100vh - 60px);
+    width: min(280px, 85vw);
     z-index: 100;
     transform: translateX(100%);
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
@@ -1762,6 +1775,11 @@
   }
   .dash-shell__content {
     padding: 1rem;
+    overflow-x: hidden;
+  }
+  .dash-shell {
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 }
 

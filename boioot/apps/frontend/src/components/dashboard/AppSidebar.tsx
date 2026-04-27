@@ -203,7 +203,7 @@ export default function AppSidebar({
         top: 0,
         right: 0,
         height: "100vh",
-        width: 280,
+        width: "min(280px, 85vw)",
         zIndex: 200,
         transform: isOpen ? "translateX(0)" : "translateX(100%)",
         transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -213,6 +213,7 @@ export default function AppSidebar({
         borderLeft: `1px solid ${T.border}`,
         boxShadow: isOpen ? "-4px 0 24px rgba(0,0,0,0.12)" : "none",
         overflowY: "auto",
+        overflowX: "hidden",
         willChange: "transform",
       }
     : {
