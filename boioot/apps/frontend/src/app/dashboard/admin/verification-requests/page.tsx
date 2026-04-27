@@ -501,7 +501,7 @@ function DetailPanel({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AdminVerificationRequestsPage() {
-  useProtectedRoute({ requiredPermission: "users.view" });
+  const { isLoading: authLoading, isUnauthorized } = useProtectedRoute({ requiredPermission: "users.view" });
 
   const [items, setItems]           = useState<VRequestSummary[]>([]);
   const [page, setPage]             = useState(1);
@@ -542,7 +542,10 @@ export default function AdminVerificationRequestsPage() {
     }
   }, [filterStatus, filterType, filterSearch]);
 
-  useEffect(() => { load(page); }, [page, load]);
+  useEffect(() => {
+    if (authLoading || isUnauthorized) return;
+    load(page);
+  }, [page, load, authLoading, isUnauthorized]);
 
   async function openDetail(id: string) {
     setLoadingDetail(true);
