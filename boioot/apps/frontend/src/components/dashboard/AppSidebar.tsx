@@ -28,22 +28,22 @@ const T = {
   textMuted:     "#9CA3AF",
 
   // Nav items
-  itemInactive:     "#374151",
+  itemInactive:     "#1F2937",
   itemActiveBg:     "#166534",
   itemActiveText:   "#ffffff",
   itemActiveIcon:   "#ffffff",
-  itemInactiveIcon: "#9CA3AF",
+  itemInactiveIcon: "#6B7280",
   itemHoverBg:      "#F0FDF4",
-  itemHoverText:    "#111827",
+  itemHoverText:    "#166534",
 
   // Group headers
   groupLabelActive:   "#15803D",
-  groupLabelInactive: "#6B7280",
+  groupLabelInactive: "#4B5563",
   groupIconActive:    "#16A34A",
-  groupIconInactive:  "#9CA3AF",
+  groupIconInactive:  "#6B7280",
 
   // Divider
-  divider: "#F3F4F6",
+  divider: "#E5E7EB",
 
   // Brand green (for accents)
   green: "#16A34A",
@@ -54,8 +54,8 @@ const T = {
 function ChevronDown({ open }: { open: boolean }) {
   return (
     <svg
-      width={11}
-      height={11}
+      width={13}
+      height={13}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -66,7 +66,7 @@ function ChevronDown({ open }: { open: boolean }) {
         flexShrink: 0,
         transition: "transform 0.2s",
         transform: open ? "rotate(180deg)" : "rotate(0deg)",
-        opacity: 0.4,
+        opacity: 0.65,
       }}
     >
       <polyline points="6 9 12 15 18 9" />
@@ -77,7 +77,7 @@ function ChevronDown({ open }: { open: boolean }) {
 // ── Logout icon ──────────────────────────────────────────────────────────────
 
 const LogoutIcon = (
-  <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <polyline points="16 17 21 12 16 7" />
     <line x1="21" y1="12" x2="9" y2="12" />
@@ -389,7 +389,7 @@ export default function AppSidebar({
                     alignItems: "center",
                     gap: "0.5rem",
                     width: "100%",
-                    padding: "0.45rem 1rem",
+                    padding: "0.55rem 1rem",
                     background: "none",
                     border: "none",
                     cursor: group.alwaysOpen ? "default" : "pointer",
@@ -405,11 +405,11 @@ export default function AppSidebar({
                   </span>
                   <span style={{
                     flex: 1,
-                    fontSize: "0.69rem",
+                    fontSize: "0.72rem",
                     fontWeight: 700,
                     color: hasActiveItem ? T.groupLabelActive : T.groupLabelInactive,
                     textTransform: "uppercase",
-                    letterSpacing: "0.07em",
+                    letterSpacing: "0.06em",
                   }}>
                     {group.label}
                   </span>
@@ -430,11 +430,11 @@ export default function AppSidebar({
                             display: "flex",
                             alignItems: "center",
                             gap: "0.55rem",
-                            padding: "0.4rem 1rem 0.4rem 1.3rem",
-                            margin: "0.05rem 0.5rem",
+                            padding: "0.5rem 1rem 0.5rem 1.3rem",
+                            margin: "0.1rem 0.5rem",
                             borderRadius: 7,
-                            fontSize: "0.81rem",
-                            fontWeight: active ? 600 : 400,
+                            fontSize: "0.9rem",
+                            fontWeight: active ? 600 : 500,
                             color: active ? T.itemActiveText : T.itemInactive,
                             backgroundColor: active ? T.itemActiveBg : "transparent",
                             textDecoration: "none",
@@ -484,11 +484,12 @@ export default function AppSidebar({
               alignItems: "center",
               gap: "0.5rem",
               width: "100%",
-              padding: "0.4rem 0",
+              padding: "0.5rem 0",
               background: "none",
               border: "none",
               cursor: "pointer",
-              fontSize: "0.78rem",
+              fontSize: "0.875rem",
+              fontWeight: 500,
               color: T.textSecondary,
               direction: "rtl",
               textAlign: "right",
