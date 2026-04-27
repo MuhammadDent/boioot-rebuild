@@ -109,6 +109,7 @@ public sealed class DatabaseStartupService
         // ── Idempotent column-type fixes (applied after every migration run) ──
         await ApplyPostgresColumnFixesAsync(ct);
         await ApplyPostgresBookingPatchesAsync(ct);
+        await ApplyBookingCurrencyFixAsync(ct);
         await ApplyReviewsPatchAsync(ct);
         await ApplyBookingReviewsPatchAsync(ct);
         await ApplyIntegrationsPatchAsync(ct);
@@ -351,6 +352,40 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("[schema-patch] Booking MVP patch failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Syncs existing booking currencies from their related property.
+    /// Fixes rows that were defaulted to 'SYP' when the Currency column was first added,
+    /// even though their property may have currency = 'USD'.
+    /// Idempotent — only updates rows where currency truly differs from the property.
+    /// </summary>
+    private async Task ApplyBookingCurrencyFixAsync(CancellationToken ct)
+    {
+        if (!IsPostgres) return;
+
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "Bookings" b
+                SET "Currency" = COALESCE(NULLIF(p."Currency", ''), 'SYP')
+                FROM "Properties" p
+                WHERE b."PropertyId"::text = p."Id"
+                  AND (
+                    b."Currency" IS NULL
+                    OR b."Currency" = ''
+                    OR b."Currency" = 'SYP'
+                  )
+                  AND COALESCE(NULLIF(p."Currency", ''), 'SYP') <> b."Currency"
+                """, ct);
+
+            _log.LogInformation("[schema-patch] Booking currencies synced from properties.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] Booking currency sync failed (non-critical): {Msg}", ex.Message);
         }
     }
 
