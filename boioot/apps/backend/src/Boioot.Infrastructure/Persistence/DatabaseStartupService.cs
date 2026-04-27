@@ -344,6 +344,7 @@ public sealed class DatabaseStartupService
             await _db.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "ConfirmedAt" timestamp with time zone""", ct);
             await _db.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "OwnerNotes" character varying(2000)""", ct);
             await _db.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "RevisionRequestedAt" timestamp with time zone""", ct);
+            await _db.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "Currency" text NOT NULL DEFAULT 'SYP'""", ct);
 
             _log.LogInformation("[schema-patch] Booking MVP patch applied.");
         }

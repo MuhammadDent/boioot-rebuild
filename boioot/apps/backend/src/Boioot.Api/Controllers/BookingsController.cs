@@ -370,6 +370,8 @@ public class BookingsController : BaseController
         await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "ConfirmedAt" timestamp with time zone""", ct);
         await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "OwnerNotes" character varying(2000)""", ct);
         await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "RevisionRequestedAt" timestamp with time zone""", ct);
+        await _context.Database.ExecuteSqlRawAsync("""ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "Currency" text NOT NULL DEFAULT 'SYP'""", ct);
+        _logger.LogInformation("[schema-patch] Bookings.Currency ensured");
     }
 
     private async Task EnsurePaymentStatusColumnAsync(CancellationToken ct)
@@ -379,6 +381,10 @@ public class BookingsController : BaseController
         await _context.Database.ExecuteSqlRawAsync(
             """ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "PaymentStatus" character varying(30) NOT NULL DEFAULT 'NotPaid'""",
             ct);
+        await _context.Database.ExecuteSqlRawAsync(
+            """ALTER TABLE "Bookings" ADD COLUMN IF NOT EXISTS "Currency" text NOT NULL DEFAULT 'SYP'""",
+            ct);
+        _logger.LogInformation("[schema-patch] Bookings.Currency ensured");
     }
 
     private async Task<OwnerBookingRow?> GetBookingForOwnerActionAsync(Guid bookingId, CancellationToken ct)
