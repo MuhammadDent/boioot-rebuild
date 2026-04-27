@@ -208,7 +208,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner));
 
     options.AddPolicy("AdminOrCompanyOwnerOrAgent", policy =>
-        policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Agent, RoleNames.Broker));
+        policy.RequireRole(RoleNames.Admin, RoleNames.CompanyOwner, RoleNames.Agent, RoleNames.Broker, RoleNames.Owner));
 
     // ── Projects: only Admin OR CompanyOwner with account_type=Company ────────
     // Office accounts also have CompanyOwner role but must NOT access Projects.

@@ -2,18 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { toast } from "sonner";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { dashboardPropertiesApi } from "@/features/dashboard/properties/api";
 import PropertyForm from "@/components/dashboard/properties/PropertyForm";
-import { normalizeError } from "@/lib/api";
+import { ApiError, normalizeError } from "@/lib/api";
 import type { PropertyResponse, CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
+
+const OWNER_ROLES = ["Admin", "CompanyOwner", "Agent", "Broker", "Owner"];
 
 export default function EditPropertyPage() {
   const { user, isLoading } = useProtectedRoute({
-    allowedRoles: ["Admin", "CompanyOwner", "Agent"],
+    allowedRoles: OWNER_ROLES,
   });
 
   const router = useRouter();
@@ -27,6 +30,9 @@ export default function EditPropertyPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
 
+  const listingsHref =
+    user?.role === "Owner" ? "/dashboard/my-listings" : "/dashboard/listings";
+
   useEffect(() => {
     if (isLoading || !user || !id) return;
 
@@ -37,13 +43,21 @@ export default function EditPropertyPage() {
         const data = await dashboardPropertiesApi.getById(id);
         setProperty(data);
       } catch (e) {
-        setLoadError(normalizeError(e));
+        if (e instanceof ApiError && e.status === 403) {
+          toast.error("لا تملك صلاحية تعديل هذا الإعلان");
+          router.replace(listingsHref);
+          return;
+        }
+        const msg = normalizeError(e);
+        console.error("[EditPropertyPage] load failed:", msg, e);
+        setLoadError(msg);
       } finally {
         setIsLoadingProperty(false);
       }
     }
 
     loadProperty();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, user, id]);
 
   async function handleSubmit(data: CreatePropertyRequest | UpdatePropertyRequest, _pendingUploads?: unknown) {
@@ -51,8 +65,13 @@ export default function EditPropertyPage() {
     setServerError("");
     try {
       await dashboardPropertiesApi.update(id, data as UpdatePropertyRequest);
-      router.push("/dashboard/listings?success=1");
+      toast.success("تم حفظ الإعلان بنجاح");
+      router.push(`${listingsHref}?success=1`);
     } catch (e) {
+      if (e instanceof ApiError && e.status === 403) {
+        toast.error("لا تملك صلاحية تعديل هذا الإعلان");
+        return;
+      }
       setServerError(normalizeError(e));
     } finally {
       setIsSubmitting(false);
@@ -73,7 +92,7 @@ export default function EditPropertyPage() {
 
         {/* ── Header ── */}
         <div style={{ marginBottom: "1.75rem" }}>
-          <DashboardBackLink href="/dashboard/listings" label="← إعلاناتي" />
+          <DashboardBackLink href={listingsHref} label="← إعلاناتي" />
           <h1
             style={{
               fontSize: "1.4rem",

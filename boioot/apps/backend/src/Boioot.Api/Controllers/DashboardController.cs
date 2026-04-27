@@ -16,17 +16,20 @@ public class DashboardController : BaseController
     private readonly IPropertyService _propertyService;
     private readonly IProjectService _projectService;
     private readonly IRequestService _requestService;
+    private readonly ILogger<DashboardController> _logger;
 
     public DashboardController(
         IDashboardService dashboardService,
         IPropertyService propertyService,
         IProjectService projectService,
-        IRequestService requestService)
+        IRequestService requestService,
+        ILogger<DashboardController> logger)
     {
         _dashboardService = dashboardService;
         _propertyService  = propertyService;
         _projectService   = projectService;
         _requestService   = requestService;
+        _logger           = logger;
     }
 
     [HttpGet("summary")]
@@ -54,8 +57,20 @@ public class DashboardController : BaseController
     [HttpGet("properties/{id:guid}")]
     public async Task<IActionResult> GetProperty(Guid id, CancellationToken ct)
     {
-        var result = await _propertyService.GetByIdDashboardAsync(GetUserId(), GetUserRole(), id, ct);
-        return Ok(result);
+        var userId = GetUserId();
+        var role   = GetUserRole();
+        _logger.LogInformation("[GetProperty] userId={UserId} role={Role} propertyId={PropertyId}", userId, role, id);
+        try
+        {
+            var result = await _propertyService.GetByIdDashboardAsync(userId, role, id, ct);
+            return Ok(result);
+        }
+        catch (Boioot.Application.Exceptions.BoiootException ex)
+        {
+            _logger.LogWarning("[GetProperty] Denied — userId={UserId} role={Role} propertyId={PropertyId} status={Status} msg={Msg}",
+                userId, role, id, ex.StatusCode, ex.Message);
+            return StatusCode(ex.StatusCode, new { message = ex.Message });
+        }
     }
 
     [HttpGet("projects")]

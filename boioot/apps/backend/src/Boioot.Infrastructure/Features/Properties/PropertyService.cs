@@ -202,12 +202,17 @@ public class PropertyService : IPropertyService
     public async Task<PropertyResponse> GetByIdDashboardAsync(
         Guid userId, string userRole, Guid propertyId, CancellationToken ct = default)
     {
+        _logger.LogInformation("[GetByIdDashboard] userId={UserId} role={Role} propertyId={PropertyId}", userId, userRole, propertyId);
+
         var property = await _context.Properties
             .Include(p => p.Company)
             .Include(p => p.Images).ThenInclude(i => i.UserImage)  // bridge: include R2 metadata
             .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
             .FirstOrDefaultAsync(p => p.Id == propertyId, ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
+
+        _logger.LogInformation("[GetByIdDashboard] property.OwnerId={OwnerId} property.CompanyId={CompanyId} property.AgentId={AgentId} userId={UserId}",
+            property.OwnerId, property.CompanyId, property.AgentId, userId);
 
         await EnsureCanManagePropertyAsync(userId, userRole, property, ct);
 
