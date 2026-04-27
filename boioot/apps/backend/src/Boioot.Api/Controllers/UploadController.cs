@@ -398,7 +398,7 @@ public class UploadController : BaseController
 
     /// <summary>
     /// Upload endpoint for verification documents (JPG, PNG, PDF — max 10 MB).
-    /// Stored in wwwroot/uploads/docs/ for direct public URL access.
+    /// Delegates to IFileStorageService — uses R2 when configured, local disk otherwise.
     /// </summary>
     [HttpPost("document")]
     [RequestSizeLimit(10_485_760)]
@@ -426,20 +426,18 @@ public class UploadController : BaseController
         if (ext is null)
             return BadRequest(new { error = "نوع الملف غير مدعوم" });
 
-        var dir = Path.Combine(_env.WebRootPath, "uploads", "docs");
-        Directory.CreateDirectory(dir);
-
-        var fileName = $"{Guid.NewGuid()}{ext}";
-        var filePath = Path.Combine(dir, fileName);
-
-        await using var stream = System.IO.File.Create(filePath);
-        await file.CopyToAsync(stream, ct);
+        var result = await _storage.UploadAsync(
+            file.OpenReadStream(),
+            file.FileName,
+            mime,
+            folder: "docs",
+            ct);
 
         _logger.LogInformation(
             "Document uploaded: {FileName} ({Size} bytes) by user {UserId}",
-            fileName, file.Length, GetUserId());
+            result.FileKey, file.Length, GetUserId());
 
-        return Ok(new { url = $"/uploads/docs/{fileName}" });
+        return Ok(new { url = result.PublicUrl });
     }
 
     // ── /api/upload/proof ─────────────────────────────────────────────────────
