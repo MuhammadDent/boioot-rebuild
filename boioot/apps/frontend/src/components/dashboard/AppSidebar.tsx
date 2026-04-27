@@ -15,6 +15,40 @@ import { usePlan } from "@/context/SubscriptionContext";
 import { getSidebarGroups, ROLE_DISPLAY } from "@/features/sidebar/sidebar.config";
 import type { FeatureKey } from "@/features/plan/types";
 
+// ── Design tokens (light theme) ───────────────────────────────────────────────
+
+const T = {
+  bg:            "#F9FAFB",
+  border:        "#E5E7EB",
+  shadow:        "-2px 0 12px rgba(0,0,0,0.06)",
+
+  // Text
+  textPrimary:   "#111827",
+  textSecondary: "#6B7280",
+  textMuted:     "#9CA3AF",
+
+  // Nav items
+  itemInactive:     "#374151",
+  itemActiveBg:     "#166534",
+  itemActiveText:   "#ffffff",
+  itemActiveIcon:   "#ffffff",
+  itemInactiveIcon: "#9CA3AF",
+  itemHoverBg:      "#F0FDF4",
+  itemHoverText:    "#111827",
+
+  // Group headers
+  groupLabelActive:   "#15803D",
+  groupLabelInactive: "#6B7280",
+  groupIconActive:    "#16A34A",
+  groupIconInactive:  "#9CA3AF",
+
+  // Divider
+  divider: "#F3F4F6",
+
+  // Brand green (for accents)
+  green: "#16A34A",
+};
+
 // ── Icon: chevron ────────────────────────────────────────────────────────────
 
 function ChevronDown({ open }: { open: boolean }) {
@@ -32,7 +66,7 @@ function ChevronDown({ open }: { open: boolean }) {
         flexShrink: 0,
         transition: "transform 0.2s",
         transform: open ? "rotate(180deg)" : "rotate(0deg)",
-        opacity: 0.35,
+        opacity: 0.4,
       }}
     >
       <polyline points="6 9 12 15 18 9" />
@@ -119,7 +153,6 @@ export default function AppSidebar({
   }
 
   // ── Plan feature helper (PBAC) ──────────────────────────────────────────
-  // Admin / Staff bypass is handled inside canAccess() in SubscriptionContext.
 
   function canFeature(feature?: FeatureKey): boolean {
     if (!feature) return true;
@@ -147,8 +180,7 @@ export default function AppSidebar({
   const roleLabel = ROLE_DISPLAY[user?.role ?? ""] ?? (user?.role ?? "");
   const isAdmin   = user?.role === "Admin" || user?.role === "Staff";
 
-  // ── Mobile detection (JS-controlled, not CSS-only) ───────────────────────
-  // This bypasses all CSS specificity/cascade issues on mobile.
+  // ── Mobile detection ────────────────────────────────────────────────────
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -160,11 +192,10 @@ export default function AppSidebar({
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  // ── Computed sidebar styles based on breakpoint ──────────────────────────
+  // ── Sidebar shell styles ─────────────────────────────────────────────────
 
   const sidebarStyle: React.CSSProperties = isMobile
     ? {
-        // Mobile: fixed right-side drawer, hidden by default
         position: "fixed",
         top: 0,
         right: 0,
@@ -173,26 +204,26 @@ export default function AppSidebar({
         zIndex: 200,
         transform: isOpen ? "translateX(0)" : "translateX(100%)",
         transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        backgroundColor: "#111827",
+        backgroundColor: T.bg,
         display: "flex",
         flexDirection: "column",
-        borderLeft: "1px solid rgba(255,255,255,0.07)",
-        boxShadow: isOpen ? "-4px 0 24px rgba(0,0,0,0.4)" : "none",
+        borderLeft: `1px solid ${T.border}`,
+        boxShadow: isOpen ? "-4px 0 24px rgba(0,0,0,0.12)" : "none",
         overflowY: "auto",
         willChange: "transform",
       }
     : {
-        // Desktop: sticky sidebar, always visible
         position: "sticky",
         top: headerHeight,
         height: `calc(100vh - ${headerHeight}px)`,
         width: 250,
         flexShrink: 0,
         zIndex: 50,
-        backgroundColor: "#111827",
+        backgroundColor: T.bg,
         display: "flex",
         flexDirection: "column",
-        borderLeft: "1px solid rgba(255,255,255,0.07)",
+        borderLeft: `1px solid ${T.border}`,
+        boxShadow: T.shadow,
         overflowY: "auto",
       };
 
@@ -206,7 +237,7 @@ export default function AppSidebar({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.55)",
+            background: "rgba(0,0,0,0.35)",
             zIndex: 199,
             backdropFilter: "blur(2px)",
             WebkitBackdropFilter: "blur(2px)",
@@ -220,7 +251,7 @@ export default function AppSidebar({
         className="admin-sidebar"
         style={sidebarStyle}
       >
-        {/* Mobile close button — JS-controlled, only shown on mobile */}
+        {/* Mobile close button */}
         {isMobile && onClose && (
           <button
             onClick={onClose}
@@ -232,9 +263,9 @@ export default function AppSidebar({
               width: 32,
               height: 32,
               borderRadius: "50%",
-              background: "rgba(255,255,255,0.1)",
+              background: "rgba(0,0,0,0.06)",
               border: "none",
-              color: "#fff",
+              color: T.textPrimary,
               fontSize: "1rem",
               cursor: "pointer",
               display: "flex",
@@ -250,18 +281,18 @@ export default function AppSidebar({
         {/* ── User badge ──────────────────────────────────────────────────── */}
         <div
           style={{
-            padding: "0.7rem 1rem",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            padding: "0.75rem 1rem",
+            borderBottom: `1px solid ${T.border}`,
             flexShrink: 0,
             display: "flex",
             alignItems: "center",
-            gap: "0.6rem",
+            gap: "0.65rem",
           }}
         >
           <div
             style={{
-              width: 30,
-              height: 30,
+              width: 32,
+              height: 32,
               borderRadius: "50%",
               backgroundColor: "#166534",
               display: "flex",
@@ -293,10 +324,18 @@ export default function AppSidebar({
             )}
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <p style={{ margin: 0, fontSize: "0.77rem", fontWeight: 600, color: "#e5e7eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <p style={{
+              margin: 0,
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              color: T.textPrimary,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}>
               {user?.fullName ?? "المستخدم"}
             </p>
-            <p style={{ margin: 0, fontSize: "0.67rem", color: "#6b7280", marginTop: 1 }}>
+            <p style={{ margin: 0, fontSize: "0.67rem", color: T.textSecondary, marginTop: 1 }}>
               {roleLabel}
             </p>
           </div>
@@ -305,32 +344,29 @@ export default function AppSidebar({
               width: 7,
               height: 7,
               borderRadius: "50%",
-              backgroundColor: "#22c55e",
+              backgroundColor: T.green,
               flexShrink: 0,
-              boxShadow: "0 0 0 2px rgba(34,197,94,0.2)",
+              boxShadow: `0 0 0 2px rgba(22,163,74,0.2)`,
             }} />
           )}
         </div>
 
         {/* ── Navigation ──────────────────────────────────────────────────── */}
         <nav
-          style={{ flex: 1, padding: "0.35rem 0 1rem", overflowY: "auto" }}
+          style={{ flex: 1, padding: "0.4rem 0 1rem", overflowY: "auto" }}
           aria-label="قائمة التنقل"
         >
           {groups.map((group, groupIdx) => {
-            // RBAC: Hide groups the user has no permission to see
             if (!can(group.permission)) return null;
-            // PBAC: Hide groups gated by a plan feature
             if (!canFeature(group.feature)) return null;
 
             const visibleItems = group.items.filter(
               (item) => can(item.permission) && canFeature(item.feature),
             );
 
-            // Requirement 7: Hide empty groups
             if (visibleItems.length === 0) return null;
 
-            const isGroupOpen  = group.alwaysOpen ? true : (openGroups[group.id] ?? false);
+            const isGroupOpen   = group.alwaysOpen ? true : (openGroups[group.id] ?? false);
             const hasActiveItem = visibleItems.some((item) => isActive(item.href, item.exact));
 
             return (
@@ -339,8 +375,8 @@ export default function AppSidebar({
                 {groupIdx > 0 && (
                   <div style={{
                     height: 1,
-                    backgroundColor: "rgba(255,255,255,0.05)",
-                    margin: "0.2rem 0.75rem",
+                    backgroundColor: T.divider,
+                    margin: "0.25rem 0.75rem",
                   }} />
                 )}
 
@@ -353,7 +389,7 @@ export default function AppSidebar({
                     alignItems: "center",
                     gap: "0.5rem",
                     width: "100%",
-                    padding: "0.5rem 1rem",
+                    padding: "0.45rem 1rem",
                     background: "none",
                     border: "none",
                     cursor: group.alwaysOpen ? "default" : "pointer",
@@ -361,14 +397,17 @@ export default function AppSidebar({
                     direction: "rtl",
                   }}
                 >
-                  <span style={{ color: hasActiveItem ? "#4ade80" : "#4b5563", display: "flex" }}>
+                  <span style={{
+                    color: hasActiveItem ? T.groupIconActive : T.groupIconInactive,
+                    display: "flex",
+                  }}>
                     {group.icon}
                   </span>
                   <span style={{
                     flex: 1,
                     fontSize: "0.69rem",
                     fontWeight: 700,
-                    color: hasActiveItem ? "#d1fae5" : "#6b7280",
+                    color: hasActiveItem ? T.groupLabelActive : T.groupLabelInactive,
                     textTransform: "uppercase",
                     letterSpacing: "0.07em",
                   }}>
@@ -391,31 +430,34 @@ export default function AppSidebar({
                             display: "flex",
                             alignItems: "center",
                             gap: "0.55rem",
-                            padding: "0.38rem 1rem 0.38rem 1.3rem",
-                            margin: "0.04rem 0.4rem",
+                            padding: "0.4rem 1rem 0.4rem 1.3rem",
+                            margin: "0.05rem 0.5rem",
                             borderRadius: 7,
                             fontSize: "0.81rem",
                             fontWeight: active ? 600 : 400,
-                            color: active ? "#ffffff" : "#9ca3af",
-                            backgroundColor: active ? "#166534" : "transparent",
+                            color: active ? T.itemActiveText : T.itemInactive,
+                            backgroundColor: active ? T.itemActiveBg : "transparent",
                             textDecoration: "none",
                             direction: "rtl",
                             transition: "background-color 0.12s, color 0.12s",
                           }}
                           onMouseEnter={(e) => {
                             if (!active) {
-                              e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
-                              e.currentTarget.style.color = "#e5e7eb";
+                              e.currentTarget.style.backgroundColor = T.itemHoverBg;
+                              e.currentTarget.style.color = T.itemHoverText;
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (!active) {
                               e.currentTarget.style.backgroundColor = "transparent";
-                              e.currentTarget.style.color = "#9ca3af";
+                              e.currentTarget.style.color = T.itemInactive;
                             }
                           }}
                         >
-                          <span style={{ color: active ? "#4ade80" : "#4b5563", display: "flex" }}>
+                          <span style={{
+                            color: active ? T.itemActiveIcon : T.itemInactiveIcon,
+                            display: "flex",
+                          }}>
                             {item.icon}
                           </span>
                           {item.label}
@@ -431,8 +473,8 @@ export default function AppSidebar({
 
         {/* ── Footer: logout ───────────────────────────────────────────────── */}
         <div style={{
-          padding: "0.6rem 1rem",
-          borderTop: "1px solid rgba(255,255,255,0.07)",
+          padding: "0.65rem 1rem",
+          borderTop: `1px solid ${T.border}`,
           flexShrink: 0,
         }}>
           <button
@@ -447,13 +489,13 @@ export default function AppSidebar({
               border: "none",
               cursor: "pointer",
               fontSize: "0.78rem",
-              color: "#6b7280",
+              color: T.textSecondary,
               direction: "rtl",
               textAlign: "right",
               transition: "color 0.12s",
             }}
             onMouseEnter={(e) => { e.currentTarget.style.color = "#ef4444"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "#6b7280"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = T.textSecondary; }}
           >
             {LogoutIcon}
             تسجيل الخروج
