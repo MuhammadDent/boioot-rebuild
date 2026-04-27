@@ -63,7 +63,8 @@ public class BookingService : IBookingService
                 p.OwnerId,
                 p.CreatedByUserId,
                 p.Title,
-                p.Price
+                p.Price,
+                p.Currency
             })
             .FirstOrDefaultAsync(ct)
             ?? throw new BoiootException("العقار غير موجود", 404);
@@ -115,6 +116,7 @@ public class BookingService : IBookingService
             TotalAmount = totalAmount,
             CommissionPercent = commissionPercent,
             CommissionAmount = commissionAmount,
+            Currency = string.IsNullOrWhiteSpace(property.Currency) ? "SYP" : property.Currency,
             PaymentStatus = NotPaid,
             Status = PendingApproval
         };
@@ -481,6 +483,7 @@ public class BookingService : IBookingService
         TotalAmount = booking.TotalAmount,
         CommissionPercent = booking.CommissionPercent,
         CommissionAmount = booking.CommissionAmount,
+        Currency = string.IsNullOrWhiteSpace(booking.Currency) ? "SYP" : booking.Currency,
         PaymentStatus = booking.PaymentStatus,
         Status = booking.Status,
         CreatedAt = booking.CreatedAt,

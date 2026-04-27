@@ -1,0 +1,66 @@
+Fix booking/payment currency mismatch for daily rental requests.
+
+Problem:
+Some daily rental properties are priced in USD, but when a tenant creates a booking/request, the owner sees the booking price and totals displayed in Syrian Pounds (SYP / ل.س). This causes confusion and makes owners hesitate to approve requests.
+
+Goal:
+The booking/request must always preserve and display the same currency as the property listing.
+
+Requirements:
+1. Find where daily rental booking totals are calculated and displayed:
+   - property detail booking form
+   - tenant booking dashboard
+   - owner booking dashboard
+   - admin booking/payment request views if applicable
+
+2. Do NOT hardcode SYP or "ل.س" for daily rental bookings.
+
+3. Booking price fields must use the property's currency:
+   - price currency
+   - subtotal
+   - platform commission
+   - final total
+   - payment proof / payment request details
+
+4. If the property price is:
+   - $50 USD per night
+   - 2 nights
+   - 10% commission
+   Then display:
+   - السعر: $50
+   - الإجمالي: $100
+   - عمولة المنصة: $10
+   - الإجمالي النهائي: $110
+
+5. If the property price is SYP, then display SYP / ل.س normally.
+
+6. Ensure the booking API response includes currency if missing.
+   If Booking entity/DTO does not store currency, add a safe field such as Currency or PriceCurrency and populate it from Property.Currency at booking creation time.
+
+7. Existing bookings:
+   - If booking currency is null, fallback to property currency when displaying.
+   - Do not break old bookings.
+
+8. Update frontend formatting:
+   - use a single helper like formatMoney(amount, currency)
+   - USD should show as $ or USD
+   - SYP should show as ل.س or SYP
+   - do not mix currencies in the same booking.
+
+9. Search the codebase for hardcoded:
+   - "ل.س"
+   - "SYP"
+   - "$"
+   in booking/payment/daily-rent related components and replace with currency-aware formatting where needed.
+
+Important:
+- Do NOT change pricing logic unless needed.
+- Do NOT convert currencies.
+- Just preserve and display the correct original listing currency.
+- No exchange rate conversion.
+
+Return:
+- root cause
+- files changed
+- exact places where hardcoded SYP was removed
+- how to test with a USD property and a SYP property

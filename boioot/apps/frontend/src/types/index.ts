@@ -234,6 +234,7 @@ export interface BookingResponse {
   totalAmount: number;
   commissionPercent: number;
   commissionAmount: number;
+  currency?: string;
   paymentStatus: BookingPaymentStatus | string;
   status: BookingStatus | string;
   createdAt: string;

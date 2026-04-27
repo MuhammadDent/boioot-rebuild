@@ -17,6 +17,7 @@ public class BookingResponse
     public decimal TotalAmount { get; set; }
     public decimal CommissionPercent { get; set; }
     public decimal CommissionAmount { get; set; }
+    public string Currency { get; set; } = "SYP";
     public string PaymentStatus { get; set; } = "NotPaid";
     public string Status { get; set; } = "PendingApproval";
     public DateTime CreatedAt { get; set; }

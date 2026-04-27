@@ -28,7 +28,11 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString("ar-SY", { year: "numeric", month: "short", day: "numeric" });
 }
 
-function formatMoney(value: number) {
+function formatMoney(value: number, currency?: string): string {
+  const cur = (currency ?? "SYP").toUpperCase().trim();
+  if (cur === "USD") {
+    return "$" + value.toLocaleString("en", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
   return value.toLocaleString("en") + " ل.س";
 }
 
@@ -568,10 +572,10 @@ function BookingCard({
         {(booking.guestCount ?? 1) > 1 && <span>عدد الضيوف: {booking.guestCount}</span>}
         {booking.phone && <span dir="ltr" style={{ textAlign: "right" }}>الهاتف: {booking.phone}</span>}
         {booking.notes && <span>ملاحظات: {booking.notes}</span>}
-        <span>السعر: {(nights || 1).toLocaleString("en")} ليلة × {formatMoney(booking.pricePerNight)}</span>
-        <strong style={{ color: "#0f172a" }}>الإجمالي: {formatMoney(booking.totalAmount)}</strong>
-        <span>عمولة المنصة ({booking.commissionPercent}%): {formatMoney(booking.commissionAmount)}</span>
-        <strong style={{ color: "#0f172a" }}>الإجمالي النهائي: {formatMoney(finalTotal)}</strong>
+        <span>السعر: {(nights || 1).toLocaleString("en")} ليلة × {formatMoney(booking.pricePerNight, booking.currency)}</span>
+        <strong style={{ color: "#0f172a" }}>الإجمالي: {formatMoney(booking.totalAmount, booking.currency)}</strong>
+        <span>عمولة المنصة ({booking.commissionPercent}%): {formatMoney(booking.commissionAmount, booking.currency)}</span>
+        <strong style={{ color: "#0f172a" }}>الإجمالي النهائي: {formatMoney(finalTotal, booking.currency)}</strong>
         <span>حالة الدفع: {booking.paymentStatus === "ReadyForPayment" ? "جاهز للدفع" : booking.paymentStatus === "Paid" ? "مدفوع" : booking.paymentStatus === "Refunded" ? "مسترد" : "غير مدفوع"}</span>
       </div>
 

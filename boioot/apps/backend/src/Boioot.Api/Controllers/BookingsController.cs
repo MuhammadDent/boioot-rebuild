@@ -101,7 +101,8 @@ public class BookingsController : BaseController
                        b."CreatedAt",
                        COALESCE(b."GuestCount", 1) AS "GuestCount",
                        b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
-                       b."OwnerNotes", b."RevisionRequestedAt"
+                       b."OwnerNotes", b."RevisionRequestedAt",
+                       COALESCE(b."Currency", 'SYP') AS "Currency"
                 FROM "Bookings" b
                 INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
                 WHERE b."RequestedByUserId" = @userId
@@ -137,7 +138,8 @@ public class BookingsController : BaseController
                        b."CreatedAt",
                        COALESCE(b."GuestCount", 1) AS "GuestCount",
                        b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
-                       b."OwnerNotes", b."RevisionRequestedAt"
+                       b."OwnerNotes", b."RevisionRequestedAt",
+                       COALESCE(b."Currency", 'SYP') AS "Currency"
                 FROM "Bookings" b
                 INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
                 WHERE b."PropertyOwnerUserId" = @userIdText OR p."OwnerId" = @userIdText OR p."CreatedByUserId" = @userIdText
@@ -422,7 +424,8 @@ public class BookingsController : BaseController
                    b."CreatedAt",
                    COALESCE(b."GuestCount", 1) AS "GuestCount",
                    b."PaymentProofUrls", b."PaymentProofNote", b."PaymentProofSubmittedAt", b."ApprovedAt", b."ConfirmedAt",
-                   b."OwnerNotes", b."RevisionRequestedAt"
+                   b."OwnerNotes", b."RevisionRequestedAt",
+                   COALESCE(b."Currency", 'SYP') AS "Currency"
             FROM "Bookings" b
             INNER JOIN "Properties" p ON b."PropertyId"::text = p."Id"
             WHERE b."Id" = @id
@@ -494,7 +497,8 @@ public class BookingsController : BaseController
                 reader.IsDBNull(21) ? null : reader.GetDateTime(21),
                 reader.IsDBNull(22) ? null : reader.GetDateTime(22),
                 reader.IsDBNull(23) ? null : reader.GetString(23),
-                reader.IsDBNull(24) ? null : reader.GetDateTime(24)));
+                reader.IsDBNull(24) ? null : reader.GetDateTime(24),
+                reader.FieldCount > 25 && !reader.IsDBNull(25) ? reader.GetString(25) : "SYP"));
         }
 
         return result;
@@ -581,7 +585,8 @@ public class BookingsController : BaseController
         DateTime? ApprovedAt = null,
         DateTime? ConfirmedAt = null,
         string? OwnerNotes = null,
-        DateTime? RevisionRequestedAt = null);
+        DateTime? RevisionRequestedAt = null,
+        string Currency = "SYP");
 
     private sealed record OwnerBookingRow(
         Guid Id,
