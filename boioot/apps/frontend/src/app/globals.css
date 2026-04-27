@@ -186,15 +186,17 @@ a {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: #111827;
-  border: none;
+  background: #ffffff;
+  border: 1px solid #E5E7EB;
   border-radius: 8px;
-  color: #fff;
+  color: #374151;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
 }
 .admin-hamburger:hover {
-  background: #1f2937;
+  background: #F0FDF4;
+  border-color: #16A34A;
+  color: #166534;
 }
 
 @media (max-width: 768px) {
@@ -243,9 +245,9 @@ a {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.06);
   border: none;
-  color: #fff;
+  color: #374151;
   font-size: 1rem;
   cursor: pointer;
   align-items: center;
@@ -253,7 +255,7 @@ a {
   z-index: 10;
 }
 .admin-sidebar-close:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 
