@@ -28,19 +28,22 @@ const T = {
   textMuted:     "#9CA3AF",
 
   // Nav items
-  itemInactive:     "#1F2937",
-  itemActiveBg:     "#166534",
-  itemActiveText:   "#ffffff",
-  itemActiveIcon:   "#ffffff",
-  itemInactiveIcon: "#6B7280",
-  itemHoverBg:      "#F0FDF4",
-  itemHoverText:    "#166534",
+  itemInactive:        "#1F2937",
+  itemActiveBg:        "#166534",
+  itemActiveText:      "#ffffff",
+  itemActiveIcon:      "#ffffff",
+  itemActiveBorder:    "#14532D",
+  itemActiveIconBg:    "rgba(255,255,255,0.15)",
+  itemInactiveIcon:    "#6B7280",
+  itemHoverBg:         "#F0FDF4",
+  itemHoverText:       "#166534",
+  itemHoverBorder:     "transparent",
 
   // Group headers
   groupLabelActive:   "#15803D",
-  groupLabelInactive: "#4B5563",
+  groupLabelInactive: "#374151",
   groupIconActive:    "#16A34A",
-  groupIconInactive:  "#6B7280",
+  groupIconInactive:  "#4B5563",
 
   // Divider
   divider: "#E5E7EB",
@@ -353,7 +356,7 @@ export default function AppSidebar({
 
         {/* ── Navigation ──────────────────────────────────────────────────── */}
         <nav
-          style={{ flex: 1, padding: "0.4rem 0 1rem", overflowY: "auto" }}
+          style={{ flex: 1, padding: "0.5rem 0 1.25rem", overflowY: "auto" }}
           aria-label="قائمة التنقل"
         >
           {groups.map((group, groupIdx) => {
@@ -376,7 +379,7 @@ export default function AppSidebar({
                   <div style={{
                     height: 1,
                     backgroundColor: T.divider,
-                    margin: "0.25rem 0.75rem",
+                    margin: "0.6rem 0.75rem 0.25rem",
                   }} />
                 )}
 
@@ -405,11 +408,11 @@ export default function AppSidebar({
                   </span>
                   <span style={{
                     flex: 1,
-                    fontSize: "0.72rem",
+                    fontSize: "0.70rem",
                     fontWeight: 700,
                     color: hasActiveItem ? T.groupLabelActive : T.groupLabelInactive,
                     textTransform: "uppercase",
-                    letterSpacing: "0.06em",
+                    letterSpacing: "0.08em",
                   }}>
                     {group.label}
                   </span>
@@ -429,34 +432,43 @@ export default function AppSidebar({
                           style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "0.55rem",
-                            padding: "0.5rem 1rem 0.5rem 1.3rem",
-                            margin: "0.1rem 0.5rem",
-                            borderRadius: 7,
+                            gap: "0.6rem",
+                            padding: "0.55rem 1rem 0.55rem 1.25rem",
+                            margin: "0.12rem 0.5rem",
+                            borderRadius: 8,
                             fontSize: "0.9rem",
                             fontWeight: active ? 600 : 500,
                             color: active ? T.itemActiveText : T.itemInactive,
                             backgroundColor: active ? T.itemActiveBg : "transparent",
+                            borderLeft: active
+                              ? `3px solid ${T.itemActiveBorder}`
+                              : "3px solid transparent",
+                            boxShadow: active
+                              ? "0 1px 6px rgba(22, 101, 52, 0.22)"
+                              : "none",
                             textDecoration: "none",
                             direction: "rtl",
-                            transition: "background-color 0.12s, color 0.12s",
+                            transition: "background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease",
                           }}
                           onMouseEnter={(e) => {
                             if (!active) {
                               e.currentTarget.style.backgroundColor = T.itemHoverBg;
                               e.currentTarget.style.color = T.itemHoverText;
+                              e.currentTarget.style.borderLeftColor = T.green;
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (!active) {
                               e.currentTarget.style.backgroundColor = "transparent";
                               e.currentTarget.style.color = T.itemInactive;
+                              e.currentTarget.style.borderLeftColor = "transparent";
                             }
                           }}
                         >
                           <span style={{
                             color: active ? T.itemActiveIcon : T.itemInactiveIcon,
                             display: "flex",
+                            flexShrink: 0,
                           }}>
                             {item.icon}
                           </span>
