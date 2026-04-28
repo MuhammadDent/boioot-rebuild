@@ -51,6 +51,12 @@ public class Subscription : BaseEntity
     /// <summary>External subscription reference ID from the payment gateway.</summary>
     public string? ExternalSubscriptionId { get; set; }
 
+    /// <summary>
+    /// Human-readable unique reference number. Format: SUB-YYYY-NNNNNN.
+    /// Generated automatically on creation. Never changes after creation.
+    /// </summary>
+    public string? SubscriptionNumber { get; set; }
+
     // ── Consumption Tracking ──────────────────────────────────────────────────
 
     /// <summary>
