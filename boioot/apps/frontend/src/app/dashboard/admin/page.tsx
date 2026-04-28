@@ -366,13 +366,14 @@ export default function AdminOverviewPage() {
           {/* Time filter */}
           <div style={{ display: "flex", gap: "0.3rem", backgroundColor: "#f1f5f9", padding: "0.22rem", borderRadius: 9 }}>
             {(["today", "7d", "30d"] as TimeFilter[]).map(f => (
-              <button key={f} onClick={() => setTimeFilter(f)} style={{ padding: "0.28rem 0.7rem", borderRadius: 6, border: "none", cursor: "pointer", fontSize: "0.73rem", fontWeight: 600, backgroundColor: timeFilter === f ? "#fff" : "transparent", color: timeFilter === f ? "#1e293b" : "#64748b", boxShadow: timeFilter === f ? "0 1px 3px rgba(0,0,0,0.1)" : "none", transition: "all 0.15s" }}>
+              <button key={f} type="button" onClick={() => setTimeFilter(f)} style={{ padding: "0.28rem 0.7rem", borderRadius: 6, border: "none", cursor: "pointer", fontSize: "0.73rem", fontWeight: 600, backgroundColor: timeFilter === f ? "#fff" : "transparent", color: timeFilter === f ? "#1e293b" : "#64748b", boxShadow: timeFilter === f ? "0 1px 3px rgba(0,0,0,0.1)" : "none", transition: "all 0.15s" }}>
                 {TIME_LABELS[f]}
               </button>
             ))}
           </div>
           {/* Export */}
           <button
+            type="button"
             onClick={() => exportCSV(a, users, brokers, companies)}
             style={{ display: "flex", alignItems: "center", gap: "0.35rem", padding: "0.3rem 0.8rem", borderRadius: 8, border: "1px solid #e2e8f0", backgroundColor: "#fff", color: "#475569", fontSize: "0.73rem", fontWeight: 600, cursor: "pointer" }}
           >
@@ -394,6 +395,7 @@ export default function AdminOverviewPage() {
             تعذّر تحميل بيانات لوحة التحكم — قد تكون البيانات غير مكتملة
           </p>
           <button
+            type="button"
             onClick={() => setRetryKey(k => k + 1)}
             style={{
               padding: "0.45rem 1.1rem", borderRadius: 8, border: "none",

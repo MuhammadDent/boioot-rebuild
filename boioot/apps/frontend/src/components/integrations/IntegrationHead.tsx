@@ -107,7 +107,10 @@ export default async function IntegrationHead(): Promise<JSX.Element | null> {
 
   // ── TikTok Pixel ───────────────────────────────────────────────────────────
   const tiktok = integrations.find((i) => i.key === "tiktok-pixel");
-  const tiktokPixelId = tiktok?.config.pixelId;
+  const rawTiktokId = tiktok?.config.pixelId ?? "";
+  // TikTok pixel IDs are alphanumeric strings, typically 15–25 chars.
+  // Skip invalid IDs to prevent the "Invalid pixel ID" console warning.
+  const tiktokPixelId = /^[A-Za-z0-9]{10,30}$/.test(rawTiktokId) ? rawTiktokId : "";
   if (tiktokPixelId) {
     nodes.push(
       <script

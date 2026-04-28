@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { adminSubscriptionApi } from "@/features/admin/subscription-api";
@@ -9,6 +9,36 @@ import { normalizeError } from "@/lib/api";
 import type { AdminSubscriptionDto } from "@/features/admin/subscription-api";
 import type { SubscriptionHistoryDto } from "@/features/subscription/types";
 import type { AdminPlanSummary } from "@/types";
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleCopy(e: React.MouseEvent) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopied(false), 1800);
+    }).catch(() => {});
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      type="button"
+      title="نسخ"
+      style={{
+        background: "none", border: "none", cursor: "pointer",
+        padding: "0 0.25rem", color: copied ? "#059669" : "#94a3b8",
+        fontSize: "0.78rem", lineHeight: 1, verticalAlign: "middle",
+        transition: "color 0.15s",
+      }}
+    >
+      {copied ? "✓" : "⎘"}
+    </button>
+  );
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -353,6 +383,7 @@ export default function AdminSubscriptionsPage() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
+  const [searchTerm, setSearchTerm]     = useState("");
   const [showAssign, setShowAssign]     = useState(false);
   const [historyFor, setHistoryFor]     = useState<AdminSubscriptionDto | null>(null);
   const [successMsg, setSuccessMsg]     = useState<string | null>(null);
@@ -386,6 +417,15 @@ export default function AdminSubscriptionsPage() {
   subs.forEach(s => {
     counts[s.status] = (counts[s.status] ?? 0) + 1;
   });
+
+  const needle = searchTerm.trim().toLowerCase();
+  const filteredSubs = needle
+    ? subs.filter(s =>
+        (s.subscriptionNumber ?? "").toLowerCase().includes(needle) ||
+        s.accountName.toLowerCase().includes(needle) ||
+        (s.accountOwnerEmail ?? "").toLowerCase().includes(needle)
+      )
+    : subs;
 
   return (
     <div style={{ padding: "1.5rem 2rem", maxWidth: 1100, direction: "rtl" }}>
@@ -467,7 +507,7 @@ export default function AdminSubscriptionsPage() {
       </div>
 
       {/* Filter tabs */}
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.85rem" }}>
         {FILTER_TABS.map(tab => (
           <button
             key={tab.key}
@@ -489,6 +529,25 @@ export default function AdminSubscriptionsPage() {
         ))}
       </div>
 
+      {/* Search by subscription number / account / email */}
+      <div style={{ marginBottom: "1.25rem", maxWidth: 380 }}>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          placeholder="بحث برقم الاشتراك أو الحساب أو البريد…"
+          style={{
+            width: "100%", padding: "0.55rem 0.9rem",
+            borderRadius: 10, border: "1.5px solid #e2e8f0",
+            fontSize: "0.85rem", boxSizing: "border-box",
+            fontFamily: "inherit", color: "#1e293b",
+            backgroundColor: "#fff",
+            outline: "none",
+          }}
+          dir="rtl"
+        />
+      </div>
+
       {/* Error */}
       {error && (
         <div style={{
@@ -505,14 +564,17 @@ export default function AdminSubscriptionsPage() {
         <div style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>
           جارٍ التحميل...
         </div>
-      ) : subs.length === 0 ? (
+      ) : filteredSubs.length === 0 ? (
         <div style={{
           backgroundColor: "#fff", borderRadius: 12,
           padding: "3rem", textAlign: "center",
           border: "1.5px solid #e2e8f0",
           color: "#94a3b8", fontSize: "0.9rem",
         }}>
-          لا توجد اشتراكات {statusFilter && `بحالة "${STATUS_LABEL[statusFilter] ?? statusFilter}"`}
+          {needle
+            ? `لا توجد نتائج للبحث "${searchTerm}"`
+            : `لا توجد اشتراكات${statusFilter ? ` بحالة "${STATUS_LABEL[statusFilter] ?? statusFilter}"` : ""}`
+          }
         </div>
       ) : (
         <div style={{
@@ -539,29 +601,32 @@ export default function AdminSubscriptionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {subs.map((sub, idx) => {
+                {filteredSubs.map((sub, idx) => {
                   const sc = STATUS_COLOR[sub.status] ?? { bg: "#f1f5f9", color: "#475569" };
                   return (
                     <tr
                       key={sub.subscriptionId}
                       style={{
-                        borderBottom: idx < subs.length - 1 ? "1px solid #f1f5f9" : "none",
+                        borderBottom: idx < filteredSubs.length - 1 ? "1px solid #f1f5f9" : "none",
                         backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
                       }}
                     >
                       {/* Subscription Number */}
                       <td style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>
                         {sub.subscriptionNumber ? (
-                          <span style={{
-                            fontFamily: "monospace",
-                            fontSize: "0.82rem",
-                            fontWeight: 700,
-                            color: "#1e293b",
-                            backgroundColor: "#f1f5f9",
-                            borderRadius: 6,
-                            padding: "0.2rem 0.5rem",
-                          }}>
-                            {sub.subscriptionNumber}
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.15rem" }}>
+                            <span style={{
+                              fontFamily: "monospace",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              color: "#1e293b",
+                              backgroundColor: "#f1f5f9",
+                              borderRadius: 6,
+                              padding: "0.2rem 0.5rem",
+                            }}>
+                              {sub.subscriptionNumber}
+                            </span>
+                            <CopyButton value={sub.subscriptionNumber} />
                           </span>
                         ) : (
                           <span style={{ color: "#94a3b8", fontSize: "0.78rem" }}>—</span>

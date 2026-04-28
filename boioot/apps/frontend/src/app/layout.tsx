@@ -14,6 +14,7 @@ const cairo = Cairo({
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
   variable: "--font-cairo",
+  preload: false,
 });
 
 const siteUrl =
