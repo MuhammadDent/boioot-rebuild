@@ -5,6 +5,7 @@ import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { normalizeError } from "@/lib/api";
+import { RefBadge } from "@/features/admin/RefBadge";
 import {
   adminGetSpecialRequests,
   adminGetSpecialRequestById,
@@ -186,20 +187,8 @@ export default function AdminSpecialRequestsPage() {
                   <td style={{ padding: "12px 16px", color: "#6b7280", fontFamily: "monospace", whiteSpace: "nowrap" }}>
                     {r.publicCode}
                   </td>
-                  <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
-                    {r.referenceNumber ? (
-                      <span
-                        title="انقر للنسخ"
-                        onClick={() => navigator.clipboard.writeText(r.referenceNumber!)}
-                        style={{
-                          fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
-                          background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
-                          padding: "2px 7px", cursor: "copy",
-                        }}
-                      >
-                        {r.referenceNumber}
-                      </span>
-                    ) : <span style={{ color: "#94a3b8" }}>—</span>}
+                  <td style={{ padding: "12px 16px" }}>
+                    <RefBadge value={r.referenceNumber} />
                   </td>
                   <td style={{ padding: "12px 16px", fontWeight: 600, color: "#1a1a2e", whiteSpace: "nowrap" }}>
                     {r.fullName || "—"}
@@ -320,7 +309,10 @@ function DetailModal({
           padding: "20px 24px", borderBottom: "1px solid #f0f0f0",
         }}>
           <div>
-            <p style={{ fontSize: 12, color: "#999", margin: 0 }}>{request.publicCode}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <p style={{ fontSize: 12, color: "#999", margin: 0, fontFamily: "monospace" }}>{request.publicCode}</p>
+              {request.referenceNumber && <RefBadge value={request.referenceNumber} />}
+            </div>
             <h2 style={{ fontSize: 20, fontWeight: 800, margin: "4px 0 0", color: "#1a1a2e" }}>
               {request.fullName || "طلب خاص"}
             </h2>

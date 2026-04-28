@@ -10,6 +10,7 @@ import { InlineBanner }         from "@/components/dashboard/InlineBanner";
 import { LoadingRow }           from "@/components/dashboard/LoadingRow";
 import { adminApi }             from "@/features/admin/api";
 import { ADMIN_PAGE_SIZE }      from "@/features/admin/constants";
+import { RefBadge }             from "@/features/admin/RefBadge";
 import {
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_OPTIONS,
@@ -619,17 +620,7 @@ function RequestCard({
 
         {r.referenceNumber && (
           <div style={{ marginTop: "0.35rem" }}>
-            <span
-              title="انقر للنسخ"
-              onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(r.referenceNumber!); }}
-              style={{
-                fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
-                background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
-                padding: "2px 7px", cursor: "copy",
-              }}
-            >
-              {r.referenceNumber}
-            </span>
+            <RefBadge value={r.referenceNumber} />
           </div>
         )}
         {r.message && (

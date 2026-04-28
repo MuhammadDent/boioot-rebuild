@@ -7,10 +7,12 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { api, normalizeError } from "@/lib/api";
 import { adminApi } from "@/features/admin/api";
+import { RefBadge } from "@/features/admin/RefBadge";
 import type { PagedResult } from "@/types";
 
 interface BuyerRequest {
   id: string;
+  referenceNumber?: string | null;
   title: string;
   propertyType: string;
   description: string;
@@ -250,20 +252,8 @@ export default function AdminBuyerRequestsPage() {
                   transition: "background 0.1s",
                 }}>
                   {/* Reference Number */}
-                  <td style={{ padding: "0.75rem 0.9rem", whiteSpace: "nowrap" }}>
-                    {r.referenceNumber ? (
-                      <span
-                        title="انقر للنسخ"
-                        onClick={() => navigator.clipboard.writeText(r.referenceNumber!)}
-                        style={{
-                          fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
-                          background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
-                          padding: "2px 7px", cursor: "copy",
-                        }}
-                      >
-                        {r.referenceNumber}
-                      </span>
-                    ) : <span style={{ color: "#94a3b8" }}>—</span>}
+                  <td style={{ padding: "0.75rem 0.9rem" }}>
+                    <RefBadge value={r.referenceNumber} />
                   </td>
                   {/* Title */}
                   <td style={{ padding: "0.75rem 0.9rem", maxWidth: 260 }}>

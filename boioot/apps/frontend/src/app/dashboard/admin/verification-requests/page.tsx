@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import { RefBadge } from "@/features/admin/RefBadge";
 import { AdminPagination } from "@/features/admin/components/AdminPagination";
 import { api, normalizeError } from "@/lib/api";
 import { resolveFileUrl } from "@/lib/api-config";
@@ -37,6 +38,7 @@ interface VRequestSummary {
 
 interface VRequestDetail {
   id: string;
+  referenceNumber?: string | null;
   userId: string;
   userFullName?: string;
   userEmail?: string;
@@ -215,6 +217,11 @@ function DetailPanel({
             <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: 2 }}>
               {req.userFullName ?? "—"} &bull; {req.userEmail ?? "—"}
             </div>
+            {req.referenceNumber && (
+              <div style={{ marginTop: "0.4rem" }}>
+                <RefBadge value={req.referenceNumber} />
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <StatusBadge status={req.status} />
@@ -688,19 +695,7 @@ export default function AdminVerificationRequestsPage() {
                 onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "transparent"; }}
               >
                 <td style={{ padding: "0.7rem 1rem" }} onClick={(e) => e.stopPropagation()}>
-                  {item.referenceNumber ? (
-                    <span
-                      title="انقر للنسخ"
-                      onClick={() => navigator.clipboard.writeText(item.referenceNumber!)}
-                      style={{
-                        fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
-                        background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
-                        padding: "2px 7px", cursor: "copy", whiteSpace: "nowrap",
-                      }}
-                    >
-                      {item.referenceNumber}
-                    </span>
-                  ) : <span style={{ color: "#94a3b8" }}>—</span>}
+                  <RefBadge value={item.referenceNumber} />
                 </td>
                 <td style={{ padding: "0.7rem 1rem" }}>
                   <div style={{ fontSize: "0.84rem", fontWeight: 600, color: "#1e293b" }}>

@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import { RefBadge } from "@/features/admin/RefBadge";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import {
   adminApi,
@@ -666,17 +667,7 @@ function UserRow({
           )}
           {u.referenceNumber && (
             <p style={{ margin: "0 0 0.15rem" }}>
-              <span
-                title="انقر للنسخ"
-                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(u.referenceNumber!); }}
-                style={{
-                  fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
-                  background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
-                  padding: "2px 7px", cursor: "copy",
-                }}
-              >
-                {u.referenceNumber}
-              </span>
+              <RefBadge value={u.referenceNumber} />
             </p>
           )}
           {u.lastLoginAt && (
@@ -787,6 +778,12 @@ function UserDetailsPanel({
 
       {/* fields */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.25rem" }}>
+        {u.referenceNumber && (
+          <div>
+            <div style={{ fontSize: "0.72rem", color: "#64748b", marginBottom: 4 }}>رقم المرجع</div>
+            <RefBadge value={u.referenceNumber} />
+          </div>
+        )}
         <DetailField label="البريد الإلكتروني" value={u.email} dir="ltr" />
         <DetailField label="الهاتف" value={u.phone} dir="ltr" />
         <DetailField label="الحالة" value={u.isActive ? "نشط" : "معطَّل"} />
