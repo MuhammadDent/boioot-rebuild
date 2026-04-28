@@ -226,8 +226,8 @@ public class VerificationRequestService : IVerificationRequestService
             .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId, ct)
             ?? throw new BoiootException("الطلب غير موجود", 404);
 
-        if (request.Status != VerificationRequestStatus.Draft)
-            throw new BoiootException("لا يمكن تعديل الملاحظات بعد تقديم الطلب", 400);
+        if (request.Status is not VerificationRequestStatus.Draft and not VerificationRequestStatus.NeedsMoreInfo)
+            throw new BoiootException("لا يمكن تعديل الملاحظات في الحالة الحالية", 400);
 
         var trimmed = dto.UserNotes?.Trim();
         if (trimmed is { Length: > 1000 })

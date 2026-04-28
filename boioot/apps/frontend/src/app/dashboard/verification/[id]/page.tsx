@@ -27,12 +27,6 @@ interface VDocResponse {
   createdAt: string;
 }
 
-interface VMessage {
-  role: "admin" | "user";
-  content: string;
-  sentAt: string;
-}
-
 interface VRequestResponse {
   id: string;
   userId: string;
@@ -43,7 +37,6 @@ interface VRequestResponse {
   userNotes?: string;
   adminNotes?: string;
   rejectionReason?: string;
-  messages: VMessage[];
   documents: VDocResponse[];
   createdAt: string;
   updatedAt: string;
@@ -425,163 +418,6 @@ function ConfirmModal({
   );
 }
 
-// ── Conversation thread ───────────────────────────────────────────────────────
-
-function ConversationThread({
-  messages,
-  status,
-  onReplySent,
-}: {
-  messages: VMessage[];
-  status: string;
-  onReplySent: (updated: VRequestResponse) => void;
-}) {
-  const [replyText, setReplyText]       = useState("");
-  const [sending, setSending]           = useState(false);
-  const [replyError, setReplyError]     = useState("");
-  const params = useParams();
-  const id = params?.id as string;
-
-  const canReply = status === "NeedsMoreInfo";
-
-  async function handleSend() {
-    const trimmed = replyText.trim();
-    if (!trimmed) return;
-    setSending(true);
-    setReplyError("");
-    try {
-      const updated: VRequestResponse = await api.post(`/verification/requests/${id}/reply`, { reply: trimmed });
-      setReplyText("");
-      onReplySent(updated);
-      toast.success("تم إرسال ردك بنجاح. سيتمّ مراجعته من قبل الإدارة.");
-    } catch (e) {
-      setReplyError(normalizeError(e));
-    } finally {
-      setSending(false);
-    }
-  }
-
-  if (messages.length === 0 && !canReply) return null;
-
-  return (
-    <div style={{
-      background: "#fff", border: "1px solid #e2e8f0",
-      borderRadius: 12, padding: "1.1rem 1.25rem",
-      marginBottom: "1rem",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-    }}>
-      <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1e293b", marginBottom: "0.85rem" }}>
-        المراسلة مع الإدارة
-      </div>
-
-      {/* Messages */}
-      {messages.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", marginBottom: "1rem" }}>
-          {messages.map((msg, i) => {
-            const isAdmin = msg.role === "admin";
-            return (
-              <div key={i} style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: isAdmin ? "flex-end" : "flex-start",
-              }}>
-                <div style={{
-                  fontSize: "0.72rem", fontWeight: 600,
-                  color: isAdmin ? "#b45309" : "#1d4ed8",
-                  marginBottom: 3,
-                }}>
-                  {isAdmin ? "الإدارة" : "أنت"}
-                </div>
-                <div style={{
-                  maxWidth: "85%",
-                  background: isAdmin ? "#fffbeb" : "#eff6ff",
-                  border: `1px solid ${isAdmin ? "#fde68a" : "#bfdbfe"}`,
-                  borderRadius: 10,
-                  padding: "0.6rem 0.85rem",
-                  fontSize: "0.86rem",
-                  color: isAdmin ? "#78350f" : "#1e3a8a",
-                  lineHeight: 1.65,
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                }}>
-                  {msg.content}
-                </div>
-                <div style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: 2 }}>
-                  {fmtDate(msg.sentAt)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Reply area — only when NeedsMoreInfo */}
-      {canReply && (
-        <div>
-          <textarea
-            value={replyText}
-            onChange={(e) => { setReplyText(e.target.value); setReplyError(""); }}
-            rows={4}
-            maxLength={2000}
-            placeholder="أضف ردك على ملاحظة الإدارة..."
-            disabled={sending}
-            style={{
-              width: "100%",
-              border: `1px solid ${replyText.trim() ? "#93c5fd" : "#e2e8f0"}`,
-              borderRadius: 8,
-              padding: "0.55rem 0.8rem",
-              fontSize: "0.85rem",
-              color: "#1e293b",
-              resize: "vertical",
-              boxSizing: "border-box",
-              outline: "none",
-              lineHeight: 1.7,
-              direction: "rtl",
-              background: "#fafbfc",
-              transition: "border-color 0.15s",
-              marginBottom: "0.4rem",
-            }}
-          />
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-            <span style={{
-              fontSize: "0.72rem",
-              color: replyText.length > 1900 ? "#dc2626" : "#94a3b8",
-            }}>
-              {replyText.length} / 2000
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              {replyError && (
-                <span style={{
-                  fontSize: "0.76rem", color: "#dc2626",
-                  background: "#fef2f2", border: "1px solid #fecaca",
-                  borderRadius: 6, padding: "2px 10px",
-                }}>
-                  {replyError}
-                </span>
-              )}
-              <button
-                onClick={handleSend}
-                disabled={sending || !replyText.trim()}
-                style={{
-                  padding: "0.42rem 1.2rem",
-                  background: replyText.trim() && !sending ? "var(--color-primary)" : "#e2e8f0",
-                  color: replyText.trim() && !sending ? "#fff" : "#94a3b8",
-                  border: "none", borderRadius: 7,
-                  fontSize: "0.82rem", fontWeight: 600,
-                  cursor: replyText.trim() && !sending ? "pointer" : "not-allowed",
-                  transition: "background 0.15s",
-                }}
-              >
-                {sending ? "جاري الإرسال…" : "إرسال الرد"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Main detail page ──────────────────────────────────────────────────────────
 
 export default function VerificationDetailPage() {
@@ -599,6 +435,7 @@ export default function VerificationDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting]     = useState(false);
   const [removingDocId, setRemovingDocId] = useState<string | null>(null);
+  const [hasNewDoc, setHasNewDoc]   = useState(false);
 
   const [showDeleteConfirm, setShowDeleteConfirm]   = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm]   = useState(false);
@@ -611,10 +448,11 @@ export default function VerificationDetailPage() {
 
   const notesDirty = notes !== savedNotes;
 
-  const isDraft        = request?.status === "Draft";
-  const isNeedsMore    = request?.status === "NeedsMoreInfo";
-  const canEdit        = isDraft || isNeedsMore;
-  const canSubmit      = isDraft || isNeedsMore;
+  const isDraft     = request?.status === "Draft";
+  const isNeedsMore = request?.status === "NeedsMoreInfo";
+  const canEdit     = isDraft || isNeedsMore;
+  const canSubmit   = isDraft;
+  const canResubmit = isNeedsMore && (notesDirty || hasNewDoc);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -703,7 +541,28 @@ export default function VerificationDetailPage() {
   function handleDocAdded(updated: VRequestResponse) {
     setRequest(updated);
     setShowAddDoc(false);
-    setSuccess("تمت إضافة المستند بنجاح.");
+    setHasNewDoc(true);
+    if (!isNeedsMore) setSuccess("تمت إضافة المستند بنجاح.");
+  }
+
+  async function handleResubmit() {
+    setSubmitting(true); setError(""); setSuccess("");
+    try {
+      if (notesDirty) {
+        await api.put(`/verification/requests/${id}/notes`, { userNotes: notes.trim() || null });
+      }
+      const res: VRequestResponse = await api.post(`/verification/requests/${id}/submit`, {});
+      setRequest(res);
+      const saved = res.userNotes ?? "";
+      setNotes(saved);
+      setSavedNotes(saved);
+      setHasNewDoc(false);
+      toast.success("تم إعادة إرسال طلبك للمراجعة بنجاح");
+    } catch (e) {
+      setError(normalizeError(e));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (loading) {
@@ -810,17 +669,81 @@ export default function VerificationDetailPage() {
           </div>
         )}
 
-        {/* Conversation thread — shown for NeedsMoreInfo or when messages exist */}
-        {(isNeedsMore || (request.messages?.length ?? 0) > 0) && (
-          <ConversationThread
-            messages={request.messages ?? []}
-            status={request.status}
-            onReplySent={(updated) => setRequest(updated)}
-          />
+        {/* ── NeedsMoreInfo: استكمال طلب التوثيق ── */}
+        {isNeedsMore && (
+          <div style={{
+            background: "#fff", border: "1px solid #bae6fd",
+            borderRadius: 12, padding: "1.25rem",
+            marginBottom: "1rem",
+            boxShadow: "0 1px 4px rgba(14,165,233,0.08)",
+          }}>
+            <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0369a1", marginBottom: "1rem" }}>
+              استكمال طلب التوثيق
+            </div>
+
+            {/* Admin note (read-only) */}
+            {request.adminNotes && (
+              <div style={{ marginBottom: "1rem" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "#92400e", marginBottom: 5 }}>
+                  ملاحظة الإدارة
+                </div>
+                <div style={{
+                  background: "#fffbeb", border: "1px solid #fde68a",
+                  borderRadius: 9, padding: "0.7rem 0.9rem",
+                  fontSize: "0.86rem", color: "#78350f", lineHeight: 1.65,
+                }}>
+                  {request.adminNotes}
+                </div>
+              </div>
+            )}
+
+            {/* User notes textarea */}
+            <div style={{ marginBottom: "0.5rem" }}>
+              <label style={{
+                display: "block", fontSize: "0.78rem", fontWeight: 600,
+                color: "#475569", marginBottom: 5,
+              }}>
+                ملاحظاتك للإدارة
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => { setNotes(e.target.value); setNotesBanner(null); }}
+                rows={4}
+                maxLength={1000}
+                placeholder="اكتب ملاحظتك أو توضيحك للإدارة..."
+                disabled={submitting}
+                style={{
+                  width: "100%",
+                  border: `1px solid ${notesDirty ? "#93c5fd" : "#e2e8f0"}`,
+                  borderRadius: 8, padding: "0.55rem 0.8rem",
+                  fontSize: "0.85rem", color: "#1e293b",
+                  resize: "vertical", boxSizing: "border-box", outline: "none",
+                  lineHeight: 1.7, direction: "rtl", background: "#fafbfc",
+                  transition: "border-color 0.15s",
+                }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
+                <span style={{ fontSize: "0.71rem", color: notes.length > 950 ? "#dc2626" : "#94a3b8" }}>
+                  {notes.length} / 1000
+                </span>
+                {notesBanner && (
+                  <span style={{
+                    fontSize: "0.74rem",
+                    color: notesBanner.type === "ok" ? "#166534" : "#dc2626",
+                    background: notesBanner.type === "ok" ? "#f0fdf4" : "#fef2f2",
+                    border: `1px solid ${notesBanner.type === "ok" ? "#bbf7d0" : "#fecaca"}`,
+                    borderRadius: 6, padding: "2px 10px",
+                  }}>
+                    {notesBanner.msg}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Simple admin notes block — shown for other statuses (Rejected, etc.) */}
-        {request.adminNotes && !isNeedsMore && (request.messages?.length ?? 0) === 0 && (
+        {/* Simple admin notes — shown for non-NeedsMoreInfo statuses (Rejected, etc.) */}
+        {request.adminNotes && !isNeedsMore && (
           <div style={{
             background: "#fffbeb", border: "1px solid #fde68a",
             borderRadius: 10, padding: "0.85rem 1rem", marginBottom: "1rem",
@@ -830,8 +753,8 @@ export default function VerificationDetailPage() {
           </div>
         )}
 
-        {/* Notes card */}
-        <div style={{
+        {/* Notes card — hidden when NeedsMoreInfo (notes are inside the استكمال section) */}
+        {!isNeedsMore && <div style={{
           background: "#fff", border: "1px solid #e2e8f0",
           borderRadius: 12, padding: "1.1rem 1.25rem",
           marginBottom: "1rem",
@@ -907,7 +830,7 @@ export default function VerificationDetailPage() {
               {request.userNotes || "لا توجد ملاحظات"}
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Documents card */}
         <div style={{
@@ -989,7 +912,43 @@ export default function VerificationDetailPage() {
           )}
         </div>
 
-        {/* Submit section */}
+        {/* ── NeedsMoreInfo: Resubmit button ── */}
+        {isNeedsMore && (
+          <div style={{
+            background: "#f0fdf4", border: "1px solid #bbf7d0",
+            borderRadius: 12, padding: "1.1rem 1.25rem",
+            marginBottom: "1rem",
+          }}>
+            <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#166534", marginBottom: 4 }}>
+              إعادة إرسال الطلب للمراجعة
+            </div>
+            <div style={{ fontSize: "0.8rem", color: "#15803d", marginBottom: "0.85rem", lineHeight: 1.6 }}>
+              تأكد من استكمال ملاحظاتك وإرفاق أي مستندات إضافية قبل إعادة الإرسال.
+            </div>
+            <button
+              onClick={handleResubmit}
+              disabled={!canResubmit || submitting}
+              style={{
+                padding: "0.55rem 1.75rem",
+                background: canResubmit && !submitting ? "var(--color-primary)" : "#e2e8f0",
+                color: canResubmit && !submitting ? "#fff" : "#94a3b8",
+                border: "none", borderRadius: 8,
+                fontSize: "0.88rem", fontWeight: 700,
+                cursor: canResubmit && !submitting ? "pointer" : "not-allowed",
+                transition: "background 0.15s",
+              }}
+            >
+              {submitting ? "جاري الإرسال…" : "إعادة إرسال الطلب للمراجعة"}
+            </button>
+            {!canResubmit && !submitting && (
+              <div style={{ fontSize: "0.76rem", color: "#94a3b8", marginTop: 6 }}>
+                أضف ملاحظة أو ارفع مستنداً جديداً لتفعيل الزر
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Submit section — Draft only */}
         {canSubmit && (
           <div style={{
             background: "#f0fdf4", border: "1px solid #bbf7d0",
