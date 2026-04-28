@@ -19,6 +19,7 @@ export interface AdminSubscriptionDto {
   billingCycle:      string | null;
   priceAmount:       number;
   currencyCode:      string;
+  subscriptionNumber: string | null;
 }
 
 export interface AssignPlanRequest {

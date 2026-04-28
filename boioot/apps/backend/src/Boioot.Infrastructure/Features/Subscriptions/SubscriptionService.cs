@@ -231,6 +231,7 @@ public sealed class SubscriptionService : ISubscriptionService
             CreatedAt          = now,
             UpdatedAt          = now,
         };
+        sub.SubscriptionNumber = await GenerateSubscriptionNumberAsync(ct);
 
         _db.Subscriptions.Add(sub);
 
@@ -310,6 +311,7 @@ public sealed class SubscriptionService : ISubscriptionService
             CreatedAt          = now,
             UpdatedAt          = now,
         };
+        newSub.SubscriptionNumber = await GenerateSubscriptionNumberAsync(ct);
         _db.Subscriptions.Add(newSub);
 
         string eventType;
@@ -443,6 +445,7 @@ public sealed class SubscriptionService : ISubscriptionService
                 BillingCycle      = pricing?.BillingCycle,
                 PriceAmount       = pricing?.PriceAmount ?? 0,
                 CurrencyCode      = pricing?.CurrencyCode ?? "SYP",
+                SubscriptionNumber = sub.SubscriptionNumber,
             });
         }
 
@@ -562,6 +565,10 @@ public sealed class SubscriptionService : ISubscriptionService
                 .ToListAsync(ct)
             : [];
 
+        // Base count for generating sequential numbers in the loop
+        var baseSubCount = await _db.Subscriptions.CountAsync(ct);
+        int downgradeOffset = 0;
+
         foreach (var s in stale)
         {
             var quotaConsumed = s.Plan?.ListingLimit > 0 && s.ListingQuotaUsed >= s.Plan.ListingLimit;
@@ -606,6 +613,7 @@ public sealed class SubscriptionService : ISubscriptionService
                         PaymentRef         = "auto_downgrade",
                         CreatedAt          = now,
                         UpdatedAt          = now,
+                        SubscriptionNumber = $"SUB-{now.Year}-{(baseSubCount + ++downgradeOffset):D6}",
                     };
                     _db.Subscriptions.Add(downgradesSub);
 
@@ -812,4 +820,18 @@ public sealed class SubscriptionService : ISubscriptionService
         "OneTime" => "دفعة واحدة",
         _         => "شهرياً",
     };
+
+    // ── Private: subscription number generation ───────────────────────────────
+
+    /// <summary>
+    /// Generates the next unique subscription reference number in the format SUB-YYYY-NNNNNN.
+    /// YYYY = current UTC year. NNNNNN = total subscription count + 1 (globally sequential).
+    /// A unique DB index ensures collision safety if two requests race.
+    /// </summary>
+    private async Task<string> GenerateSubscriptionNumberAsync(CancellationToken ct)
+    {
+        var year  = DateTime.UtcNow.Year;
+        var total = await _db.Subscriptions.CountAsync(ct);
+        return $"SUB-{year}-{(total + 1):D6}";
+    }
 }

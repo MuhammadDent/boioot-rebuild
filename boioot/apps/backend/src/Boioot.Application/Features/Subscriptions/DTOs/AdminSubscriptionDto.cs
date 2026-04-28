@@ -19,4 +19,5 @@ public sealed class AdminSubscriptionDto
     public string? BillingCycle       { get; init; }
     public decimal PriceAmount        { get; init; }
     public string CurrencyCode        { get; init; } = "SYP";
+    public string? SubscriptionNumber { get; init; }
 }

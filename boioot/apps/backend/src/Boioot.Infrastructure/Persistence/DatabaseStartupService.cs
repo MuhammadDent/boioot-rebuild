@@ -115,6 +115,7 @@ public sealed class DatabaseStartupService
         await ApplyIntegrationsPatchAsync(ct);
         await ApplyMessagingPatchAsync(ct);
         await ApplyUserTagsPatchAsync(ct);
+        await ApplySubscriptionNumberPatchAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
         await SyncIsCoverFromIsPrimaryAsync(ct);
@@ -806,6 +807,61 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("[schema-patch] UserTags patch failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    // ── Subscription reference numbers ────────────────────────────────────────
+
+    /// <summary>
+    /// Adds SubscriptionNumber column (nullable varchar 20) and backfills
+    /// existing rows with generated SUB-YYYY-NNNNNN values, then creates a
+    /// unique partial index so future rows cannot collide.
+    /// Fully idempotent — safe to run on every startup.
+    /// </summary>
+    private async Task ApplySubscriptionNumberPatchAsync(CancellationToken ct)
+    {
+        if (!IsPostgres) return;
+
+        try
+        {
+            // 1. Add column if absent
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Subscriptions" ADD COLUMN IF NOT EXISTS "SubscriptionNumber" character varying(20)""", ct);
+
+            // 2. Backfill existing rows that have no number yet.
+            //    Partition by year so each year's counter restarts at 000001.
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "Subscriptions" s
+                SET    "SubscriptionNumber" = sub_numbered."num"
+                FROM (
+                    SELECT "Id",
+                           'SUB-' || TO_CHAR("CreatedAt", 'YYYY') || '-' ||
+                           LPAD(ROW_NUMBER() OVER (
+                               PARTITION BY DATE_PART('year', "CreatedAt")
+                               ORDER BY "CreatedAt", "Id"
+                           )::text, 6, '0') AS num
+                    FROM "Subscriptions"
+                    WHERE "SubscriptionNumber" IS NULL
+                ) sub_numbered
+                WHERE s."Id" = sub_numbered."Id"
+                  AND s."SubscriptionNumber" IS NULL
+                """, ct);
+
+            // 3. Unique partial index — only indexes non-NULL values (safe for
+            //    any rows that might still be NULL on non-Postgres envs).
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_Subscriptions_SubscriptionNumber"
+                ON "Subscriptions" ("SubscriptionNumber")
+                WHERE "SubscriptionNumber" IS NOT NULL
+                """, ct);
+
+            _log.LogInformation("[schema-patch] Subscriptions.SubscriptionNumber patch applied.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] Subscriptions.SubscriptionNumber patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 }

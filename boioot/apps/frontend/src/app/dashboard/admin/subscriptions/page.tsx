@@ -528,7 +528,7 @@ export default function AdminSubscriptionsPage() {
             }}>
               <thead>
                 <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1.5px solid #e2e8f0" }}>
-                  {["الحساب", "البريد", "الباقة", "الحالة", "تاريخ البدء", "نهاية الفترة", "إجراءات"].map(h => (
+                  {["رقم الاشتراك", "الحساب", "البريد", "الباقة", "الحالة", "تاريخ البدء", "نهاية الفترة", "إجراءات"].map(h => (
                     <th key={h} style={{
                       padding: "0.85rem 1rem", textAlign: "right",
                       fontWeight: 700, color: "#374151", whiteSpace: "nowrap",
@@ -549,6 +549,24 @@ export default function AdminSubscriptionsPage() {
                         backgroundColor: idx % 2 === 0 ? "#fff" : "#fafafa",
                       }}
                     >
+                      {/* Subscription Number */}
+                      <td style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>
+                        {sub.subscriptionNumber ? (
+                          <span style={{
+                            fontFamily: "monospace",
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            color: "#1e293b",
+                            backgroundColor: "#f1f5f9",
+                            borderRadius: 6,
+                            padding: "0.2rem 0.5rem",
+                          }}>
+                            {sub.subscriptionNumber}
+                          </span>
+                        ) : (
+                          <span style={{ color: "#94a3b8", fontSize: "0.78rem" }}>—</span>
+                        )}
+                      </td>
                       {/* Account */}
                       <td style={{ padding: "0.85rem 1rem" }}>
                         <div style={{ fontWeight: 700, color: "#1e293b" }}>{sub.accountName}</div>
