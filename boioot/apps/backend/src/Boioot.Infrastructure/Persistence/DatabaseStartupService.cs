@@ -353,6 +353,18 @@ public sealed class DatabaseStartupService
         {
             _log.LogWarning("[schema-patch] Booking MVP patch failed (non-critical): {Msg}", ex.Message);
         }
+
+        // ── Verification conversation thread ──────────────────────────────────
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "VerificationRequests" ADD COLUMN IF NOT EXISTS "ConversationJson" text""", ct);
+            _log.LogInformation("[schema-patch] VerificationRequests.ConversationJson patch applied.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] VerificationRequests.ConversationJson patch failed (non-critical): {Msg}", ex.Message);
+        }
     }
 
     /// <summary>

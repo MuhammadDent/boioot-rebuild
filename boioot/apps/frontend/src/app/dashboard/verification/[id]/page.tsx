@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { toast } from "sonner";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
@@ -27,6 +27,12 @@ interface VDocResponse {
   createdAt: string;
 }
 
+interface VMessage {
+  role: "admin" | "user";
+  content: string;
+  sentAt: string;
+}
+
 interface VRequestResponse {
   id: string;
   userId: string;
@@ -37,6 +43,7 @@ interface VRequestResponse {
   userNotes?: string;
   adminNotes?: string;
   rejectionReason?: string;
+  messages: VMessage[];
   documents: VDocResponse[];
   createdAt: string;
   updatedAt: string;
@@ -114,8 +121,6 @@ function DocRow({
   const isPdf    = doc.mimeType === "application/pdf" || doc.fileUrl?.endsWith(".pdf");
   const fileUrl  = resolveFileUrl(doc.fileUrl);
 
-  console.log("[DocRow] raw url:", doc.fileUrl);
-  console.log("[DocRow] resolved url:", fileUrl);
 
   return (
     <div style={{
@@ -420,6 +425,163 @@ function ConfirmModal({
   );
 }
 
+// ── Conversation thread ───────────────────────────────────────────────────────
+
+function ConversationThread({
+  messages,
+  status,
+  onReplySent,
+}: {
+  messages: VMessage[];
+  status: string;
+  onReplySent: (updated: VRequestResponse) => void;
+}) {
+  const [replyText, setReplyText]       = useState("");
+  const [sending, setSending]           = useState(false);
+  const [replyError, setReplyError]     = useState("");
+  const params = useParams();
+  const id = params?.id as string;
+
+  const canReply = status === "NeedsMoreInfo";
+
+  async function handleSend() {
+    const trimmed = replyText.trim();
+    if (!trimmed) return;
+    setSending(true);
+    setReplyError("");
+    try {
+      const updated: VRequestResponse = await api.post(`/verification/requests/${id}/reply`, { reply: trimmed });
+      setReplyText("");
+      onReplySent(updated);
+      toast.success("تم إرسال ردك بنجاح. سيتمّ مراجعته من قبل الإدارة.");
+    } catch (e) {
+      setReplyError(normalizeError(e));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (messages.length === 0 && !canReply) return null;
+
+  return (
+    <div style={{
+      background: "#fff", border: "1px solid #e2e8f0",
+      borderRadius: 12, padding: "1.1rem 1.25rem",
+      marginBottom: "1rem",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+    }}>
+      <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1e293b", marginBottom: "0.85rem" }}>
+        المراسلة مع الإدارة
+      </div>
+
+      {/* Messages */}
+      {messages.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", marginBottom: "1rem" }}>
+          {messages.map((msg, i) => {
+            const isAdmin = msg.role === "admin";
+            return (
+              <div key={i} style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: isAdmin ? "flex-end" : "flex-start",
+              }}>
+                <div style={{
+                  fontSize: "0.72rem", fontWeight: 600,
+                  color: isAdmin ? "#b45309" : "#1d4ed8",
+                  marginBottom: 3,
+                }}>
+                  {isAdmin ? "الإدارة" : "أنت"}
+                </div>
+                <div style={{
+                  maxWidth: "85%",
+                  background: isAdmin ? "#fffbeb" : "#eff6ff",
+                  border: `1px solid ${isAdmin ? "#fde68a" : "#bfdbfe"}`,
+                  borderRadius: 10,
+                  padding: "0.6rem 0.85rem",
+                  fontSize: "0.86rem",
+                  color: isAdmin ? "#78350f" : "#1e3a8a",
+                  lineHeight: 1.65,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                }}>
+                  {msg.content}
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "#94a3b8", marginTop: 2 }}>
+                  {fmtDate(msg.sentAt)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Reply area — only when NeedsMoreInfo */}
+      {canReply && (
+        <div>
+          <textarea
+            value={replyText}
+            onChange={(e) => { setReplyText(e.target.value); setReplyError(""); }}
+            rows={4}
+            maxLength={2000}
+            placeholder="أضف ردك على ملاحظة الإدارة..."
+            disabled={sending}
+            style={{
+              width: "100%",
+              border: `1px solid ${replyText.trim() ? "#93c5fd" : "#e2e8f0"}`,
+              borderRadius: 8,
+              padding: "0.55rem 0.8rem",
+              fontSize: "0.85rem",
+              color: "#1e293b",
+              resize: "vertical",
+              boxSizing: "border-box",
+              outline: "none",
+              lineHeight: 1.7,
+              direction: "rtl",
+              background: "#fafbfc",
+              transition: "border-color 0.15s",
+              marginBottom: "0.4rem",
+            }}
+          />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+            <span style={{
+              fontSize: "0.72rem",
+              color: replyText.length > 1900 ? "#dc2626" : "#94a3b8",
+            }}>
+              {replyText.length} / 2000
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              {replyError && (
+                <span style={{
+                  fontSize: "0.76rem", color: "#dc2626",
+                  background: "#fef2f2", border: "1px solid #fecaca",
+                  borderRadius: 6, padding: "2px 10px",
+                }}>
+                  {replyError}
+                </span>
+              )}
+              <button
+                onClick={handleSend}
+                disabled={sending || !replyText.trim()}
+                style={{
+                  padding: "0.42rem 1.2rem",
+                  background: replyText.trim() && !sending ? "var(--color-primary)" : "#e2e8f0",
+                  color: replyText.trim() && !sending ? "#fff" : "#94a3b8",
+                  border: "none", borderRadius: 7,
+                  fontSize: "0.82rem", fontWeight: 600,
+                  cursor: replyText.trim() && !sending ? "pointer" : "not-allowed",
+                  transition: "background 0.15s",
+                }}
+              >
+                {sending ? "جاري الإرسال…" : "إرسال الرد"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main detail page ──────────────────────────────────────────────────────────
 
 export default function VerificationDetailPage() {
@@ -449,9 +611,10 @@ export default function VerificationDetailPage() {
 
   const notesDirty = notes !== savedNotes;
 
-  const isDraft   = request?.status === "Draft";
-  const canEdit   = isDraft || request?.status === "NeedsMoreInfo";
-  const canSubmit = isDraft;
+  const isDraft        = request?.status === "Draft";
+  const isNeedsMore    = request?.status === "NeedsMoreInfo";
+  const canEdit        = isDraft || isNeedsMore;
+  const canSubmit      = isDraft || isNeedsMore;
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -647,7 +810,17 @@ export default function VerificationDetailPage() {
           </div>
         )}
 
-        {request.adminNotes && (
+        {/* Conversation thread — shown for NeedsMoreInfo or when messages exist */}
+        {(isNeedsMore || (request.messages?.length ?? 0) > 0) && (
+          <ConversationThread
+            messages={request.messages ?? []}
+            status={request.status}
+            onReplySent={(updated) => setRequest(updated)}
+          />
+        )}
+
+        {/* Simple admin notes block — shown for other statuses (Rejected, etc.) */}
+        {request.adminNotes && !isNeedsMore && (request.messages?.length ?? 0) === 0 && (
           <div style={{
             background: "#fffbeb", border: "1px solid #fde68a",
             borderRadius: 10, padding: "0.85rem 1rem", marginBottom: "1rem",

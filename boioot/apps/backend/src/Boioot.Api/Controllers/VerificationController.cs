@@ -90,4 +90,14 @@ public class VerificationController : BaseController
         var result = await _service.UpdateUserNotesAsync(userId, id, dto, ct);
         return Ok(result);
     }
+
+    /// <summary>Reply to admin notes when status is NeedsMoreInfo → transitions back to Pending</summary>
+    [HttpPost("requests/{id:guid}/reply")]
+    public async Task<IActionResult> ReplyToAdmin(
+        Guid id, [FromBody] UserReplyDto dto, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        var result = await _service.ReplyToAdminAsync(userId, id, dto, ct);
+        return Ok(result);
+    }
 }

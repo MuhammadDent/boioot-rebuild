@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Notifications.Interfaces;
@@ -310,12 +311,26 @@ public class VerificationRequestService : IVerificationRequestService
         if (request.Status is VerificationRequestStatus.Draft)
             throw new BoiootException("لا يمكن مراجعة طلب لم يُقدَّم بعد", 400);
 
-        request.Status         = newStatus;
-        request.AdminNotes     = dto.AdminNotes?.Trim();
+        request.Status          = newStatus;
+        request.AdminNotes      = dto.AdminNotes?.Trim();
         request.RejectionReason = dto.RejectionReason?.Trim();
-        request.ReviewedAt     = DateTime.UtcNow;
-        request.ReviewedBy     = adminUserId.ToString();
-        request.UpdatedAt      = DateTime.UtcNow;
+        request.ReviewedAt      = DateTime.UtcNow;
+        request.ReviewedBy      = adminUserId.ToString();
+        request.UpdatedAt       = DateTime.UtcNow;
+
+        // Append admin note to conversation thread when requesting more info
+        if (newStatus is VerificationRequestStatus.NeedsMoreInfo &&
+            !string.IsNullOrWhiteSpace(dto.AdminNotes))
+        {
+            var msgs = DeserializeMessages(request.ConversationJson);
+            msgs.Add(new VerificationMessage
+            {
+                Role    = "admin",
+                Content = dto.AdminNotes.Trim(),
+                SentAt  = DateTime.UtcNow,
+            });
+            request.ConversationJson = SerializeMessages(msgs);
+        }
 
         // When approved: update the user's verification via the unified service logic
         if (newStatus is VerificationRequestStatus.Approved)
@@ -418,7 +433,94 @@ public class VerificationRequestService : IVerificationRequestService
         return await GetRequestByIdCoreAsync(requestId, ct);
     }
 
+    public async Task<VerificationRequestResponse> ReplyToAdminAsync(
+        Guid userId, Guid requestId, UserReplyDto dto, CancellationToken ct = default)
+    {
+        var trimmed = dto.Reply?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            throw new BoiootException("الرد لا يمكن أن يكون فارغاً", 400);
+        if (trimmed.Length > 2000)
+            throw new BoiootException("الرد لا يمكن أن يتجاوز 2000 حرف", 400);
+
+        var request = await _context.Set<VerificationRequest>()
+            .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId, ct)
+            ?? throw new BoiootException("الطلب غير موجود", 404);
+
+        if (request.Status != VerificationRequestStatus.NeedsMoreInfo)
+            throw new BoiootException("لا يمكن إرسال رد إلا عندما يكون الطلب بحاجة إلى معلومات إضافية", 400);
+
+        var messages = DeserializeMessages(request.ConversationJson);
+
+        // Seed existing AdminNotes as the first admin message if conversation is empty
+        if (messages.Count == 0 && !string.IsNullOrWhiteSpace(request.AdminNotes))
+        {
+            messages.Add(new VerificationMessage
+            {
+                Role    = "admin",
+                Content = request.AdminNotes,
+                SentAt  = request.ReviewedAt ?? request.UpdatedAt,
+            });
+        }
+
+        messages.Add(new VerificationMessage
+        {
+            Role    = "user",
+            Content = trimmed,
+            SentAt  = DateTime.UtcNow,
+        });
+
+        request.ConversationJson = SerializeMessages(messages);
+        request.Status           = VerificationRequestStatus.Pending;
+        request.SubmittedAt      = DateTime.UtcNow;
+        request.UpdatedAt        = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "User {UserId} replied to admin on verification request {RequestId}; status → Pending",
+            userId, requestId);
+
+        // Notify admins
+        try
+        {
+            var userName = await _context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync(ct) ?? "مستخدم";
+
+            await NotifyAdminsVerificationAsync(
+                "verification_new_request",
+                "رد على طلب توثيق",
+                $"ردّ {userName} على ملاحظات الإدارة في طلب التوثيق",
+                requestId.ToString(),
+                ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Failed to send admin notification for verification reply {RequestId}", requestId);
+        }
+
+        return await GetRequestByIdCoreAsync(requestId, ct);
+    }
+
     // ── Shared private helpers ────────────────────────────────────────────────
+
+    private static readonly JsonSerializerOptions _jsonOpts = new()
+    {
+        PropertyNamingPolicy        = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+    };
+
+    private static List<VerificationMessage> DeserializeMessages(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+        try { return JsonSerializer.Deserialize<List<VerificationMessage>>(json, _jsonOpts) ?? []; }
+        catch { return []; }
+    }
+
+    private static string SerializeMessages(List<VerificationMessage> messages)
+        => JsonSerializer.Serialize(messages, _jsonOpts);
 
     private async Task<VerificationRequestResponse> GetRequestByIdCoreAsync(
         Guid requestId, CancellationToken ct)
@@ -429,6 +531,19 @@ public class VerificationRequestService : IVerificationRequestService
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == requestId, ct)
             ?? throw new BoiootException("الطلب غير موجود", 404);
+
+        // Build conversation: start from stored JSON, then fall back to seeding from AdminNotes
+        var messages = DeserializeMessages(r.ConversationJson);
+        if (messages.Count == 0 && !string.IsNullOrWhiteSpace(r.AdminNotes) &&
+            r.Status is VerificationRequestStatus.NeedsMoreInfo)
+        {
+            messages.Add(new VerificationMessage
+            {
+                Role    = "admin",
+                Content = r.AdminNotes,
+                SentAt  = r.ReviewedAt ?? r.UpdatedAt,
+            });
+        }
 
         return new VerificationRequestResponse
         {
@@ -444,6 +559,7 @@ public class VerificationRequestService : IVerificationRequestService
             UserNotes        = r.UserNotes,
             AdminNotes       = r.AdminNotes,
             RejectionReason  = r.RejectionReason,
+            Messages         = messages,
             CreatedAt        = r.CreatedAt,
             UpdatedAt        = r.UpdatedAt,
             Documents        = r.Documents.Select(d => new VerificationDocumentResponse

@@ -1,5 +1,21 @@
 namespace Boioot.Application.Features.VerificationRequests.DTOs;
 
+// ── Conversation thread ───────────────────────────────────────────────────────
+
+/// <summary>A single message in the admin ↔ user conversation.</summary>
+public class VerificationMessage
+{
+    /// <summary>"admin" or "user"</summary>
+    public string Role    { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public DateTime SentAt { get; set; }
+}
+
+public class UserReplyDto
+{
+    public string Reply { get; set; } = string.Empty;
+}
+
 // ── User-side request/response ────────────────────────────────────────────────
 
 public class CreateVerificationRequestDto
@@ -47,6 +63,7 @@ public class VerificationRequestResponse
     public string? UserNotes { get; set; }
     public string? AdminNotes { get; set; }
     public string? RejectionReason { get; set; }
+    public List<VerificationMessage> Messages { get; set; } = [];
     public List<VerificationDocumentResponse> Documents { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

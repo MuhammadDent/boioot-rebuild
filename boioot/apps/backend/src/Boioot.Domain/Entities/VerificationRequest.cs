@@ -18,5 +18,8 @@ public class VerificationRequest : BaseEntity
     public string? AdminNotes { get; set; }
     public string? RejectionReason { get; set; }
 
+    /// <summary>JSON array of { Role, Content, SentAt } messages for two-way communication.</summary>
+    public string? ConversationJson { get; set; }
+
     public ICollection<VerificationDocument> Documents { get; set; } = [];
 }
