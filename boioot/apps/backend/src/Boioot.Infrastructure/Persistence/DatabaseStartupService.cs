@@ -909,7 +909,27 @@ public sealed class DatabaseStartupService
                 WHERE "ReferenceNumber" IS NOT NULL
                 """, ct);
 
-            _log.LogInformation("[schema-patch] ReferenceNumber columns and indexes applied.");
+            // ── Backfill existing Users that have no ReferenceNumber ──────────
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                WITH ordered AS (
+                    SELECT
+                        "Id",
+                        EXTRACT(YEAR FROM "CreatedAt")::TEXT AS yr,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY EXTRACT(YEAR FROM "CreatedAt")
+                            ORDER BY "CreatedAt", "Id"
+                        ) AS rn
+                    FROM "Users"
+                    WHERE "ReferenceNumber" IS NULL
+                )
+                UPDATE "Users" u
+                SET "ReferenceNumber" = CONCAT('USR-', o.yr, '-', LPAD(o.rn::TEXT, 6, '0'))
+                FROM ordered o
+                WHERE u."Id" = o."Id"
+                """, ct);
+
+            _log.LogInformation("[schema-patch] ReferenceNumber columns, indexes, and backfill applied.");
         }
         catch (Exception ex)
         {
