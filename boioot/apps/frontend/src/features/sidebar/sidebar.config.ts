@@ -213,6 +213,14 @@ export const ROLE_DISPLAY: Record<string, string> = {
   User:         "مستخدم",
 };
 
+// ── Shared items available to ALL authenticated roles ─────────────────────────
+
+const FAVORITES_ITEM: SidebarItem = {
+  href:  "/dashboard/favorites",
+  label: "المفضلة",
+  icon:  I.heart,
+};
+
 // ── Shared base groups for customer roles ──────────────────────────────────────
 
 const OVERVIEW_GROUP: SidebarGroup = {
@@ -301,6 +309,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         { href: "/dashboard/bookings",     label: "الحجوزات",    icon: I.check },
         { href: "/dashboard/my-requests",  label: "طلباتي",      icon: I.requests },
         { href: "/dashboard/insights",     label: "الإحصائيات",  icon: I.chart, feature: "analytics_dashboard" as FeatureKey },
+        FAVORITES_ITEM,
       ],
     },
     VERIFICATION_GROUP,
@@ -322,6 +331,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         { href: "/dashboard/bookings",    label: "الحجوزات",     icon: I.check },
         { href: "/dashboard/my-requests", label: "طلباتي",       icon: I.requests },
         { href: "/dashboard/insights",    label: "الإحصائيات",   icon: I.chart, feature: "analytics_dashboard" as FeatureKey },
+        FAVORITES_ITEM,
       ],
     },
     VERIFICATION_GROUP,
@@ -342,6 +352,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         { href: "/dashboard/bookings",    label: "الحجوزات",     icon: I.check },
         { href: "/dashboard/my-requests", label: "الطلبات",      icon: I.requests },
         { href: "/dashboard/insights",    label: "الإحصائيات",   icon: I.chart, feature: "analytics_dashboard" as FeatureKey },
+        FAVORITES_ITEM,
       ],
     },
     VERIFICATION_GROUP,
@@ -363,6 +374,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         { href: "/dashboard/bookings",    label: "الحجوزات",     icon: I.check },
         { href: "/dashboard/my-requests", label: "الطلبات",      icon: I.requests },
         { href: "/dashboard/insights",    label: "الإحصائيات",   icon: I.chart, feature: "analytics_dashboard" as FeatureKey },
+        FAVORITES_ITEM,
       ],
     },
     VERIFICATION_GROUP,
