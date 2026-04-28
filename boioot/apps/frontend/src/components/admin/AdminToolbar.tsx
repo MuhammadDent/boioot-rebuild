@@ -48,7 +48,6 @@ export default function AdminToolbar() {
         zIndex: 300,
         height: 52,
         maxWidth: "100%",
-        overflow: "hidden",
         backgroundColor: "#0f172a",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
         display: "flex",
