@@ -142,6 +142,7 @@ public class AdminService : IAdminService
                 u.VerificationBadge,
                 u.VerificationNotes,
                 u.RejectionReason,
+                u.ReferenceNumber,
             })
             .ToListAsync(ct);
 
@@ -236,6 +237,7 @@ public class AdminService : IAdminService
                 VerificationBadge          = u.VerificationBadge,
                 VerificationNotes          = u.VerificationNotes,
                 RejectionReason            = u.RejectionReason,
+                ReferenceNumber            = u.ReferenceNumber,
             };
         }).ToList();
 
