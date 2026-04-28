@@ -12,31 +12,54 @@ import type { AdminPlanSummary } from "@/types";
 
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleCopy(e: React.MouseEvent) {
     e.stopPropagation();
     navigator.clipboard.writeText(value).then(() => {
       setCopied(true);
+      setToast(true);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => setCopied(false), 1800);
+      if (toastRef.current) clearTimeout(toastRef.current);
+      toastRef.current = setTimeout(() => setToast(false), 2200);
     }).catch(() => {});
   }
 
   return (
-    <button
-      onClick={handleCopy}
-      type="button"
-      title="نسخ"
-      style={{
-        background: "none", border: "none", cursor: "pointer",
-        padding: "0 0.25rem", color: copied ? "#059669" : "#94a3b8",
-        fontSize: "0.78rem", lineHeight: 1, verticalAlign: "middle",
-        transition: "color 0.15s",
-      }}
-    >
-      {copied ? "✓" : "⎘"}
-    </button>
+    <>
+      <button
+        onClick={handleCopy}
+        type="button"
+        title="نسخ"
+        style={{
+          background: "none", border: "none", cursor: "pointer",
+          padding: "0 0.25rem", color: copied ? "#059669" : "#94a3b8",
+          fontSize: "0.78rem", lineHeight: 1, verticalAlign: "middle",
+          transition: "color 0.15s",
+        }}
+      >
+        {copied ? "✓" : "⎘"}
+      </button>
+      {toast && (
+        <div
+          style={{
+            position: "fixed", bottom: "2rem", left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "#1e293b", color: "#fff",
+            padding: "0.55rem 1.3rem", borderRadius: 24,
+            fontSize: "0.85rem", fontWeight: 600,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+            zIndex: 9999, pointerEvents: "none",
+            whiteSpace: "nowrap", direction: "rtl",
+          }}
+        >
+          ✓ تم نسخ رقم الاشتراك
+        </div>
+      )}
+    </>
   );
 }
 
