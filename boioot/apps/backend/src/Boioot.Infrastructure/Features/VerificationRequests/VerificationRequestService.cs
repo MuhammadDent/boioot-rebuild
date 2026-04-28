@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Boioot.Application.Common.Models;
+using Boioot.Infrastructure.Common;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Notifications.Interfaces;
 using Boioot.Application.Features.VerificationRequests.DTOs;
@@ -39,9 +40,13 @@ public class VerificationRequestService : IVerificationRequestService
         if (!Enum.TryParse<VerificationType>(dto.VerificationType, out var vt))
             throw new BoiootException("نوع التوثيق غير صالح", 400);
 
+        var refNumber = await ReferenceGenerator.NextAsync(
+            _context.Set<VerificationRequest>().Select(v => v.ReferenceNumber), "VER", ct);
+
         var request = new VerificationRequest
         {
             Id               = Guid.NewGuid(),
+            ReferenceNumber  = refNumber,
             UserId           = userId,
             VerificationType = vt,
             Status           = VerificationRequestStatus.Draft,
@@ -279,6 +284,7 @@ public class VerificationRequestService : IVerificationRequestService
             .Select(r => new VerificationRequestSummary
             {
                 Id               = r.Id,
+                ReferenceNumber  = r.ReferenceNumber,
                 UserId           = r.UserId,
                 UserFullName     = r.User != null ? r.User.FullName : null,
                 UserEmail        = r.User != null ? r.User.Email : null,
@@ -548,6 +554,7 @@ public class VerificationRequestService : IVerificationRequestService
         return new VerificationRequestResponse
         {
             Id               = r.Id,
+            ReferenceNumber  = r.ReferenceNumber,
             UserId           = r.UserId,
             UserFullName     = r.User?.FullName,
             UserEmail        = r.User?.Email,

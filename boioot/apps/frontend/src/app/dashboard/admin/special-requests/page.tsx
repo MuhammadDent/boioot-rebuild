@@ -169,22 +169,37 @@ export default function AdminSpecialRequestsPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e5e7eb" }}>
-              {["الكود", "الاسم", "الهاتف", "نص الطلب", "الحالة", "تاريخ الإرسال", "إجراء"].map(h => (
+              {["الكود", "رقم المرجع", "الاسم", "الهاتف", "نص الطلب", "الحالة", "تاريخ الإرسال", "إجراء"].map(h => (
                 <th key={h} style={{ padding: "12px 16px", textAlign: "right", fontWeight: 700, color: "#374151", whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={{ textAlign: "center", padding: 48, color: "#999" }}>جاري التحميل...</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: "center", padding: 48, color: "#999" }}>جاري التحميل...</td></tr>
             ) : requests.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: "center", padding: 48, color: "#999" }}>لا توجد طلبات</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: "center", padding: 48, color: "#999" }}>لا توجد طلبات</td></tr>
             ) : requests.map(r => {
               const st = STATUS_STYLES[r.status] ?? STATUS_STYLES.New;
               return (
                 <tr key={r.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "12px 16px", color: "#6b7280", fontFamily: "monospace", whiteSpace: "nowrap" }}>
                     {r.publicCode}
+                  </td>
+                  <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                    {r.referenceNumber ? (
+                      <span
+                        title="انقر للنسخ"
+                        onClick={() => navigator.clipboard.writeText(r.referenceNumber!)}
+                        style={{
+                          fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
+                          background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
+                          padding: "2px 7px", cursor: "copy",
+                        }}
+                      >
+                        {r.referenceNumber}
+                      </span>
+                    ) : <span style={{ color: "#94a3b8" }}>—</span>}
                   </td>
                   <td style={{ padding: "12px 16px", fontWeight: 600, color: "#1a1a2e", whiteSpace: "nowrap" }}>
                     {r.fullName || "—"}

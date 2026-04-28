@@ -9,6 +9,7 @@ public class Request : BaseEntity
     public string? Email { get; set; }
     public string? Message { get; set; }
     public RequestStatus Status { get; set; } = RequestStatus.New;
+    public string? ReferenceNumber { get; set; }
 
     public Guid? PropertyId { get; set; }
     public Guid? ProjectId { get; set; }

@@ -21,5 +21,7 @@ public class VerificationRequest : BaseEntity
     /// <summary>JSON array of { Role, Content, SentAt } messages for two-way communication.</summary>
     public string? ConversationJson { get; set; }
 
+    public string? ReferenceNumber { get; set; }
+
     public ICollection<VerificationDocument> Documents { get; set; } = [];
 }

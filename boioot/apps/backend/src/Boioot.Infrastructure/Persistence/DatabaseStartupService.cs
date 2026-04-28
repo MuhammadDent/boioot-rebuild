@@ -863,5 +863,57 @@ public sealed class DatabaseStartupService
         {
             _log.LogWarning("[schema-patch] Subscriptions.SubscriptionNumber patch failed (non-critical): {Msg}", ex.Message);
         }
+
+        // ── Reference numbers for admin entities ──────────────────────────────
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "ReferenceNumber" character varying(25)""", ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "VerificationRequests" ADD COLUMN IF NOT EXISTS "ReferenceNumber" character varying(25)""", ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Requests" ADD COLUMN IF NOT EXISTS "ReferenceNumber" character varying(25)""", ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "BuyerRequests" ADD COLUMN IF NOT EXISTS "ReferenceNumber" character varying(25)""", ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "SpecialRequests" ADD COLUMN IF NOT EXISTS "ReferenceNumber" character varying(25)""", ct);
+
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_Users_ReferenceNumber"
+                ON "Users" ("ReferenceNumber")
+                WHERE "ReferenceNumber" IS NOT NULL
+                """, ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_VerificationRequests_ReferenceNumber"
+                ON "VerificationRequests" ("ReferenceNumber")
+                WHERE "ReferenceNumber" IS NOT NULL
+                """, ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_Requests_ReferenceNumber"
+                ON "Requests" ("ReferenceNumber")
+                WHERE "ReferenceNumber" IS NOT NULL
+                """, ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_BuyerRequests_ReferenceNumber"
+                ON "BuyerRequests" ("ReferenceNumber")
+                WHERE "ReferenceNumber" IS NOT NULL
+                """, ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_SpecialRequests_ReferenceNumber"
+                ON "SpecialRequests" ("ReferenceNumber")
+                WHERE "ReferenceNumber" IS NOT NULL
+                """, ct);
+
+            _log.LogInformation("[schema-patch] ReferenceNumber columns and indexes applied.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] ReferenceNumber patch failed (non-critical): {Msg}", ex.Message);
+        }
     }
 }

@@ -6,6 +6,7 @@ namespace Boioot.Domain.Entities;
 public class User : BaseEntity, ISoftDeletable
 {
     public string UserCode { get; set; } = string.Empty;
+    public string? ReferenceNumber { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? Phone { get; set; }

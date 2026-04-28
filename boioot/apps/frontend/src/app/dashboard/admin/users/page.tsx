@@ -664,6 +664,21 @@ function UserRow({
               📞 {u.phone}
             </p>
           )}
+          {u.referenceNumber && (
+            <p style={{ margin: "0 0 0.15rem" }}>
+              <span
+                title="انقر للنسخ"
+                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(u.referenceNumber!); }}
+                style={{
+                  fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
+                  background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
+                  padding: "2px 7px", cursor: "copy",
+                }}
+              >
+                {u.referenceNumber}
+              </span>
+            </p>
+          )}
           {u.lastLoginAt && (
             <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
               آخر دخول: {new Date(u.lastLoginAt).toLocaleDateString("ar-SY")}

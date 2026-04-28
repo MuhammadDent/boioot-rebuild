@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Boioot.Infrastructure.Common;
 using Boioot.Application.Common.Models;
 using Boioot.Application.Features.Notifications.DTOs;
 using Boioot.Application.Features.Notifications.Interfaces;
@@ -29,10 +30,13 @@ public class SpecialRequestService : ISpecialRequestService
         CancellationToken ct = default)
     {
         var code = await GenerateCodeAsync(ct);
+        var refNumber = await ReferenceGenerator.NextAsync(
+            _context.SpecialRequests.Select(r => r.ReferenceNumber), "REQ", ct);
 
         var entity = new SpecialRequest
         {
             PublicCode      = code,
+            ReferenceNumber = refNumber,
             CreatedByUserId = userId,
             FullName        = dto.FullName.Trim(),
             Phone           = dto.Phone.Trim(),
@@ -187,6 +191,7 @@ public class SpecialRequestService : ISpecialRequestService
     {
         Id                  = r.Id,
         PublicCode          = r.PublicCode,
+        ReferenceNumber     = r.ReferenceNumber,
         FullName            = r.FullName,
         Phone               = r.Phone,
         WhatsApp            = r.WhatsApp,

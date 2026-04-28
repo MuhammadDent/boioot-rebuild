@@ -3,6 +3,7 @@ namespace Boioot.Application.Features.BuyerRequests.DTOs;
 public class BuyerRequestResponse
 {
     public Guid Id { get; set; }
+    public string? ReferenceNumber { get; set; }
     public string Title { get; set; } = string.Empty;
     public string PropertyType { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

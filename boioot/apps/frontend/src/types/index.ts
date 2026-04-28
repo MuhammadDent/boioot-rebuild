@@ -471,6 +471,7 @@ export interface ConversationDetail {
 
 export interface RequestResponse {
   id: string;
+  referenceNumber?: string | null;
   name: string;
   phone: string;
   email?: string;
@@ -519,6 +520,7 @@ export interface AdminUserResponse {
   verificationBadge?: string;
   verificationNotes?: string;
   rejectionReason?: string;
+  referenceNumber?: string | null;
 }
 
 export interface UserVerificationResponse {

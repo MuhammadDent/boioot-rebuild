@@ -11,6 +11,7 @@ public class BuyerRequest : BaseEntity
 
     // Moderation status: Open | Closed | Reviewed
     public string Status { get; set; } = "Open";
+    public string? ReferenceNumber { get; set; }
 
     public Guid UserId { get; set; }
     public User? User { get; set; }

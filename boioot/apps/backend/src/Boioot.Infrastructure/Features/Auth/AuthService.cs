@@ -8,6 +8,7 @@ using Boioot.Application.Features.Auth.Interfaces;
 using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
 using Boioot.Domain.Enums;
+using Boioot.Infrastructure.Common;
 using Boioot.Infrastructure.Features.Rbac;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -54,10 +55,13 @@ public class AuthService : IAuthService
             : UserRole.User;
 
         var userCode = await GenerateUserCodeAsync(role, ct);
+        var referenceNumber = await ReferenceGenerator.NextAsync(
+            _context.Users.Select(u => u.ReferenceNumber), "USR", ct);
 
         var user = new User
         {
             UserCode = userCode,
+            ReferenceNumber = referenceNumber,
             FullName = request.FullName.Trim(),
             Email = emailLower,
             Phone = request.Phone?.Trim(),

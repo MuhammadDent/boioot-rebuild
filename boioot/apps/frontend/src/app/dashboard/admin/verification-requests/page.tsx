@@ -24,6 +24,7 @@ interface VDocResponse {
 
 interface VRequestSummary {
   id: string;
+  referenceNumber?: string | null;
   userId: string;
   userFullName?: string;
   userEmail?: string;
@@ -651,7 +652,7 @@ export default function AdminVerificationRequestsPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 540 }}>
           <thead>
             <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-              {["المستخدم", "النوع", "الحالة", "المستندات", "تاريخ التقديم", ""].map((h) => (
+              {["رقم المرجع", "المستخدم", "النوع", "الحالة", "المستندات", "تاريخ التقديم", ""].map((h) => (
                 <th key={h} style={{
                   padding: "0.65rem 1rem", textAlign: "right",
                   fontSize: "0.73rem", fontWeight: 600, color: "#64748b",
@@ -664,13 +665,13 @@ export default function AdminVerificationRequestsPage() {
           <tbody>
             {fetching ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b", fontSize: "0.85rem" }}>
+                <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem", color: "#64748b", fontSize: "0.85rem" }}>
                   جاري التحميل…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8", fontSize: "0.85rem" }}>
+                <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem", color: "#94a3b8", fontSize: "0.85rem" }}>
                   لا توجد طلبات توثيق
                 </td>
               </tr>
@@ -686,6 +687,21 @@ export default function AdminVerificationRequestsPage() {
                 onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "#f8fafc"; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "transparent"; }}
               >
+                <td style={{ padding: "0.7rem 1rem" }} onClick={(e) => e.stopPropagation()}>
+                  {item.referenceNumber ? (
+                    <span
+                      title="انقر للنسخ"
+                      onClick={() => navigator.clipboard.writeText(item.referenceNumber!)}
+                      style={{
+                        fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
+                        background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
+                        padding: "2px 7px", cursor: "copy", whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.referenceNumber}
+                    </span>
+                  ) : <span style={{ color: "#94a3b8" }}>—</span>}
+                </td>
                 <td style={{ padding: "0.7rem 1rem" }}>
                   <div style={{ fontSize: "0.84rem", fontWeight: 600, color: "#1e293b" }}>
                     {item.userFullName ?? "—"}

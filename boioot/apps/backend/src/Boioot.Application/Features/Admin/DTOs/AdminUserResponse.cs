@@ -33,6 +33,7 @@ public class AdminUserResponse
     public string? VerificationBadge          { get; set; }
     public string? VerificationNotes          { get; set; }
     public string? RejectionReason            { get; set; }
+    public string? ReferenceNumber            { get; set; }
 }
 
 public class UserAnalyticsResponse

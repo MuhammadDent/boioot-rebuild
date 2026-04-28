@@ -617,6 +617,21 @@ function RequestCard({
           </div>
         )}
 
+        {r.referenceNumber && (
+          <div style={{ marginTop: "0.35rem" }}>
+            <span
+              title="انقر للنسخ"
+              onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(r.referenceNumber!); }}
+              style={{
+                fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
+                background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
+                padding: "2px 7px", cursor: "copy",
+              }}
+            >
+              {r.referenceNumber}
+            </span>
+          </div>
+        )}
         {r.message && (
           <p style={{
             margin: "0.4rem 0 0", fontSize: "0.81rem", color: "#64748b", lineHeight: 1.55,

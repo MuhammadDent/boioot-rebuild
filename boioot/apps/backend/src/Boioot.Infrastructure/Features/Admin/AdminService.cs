@@ -1981,6 +1981,7 @@ public class AdminService : IAdminService
         VerificationBadge          = user.VerificationBadge,
         VerificationNotes          = user.VerificationNotes,
         RejectionReason            = user.RejectionReason,
+        ReferenceNumber            = user.ReferenceNumber,
     };
 
     private class UserTagRowFull

@@ -1,4 +1,5 @@
 using Boioot.Application.Common.Models;
+using Boioot.Infrastructure.Common;
 using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Requests.DTOs;
@@ -58,9 +59,13 @@ public class RequestService : IRequestService
                 throw new BoiootException("المشروع غير موجود أو غير متاح", 404);
         }
 
+        var refNumber = await ReferenceGenerator.NextAsync(
+            _context.Requests.Select(r => r.ReferenceNumber), "CNT", ct);
+
         var entity = new Request
         {
             Name = request.Name.Trim(),
+            ReferenceNumber = refNumber,
             Phone = request.Phone.Trim(),
             Email = request.Email?.Trim(),
             Message = request.Message?.Trim(),
@@ -311,6 +316,7 @@ public class RequestService : IRequestService
     private static RequestResponse MapToResponse(Request r) => new()
     {
         Id = r.Id,
+        ReferenceNumber = r.ReferenceNumber,
         Name = r.Name,
         Phone = r.Phone,
         Email = r.Email,

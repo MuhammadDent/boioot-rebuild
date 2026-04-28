@@ -52,6 +52,7 @@ public class VerificationDocumentResponse
 public class VerificationRequestResponse
 {
     public Guid Id { get; set; }
+    public string? ReferenceNumber { get; set; }
     public Guid UserId { get; set; }
     public string? UserFullName { get; set; }
     public string? UserEmail { get; set; }
@@ -72,6 +73,7 @@ public class VerificationRequestResponse
 public class VerificationRequestSummary
 {
     public Guid Id { get; set; }
+    public string? ReferenceNumber { get; set; }
     public Guid UserId { get; set; }
     public string? UserFullName { get; set; }
     public string? UserEmail { get; set; }

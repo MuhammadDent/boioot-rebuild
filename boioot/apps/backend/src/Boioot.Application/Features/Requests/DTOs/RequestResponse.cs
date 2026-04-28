@@ -3,6 +3,7 @@ namespace Boioot.Application.Features.Requests.DTOs;
 public class RequestResponse
 {
     public Guid Id { get; set; }
+    public string? ReferenceNumber { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string? Email { get; set; }

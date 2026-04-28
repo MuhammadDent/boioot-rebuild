@@ -216,7 +216,7 @@ export default function AdminBuyerRequestsPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
           <thead>
             <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-              {["الطلب", "النوع", "الموقع", "الناشر", "الحالة", "التعليقات", "التاريخ", ""].map((h, i) => (
+              {["رقم المرجع", "الطلب", "النوع", "الموقع", "الناشر", "الحالة", "التعليقات", "التاريخ", ""].map((h, i) => (
                 <th key={i} style={{
                   padding: "0.7rem 0.9rem", textAlign: "right",
                   fontWeight: 700, color: "#475569", fontSize: "0.78rem",
@@ -230,14 +230,14 @@ export default function AdminBuyerRequestsPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
+                <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
                   جارٍ التحميل...
                 </td>
               </tr>
             )}
             {!loading && requests.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
+                <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
                   {search ? "لا توجد نتائج لهذا البحث" : "لا توجد طلبات بعد"}
                 </td>
               </tr>
@@ -249,6 +249,22 @@ export default function AdminBuyerRequestsPage() {
                   borderBottom: idx < requests.length - 1 ? "1px solid #f1f5f9" : "none",
                   transition: "background 0.1s",
                 }}>
+                  {/* Reference Number */}
+                  <td style={{ padding: "0.75rem 0.9rem", whiteSpace: "nowrap" }}>
+                    {r.referenceNumber ? (
+                      <span
+                        title="انقر للنسخ"
+                        onClick={() => navigator.clipboard.writeText(r.referenceNumber!)}
+                        style={{
+                          fontFamily: "monospace", fontSize: "0.72rem", fontWeight: 700,
+                          background: "#eff6ff", color: "#1d4ed8", borderRadius: 6,
+                          padding: "2px 7px", cursor: "copy",
+                        }}
+                      >
+                        {r.referenceNumber}
+                      </span>
+                    ) : <span style={{ color: "#94a3b8" }}>—</span>}
+                  </td>
                   {/* Title */}
                   <td style={{ padding: "0.75rem 0.9rem", maxWidth: 260 }}>
                     <Link

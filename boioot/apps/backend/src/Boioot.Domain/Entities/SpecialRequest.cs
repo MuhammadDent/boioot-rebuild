@@ -5,6 +5,9 @@ public class SpecialRequest : BaseEntity
     /// <summary>Human-readable code shown to admin, e.g. SR-20240001.</summary>
     public string PublicCode { get; set; } = string.Empty;
 
+    /// <summary>Unified reference number in format REQ-YYYY-000001.</summary>
+    public string? ReferenceNumber { get; set; }
+
     // ── Submitter ─────────────────────────────────────────────────────────────
     public Guid?   CreatedByUserId { get; set; }
     public User?   CreatedByUser   { get; set; }

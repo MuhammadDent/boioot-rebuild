@@ -32,6 +32,7 @@ export interface UpdateSpecialRequestTypeDto {
 export interface SpecialRequest {
   id: string;
   publicCode: string;
+  referenceNumber?: string | null;
   fullName: string;
   phone: string;
   whatsApp?: string;

@@ -1,4 +1,5 @@
 using Boioot.Application.Common.Models;
+using Boioot.Infrastructure.Common;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.BuyerRequests.DTOs;
 using Boioot.Application.Features.BuyerRequests.Interfaces;
@@ -35,9 +36,13 @@ public class BuyerRequestService : IBuyerRequestService
     public async Task<BuyerRequestResponse> CreateAsync(
         Guid userId, CreateBuyerRequestDto dto, CancellationToken ct = default)
     {
+        var refNumber = await ReferenceGenerator.NextAsync(
+            _context.BuyerRequests.Select(r => r.ReferenceNumber), "MRK", ct);
+
         var entity = new BuyerRequest
         {
             Title        = dto.Title.Trim(),
+            ReferenceNumber = refNumber,
             PropertyType = dto.PropertyType.Trim(),
             Description  = dto.Description.Trim(),
             City         = dto.City?.Trim(),
@@ -504,8 +509,9 @@ public class BuyerRequestService : IBuyerRequestService
 
     private static BuyerRequestResponse MapToResponse(BuyerRequest r, string userName, int commentsCount) => new()
     {
-        Id            = r.Id,
-        Title         = r.Title,
+        Id              = r.Id,
+        ReferenceNumber = r.ReferenceNumber,
+        Title           = r.Title,
         PropertyType  = r.PropertyType,
         Description   = r.Description,
         City          = r.City,

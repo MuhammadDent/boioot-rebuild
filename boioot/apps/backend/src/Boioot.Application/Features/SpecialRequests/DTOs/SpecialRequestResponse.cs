@@ -4,6 +4,7 @@ public class SpecialRequestResponse
 {
     public Guid      Id            { get; set; }
     public string    PublicCode    { get; set; } = string.Empty;
+    public string?   ReferenceNumber { get; set; }
     public string    FullName      { get; set; } = string.Empty;
     public string    Phone         { get; set; } = string.Empty;
     public string?   WhatsApp      { get; set; }
