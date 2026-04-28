@@ -104,6 +104,15 @@ const I = {
   star: path(
     createElement("path", { d: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" }),
   ),
+  heart: path(
+    createElement("path", { d: "M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" }),
+  ),
+  calendar: path(
+    createElement("rect", { x: "3", y: "4", width: "18", height: "18", rx: "2", ry: "2" }),
+    createElement("line", { x1: "16", y1: "2", x2: "16", y2: "6" }),
+    createElement("line", { x1: "8",  y1: "2", x2: "8",  y2: "6" }),
+    createElement("line", { x1: "3",  y1: "10", x2: "21", y2: "10" }),
+  ),
   layers: path(
     createElement("polygon", { points: "12 2 2 7 12 12 22 7 12 2" }),
     createElement("polyline", { points: "2 17 12 22 22 17" }),
@@ -268,7 +277,10 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       label: "نشاطي",
       icon: I.requests,
       items: [
-        { href: "/dashboard/my-requests", label: "طلباتي", icon: I.requests },
+        { href: "/dashboard/listings",    label: "إعلاناتي",  icon: I.listings  },
+        { href: "/dashboard/my-requests", label: "طلباتي",    icon: I.requests  },
+        { href: "/dashboard/bookings",    label: "حجوزاتي",   icon: I.calendar  },
+        { href: "/dashboard/favorites",   label: "المفضلة",   icon: I.heart     },
       ],
     },
     VERIFICATION_GROUP,
