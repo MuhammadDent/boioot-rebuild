@@ -17,6 +17,10 @@ public class PlanSummaryResponse
     public bool    IsActive                { get; set; }
     public decimal BasePriceMonthly        { get; set; }
     public decimal BasePriceYearly         { get; set; }
+    /// <summary>Canonical price in Syrian Pounds (SYP). 0 = free / not set.</summary>
+    public decimal PriceSyp                { get; set; }
+    /// <summary>Canonical price in US Dollars (USD). 0 = not set.</summary>
+    public decimal PriceUsd                { get; set; }
     public string? ApplicableAccountType   { get; set; }
     public DateTime CreatedAt             { get; set; }
     public int     DisplayOrder            { get; set; }

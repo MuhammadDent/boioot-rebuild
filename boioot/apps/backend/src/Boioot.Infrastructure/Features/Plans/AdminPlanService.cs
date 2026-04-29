@@ -79,6 +79,8 @@ public class AdminPlanService : IAdminPlanService
                 IsActive                = p.IsActive,
                 BasePriceMonthly        = p.BasePriceMonthly,
                 BasePriceYearly         = p.BasePriceYearly,
+                PriceSyp                = p.PriceSyp,
+                PriceUsd                = p.PriceUsd,
                 ApplicableAccountType   = p.ApplicableAccountType?.ToString(),
                 CreatedAt               = p.CreatedAt,
                 DisplayOrder            = p.DisplayOrder,
@@ -232,6 +234,8 @@ public class AdminPlanService : IAdminPlanService
             Description             = request.Description?.Trim(),
             BasePriceMonthly        = request.BasePriceMonthly,
             BasePriceYearly         = request.BasePriceYearly,
+            PriceSyp                = request.PriceSyp,
+            PriceUsd                = request.PriceUsd,
             ApplicableAccountType   = accountType,
             DisplayOrder            = request.DisplayOrder,
             BadgeText               = string.IsNullOrWhiteSpace(request.BadgeText)    ? null : request.BadgeText.Trim(),
@@ -321,6 +325,8 @@ public class AdminPlanService : IAdminPlanService
         plan.Description             = request.Description?.Trim();
         plan.BasePriceMonthly        = request.BasePriceMonthly;
         plan.BasePriceYearly         = request.BasePriceYearly;
+        plan.PriceSyp                = request.PriceSyp;
+        plan.PriceUsd                = request.PriceUsd;
         plan.IsActive                = request.IsActive;
         plan.ApplicableAccountType   = accountType;
         plan.DisplayOrder            = request.DisplayOrder;
@@ -426,6 +432,8 @@ public class AdminPlanService : IAdminPlanService
             Description             = source.Description,
             BasePriceMonthly        = source.BasePriceMonthly,
             BasePriceYearly         = source.BasePriceYearly,
+            PriceSyp                = source.PriceSyp,
+            PriceUsd                = source.PriceUsd,
             ApplicableAccountType   = source.ApplicableAccountType,
             DisplayOrder            = source.DisplayOrder + 1,
             BadgeText               = source.BadgeText,
@@ -619,6 +627,8 @@ public class AdminPlanService : IAdminPlanService
         IsActive                = p.IsActive,
         BasePriceMonthly        = p.BasePriceMonthly,
         BasePriceYearly         = p.BasePriceYearly,
+        PriceSyp                = p.PriceSyp,
+        PriceUsd                = p.PriceUsd,
         ApplicableAccountType   = p.ApplicableAccountType?.ToString(),
         CreatedAt               = p.CreatedAt,
         DisplayOrder            = p.DisplayOrder,
@@ -669,6 +679,8 @@ public class AdminPlanService : IAdminPlanService
         IsActive                = p.IsActive,
         BasePriceMonthly        = p.BasePriceMonthly,
         BasePriceYearly         = p.BasePriceYearly,
+        PriceSyp                = p.PriceSyp,
+        PriceUsd                = p.PriceUsd,
         ApplicableAccountType   = p.ApplicableAccountType?.ToString(),
         CreatedAt               = p.CreatedAt,
         DisplayOrder            = p.DisplayOrder,

@@ -30,7 +30,11 @@ public record PublicPricingItem(
     string PlanBillingType,
     List<PublicPricingEntry> Pricing,
     List<PublicLimitItem> Limits,
-    List<PublicFeatureItem> Features
+    List<PublicFeatureItem> Features,
+    /// <summary>Canonical plan price in Syrian Pounds (SYP). 0 = free / not set.</summary>
+    decimal PriceSyp,
+    /// <summary>Canonical plan price in US Dollars (USD). 0 = not set.</summary>
+    decimal PriceUsd
 );
 
 /// <summary>Single pricing tier (e.g., Monthly or Yearly).</summary>

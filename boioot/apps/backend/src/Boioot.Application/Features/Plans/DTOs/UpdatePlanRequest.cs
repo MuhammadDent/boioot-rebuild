@@ -32,6 +32,14 @@ public class UpdatePlanRequest
     [Range(0, double.MaxValue)]
     public decimal BasePriceYearly         { get; set; }
 
+    /// <summary>Canonical price in Syrian Pounds (SYP). 0 = free / not set.</summary>
+    [Range(0, double.MaxValue)]
+    public decimal PriceSyp                { get; set; } = 0;
+
+    /// <summary>Canonical price in US Dollars (USD). 0 = not set.</summary>
+    [Range(0, double.MaxValue)]
+    public decimal PriceUsd                { get; set; } = 0;
+
     public bool    IsActive                { get; set; } = true;
 
     public string? ApplicableAccountType   { get; set; }

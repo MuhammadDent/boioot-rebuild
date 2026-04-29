@@ -935,5 +935,28 @@ public sealed class DatabaseStartupService
         {
             _log.LogWarning("[schema-patch] ReferenceNumber patch failed (non-critical): {Msg}", ex.Message);
         }
+
+        // ── Dual-currency prices for Plans (PriceSyp / PriceUsd) ─────────────
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Plans" ADD COLUMN IF NOT EXISTS "PriceSyp" numeric(18,2) NOT NULL DEFAULT 0""", ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Plans" ADD COLUMN IF NOT EXISTS "PriceUsd" numeric(18,2) NOT NULL DEFAULT 0""", ct);
+
+            // Backfill: seed PriceSyp from BasePriceMonthly for existing plans where PriceSyp = 0
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE "Plans"
+                SET "PriceSyp" = "BasePriceMonthly"
+                WHERE "PriceSyp" = 0 AND "BasePriceMonthly" > 0
+                """, ct);
+
+            _log.LogInformation("[schema-patch] Plans.PriceSyp / Plans.PriceUsd columns added and backfilled.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] Plans dual-currency patch failed (non-critical): {Msg}", ex.Message);
+        }
     }
 }

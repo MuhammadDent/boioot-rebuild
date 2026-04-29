@@ -69,6 +69,12 @@ public class Plan : BaseEntity
     /// <summary>Base yearly price before any discounts or add-ons.</summary>
     public decimal BasePriceYearly { get; set; } = 0;
 
+    /// <summary>Canonical plan price in Syrian Pounds (SYP). 0 = free / not set.</summary>
+    public decimal PriceSyp { get; set; } = 0;
+
+    /// <summary>Canonical plan price in US Dollars (USD). 0 = not set.</summary>
+    public decimal PriceUsd { get; set; } = 0;
+
     // ── Trial ─────────────────────────────────────────────────────
     /// <summary>Whether this plan offers a free trial period.</summary>
     public bool HasTrial { get; set; } = false;

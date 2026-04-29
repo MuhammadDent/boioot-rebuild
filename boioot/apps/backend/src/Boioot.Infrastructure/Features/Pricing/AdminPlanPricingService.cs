@@ -24,13 +24,18 @@ public class AdminPlanPricingService : IAdminPlanPricingService
     {
         var plan = await GetPlanOrThrowAsync(planId, ct);
 
-        // Only return pricing entries whose BillingCycle is compatible with the plan's billing type.
-        // This prevents stale Monthly/Yearly entries from surfacing for OneTime plans (and vice-versa).
-        return await _db.PlanPricings
-            .Where(pp => pp.PlanId == planId && IsCycleCompatible(pp.BillingCycle, plan.PlanBillingType))
+        // Load all pricing rows for this plan first, then filter in-memory.
+        // EF Core cannot translate the IsCycleCompatible switch expression to SQL,
+        // so performing the filter after materialization avoids a 500 translation error.
+        var all = await _db.PlanPricings
+            .Where(pp => pp.PlanId == planId)
             .OrderBy(pp => pp.BillingCycle)
-            .Select(pp => ToResponse(pp))
             .ToListAsync(ct);
+
+        return all
+            .Where(pp => IsCycleCompatible(pp.BillingCycle, plan.PlanBillingType))
+            .Select(ToResponse)
+            .ToList();
     }
 
     // ── CreateAsync ───────────────────────────────────────────────────────────

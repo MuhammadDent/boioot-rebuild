@@ -52,6 +52,8 @@ public class PublicPricingService : IPublicPricingService
                 p.IsRecommended,
                 p.PlanCategory,
                 p.PlanBillingType,
+                p.PriceSyp,
+                p.PriceUsd,
             })
             .AsNoTracking()
             .ToListAsync(ct);
@@ -126,7 +128,9 @@ public class PublicPricingService : IPublicPricingService
             Features: features
                 .Where(f => f.SubscriptionPlanId == p.Id)
                 .Select(f => new PublicFeatureItem(f.Key, f.Name, f.IsEnabled, f.FeatureGroup))
-                .ToList()
+                .ToList(),
+            PriceSyp: p.PriceSyp,
+            PriceUsd: p.PriceUsd
         )).ToList();
     }
 
