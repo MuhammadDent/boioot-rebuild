@@ -1139,11 +1139,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }, []);
 
   async function doSave() {
-    console.log("[plans] ▶ doSave ENTERED", new Error("doSave call site").stack);
     if (!plan?.id || saving) return;
     setSaving(true); setSaveStatus("saving"); setError("");
     try {
-      console.log("[plans] API CALL: updatePlan →", plan.id);
       const result = await adminApi.updatePlan(plan.id, {
         name:                   name.trim(),
         description:            description.trim() || undefined,
@@ -1184,7 +1182,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       const updatedLimits = [...result.limits];
 
       // ── STEP 1: build validated payload ────────────────────────────────────
-      console.log("[plans][diag] monthly_lead_unlocks before save:", limitValues["monthly_lead_unlocks"]);
       // Only send keys that:
       //  a) Are in VALID_LIMIT_KEYS (backend supports them — unknown keys 404)
       //  b) Are not alias keys (only canonical keys reach the API)
@@ -1203,7 +1200,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       for (const [key, rawVal] of changedLimits) {
         const val = parseInt(rawVal, 10);
         try {
-          console.log("[plans] API CALL: setPlanLimit →", key, "=", val);
           const updated = await adminApi.setPlanLimit(plan!.id, key, val);
           const idx = updatedLimits.findIndex(l => l.key === key);
           if (idx >= 0) updatedLimits[idx] = updated;
@@ -1218,10 +1214,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       // ── STEP 3: rebuild clean limit state from server ────────────────────────
       // normalizeLimitValues promotes any alias keys the server may have returned
       // (e.g. max_images → max_images_per_listing) so the sim cards read correctly.
-      const rawFromServer = Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)]));
-      console.log("[plans][diag] monthly_lead_unlocks from server raw:", rawFromServer["monthly_lead_unlocks"]);
-      const newLimitValues = normalizeLimitValues(rawFromServer);
-      console.log("[plans][diag] monthly_lead_unlocks after normalize:", newLimitValues["monthly_lead_unlocks"]);
+      const newLimitValues = normalizeLimitValues(
+        Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)]))
+      );
 
       // ── STEP 4: save feature toggles that changed vs initial server state ────
       // Features were edited locally (no API call on toggle); we now flush them.
@@ -1233,7 +1228,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         if (!changed) continue;
         try {
           setFeatureSaving(feat.key);
-          console.log("[plans] API CALL: setPlanFeature →", feat.key, "=", feat.isEnabled);
           const serverFeat = await adminApi.setPlanFeature(plan!.id, feat.key, feat.isEnabled);
           const idx = updatedFeatures.findIndex(f => f.key === feat.key);
           if (idx >= 0) updatedFeatures[idx] = serverFeat;
@@ -1282,7 +1276,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   useEffect(() => {
-    console.log("[plans] useEffect:formSnapshot isDirty=", isDirty, "saveStatus=", saveStatus, "— NO SAVE TRIGGERED");
     if (!isNew && isDirty && saveStatus !== "saving" && saveStatus !== "saved") {
       setSaveStatus("dirty");
     }
@@ -1290,7 +1283,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }, [formSnapshot]);
 
   async function doCreate() {
-    console.log("[plans] ▶ doCreate ENTERED");
     if (saving) return;
     setSaving(true); setSaveStatus("saving"); setError("");
     try {
@@ -1360,7 +1352,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   function handleFeatureLimitToggle(fk: string, limitKey: string, val: boolean) {
-    console.log("[plans] handleFeatureLimitToggle — LOCAL ONLY (no API)", fk, val);
     handleFeatureToggle(fk, val);
     if (!val) {
       setLimitValues(prev => ({ ...prev, [limitKey]: "0" }));
@@ -1373,7 +1364,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   function handleFeatureToggle(key: string, newVal: boolean) {
-    console.log("[plans] handleFeatureToggle — LOCAL ONLY (no API)", key, newVal);
     setFeatures(prev => prev.map(f => f.key === key ? { ...f, isEnabled: newVal } : f));
   }
 
