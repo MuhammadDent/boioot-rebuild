@@ -143,7 +143,10 @@ const CURRENCY_OPTIONS = [
 
 type UnifiedItem =
   | { t: "limit";   key: string;  icon: string; label: string; hint: string }
-  | { t: "sim";     key: string;  icon: string; label: string; hint: string; limitLabel: string; hiddenFks?: string[] }
+  | { t: "sim";     key: string;  icon: string; label: string; hint: string; limitLabel: string;
+      /** All possible backend feature keys that represent this capability.
+       *  The card claims the FIRST match found; all entries are suppressed from the fallback. */
+      possibleFks: string[] }
   | { t: "flt";     fk: string; key: string; icon: string; label: string; hint: string; limitLabel: string }
   | { t: "feature"; fk: string;  icon: string; label: string; hint: string };
 
@@ -151,11 +154,41 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
   // ── Core limit (always configurable) ─────────────────────────────────────
   { t: "limit",   key: "max_active_listings",   icon: "🏠", label: "الإعلانات النشطة",        hint: "الحد الأقصى لعدد الإعلانات النشطة في آن واحد (-1 = غير محدود)." },
 
-  // ── Simulated toggles (driven by limit value > 0) ────────────────────────
-  // hiddenFks: backend feature keys that represent the same capability — suppressed from fallback
-  { t: "sim", key: "max_images_per_listing",    icon: "📸", label: "صور متعددة لكل إعلان",    hint: "السماح برفع أكثر من صورة لكل إعلان. عند التعطيل يُصبح 0.",   limitLabel: "عدد الصور لكل إعلان",    hiddenFks: ["multi_images","multiple_images","images_per_listing","multiple_images_per_listing","multi_image"] },
-  { t: "sim", key: "max_messages",              icon: "💬", label: "المراسلة الداخلية",        hint: "تمكين التواصل المباشر بين المستخدمين داخل المنصة.",          limitLabel: "الحد الأقصى للمحادثات", hiddenFks: ["messaging","internal_messaging","direct_messaging","chat","messages"] },
-  { t: "sim", key: "max_requests",              icon: "📨", label: "طلبات التواصل",            hint: "الحد الأقصى لعدد طلبات التواصل المستقبَلة.",                limitLabel: "عدد الطلبات",           hiddenFks: ["requests","contact_requests","request_limit","max_contact_requests"] },
+  // ── Simulated toggles — own BOTH toggle (via backend feature OR limit>0) + numeric limit ──
+  // possibleFks: every backend key variant that represents this capability.
+  // The card consumes the first match found; ALL variants are suppressed from the fallback.
+  {
+    t: "sim", key: "max_images_per_listing", icon: "📸",
+    label: "صور متعددة لكل إعلان",
+    hint: "السماح برفع أكثر من صورة لكل إعلان. عند التعطيل يُصبح 0.",
+    limitLabel: "عدد الصور لكل إعلان",
+    possibleFks: [
+      "multi_images","multiple_images","images_per_listing","multiple_images_per_listing",
+      "multi_image","image_limit","image_upload","allow_multiple_images","multiple_image_upload",
+      "max_image","images","image","image_count","allow_images","images_count",
+    ],
+  },
+  {
+    t: "sim", key: "max_messages", icon: "💬",
+    label: "المراسلة الداخلية",
+    hint: "تمكين التواصل المباشر بين المستخدمين داخل المنصة.",
+    limitLabel: "الحد الأقصى للمحادثات",
+    possibleFks: [
+      "messaging","internal_messaging","direct_messaging","chat","messages","message",
+      "messaging_enabled","allow_messaging","message_limit","chat_enabled","inbox",
+      "direct_messages","conversations","conversation_limit","allow_chat",
+    ],
+  },
+  {
+    t: "sim", key: "max_requests", icon: "📨",
+    label: "طلبات التواصل",
+    hint: "الحد الأقصى لعدد طلبات التواصل المستقبَلة.",
+    limitLabel: "عدد الطلبات",
+    possibleFks: [
+      "requests","contact_requests","request_limit","max_contact_requests","request",
+      "contact_request","allow_requests","inquiry","inquiries","inquiry_limit",
+    ],
+  },
 
   // ── Backend feature toggle + associated limit ─────────────────────────────
   { t: "flt", fk: "video_upload",       key: "max_videos_per_listing", icon: "🎬", label: "رفع فيديو",             hint: "السماح برفع مقاطع فيديو داخل الإعلان.",          limitLabel: "عدد الفيديوهات لكل إعلان" },
@@ -179,15 +212,17 @@ const KNOWN_MARKETING: { key: string; icon: string; label: string; description: 
   { key: "homepage_slots",       icon: "🏠", label: "خانات الصفحة الرئيسية", description: "عدد الخانات المخصصة في الصفحة الرئيسية" },
 ];
 
-// Feature keys owned by UNIFIED_ITEMS (fk fields + sim hiddenFks).
+// All backend feature keys owned by UNIFIED_ITEMS.
 // Any backend feature whose key is in this set is suppressed from the
 // fallback renderer — it is already represented by a unified card above.
+// sim items contribute: their own limit key + every entry in possibleFks.
+// flt/feature items contribute their fk.
 const SUPPRESSED_FEATURE_KEYS: ReadonlySet<string> = new Set<string>(
   UNIFIED_ITEMS.flatMap(u => {
-    const keys: string[] = [];
-    if ("fk" in u) keys.push(u.fk);
-    if (u.t === "sim" && u.hiddenFks) keys.push(...u.hiddenFks);
-    return keys;
+    if (u.t === "flt" || u.t === "feature") return [u.fk];
+    if (u.t === "sim") return [u.key, ...u.possibleFks];
+    if (u.t === "limit") return [u.key];
+    return [];
   })
 );
 
@@ -244,14 +279,28 @@ function UnifiedItemCard({
     );
   }
 
-  // ── t: "sim" — simulated toggle (limit > 0 means enabled) ─────────────────
+  // ── t: "sim" — unified toggle + limit card ────────────────────────────────
+  // Finds and CLAIMS the first matching backend feature from possibleFks.
+  // Toggle is driven by: backend feature.isEnabled (if found) OR limit > 0.
+  // ALL possibleFks are suppressed from the fallback renderer via SUPPRESSED_FEATURE_KEYS.
   if (item.t === "sim") {
+    const claimedFeat = features.find(f => item.possibleFks.includes(f.key)) ?? null;
     const limItem = limits.find(l => l.key === item.key);
     const val = limitValues[item.key] ?? String(limItem?.value ?? 0);
-    const enabled = val !== "0" && val !== "";
+    // Toggle ON if: backend feature is enabled (primary) OR limit value > 0 (fallback)
+    const enabled = claimedFeat != null ? claimedFeat.isEnabled : (val !== "0" && val !== "");
     const dirty = limItem ? val !== String(limItem.value) : false;
+    const saving = claimedFeat != null ? featureSaving === claimedFeat.key : false;
+
+    const handleSimToggleClick = (v: boolean) => {
+      // Always update the limit value (sim-style toggle)
+      onSimToggle(item.key, v);
+      // If a real backend feature is claimed, also fire its toggle (persists to API)
+      if (claimedFeat) onFeatureToggle(claimedFeat.key, v);
+    };
+
     return (
-      <div style={{ ...cardBase, background: enabled ? "#f0fdf4" : "#fff", border: enabled ? "1.5px solid #86efac" : dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0" }}>
+      <div style={{ ...cardBase, background: enabled ? "#f0fdf4" : "#fff", border: enabled ? "1.5px solid #86efac" : dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0", opacity: saving ? 0.6 : 1, transition: "all 0.18s" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
           <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -261,7 +310,7 @@ function UnifiedItemCard({
           <span style={{ fontSize: "0.75rem", color: enabled ? "#16a34a" : "#94a3b8", fontWeight: 600, flexShrink: 0 }}>
             {enabled ? "مفعّل" : "معطّل"}
           </span>
-          <ToggleSwitch checked={enabled} onChange={v => onSimToggle(item.key, v)} />
+          <ToggleSwitch checked={enabled} onChange={handleSimToggleClick} disabled={saving} />
         </div>
         {enabled && (
           <div style={{ marginTop: "0.75rem", paddingTop: "0.65rem", borderTop: "1px solid #dcfce7" }}>
