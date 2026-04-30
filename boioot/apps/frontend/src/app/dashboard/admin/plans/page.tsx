@@ -181,33 +181,8 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
       "listing_image_limit","per_listing_images",
     ],
   },
-  {
-    t: "sim", key: "max_messages", icon: "💬",
-    label: "حد المحادثات الداخلية الخاصة",
-    hint: "حد خاص بالمحادثات الداخلية المدفوعة ضمن الخطة. لا يؤثر على المراسلة العادية بين المشترين والبائعين.",
-    limitLabel: "الحد الأقصى للمحادثات الخاصة",
-    possibleFks: [
-      // snake_case
-      "messaging","internal_messaging","direct_messaging","chat","messages","message",
-      "messaging_enabled","allow_messaging","message_limit","chat_enabled","inbox",
-      "direct_messages","conversations","conversation_limit","allow_chat",
-      "private_messaging","private_chat","paid_messaging","paid_chat","premium_chat",
-      // camelCase (ASP.NET Core JSON serializer default)
-      "internalMessaging","directMessaging","messagingEnabled","allowMessaging",
-      "messageLimit","chatEnabled","directMessages","conversationLimit","allowChat",
-      "privateMessaging","privateChat","paidMessaging","paidChat","premiumChat",
-    ],
-    possibleLimitKeys: [
-      // snake_case (DB-stored keys)
-      "max_conversations","conversation_limit","max_conversation","conversations",
-      "message_limit","max_chat","chat_limit","inbox_limit","private_message_limit",
-      "max_private_messages","max_inbox","messaging_limit","max_messaging",
-      // camelCase (ASP.NET Core JSON serializer default)
-      "maxConversations","conversationLimit","maxConversation",
-      "messageLimit","maxChat","chatLimit","inboxLimit","privateMessageLimit",
-      "maxPrivateMessages","maxInbox","messagingLimit","maxMessaging",
-    ],
-  },
+  // max_messages sim item removed — backend does not support this limit key (404).
+  // Messaging feature aliases are still suppressed via MESSAGING_EXTRA_FEATURES below.
   {
     t: "sim", key: "max_requests", icon: "📨",
     label: "طلبات التواصل",
@@ -245,21 +220,41 @@ const KNOWN_MARKETING: { key: string; icon: string; label: string; description: 
   { key: "homepage_slots",       icon: "🏠", label: "خانات الصفحة الرئيسية", description: "عدد الخانات المخصصة في الصفحة الرئيسية" },
 ];
 
-// All backend feature keys owned by UNIFIED_ITEMS.
-// Any backend feature whose key is in this set is suppressed from the
-// fallback renderer — it is already represented by a unified card above.
-// sim items contribute: their own limit key + every entry in possibleFks.
-// flt/feature items contribute their fk.
-// Both original and lowercase are stored so the check is always case-insensitive.
-const SUPPRESSED_FEATURE_KEYS: ReadonlySet<string> = new Set<string>(
-  UNIFIED_ITEMS.flatMap(u => {
+// Messaging feature / limit aliases that need suppressing even though the
+// max_messages sim card has been removed (backend does not support it).
+// These prevent any general "messaging" backend feature from appearing as a
+// standalone editable toggle in the plan configuration UI.
+const MESSAGING_EXTRA_FEATURES: readonly string[] = [
+  "messaging","internal_messaging","direct_messaging","chat","messages","message",
+  "messaging_enabled","allow_messaging","message_limit","chat_enabled","inbox",
+  "direct_messages","conversations","conversation_limit","allow_chat",
+  "private_messaging","private_chat","paid_messaging","paid_chat","premium_chat",
+  "internalMessaging","directMessaging","messagingEnabled","allowMessaging",
+  "messageLimit","chatEnabled","directMessages","conversationLimit","allowChat",
+  "privateMessaging","privateChat","paidMessaging","paidChat","premiumChat",
+];
+const MESSAGING_EXTRA_LIMITS: readonly string[] = [
+  "max_messages","max_conversations","conversation_limit","max_conversation","conversations",
+  "message_limit","max_chat","chat_limit","inbox_limit","private_message_limit",
+  "max_private_messages","max_inbox","messaging_limit","max_messaging",
+  "maxMessages","maxConversations","conversationLimit","maxConversation",
+  "chatLimit","inboxLimit","messageLimit","messagesLimit","privatMessageLimit",
+  "maxPrivateMessages","maxInbox","messagingLimit","maxMessaging",
+];
+
+// All backend feature keys that are suppressed from the fallback renderer.
+// Includes keys owned by UNIFIED_ITEMS cards + messaging aliases (no card).
+// Both original and lowercase stored → always case-insensitive.
+const SUPPRESSED_FEATURE_KEYS: ReadonlySet<string> = new Set<string>([
+  ...UNIFIED_ITEMS.flatMap(u => {
     const raw: string[] = [];
     if (u.t === "flt" || u.t === "feature") raw.push(u.fk);
     else if (u.t === "sim") raw.push(u.key, ...u.possibleFks);
     else if (u.t === "limit") raw.push(u.key);
     return raw.flatMap(k => [k, k.toLowerCase()]);
-  })
-);
+  }),
+  ...MESSAGING_EXTRA_FEATURES.flatMap(k => [k, k.toLowerCase()]),
+]);
 
 /** Returns true when a backend feature key is owned by a unified card or is a known
  *  platform-level feature that must NOT be controlled via plan configuration. */
@@ -274,42 +269,64 @@ function normalizeFeatures(arr: PlanFeatureItem[]): PlanFeatureItem[] {
   return arr.filter(f => !isSuppressedFeature(f.key));
 }
 
-// All backend LIMIT keys owned by UNIFIED_ITEMS — stored in lowercase for
-// case-insensitive matching (backend may use camelCase or snake_case).
-// sim items contribute: their primary key + every possibleLimitKeys entry.
-// flt/limit items contribute their own key.
-const SUPPRESSED_LIMIT_KEYS: ReadonlySet<string> = new Set<string>(
-  UNIFIED_ITEMS.flatMap(u => {
+// All backend LIMIT keys owned by UNIFIED_ITEMS + messaging extras — stored in lowercase
+// for case-insensitive matching (backend may use camelCase or snake_case).
+const SUPPRESSED_LIMIT_KEYS: ReadonlySet<string> = new Set<string>([
+  ...UNIFIED_ITEMS.flatMap(u => {
     const raw: string[] = [];
     if (u.t === "sim") raw.push(u.key, ...(u.possibleLimitKeys ?? []));
     else if (u.t === "flt") raw.push(u.key);
     else if (u.t === "limit") raw.push(u.key);
-    // Store both original and lowercase so the has() check is case-insensitive
     return raw.flatMap(k => [k, k.toLowerCase()]);
-  })
-);
+  }),
+  ...MESSAGING_EXTRA_LIMITS.flatMap(k => [k, k.toLowerCase()]),
+]);
 /** Returns true if a limit key is owned by a unified card and must not be rendered in the fallback. */
 function isSuppressedLimit(key: string): boolean {
   return SUPPRESSED_LIMIT_KEYS.has(key) || SUPPRESSED_LIMIT_KEYS.has(key.toLowerCase());
 }
 
+// ── Validated limit key allowlist ─────────────────────────────────────────────
+// Only keys present here will be sent to the backend during save.
+// Keys NOT in this set (e.g. max_messages which 404s) are silently skipped.
+const VALID_LIMIT_KEYS: ReadonlySet<string> = new Set([
+  "max_active_listings",
+  "max_images_per_listing",
+  "max_requests",
+  "max_videos_per_listing",
+  "max_featured_slots",
+  "max_projects",
+  "max_agents",
+  // marketing / boost keys (rendered in القيمة التسويقية section)
+  "listing_priority",
+  "search_ranking_boost",
+  "homepage_slots",
+]);
+
 // ── Limit-alias normalisation ─────────────────────────────────────────────────
-// The backend may use different keys for the same logical limit across plans or
-// API versions.  We consolidate all known aliases into ONE canonical key so that:
+// Consolidates backend alias keys into one canonical key so:
 //  • limitValues state never holds duplicate / conflicting entries
 //  • formSnapshot never goes dirty because of a ghost alias key
-//  • changedLimits never sends an alias key to the backend
 //  • UI always shows a single source of truth per logical limit
 
 // canonical key → set of backend alias keys that map to it
 const LIMIT_CANONICAL_ALIASES: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  ["max_messages", new Set([
-    // snake_case (DB-stored keys)
-    "max_conversations","conversation_limit","max_conversation",
-    "chat_limit","inbox_limit","message_limit","messages_limit",
-    // camelCase (ASP.NET Core serialiser default)
-    "maxConversations","conversationLimit","maxConversation",
-    "chatLimit","inboxLimit","messageLimit","messagesLimit",
+  // The backend may store the images limit under max_images or other variants.
+  ["max_images_per_listing", new Set([
+    "max_images","image_limit","max_image_count","images_limit",
+    "image_per_listing","images_per_listing","images_count","max_image",
+    "listing_image_limit","per_listing_images",
+    // camelCase
+    "maxImages","imageLimit","maxImageCount","imagesLimit",
+    "imagePerListing","imagesPerListing","imagesCount","maxImage",
+    "listingImageLimit","perListingImages",
+  ])],
+  // The backend may store the requests limit under different keys.
+  ["max_requests", new Set([
+    "max_contact_requests","contact_request_limit","inquiry_limit","max_inquiries",
+    "request_limit","max_request","contact_limit","max_leads",
+    "maxContactRequests","contactRequestLimit","inquiryLimit","maxInquiries",
+    "requestLimit","maxRequest","contactLimit","maxLeads",
   ])],
 ]);
 
@@ -1176,53 +1193,52 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       });
       const updatedLimits = [...result.limits];
 
-      // Include both CHANGED existing limits AND new non-zero limits not yet on the plan.
-      // This covers sim-card limits (max_messages, max_images_per_listing, etc.) that may
-      // not exist in the backend until the admin explicitly sets a non-zero value.
-      // Alias keys (e.g. max_conversations → max_messages) are NEVER sent to the backend.
+      // ── STEP 1: build validated payload ────────────────────────────────────
+      // Only send keys that:
+      //  a) Are in VALID_LIMIT_KEYS (backend supports them — unknown keys 404)
+      //  b) Are not alias keys (only canonical keys reach the API)
+      //  c) Actually changed vs the server value, OR are new non-zero values
       const changedLimits = Object.entries(limitValues).filter(([key, val]) => {
-        if (isAliasKey(key)) return false; // never send an alias key
+        if (!VALID_LIMIT_KEYS.has(key)) return false; // key not in backend catalog
+        if (isAliasKey(key)) return false;             // never send an alias
         const parsedVal = parseInt(val, 10);
         if (isNaN(parsedVal)) return false;
         const original = result.limits.find(l => l.key === key);
-        if (original) return val !== String(original.value); // existing limit that changed
-        return parsedVal !== 0; // new limit with a non-zero value → create it
+        if (original) return val !== String(original.value); // existing → only if changed
+        return parsedVal !== 0; // new → only if non-zero
       });
 
-      if (changedLimits.length > 0) {
-        await Promise.all(changedLimits.map(async ([key, rawVal]) => {
-          const val = parseInt(rawVal, 10);
-          try {
-            const updated = await adminApi.setPlanLimit(plan!.id, key, val);
-            const idx = updatedLimits.findIndex(l => l.key === key);
-            if (idx >= 0) updatedLimits[idx] = updated;
-            else updatedLimits.push(updated);
-          } catch (limErr) {
-            // Gracefully skip limits the backend doesn't yet support (e.g. 404 / unknown key).
-            // This keeps the main plan save from failing when a sim-card limit key is absent
-            // from the backend's limit catalog.
-            console.warn(`[plans] Limit "${key}" rejected by backend — skipping.`, limErr);
-          }
-        }));
+      // ── STEP 2: sequential save — one failure must NOT block snapshot update ─
+      for (const [key, rawVal] of changedLimits) {
+        const val = parseInt(rawVal, 10);
+        try {
+          const updated = await adminApi.setPlanLimit(plan!.id, key, val);
+          const idx = updatedLimits.findIndex(l => l.key === key);
+          if (idx >= 0) updatedLimits[idx] = updated;
+          else updatedLimits.push(updated);
+        } catch (limErr) {
+          // Backend does not support this limit key — skip silently.
+          // The snapshot will still be updated so the UI clears "unsaved changes".
+          console.warn(`[plans] Limit "${key}" not accepted by backend — skipping.`, limErr);
+        }
       }
 
-      // Compute the new limitValues that will exist in state AFTER setLimitValues —
-      // we need this BEFORE calling setState so we can build initialSnapshot correctly.
-      // Using an eager (non-functional) update avoids the mismatch where
-      // initialSnapshot.current is set to the pre-update snapshot while React
-      // re-renders with new limitValues, making isDirty permanently true.
-      const newLimitValues = normalizeLimitValues({
-        ...limitValues,
-        ...Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)])),
-      });
+      // ── STEP 3: rebuild clean state purely from server (updatedLimits) ──────
+      // We do NOT merge with local limitValues — the server is the source of truth.
+      // normalizeLimitValues promotes any alias keys the server may have returned
+      // (e.g. max_images → max_images_per_listing) so the sim cards read correctly.
+      const newLimitValues = normalizeLimitValues(
+        Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)]))
+      );
 
       setLimits(updatedLimits);
       setLimitValues(newLimitValues);
       setFeatures(normalizeFeatures(result.features));
       onSaved({ ...result, limits: updatedLimits });
 
-      // Store the snapshot that the NEXT render will produce — all fields are identical
-      // to formSnapshot except limitValues, which uses the updated newLimitValues.
+      // ── STEP 4: store snapshot matching the NEXT render exactly ─────────────
+      // Uses newLimitValues (not the pre-save limitValues) so formSnapshot === initialSnapshot
+      // after re-render → isDirty = false → "unsaved changes" disappears ALWAYS.
       initialSnapshot.current = JSON.stringify({
         name, description, applicableAccountType, priceMonthly, priceYearly,
         isActive, isPublic, isRecommended, displayOrder, billingMode, planBillingType,
