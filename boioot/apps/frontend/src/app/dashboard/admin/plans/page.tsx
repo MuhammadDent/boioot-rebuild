@@ -127,43 +127,49 @@ const inputStyle: React.CSSProperties = {
 
 const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
 
-// ── Known catalog keys with Arabic labels ────────────────────────────────────
+// ── Currency options (locked dropdown — only USD / SYP allowed) ──────────────
 
-interface KnownLimit {
-  key: string;
-  icon: string;
-  label: string;
-  /** If set, this limit is only active when the named feature is enabled */
-  dependsOnFeatureKey?: string;
-  dependsOnFeatureLabel?: string;
-}
-
-const KNOWN_LIMITS: KnownLimit[] = [
-  { key: "max_active_listings",    icon: "🏠", label: "عدد الإعلانات النشطة" },
-  { key: "max_images_per_listing", icon: "📸", label: "عدد الصور لكل إعلان" },
-  {
-    key: "max_videos_per_listing", icon: "🎬", label: "عدد الفيديوهات لكل إعلان",
-    dependsOnFeatureKey: "video_upload", dependsOnFeatureLabel: "رفع الفيديو",
-  },
-  { key: "max_requests",           icon: "📨", label: "عدد الطلبات المستقبَلة" },
-  { key: "max_messages",           icon: "💬", label: "عدد المحادثات الداخلية" },
-  { key: "max_agents",             icon: "👤", label: "عدد الوسطاء" },
-  { key: "max_projects",           icon: "🏗", label: "عدد المشاريع" },
-  { key: "max_featured_slots",     icon: "⭐", label: "عدد الإعلانات المميزة (Boost)" },
+const CURRENCY_OPTIONS = [
+  { value: "SYP", label: "SYP — ليرة سورية" },
+  { value: "USD", label: "USD — دولار أمريكي" },
 ];
 
-const KNOWN_FEATURES: { key: string; icon: string; label: string; description: string }[] = [
-  { key: "video_upload",         icon: "🎬", label: "رفع فيديو",                        description: "السماح برفع مقاطع الفيديو ضمن الإعلان" },
-  { key: "analytics_dashboard",  icon: "📊", label: "لوحة التحليلات",                   description: "إحصاءات وتقارير مفصّلة لأداء الإعلانات" },
-  { key: "priority_support",     icon: "🛠", label: "دعم فني بأولوية",                  description: "استجابة أسرع من فريق الدعم" },
-  { key: "homepage_exposure",    icon: "🏠", label: "ظهور في الصفحة الرئيسية",          description: "عرض الإعلانات ضمن أقسام الصفحة الرئيسية" },
-  { key: "verified_badge",       icon: "✅", label: "شارة موثّق",                       description: "تمييز الملف الشخصي بشارة الموثوقية" },
-  { key: "search_priority",      icon: "🔍", label: "أولوية في نتائج البحث",            description: "ظهور الإعلانات في مقدمة نتائج البحث" },
-  { key: "whatsapp_contact",     icon: "💬", label: "زر واتساب مباشر",                  description: "تمكين زر التواصل عبر واتساب في الإعلان" },
-  { key: "team_management",      icon: "👥", label: "إدارة فريق / إضافة أعضاء",         description: "إضافة وسطاء وأعضاء ضمن الحساب التجاري" },
-  { key: "lead_insights",        icon: "📈", label: "تحليلات العملاء المحتملين",          description: "بيانات مفصّلة عن الطلبات والعملاء المحتملين" },
-  { key: "featured_listings",    icon: "✨", label: "إعلانات مميزة / ظهور متقدم",       description: "رفع الإعلانات لأقسام \"مميزة\" في الموقع" },
-  { key: "project_management",   icon: "🏗", label: "إدارة المشاريع",                   description: "إنشاء مشاريع عقارية متعددة الوحدات" },
+// ── Unified Feature + Limit catalog ──────────────────────────────────────────
+//
+// t: "limit"   → numeric input only (no toggle)
+// t: "sim"     → simulated toggle derived from limit value (> 0 = ON)
+// t: "flt"     → backend feature toggle + associated limit input when ON
+// t: "feature" → backend feature toggle only (no numeric limit)
+
+type UnifiedItem =
+  | { t: "limit";   key: string;  icon: string; label: string; hint: string }
+  | { t: "sim";     key: string;  icon: string; label: string; hint: string; limitLabel: string }
+  | { t: "flt";     fk: string; key: string; icon: string; label: string; hint: string; limitLabel: string }
+  | { t: "feature"; fk: string;  icon: string; label: string; hint: string };
+
+const UNIFIED_ITEMS: UnifiedItem[] = [
+  // ── Core limit (always configurable) ─────────────────────────────────────
+  { t: "limit",   key: "max_active_listings",   icon: "🏠", label: "الإعلانات النشطة",        hint: "الحد الأقصى لعدد الإعلانات النشطة في آن واحد (-1 = غير محدود)." },
+
+  // ── Simulated toggles (driven by limit value > 0) ────────────────────────
+  { t: "sim", key: "max_images_per_listing",    icon: "📸", label: "صور متعددة لكل إعلان",    hint: "السماح برفع أكثر من صورة لكل إعلان. عند التعطيل يُصبح 0.",   limitLabel: "عدد الصور لكل إعلان" },
+  { t: "sim", key: "max_messages",              icon: "💬", label: "المراسلة الداخلية",        hint: "تمكين التواصل المباشر بين المستخدمين داخل المنصة.",          limitLabel: "الحد الأقصى للمحادثات" },
+  { t: "sim", key: "max_requests",              icon: "📨", label: "طلبات التواصل",            hint: "الحد الأقصى لعدد طلبات التواصل المستقبَلة.",                limitLabel: "عدد الطلبات" },
+
+  // ── Backend feature toggle + associated limit ─────────────────────────────
+  { t: "flt", fk: "video_upload",       key: "max_videos_per_listing", icon: "🎬", label: "رفع فيديو",             hint: "السماح برفع مقاطع فيديو داخل الإعلان.",          limitLabel: "عدد الفيديوهات لكل إعلان" },
+  { t: "flt", fk: "featured_listings",  key: "max_featured_slots",     icon: "⭐", label: "إعلانات مميزة (Boost)", hint: "رفع الإعلانات لأقسام مميزة في الموقع.",          limitLabel: "عدد الإعلانات المميزة" },
+  { t: "flt", fk: "project_management", key: "max_projects",           icon: "🏗", label: "إدارة المشاريع",        hint: "إنشاء مشاريع عقارية متعددة الوحدات.",           limitLabel: "عدد المشاريع" },
+  { t: "flt", fk: "team_management",    key: "max_agents",             icon: "👥", label: "إدارة الفريق (وسطاء)", hint: "إضافة وسطاء وأعضاء ضمن الحساب التجاري.",       limitLabel: "عدد الوسطاء" },
+
+  // ── Pure features — toggle only ───────────────────────────────────────────
+  { t: "feature", fk: "analytics_dashboard",  icon: "📊", label: "لوحة التحليلات",             hint: "إحصاءات وتقارير مفصّلة لأداء الإعلانات." },
+  { t: "feature", fk: "priority_support",     icon: "🛠", label: "دعم فني بأولوية",            hint: "استجابة أسرع من فريق الدعم الفني." },
+  { t: "feature", fk: "homepage_exposure",    icon: "🏠", label: "ظهور في الصفحة الرئيسية",   hint: "عرض الإعلانات ضمن أقسام الصفحة الرئيسية." },
+  { t: "feature", fk: "verified_badge",       icon: "✅", label: "شارة موثّق",                 hint: "تمييز الملف الشخصي بشارة الموثوقية." },
+  { t: "feature", fk: "search_priority",      icon: "🔍", label: "أولوية في نتائج البحث",     hint: "ظهور الإعلانات في مقدمة نتائج البحث." },
+  { t: "feature", fk: "whatsapp_contact",     icon: "💬", label: "زر واتساب مباشر",           hint: "تمكين زر التواصل عبر واتساب في الإعلان." },
+  { t: "feature", fk: "lead_insights",        icon: "📈", label: "تحليلات العملاء المحتملين", hint: "بيانات مفصّلة عن الطلبات والعملاء المحتملين." },
 ];
 
 const KNOWN_MARKETING: { key: string; icon: string; label: string; description: string }[] = [
@@ -172,202 +178,185 @@ const KNOWN_MARKETING: { key: string; icon: string; label: string; description: 
   { key: "homepage_slots",       icon: "🏠", label: "خانات الصفحة الرئيسية", description: "عدد الخانات المخصصة في الصفحة الرئيسية" },
 ];
 
-// ── LimitRow (generic fallback) ───────────────────────────────────────────────
+// ── UnifiedItemCard ───────────────────────────────────────────────────────────
+// Renders one item from UNIFIED_ITEMS.
+// Handles all four types: limit / sim / flt / feature
 
-function LimitRow({ limit, value, onValueChange }: { limit: PlanLimitItem; value: string; onValueChange: (key: string, val: string) => void }) {
-  const isDirtyField = value !== String(limit.value);
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", alignItems: "center", gap: "0.5rem", padding: "0.5rem 0.75rem", borderRadius: 8, background: "var(--color-bg-secondary, #f9fafb)", border: isDirtyField ? "1.5px solid #93c5fd" : "1.5px solid transparent" }}>
-      <div>
-        <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 500 }}>{limit.name}</p>
-        {limit.unit && <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>{limitLabel(limit.value)} {limit.unit}</p>}
-      </div>
-      <input type="number" value={value} onChange={e => onValueChange(limit.key, e.target.value)} style={{ ...inputStyle, width: 80, textAlign: "center", padding: "0.3rem 0.5rem", margin: 0 }} />
-      {isDirtyField && <span style={{ fontSize: "0.68rem", color: "#2563eb", fontWeight: 600 }}>●</span>}
-    </div>
-  );
-}
-
-// ── TypeBadge ─────────────────────────────────────────────────────────────────
-
-function TypeBadge({ kind }: { kind: "limit" | "feature" }) {
-  const isLimit = kind === "limit";
-  return (
-    <span style={{
-      display: "inline-block", fontSize: "0.63rem", fontWeight: 700,
-      padding: "0.1rem 0.45rem", borderRadius: 99,
-      background: isLimit ? "#eff6ff" : "#f5f3ff",
-      color:      isLimit ? "#1d4ed8" : "#7c3aed",
-      border:     `1px solid ${isLimit ? "#bfdbfe" : "#ddd6fe"}`,
-      flexShrink: 0,
-    }}>
-      {isLimit ? "حد عددي" : "ميزة"}
-    </span>
-  );
-}
-
-// ── NamedLimitField ───────────────────────────────────────────────────────────
-
-function NamedLimitField({
-  icon, label, limitKey, limits, value, onValueChange,
-  dependsOnFeatureKey, dependsOnFeatureLabel, features,
-}: {
-  icon: string;
-  label: string;
-  limitKey: string;
-  limits: PlanLimitItem[];
-  value: string;
-  onValueChange: (key: string, val: string) => void;
-  dependsOnFeatureKey?: string;
-  dependsOnFeatureLabel?: string;
-  features?: PlanFeatureItem[];
-}) {
-  const item = limits.find(l => l.key === limitKey);
-  const dirty  = item ? value !== String(item.value) : false;
-
-  // Check whether a required feature is enabled for this plan
-  const dependencyFeature = dependsOnFeatureKey && features
-    ? features.find(f => f.key === dependsOnFeatureKey)
-    : undefined;
-  const dependencyDisabled = dependsOnFeatureKey
-    ? !dependencyFeature?.isEnabled   // feature disabled or not found for this plan
-    : false;
-
-  if (!item) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
-        <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
-            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
-            <TypeBadge kind="limit" />
-          </div>
-          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>
-            لم يُعرَّف في كتالوج الحدود — أضفه أولاً من صفحة <strong>كتالوج الحدود</strong>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Limit exists but its prerequisite feature is disabled
-  if (dependencyDisabled) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#fffbeb", border: "1.5px solid #fde68a" }}>
-        <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
-            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#92400e" }}>{label}</p>
-            <TypeBadge kind="limit" />
-          </div>
-          <p style={{ margin: 0, fontSize: "0.72rem", color: "#b45309" }}>
-            ⚠ يتوقف على تفعيل «{dependsOnFeatureLabel}» — فعّل الميزة أولاً لتأثير هذا الحد
-          </p>
-          <p style={{ margin: 0, fontSize: "0.72rem", color: "#78716c", marginTop: "0.1rem" }}>
-            القيمة الحالية: <strong>{item.value === -1 ? "غير محدود ∞" : `${item.value}${item.unit ? ` ${item.unit}` : ""}`}</strong>
-          </p>
-        </div>
-        <input
-          type="number"
-          value={value}
-          style={{ ...inputStyle, width: 76, textAlign: "center", padding: "0.35rem 0.5rem", margin: 0, flexShrink: 0, opacity: 0.5 }}
-          disabled={true}
-          min={-1}
-          readOnly
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#ffffff", border: dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0" }}>
-      <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.1rem" }}>
-          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600 }}>{label}</p>
-          <TypeBadge kind="limit" />
-        </div>
-        <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>
-          الحالي: <strong>{item.value === -1 ? "غير محدود ∞" : `${item.value}${item.unit ? ` ${item.unit}` : ""}`}</strong>
-          {dirty && <span style={{ color: "#2563eb", marginRight: "0.4rem" }}>· ● معلَّق</span>}
-        </p>
-      </div>
-      <input
-        type="number"
-        value={value}
-        onChange={e => onValueChange(limitKey, e.target.value)}
-        style={{ ...inputStyle, width: 76, textAlign: "center", padding: "0.35rem 0.5rem", margin: 0, flexShrink: 0 }}
-        min={-1}
-      />
-      <button
-        type="button"
-        title="تعيين غير محدود (∞)"
-        style={{ padding: "0.3rem 0.55rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: value === "-1" ? "#f0fdf4" : "#f8fafc", fontSize: "0.82rem", cursor: "pointer", flexShrink: 0, color: value === "-1" ? "#166534" : "#475569", fontWeight: 700 }}
-        onClick={() => onValueChange(limitKey, "-1")}
-      >
-        ∞
-      </button>
-    </div>
-  );
-}
-
-// ── NamedFeatureToggle ────────────────────────────────────────────────────────
-
-function NamedFeatureToggle({
-  icon, label, description, featureKey, features, featureSaving, onToggle,
-}: {
-  icon: string;
-  label: string;
-  description: string;
-  featureKey: string;
+interface UnifiedCardProps {
+  item: UnifiedItem;
   features: PlanFeatureItem[];
+  limits: PlanLimitItem[];
+  limitValues: Record<string, string>;
   featureSaving: string | null;
-  onToggle: (key: string, val: boolean) => void;
-}) {
-  const item = features.find(f => f.key === featureKey);
+  onFeatureToggle: (fk: string, val: boolean) => void;
+  onLimitChange: (key: string, val: string) => void;
+  onSimToggle: (limitKey: string, enabled: boolean) => void;
+  onFeatureLimitToggle: (fk: string, limitKey: string, val: boolean) => void;
+}
 
-  if (!item) {
+function UnifiedItemCard({
+  item, features, limits, limitValues, featureSaving,
+  onFeatureToggle, onLimitChange, onSimToggle, onFeatureLimitToggle,
+}: UnifiedCardProps) {
+  const cardBase: React.CSSProperties = {
+    borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fff",
+    padding: "0.9rem 1rem", transition: "border-color 0.15s, background 0.15s",
+  };
+
+  // ── t: "limit" — always-visible numeric input ──────────────────────────────
+  if (item.t === "limit") {
+    const limItem = limits.find(l => l.key === item.key);
+    const val = limitValues[item.key] ?? String(limItem?.value ?? 0);
+    const dirty = limItem ? val !== String(limItem.value) : false;
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
-        <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.15rem" }}>
-            <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600, color: "#64748b" }}>{label}</p>
-            <TypeBadge kind="feature" />
+      <div style={{ ...cardBase, border: dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600 }}>{item.label}</p>
+            <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>{item.hint}</p>
           </div>
-          <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>
-            لم تُعرَّف في كتالوج الميزات — أضفها أولاً من صفحة <strong>كتالوج الميزات</strong>
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
+            <input
+              type="number" min={-1}
+              value={val}
+              onChange={e => onLimitChange(item.key, e.target.value)}
+              style={{ ...inputStyle, width: 82, textAlign: "center", padding: "0.3rem 0.5rem", margin: 0 }}
+            />
+            <button type="button" title="غير محدود ∞" onClick={() => onLimitChange(item.key, "-1")}
+              style={{ padding: "0.3rem 0.5rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: val === "-1" ? "#f0fdf4" : "#f8fafc", fontSize: "0.82rem", cursor: "pointer", color: val === "-1" ? "#166534" : "#475569", fontWeight: 700 }}>∞</button>
+          </div>
         </div>
-        <ToggleSwitch checked={false} onChange={() => {}} disabled={true} />
       </div>
     );
   }
 
-  const saving = featureSaving === featureKey;
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: item.isEnabled ? "#f0fdf4" : "#ffffff", border: `1.5px solid ${item.isEnabled ? "#86efac" : "#e2e8f0"}`, transition: "all 0.2s", opacity: saving ? 0.55 : 1 }}>
-      <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{icon || item.icon || "○"}</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.1rem" }}>
-          <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: item.isEnabled ? 600 : 400, color: item.isEnabled ? "#166534" : "#334155" }}>
-            {label}
-          </p>
-          <TypeBadge kind="feature" />
+  // ── t: "sim" — simulated toggle (limit > 0 means enabled) ─────────────────
+  if (item.t === "sim") {
+    const limItem = limits.find(l => l.key === item.key);
+    const val = limitValues[item.key] ?? String(limItem?.value ?? 0);
+    const enabled = val !== "0" && val !== "";
+    const dirty = limItem ? val !== String(limItem.value) : false;
+    return (
+      <div style={{ ...cardBase, background: enabled ? "#f0fdf4" : "#fff", border: enabled ? "1.5px solid #86efac" : dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: enabled ? 600 : 400, color: enabled ? "#166534" : "#334155" }}>{item.label}</p>
+            <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>{item.hint}</p>
+          </div>
+          <span style={{ fontSize: "0.75rem", color: enabled ? "#16a34a" : "#94a3b8", fontWeight: 600, flexShrink: 0 }}>
+            {enabled ? "مفعّل" : "معطّل"}
+          </span>
+          <ToggleSwitch checked={enabled} onChange={v => onSimToggle(item.key, v)} />
         </div>
-        {description && (
-          <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>{description}</p>
+        {enabled && (
+          <div style={{ marginTop: "0.75rem", paddingTop: "0.65rem", borderTop: "1px solid #dcfce7" }}>
+            <label style={{ ...labelStyle, fontSize: "0.78rem" }}>{item.limitLabel}</label>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <input
+                type="number" min={0}
+                value={val}
+                onChange={e => onLimitChange(item.key, e.target.value)}
+                style={{ ...inputStyle, width: 110, textAlign: "center", padding: "0.35rem 0.6rem" }}
+              />
+              <button type="button" title="غير محدود ∞" onClick={() => onLimitChange(item.key, "-1")}
+                style={{ padding: "0.35rem 0.6rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: val === "-1" ? "#f0fdf4" : "#f8fafc", fontSize: "0.82rem", cursor: "pointer", color: val === "-1" ? "#166534" : "#475569", fontWeight: 700 }}>∞</button>
+            </div>
+          </div>
         )}
       </div>
-      <span style={{ fontSize: "0.78rem", color: item.isEnabled ? "#16a34a" : "#94a3b8", fontWeight: 700, flexShrink: 0, minWidth: 44, textAlign: "center" }}>
-        {item.isEnabled ? "مفعّل" : "معطّل"}
-      </span>
-      <ToggleSwitch
-        checked={item.isEnabled}
-        onChange={(v) => onToggle(featureKey, v)}
-        disabled={saving}
-      />
+    );
+  }
+
+  // ── t: "flt" — backend feature toggle + associated limit ───────────────────
+  if (item.t === "flt") {
+    const feat = features.find(f => f.key === item.fk);
+    const limItem = limits.find(l => l.key === item.key);
+    const enabled = feat?.isEnabled ?? false;
+    const saving = featureSaving === item.fk;
+    const val = limitValues[item.key] ?? String(limItem?.value ?? 0);
+    const limitDirty = limItem ? val !== String(limItem.value) : false;
+
+    if (!feat) {
+      return (
+        <div style={{ ...cardBase, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+            <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#64748b" }}>{item.label}</p>
+              <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#94a3b8" }}>لم تُعرَّف في كتالوج الميزات — أضفها أولاً.</p>
+            </div>
+            <ToggleSwitch checked={false} onChange={() => {}} disabled />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ ...cardBase, background: enabled ? "#f0fdf4" : "#fff", border: enabled ? "1.5px solid #86efac" : "1.5px solid #e2e8f0", opacity: saving ? 0.6 : 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: enabled ? 600 : 400, color: enabled ? "#166534" : "#334155" }}>{item.label}</p>
+            <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>{item.hint}</p>
+          </div>
+          <span style={{ fontSize: "0.75rem", color: enabled ? "#16a34a" : "#94a3b8", fontWeight: 600, flexShrink: 0 }}>
+            {enabled ? "مفعّل" : "معطّل"}
+          </span>
+          <ToggleSwitch checked={enabled} onChange={v => onFeatureLimitToggle(item.fk, item.key, v)} disabled={saving} />
+        </div>
+        {enabled && (
+          <div style={{ marginTop: "0.75rem", paddingTop: "0.65rem", borderTop: "1px solid #dcfce7" }}>
+            <label style={{ ...labelStyle, fontSize: "0.78rem" }}>{item.limitLabel}</label>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+              <input
+                type="number" min={0}
+                value={val}
+                onChange={e => onLimitChange(item.key, e.target.value)}
+                style={{ ...inputStyle, width: 110, textAlign: "center", padding: "0.35rem 0.6rem", border: limitDirty ? "1.5px solid #93c5fd" : undefined }}
+              />
+              <button type="button" title="غير محدود ∞" onClick={() => onLimitChange(item.key, "-1")}
+                style={{ padding: "0.35rem 0.6rem", borderRadius: 6, border: "1.5px solid #e2e8f0", background: val === "-1" ? "#f0fdf4" : "#f8fafc", fontSize: "0.82rem", cursor: "pointer", color: val === "-1" ? "#166534" : "#475569", fontWeight: 700 }}>∞</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── t: "feature" — pure feature toggle (no limit) ─────────────────────────
+  const feat = features.find(f => f.key === item.fk);
+  const saving = featureSaving === item.fk;
+
+  if (!feat) {
+    return (
+      <div style={{ ...cardBase, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#64748b" }}>{item.label}</p>
+            <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#94a3b8" }}>لم تُعرَّف في كتالوج الميزات — أضفها أولاً.</p>
+          </div>
+          <ToggleSwitch checked={false} onChange={() => {}} disabled />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ ...cardBase, background: feat.isEnabled ? "#f0fdf4" : "#fff", border: feat.isEnabled ? "1.5px solid #86efac" : "1.5px solid #e2e8f0", opacity: saving ? 0.6 : 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+        <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: feat.isEnabled ? 600 : 400, color: feat.isEnabled ? "#166534" : "#334155" }}>{item.label}</p>
+          <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>{item.hint}</p>
+        </div>
+        <span style={{ fontSize: "0.75rem", color: feat.isEnabled ? "#16a34a" : "#94a3b8", fontWeight: 600, flexShrink: 0 }}>
+          {feat.isEnabled ? "مفعّل" : "معطّل"}
+        </span>
+        <ToggleSwitch checked={feat.isEnabled} onChange={v => onFeatureToggle(item.fk, v)} disabled={saving} />
+      </div>
     </div>
   );
 }
@@ -457,7 +446,9 @@ function PricingRow({ entry, planId, planBillingType, onUpdated, onDeleted }: Pr
         </div>
         <div>
           <label style={labelStyle}>العملة</label>
-          <input value={currency} onChange={e => setCurrency(e.target.value)} style={inputStyle} placeholder="SYP" />
+          <select value={currency} onChange={e => setCurrency(e.target.value)} style={selectStyle} required>
+            {CURRENCY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
         </div>
       </div>
       <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
@@ -529,7 +520,9 @@ function AddPricingForm({ planId, planBillingType, onCreated, onCancel }: AddPri
         </div>
         <div>
           <label style={labelStyle}>العملة</label>
-          <input value={currency} onChange={e => setCurrency(e.target.value)} style={inputStyle} placeholder="SYP" />
+          <select value={currency} onChange={e => setCurrency(e.target.value)} style={selectStyle} required>
+            {CURRENCY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
         </div>
       </div>
       <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
@@ -912,6 +905,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [limitValues, setLimitValues]     = useState<Record<string, string>>(
     () => Object.fromEntries((plan?.limits ?? []).map(l => [l.key, String(l.value)]))
   );
+  // Stores limit values before a simulated-toggle turns them OFF (so we can restore on re-enable)
+  const [prevLimitValues, setPrevLimitValues] = useState<Record<string, string>>({});
 
   const initialSnapshot = useRef<string>("");
   const formRef = useRef<HTMLFormElement>(null);
@@ -1087,7 +1082,34 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   function handleLimitChange(key: string, rawVal: string) {
-    setLimitValues(prev => ({ ...prev, [key]: rawVal }));
+    const parsed = parseInt(rawVal, 10);
+    const safe = isNaN(parsed) ? "0" : String(Math.max(-1, parsed));
+    setLimitValues(prev => ({ ...prev, [key]: rawVal === "-1" ? "-1" : rawVal === "" ? "" : safe }));
+  }
+
+  function handleSimToggle(limitKey: string, enabled: boolean) {
+    if (!enabled) {
+      setPrevLimitValues(prev => ({ ...prev, [limitKey]: limitValues[limitKey] ?? "0" }));
+      setLimitValues(prev => ({ ...prev, [limitKey]: "0" }));
+    } else {
+      const restored = prevLimitValues[limitKey];
+      setLimitValues(prev => ({
+        ...prev,
+        [limitKey]: restored && restored !== "0" ? restored : "1",
+      }));
+    }
+  }
+
+  async function handleFeatureLimitToggle(fk: string, limitKey: string, val: boolean) {
+    await handleFeatureToggle(fk, val);
+    if (!val) {
+      setLimitValues(prev => ({ ...prev, [limitKey]: "0" }));
+    } else {
+      const original = limits.find(l => l.key === limitKey);
+      if (original && original.value > 0) {
+        setLimitValues(prev => ({ ...prev, [limitKey]: String(original.value) }));
+      }
+    }
   }
 
   async function handleFeatureToggle(key: string, newVal: boolean) {
@@ -1308,33 +1330,13 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                 </div>
               )}
 
-              {/* One-time price */}
-              {planBillingType === "one_time_fixed_term" && (
-                <div style={{ maxWidth: 260 }}>
-                  <label style={labelStyle}>سعر الشراء (ل.س)</label>
-                  <input type="number" min={0} value={priceMonthly} onChange={e => setPriceMonthly(e.target.value)} style={inputStyle} placeholder="مثال: 5000" />
-                  <p style={{ margin: "0.3rem 0 0", fontSize: "0.75rem", color: "#64748b" }}>السعر المدفوع مرة واحدة فقط عند الشراء.</p>
-                </div>
-              )}
-
-              {/* Subscription: monthly + yearly side by side */}
-              {planBillingType === "recurring" && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", maxWidth: 420 }}>
-                  <div>
-                    <label style={labelStyle}>السعر الشهري (ل.س)</label>
-                    <input type="number" min={0} value={priceMonthly} onChange={e => setPriceMonthly(e.target.value)} style={inputStyle} placeholder="مثال: 500" />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>السعر السنوي (ل.س)</label>
-                    <input type="number" min={0} value={priceYearly} onChange={e => setPriceYearly(e.target.value)} style={inputStyle} placeholder="مثال: 5000" />
-                  </div>
-                </div>
-              )}
-
+              {/* Pricing note — prices are managed exclusively in "Subscription Prices" section below */}
               {planBillingType !== "free_default" && (
-                <p style={{ margin: "0.75rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
-                  💡 أسعار بعملات متعددة تُضاف في قسم &quot;أسعار الاشتراك&quot; بعد الحفظ.
-                </p>
+                <div style={{ padding: "0.8rem 1rem", background: "#f0f9ff", borderRadius: 8, border: "1px solid #bae6fd", marginTop: "0.5rem" }}>
+                  <p style={{ margin: 0, fontSize: "0.84rem", color: "#0369a1", fontWeight: 500 }}>
+                    💡 أضف الأسعار بعملات متعددة (ل.س / دولار) من قسم <strong>«أسعار الاشتراك»</strong> أدناه — هو المصدر الوحيد للتسعير.
+                  </p>
+                </div>
               )}
 
               {/* Status & Visibility (existing plans only) */}
@@ -1510,56 +1512,72 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           })()}
 
           {/* ═══════════════════════════════════════════════
-              3. الحدود (existing plans only)
+              3. المميزات والحدود — Unified section (existing plans only)
           ═══════════════════════════════════════════════ */}
           {!isNew && (
-            <SectionCard title="الحدود" icon="📦">
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {KNOWN_LIMITS.map(kl => (
-                  <NamedLimitField key={kl.key} icon={kl.icon} label={kl.label} limitKey={kl.key}
-                    limits={limits} value={limitValues[kl.key] ?? String(limits.find(l => l.key === kl.key)?.value ?? 0)}
-                    onValueChange={handleLimitChange}
-                    dependsOnFeatureKey={kl.dependsOnFeatureKey} dependsOnFeatureLabel={kl.dependsOnFeatureLabel} features={features}
-                  />
-                ))}
-                {limits.filter(l => !KNOWN_LIMITS.some(k => k.key === l.key)).map(lim => (
-                  <LimitRow key={lim.key} limit={lim} value={limitValues[lim.key] ?? String(lim.value)} onValueChange={handleLimitChange} />
-                ))}
-              </div>
-              {limits.length === 0 && (
-                <p style={{ fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "0.75rem 0", margin: 0 }}>
-                  لم تُحدَّد حدود بعد — أضفها من كتالوج الحدود أولاً.
-                </p>
-              )}
-            </SectionCard>
-          )}
+            <SectionCard title={`المميزات والحدود ${enabledCount > 0 ? `· ${enabledCount} مفعّل` : ""}`} icon="🎛">
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                {UNIFIED_ITEMS.map(item => {
+                  const itemKey = "key" in item ? item.key : item.fk;
+                  return (
+                    <UnifiedItemCard
+                      key={itemKey}
+                      item={item}
+                      features={features}
+                      limits={limits}
+                      limitValues={limitValues}
+                      featureSaving={featureSaving}
+                      onFeatureToggle={handleFeatureToggle}
+                      onLimitChange={handleLimitChange}
+                      onSimToggle={handleSimToggle}
+                      onFeatureLimitToggle={handleFeatureLimitToggle}
+                    />
+                  );
+                })}
 
-          {/* ═══════════════════════════════════════════════
-              4. المميزات (existing plans only)
-          ═══════════════════════════════════════════════ */}
-          {!isNew && (
-            <SectionCard title={`المميزات ${enabledCount > 0 ? `(${enabledCount} مفعّل)` : ""}`} icon="✨">
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {KNOWN_FEATURES.map(kf => (
-                  <NamedFeatureToggle key={kf.key} icon={kf.icon} label={kf.label} description={kf.description}
-                    featureKey={kf.key} features={features} featureSaving={featureSaving} onToggle={handleFeatureToggle}
-                  />
-                ))}
-                {features.filter(f => !KNOWN_FEATURES.some(k => k.key === f.key)).map(feat => (
-                  <div key={feat.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0.85rem", borderRadius: 8, background: feat.isEnabled ? "#f0fdf4" : "#f9fafb", border: feat.isEnabled ? "1px solid #bbf7d0" : "1px solid #e2e8f0", opacity: featureSaving === feat.key ? 0.55 : 1, transition: "all 0.18s" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
-                      {feat.icon && <span style={{ fontSize: "1rem", flexShrink: 0 }}>{feat.icon}</span>}
-                      <div>
-                        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: feat.isEnabled ? 600 : 400 }}>{feat.name}</p>
-                        {feat.description && <p style={{ margin: 0, fontSize: "0.73rem", color: "#64748b" }}>{feat.description}</p>}
+                {/* Unknown limits — fallback for limits not in UNIFIED_ITEMS */}
+                {limits
+                  .filter(l => !UNIFIED_ITEMS.some(u => "key" in u && u.key === l.key))
+                  .filter(l => !KNOWN_MARKETING.some(k => k.key === l.key))
+                  .map(lim => {
+                    const val = limitValues[lim.key] ?? String(lim.value);
+                    const dirty = val !== String(lim.value);
+                    return (
+                      <div key={lim.key} style={{ borderRadius: 10, border: dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0", background: "#fff", padding: "0.9rem 1rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                          <span style={{ fontSize: "1.15rem" }}>📐</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600 }}>{lim.name || lim.key}</p>
+                            {lim.unit && <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>{lim.unit}</p>}
+                          </div>
+                          <input type="number" min={-1} value={val}
+                            onChange={e => handleLimitChange(lim.key, e.target.value)}
+                            style={{ ...inputStyle, width: 82, textAlign: "center", padding: "0.3rem 0.5rem", margin: 0, flexShrink: 0 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                {/* Unknown features — fallback for features not in UNIFIED_ITEMS */}
+                {features
+                  .filter(f => !UNIFIED_ITEMS.some(u => "fk" in u && u.fk === f.key))
+                  .map(feat => (
+                    <div key={feat.key} style={{ borderRadius: 10, border: feat.isEnabled ? "1.5px solid #86efac" : "1.5px solid #e2e8f0", background: feat.isEnabled ? "#f0fdf4" : "#fff", padding: "0.9rem 1rem", opacity: featureSaving === feat.key ? 0.6 : 1, transition: "all 0.18s" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                        {feat.icon && <span style={{ fontSize: "1.15rem" }}>{feat.icon}</span>}
+                        <div style={{ flex: 1 }}>
+                          <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: feat.isEnabled ? 600 : 400, color: feat.isEnabled ? "#166534" : "#334155" }}>{feat.name}</p>
+                          {feat.description && <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>{feat.description}</p>}
+                        </div>
+                        <span style={{ fontSize: "0.75rem", color: feat.isEnabled ? "#16a34a" : "#94a3b8", fontWeight: 600, flexShrink: 0 }}>{feat.isEnabled ? "مفعّل" : "معطّل"}</span>
+                        <ToggleSwitch checked={feat.isEnabled} onChange={val => handleFeatureToggle(feat.key, val)} disabled={featureSaving === feat.key} />
                       </div>
                     </div>
-                    <ToggleSwitch checked={feat.isEnabled} onChange={(val) => handleFeatureToggle(feat.key, val)} disabled={featureSaving === feat.key} />
-                  </div>
-                ))}
-                {features.length === 0 && (
-                  <p style={{ fontSize: "0.82rem", color: "#94a3b8", textAlign: "center", padding: "0.75rem 0", margin: 0 }}>
-                    لم تُحدَّد ميزات بعد — أضفها من كتالوج الميزات أولاً.
+                  ))}
+
+                {limits.length === 0 && features.length === 0 && (
+                  <p style={{ fontSize: "0.83rem", color: "#94a3b8", textAlign: "center", padding: "1rem 0", margin: 0 }}>
+                    لم تُحدَّد حدود أو ميزات بعد — أضفها من <strong>كتالوج الميزات والحدود</strong> أولاً.
                   </p>
                 )}
               </div>
@@ -1570,12 +1588,24 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           {!isNew && limits.some(l => KNOWN_MARKETING.some(k => k.key === l.key)) && (
             <CollapsibleSection title="القيمة التسويقية" icon="📈" defaultOpen={false}>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
-                {KNOWN_MARKETING.map(km => (
-                  <NamedLimitField key={km.key} icon={km.icon} label={km.label} limitKey={km.key}
-                    limits={limits} value={limitValues[km.key] ?? String(limits.find(l => l.key === km.key)?.value ?? 0)}
-                    onValueChange={handleLimitChange}
-                  />
-                ))}
+                {KNOWN_MARKETING.map(km => {
+                  const limItem = limits.find(l => l.key === km.key);
+                  if (!limItem) return null;
+                  const val = limitValues[km.key] ?? String(limItem.value);
+                  const dirty = val !== String(limItem.value);
+                  return (
+                    <div key={km.key} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 0.85rem", borderRadius: 8, background: "#fff", border: dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0" }}>
+                      <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{km.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 600 }}>{km.label}</p>
+                        <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748b" }}>{km.description}</p>
+                      </div>
+                      <input type="number" min={0} value={val}
+                        onChange={e => handleLimitChange(km.key, e.target.value)}
+                        style={{ ...inputStyle, width: 82, textAlign: "center", padding: "0.35rem 0.5rem", margin: 0, flexShrink: 0 }} />
+                    </div>
+                  );
+                })}
               </div>
             </CollapsibleSection>
           )}

@@ -1,0 +1,135 @@
+I want you to refactor and clean up the Admin Plan Configuration UI in a highly professional and controlled way.
+
+⚠️ STRICT RULES (VERY IMPORTANT):
+- DO NOT touch or modify anything related to the Booking System.
+- DO NOT modify backend APIs unless absolutely necessary.
+- DO NOT refactor unrelated modules.
+- DO NOT introduce breaking changes.
+- Stay strictly within the Plan/Pricing UI scope only.
+- If something is unclear, choose the safest minimal-change approach.
+
+-------------------------------------
+CURRENT PROBLEMS TO FIX
+-------------------------------------
+
+1. DUPLICATED PRICE INPUT
+There are currently two places where price is defined:
+- "Purchase Price"
+- "Subscription Prices"
+
+This is incorrect and confusing.
+
+REQUIRED:
+- Use ONLY ONE source of truth for pricing.
+- Keep "Subscription Prices" as the main pricing system.
+- Remove or hide the duplicated "Purchase Price" field from the UI.
+- If the backend requires it, keep it as read-only or internally mapped.
+
+-------------------------------------
+
+2. CURRENCY INPUT IS NOT SAFE
+Currently, currency is a free text input (e.g., SYP, usd, random text).
+
+REQUIRED:
+- Replace currency input with a Dropdown (Select).
+- Allowed values ONLY:
+  - USD (US Dollar)
+  - SYP (Syrian Pound)
+- Prevent any manual text input.
+- Ensure backend receives ONLY "USD" or "SYP".
+
+-------------------------------------
+
+3. DUPLICATED / UNSTRUCTURED FEATURES & LIMITS
+There is duplication and inconsistency between:
+- Limits section
+- Features section
+
+Examples:
+- Number of images
+- Internal messaging
+- Boost ads
+- Projects
+- Brokers
+
+REQUIRED:
+Unify ALL of these under ONE consistent system:
+
+👉 Each feature must follow this pattern:
+- Toggle (Enable / Disable)
+- If enabled → show numeric input (limit)
+- If disabled → hide or disable the input and store 0 or null
+
+-------------------------------------
+
+4. STRUCTURED FEATURE SYSTEM (MANDATORY)
+
+Implement features like this:
+
+- Multiple Images:
+  Toggle
+  If enabled → "Images per listing" input
+
+- Internal Messaging:
+  Toggle
+  If enabled → "Max conversations" input
+
+- Boost Ads:
+  Toggle
+  If enabled → "Number of boosted ads"
+
+- Projects:
+  Toggle
+  If enabled → "Number of projects"
+
+- Brokers:
+  Toggle
+  If enabled → "Number of brokers"
+
+-------------------------------------
+
+5. REMOVE DUPLICATION COMPLETELY
+- DO NOT allow the same setting to appear in two different sections.
+- UI must be clean, single-source, and non-redundant.
+- Backend structure can remain, but frontend must be unified.
+
+-------------------------------------
+
+6. UX IMPROVEMENTS (IMPORTANT)
+- Each feature should be inside a clean Card.
+- Toggle appears first.
+- When enabled → input appears smoothly below or beside it.
+- Add small helper text explaining each feature.
+- Avoid popups unless absolutely necessary.
+- Keep layout clean, modern, RTL-compatible.
+
+-------------------------------------
+
+7. VALIDATION RULES
+- Price must be ≥ 0
+- Currency is REQUIRED (USD or SYP only)
+- All numeric inputs must be integers ≥ 0
+- Disabled features must not retain stale values (reset to 0/null)
+
+-------------------------------------
+
+8. BACKEND SAFETY
+- DO NOT break existing API contracts
+- DO NOT rename backend fields unless unavoidable
+- If needed → map values in frontend instead of changing backend
+
+-------------------------------------
+
+9. FINAL OUTPUT REQUIRED
+After implementation, provide:
+- What was removed
+- What was unified
+- What files were modified
+- Whether commit and deploy are required
+
+-------------------------------------
+
+REMEMBER:
+Stay focused ONLY on Plan Configuration UI.
+Do NOT touch Booking System or any unrelated modules.
+Do NOT over-engineer or refactor beyond scope.
