@@ -1138,9 +1138,11 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }, []);
 
   async function doSave() {
+    console.log("[plans] ▶ doSave ENTERED", new Error("doSave call site").stack);
     if (!plan?.id || saving) return;
     setSaving(true); setSaveStatus("saving"); setError("");
     try {
+      console.log("[plans] API CALL: updatePlan →", plan.id);
       const result = await adminApi.updatePlan(plan.id, {
         name:                   name.trim(),
         description:            description.trim() || undefined,
@@ -1199,6 +1201,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       for (const [key, rawVal] of changedLimits) {
         const val = parseInt(rawVal, 10);
         try {
+          console.log("[plans] API CALL: setPlanLimit →", key, "=", val);
           const updated = await adminApi.setPlanLimit(plan!.id, key, val);
           const idx = updatedLimits.findIndex(l => l.key === key);
           if (idx >= 0) updatedLimits[idx] = updated;
@@ -1227,6 +1230,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         if (!changed) continue;
         try {
           setFeatureSaving(feat.key);
+          console.log("[plans] API CALL: setPlanFeature →", feat.key, "=", feat.isEnabled);
           const serverFeat = await adminApi.setPlanFeature(plan!.id, feat.key, feat.isEnabled);
           const idx = updatedFeatures.findIndex(f => f.key === feat.key);
           if (idx >= 0) updatedFeatures[idx] = serverFeat;
@@ -1275,15 +1279,16 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   useEffect(() => {
+    console.log("[plans] useEffect:formSnapshot isDirty=", isDirty, "saveStatus=", saveStatus, "— NO SAVE TRIGGERED");
     if (!isNew && isDirty && saveStatus !== "saving" && saveStatus !== "saved") {
       setSaveStatus("dirty");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formSnapshot]);
 
-  async function handleSavePlan(e: React.FormEvent) {
-    e.preventDefault();
-    if (!isNew) { void doSave(); return; }
+  async function doCreate() {
+    console.log("[plans] ▶ doCreate ENTERED");
+    if (saving) return;
     setSaving(true); setSaveStatus("saving"); setError("");
     try {
       const result = await adminApi.createPlan({
@@ -1352,6 +1357,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   function handleFeatureLimitToggle(fk: string, limitKey: string, val: boolean) {
+    console.log("[plans] handleFeatureLimitToggle — LOCAL ONLY (no API)", fk, val);
     handleFeatureToggle(fk, val);
     if (!val) {
       setLimitValues(prev => ({ ...prev, [limitKey]: "0" }));
@@ -1364,6 +1370,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   function handleFeatureToggle(key: string, newVal: boolean) {
+    console.log("[plans] handleFeatureToggle — LOCAL ONLY (no API)", key, newVal);
     setFeatures(prev => prev.map(f => f.key === key ? { ...f, isEnabled: newVal } : f));
   }
 
@@ -1453,7 +1460,11 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
             </div>
           )}
 
-          <form ref={formRef} onSubmit={handleSavePlan}>
+          <form
+            ref={formRef}
+            onSubmit={e => e.preventDefault()}
+            onKeyDown={e => { if (e.key === "Enter") e.preventDefault(); }}
+          >
 
             {/* ═══════════════════════════════════════════════
                 1. المعلومات الأساسية
@@ -1851,7 +1862,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
             </button>
             <button
               type="button" className="btn btn-primary"
-              onClick={() => { if (isNew) { formRef.current?.requestSubmit(); } else void doSave(); }}
+              onClick={() => { if (isNew) { void doCreate(); } else { void doSave(); } }}
               disabled={saving || (!isNew && !isDirty)}
               style={{ minWidth: 130 }}
             >
