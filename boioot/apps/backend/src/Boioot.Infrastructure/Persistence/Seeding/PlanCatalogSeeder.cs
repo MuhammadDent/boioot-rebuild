@@ -139,6 +139,11 @@ public sealed class PlanCatalogSeeder
             FD("fd00000a-0000-0000-0000-000000000000", "internal_chat",       "المراسلة الداخلية",       "إمكانية التواصل مع البائعين والمشترين عبر المنصة",  "communication", "✉️",  "boolean", "messaging", 41),
             // support group (SortOrder 50-59)
             FD("fd000002-0000-0000-0000-000000000000", "priority_support",    "دعم ذو أولوية",          "أولوية الوصول لفريق الدعم الفني",                 "support",       "🛠",  "boolean", "user",      50),
+            // marketing extras (SortOrder 13)
+            FD("fd00000b-0000-0000-0000-000000000000", "search_priority",     "أولوية نتائج البحث",     "ظهور الإعلانات في مقدمة نتائج البحث",             "marketing",     "🔍",  "boolean", "listing",   13),
+            // business extras (SortOrder 32-33)
+            FD("fd00000c-0000-0000-0000-000000000000", "lead_insights",       "تحليلات العملاء المحتملين","بيانات مفصّلة عن الطلبات والعملاء المحتملين",   "business",      "📈",  "boolean", "analytics", 32),
+            FD("fd00000d-0000-0000-0000-000000000000", "team_management",     "إدارة الفريق",            "إضافة وسطاء وأعضاء ضمن الحساب التجاري",          "business",      "👥",  "boolean", "account",   33),
         };
 
         var newFDs = catalog.Where(f => !existing.Contains(f.Key)).ToList();
@@ -166,6 +171,9 @@ public sealed class PlanCatalogSeeder
             ["whatsapp_contact"]    = ("communication", "💬",  "boolean", "messaging", true,  40),
             ["internal_chat"]       = ("communication", "✉️",  "boolean", "messaging", true,  41),
             ["priority_support"]    = ("support",       "🛠",  "boolean", "user",      true,  50),
+            ["search_priority"]     = ("marketing",     "🔍",  "boolean", "listing",   true,  13),
+            ["lead_insights"]       = ("business",      "📈",  "boolean", "analytics", true,  32),
+            ["team_management"]     = ("business",      "👥",  "boolean", "account",   true,  33),
         };
 
         foreach (var fd in fds)
@@ -301,6 +309,9 @@ public sealed class PlanCatalogSeeder
         const string fd8  = "fd000008-0000-0000-0000-000000000000"; // verified_badge
         const string fd9  = "fd000009-0000-0000-0000-000000000000"; // homepage_exposure
         const string fd0a = "fd00000a-0000-0000-0000-000000000000"; // internal_chat
+        const string fd0b = "fd00000b-0000-0000-0000-000000000000"; // search_priority
+        const string fd0c = "fd00000c-0000-0000-0000-000000000000"; // lead_insights
+        const string fd0d = "fd00000d-0000-0000-0000-000000000000"; // team_management
 
         const string p01 = "00000001-0000-0000-0000-000000000000"; // Free
         const string p02 = "00000002-0000-0000-0000-000000000000"; // Silver
@@ -470,6 +481,59 @@ public sealed class PlanCatalogSeeder
             PF("ed000008-0000-0000-0000-000000000000", p0d, fd8, true),
             PF("ed000009-0000-0000-0000-000000000000", p0d, fd9, true),
             PF("ed00000a-0000-0000-0000-000000000000", p0d, fd0a, true),
+            // ── search_priority / lead_insights / team_management (ee000001–ee000027) ──
+            // Free (01): all false
+            PF("ee000001-0000-0000-0000-000000000000", p01, fd0b, false), // search_priority
+            PF("ee000002-0000-0000-0000-000000000000", p01, fd0c, false), // lead_insights
+            PF("ee000003-0000-0000-0000-000000000000", p01, fd0d, false), // team_management
+            // Silver (02): all false
+            PF("ee000004-0000-0000-0000-000000000000", p02, fd0b, false),
+            PF("ee000005-0000-0000-0000-000000000000", p02, fd0c, false),
+            PF("ee000006-0000-0000-0000-000000000000", p02, fd0d, false),
+            // Gold (03): search_priority only
+            PF("ee000007-0000-0000-0000-000000000000", p03, fd0b, true),
+            PF("ee000008-0000-0000-0000-000000000000", p03, fd0c, false),
+            PF("ee000009-0000-0000-0000-000000000000", p03, fd0d, false),
+            // Platinum (04): search_priority + lead_insights
+            PF("ee00000a-0000-0000-0000-000000000000", p04, fd0b, true),
+            PF("ee00000b-0000-0000-0000-000000000000", p04, fd0c, true),
+            PF("ee00000c-0000-0000-0000-000000000000", p04, fd0d, false),
+            // OwnerPro (05): all false
+            PF("ee00000d-0000-0000-0000-000000000000", p05, fd0b, false),
+            PF("ee00000e-0000-0000-0000-000000000000", p05, fd0c, false),
+            PF("ee00000f-0000-0000-0000-000000000000", p05, fd0d, false),
+            // BrokerPro (06): team_management only
+            PF("ee000010-0000-0000-0000-000000000000", p06, fd0b, false),
+            PF("ee000011-0000-0000-0000-000000000000", p06, fd0c, false),
+            PF("ee000012-0000-0000-0000-000000000000", p06, fd0d, true),
+            // BrokerPremium (07): search_priority + team_management
+            PF("ee000013-0000-0000-0000-000000000000", p07, fd0b, true),
+            PF("ee000014-0000-0000-0000-000000000000", p07, fd0c, false),
+            PF("ee000015-0000-0000-0000-000000000000", p07, fd0d, true),
+            // OfficeStarter (08): search_priority + team_management
+            PF("ee000016-0000-0000-0000-000000000000", p08, fd0b, true),
+            PF("ee000017-0000-0000-0000-000000000000", p08, fd0c, false),
+            PF("ee000018-0000-0000-0000-000000000000", p08, fd0d, true),
+            // OfficeGrowth (09): all true
+            PF("ee000019-0000-0000-0000-000000000000", p09, fd0b, true),
+            PF("ee00001a-0000-0000-0000-000000000000", p09, fd0c, true),
+            PF("ee00001b-0000-0000-0000-000000000000", p09, fd0d, true),
+            // DeveloperBusiness (0a): all true
+            PF("ee00001c-0000-0000-0000-000000000000", p0a, fd0b, true),
+            PF("ee00001d-0000-0000-0000-000000000000", p0a, fd0c, true),
+            PF("ee00001e-0000-0000-0000-000000000000", p0a, fd0d, true),
+            // DeveloperPremium (0b): all true
+            PF("ee00001f-0000-0000-0000-000000000000", p0b, fd0b, true),
+            PF("ee000020-0000-0000-0000-000000000000", p0b, fd0c, true),
+            PF("ee000021-0000-0000-0000-000000000000", p0b, fd0d, true),
+            // BrokerAdvanced (0c): all true
+            PF("ee000022-0000-0000-0000-000000000000", p0c, fd0b, true),
+            PF("ee000023-0000-0000-0000-000000000000", p0c, fd0c, true),
+            PF("ee000024-0000-0000-0000-000000000000", p0c, fd0d, true),
+            // OfficeAdvanced (0d): all true
+            PF("ee000025-0000-0000-0000-000000000000", p0d, fd0b, true),
+            PF("ee000026-0000-0000-0000-000000000000", p0d, fd0c, true),
+            PF("ee000027-0000-0000-0000-000000000000", p0d, fd0d, true),
         };
     }
 
