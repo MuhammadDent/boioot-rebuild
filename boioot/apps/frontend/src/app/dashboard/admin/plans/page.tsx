@@ -188,9 +188,14 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
       "private_messaging","private_chat","paid_messaging","paid_chat","premium_chat",
     ],
     possibleLimitKeys: [
+      // snake_case (DB-stored keys)
       "max_conversations","conversation_limit","max_conversation","conversations",
       "message_limit","max_chat","chat_limit","inbox_limit","private_message_limit",
       "max_private_messages","max_inbox","messaging_limit","max_messaging",
+      // camelCase (ASP.NET Core JSON serializer default)
+      "maxConversations","conversationLimit","maxConversation",
+      "messageLimit","maxChat","chatLimit","inboxLimit","privateMessageLimit",
+      "maxPrivateMessages","maxInbox","messagingLimit","maxMessaging",
     ],
   },
   {
@@ -244,19 +249,24 @@ const SUPPRESSED_FEATURE_KEYS: ReadonlySet<string> = new Set<string>(
   })
 );
 
-// All backend LIMIT keys owned by UNIFIED_ITEMS.
-// Any backend limit whose key is in this set is suppressed from the fallback
-// limit renderer — it is already represented by a unified card above.
+// All backend LIMIT keys owned by UNIFIED_ITEMS — stored in lowercase for
+// case-insensitive matching (backend may use camelCase or snake_case).
 // sim items contribute: their primary key + every possibleLimitKeys entry.
 // flt/limit items contribute their own key.
 const SUPPRESSED_LIMIT_KEYS: ReadonlySet<string> = new Set<string>(
   UNIFIED_ITEMS.flatMap(u => {
-    if (u.t === "sim") return [u.key, ...(u.possibleLimitKeys ?? [])];
-    if (u.t === "flt") return [u.key];
-    if (u.t === "limit") return [u.key];
-    return [];
+    const raw: string[] = [];
+    if (u.t === "sim") raw.push(u.key, ...(u.possibleLimitKeys ?? []));
+    else if (u.t === "flt") raw.push(u.key);
+    else if (u.t === "limit") raw.push(u.key);
+    // Store both original and lowercase so the has() check is case-insensitive
+    return raw.flatMap(k => [k, k.toLowerCase()]);
   })
 );
+/** Returns true if a limit key is owned by a unified card and must not be rendered in the fallback. */
+function isSuppressedLimit(key: string): boolean {
+  return SUPPRESSED_LIMIT_KEYS.has(key) || SUPPRESSED_LIMIT_KEYS.has(key.toLowerCase());
+}
 
 // ── UnifiedItemCard ───────────────────────────────────────────────────────────
 // Renders one item from UNIFIED_ITEMS.
