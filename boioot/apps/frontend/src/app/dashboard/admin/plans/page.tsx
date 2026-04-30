@@ -242,49 +242,35 @@ const MESSAGING_EXTRA_LIMITS: readonly string[] = [
   "maxPrivateMessages","maxInbox","messagingLimit","maxMessaging",
 ];
 
-// All backend feature keys that are suppressed from the fallback renderer.
-// Includes keys owned by UNIFIED_ITEMS cards + messaging aliases (no card).
-// Both original and lowercase stored → always case-insensitive.
+// Feature keys that are stripped from React state entirely.
+// ONLY includes alias / extra keys that have NO unified card.
+// CRITICAL: flt/feature fk values (video_upload, featured_listings, analytics_dashboard etc.)
+//   are NOT included here — their feature objects MUST stay in state so the unified
+//   flt/feature cards can find them via features.find(f => f.key === item.fk).
+// Removing them from state causes "لم تُعرَّف" (not defined) on every flt/feature card.
 const SUPPRESSED_FEATURE_KEYS: ReadonlySet<string> = new Set<string>([
+  // sim-item possibleFks are alias keys only — no unified card reads them from state
   ...UNIFIED_ITEMS.flatMap(u => {
-    const raw: string[] = [];
-    if (u.t === "flt" || u.t === "feature") raw.push(u.fk);
-    else if (u.t === "sim") raw.push(u.key, ...u.possibleFks);
-    else if (u.t === "limit") raw.push(u.key);
-    return raw.flatMap(k => [k, k.toLowerCase()]);
+    if (u.t === "sim") return [u.key, ...u.possibleFks].flatMap(k => [k, k.toLowerCase()]);
+    return [];
   }),
+  // messaging extras — suppressed from state and fallback renderer
   ...MESSAGING_EXTRA_FEATURES.flatMap(k => [k, k.toLowerCase()]),
 ]);
 
-/** Returns true when a backend feature key is owned by a unified card or is a known
- *  platform-level feature that must NOT be controlled via plan configuration. */
-function isSuppressedFeature(key: string): boolean {
+/** True when a key should be removed from React features state.
+ *  Does NOT include flt/feature fk values — those must stay in state so unified cards work. */
+function isSuppressedFromState(key: string): boolean {
   return SUPPRESSED_FEATURE_KEYS.has(key) || SUPPRESSED_FEATURE_KEYS.has(key.toLowerCase());
 }
 
-/** Strips every suppressed feature from an array so it never enters React state.
- *  Ensures suppressed features cannot cause dirty-detection issues, cannot be
- *  rendered by the fallback renderer, and cannot be toggled via the UI. */
+/** Strips only alias/extra keys from a features array.
+ *  flt/feature keys are kept so unified cards can find their feature object. */
 function normalizeFeatures(arr: PlanFeatureItem[]): PlanFeatureItem[] {
-  return arr.filter(f => !isSuppressedFeature(f.key));
+  return arr.filter(f => !isSuppressedFromState(f.key));
 }
 
-// All backend LIMIT keys owned by UNIFIED_ITEMS + messaging extras — stored in lowercase
-// for case-insensitive matching (backend may use camelCase or snake_case).
-const SUPPRESSED_LIMIT_KEYS: ReadonlySet<string> = new Set<string>([
-  ...UNIFIED_ITEMS.flatMap(u => {
-    const raw: string[] = [];
-    if (u.t === "sim") raw.push(u.key, ...(u.possibleLimitKeys ?? []));
-    else if (u.t === "flt") raw.push(u.key);
-    else if (u.t === "limit") raw.push(u.key);
-    return raw.flatMap(k => [k, k.toLowerCase()]);
-  }),
-  ...MESSAGING_EXTRA_LIMITS.flatMap(k => [k, k.toLowerCase()]),
-]);
-/** Returns true if a limit key is owned by a unified card and must not be rendered in the fallback. */
-function isSuppressedLimit(key: string): boolean {
-  return SUPPRESSED_LIMIT_KEYS.has(key) || SUPPRESSED_LIMIT_KEYS.has(key.toLowerCase());
-}
+// Limit fallback renderer removed — only UNIFIED_ITEMS cards render limits now.
 
 // ── Validated limit key allowlist ─────────────────────────────────────────────
 // Only keys present here will be sent to the backend during save.
@@ -1233,7 +1219,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
 
       setLimits(updatedLimits);
       setLimitValues(newLimitValues);
-      setFeatures(normalizeFeatures(result.features));
+      // Do NOT touch features here — features are managed exclusively by handleFeatureToggle.
+      // Overwriting features from the plan-update response causes a race condition where
+      // a concurrently toggled feature (isEnabled=true) gets reset to the server's stale value.
       onSaved({ ...result, limits: updatedLimits });
 
       // ── STEP 4: store snapshot matching the NEXT render exactly ─────────────
@@ -1783,49 +1771,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                   );
                 })}
 
-                {/* Unknown limits — fallback for limits not owned by UNIFIED_ITEMS.
-                    isSuppressedLimit() is case-insensitive so camelCase backend keys
-                    (e.g. maxImages, maxMessages) are also correctly suppressed. */}
-                {limits
-                  .filter(l => !isSuppressedLimit(l.key))
-                  .filter(l => !KNOWN_MARKETING.some(k => k.key === l.key))
-                  .map(lim => {
-                    const val = limitValues[lim.key] ?? String(lim.value);
-                    const dirty = val !== String(lim.value);
-                    return (
-                      <div key={lim.key} style={{ borderRadius: 10, border: dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0", background: "#fff", padding: "0.9rem 1rem" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-                          <span style={{ fontSize: "1.15rem" }}>📐</span>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600 }}>{lim.name || lim.key}</p>
-                            {lim.unit && <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>{lim.unit}</p>}
-                          </div>
-                          <input type="number" min={-1} value={val}
-                            onChange={e => handleLimitChange(lim.key, e.target.value)}
-                            style={{ ...inputStyle, width: 82, textAlign: "center", padding: "0.3rem 0.5rem", margin: 0, flexShrink: 0 }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                {/* Unknown features — fallback for features not owned by UNIFIED_ITEMS.
-                    isSuppressedFeature() is case-insensitive; normalizeFeatures() already
-                    stripped these from state, so this is a final safety guard. */}
-                {features
-                  .filter(f => !isSuppressedFeature(f.key))
-                  .map(feat => (
-                    <div key={feat.key} style={{ borderRadius: 10, border: feat.isEnabled ? "1.5px solid #86efac" : "1.5px solid #e2e8f0", background: feat.isEnabled ? "#f0fdf4" : "#fff", padding: "0.9rem 1rem", opacity: featureSaving === feat.key ? 0.6 : 1, transition: "all 0.18s" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-                        {feat.icon && <span style={{ fontSize: "1.15rem" }}>{feat.icon}</span>}
-                        <div style={{ flex: 1 }}>
-                          <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: feat.isEnabled ? 600 : 400, color: feat.isEnabled ? "#166534" : "#334155" }}>{feat.name}</p>
-                          {feat.description && <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>{feat.description}</p>}
-                        </div>
-                        <span style={{ fontSize: "0.75rem", color: feat.isEnabled ? "#16a34a" : "#94a3b8", fontWeight: 600, flexShrink: 0 }}>{feat.isEnabled ? "مفعّل" : "معطّل"}</span>
-                        <ToggleSwitch checked={feat.isEnabled} onChange={val => handleFeatureToggle(feat.key, val)} disabled={featureSaving === feat.key} />
-                      </div>
-                    </div>
-                  ))}
+                {/* Fallback renderers removed — only UNIFIED_ITEMS cards are shown.
+                    Any backend key not covered by a unified card is silently ignored.
+                    This prevents duplicate controls and unknown-feature confusion. */}
 
                 {limits.length === 0 && features.length === 0 && (
                   <p style={{ fontSize: "0.83rem", color: "#94a3b8", textAlign: "center", padding: "1rem 0", margin: 0 }}>
