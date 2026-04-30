@@ -268,6 +268,75 @@ function isSuppressedLimit(key: string): boolean {
   return SUPPRESSED_LIMIT_KEYS.has(key) || SUPPRESSED_LIMIT_KEYS.has(key.toLowerCase());
 }
 
+// ── Limit-alias normalisation ─────────────────────────────────────────────────
+// The backend may use different keys for the same logical limit across plans or
+// API versions.  We consolidate all known aliases into ONE canonical key so that:
+//  • limitValues state never holds duplicate / conflicting entries
+//  • formSnapshot never goes dirty because of a ghost alias key
+//  • changedLimits never sends an alias key to the backend
+//  • UI always shows a single source of truth per logical limit
+
+// canonical key → set of backend alias keys that map to it
+const LIMIT_CANONICAL_ALIASES: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ["max_messages", new Set([
+    // snake_case (DB-stored keys)
+    "max_conversations","conversation_limit","max_conversation",
+    "chat_limit","inbox_limit","message_limit","messages_limit",
+    // camelCase (ASP.NET Core serialiser default)
+    "maxConversations","conversationLimit","maxConversation",
+    "chatLimit","inboxLimit","messageLimit","messagesLimit",
+  ])],
+]);
+
+// Flat set of ALL alias keys (used for fast O(1) look-up)
+const ALL_ALIAS_KEYS: ReadonlySet<string> = new Set(
+  [...LIMIT_CANONICAL_ALIASES.values()].flatMap(s => [...s])
+);
+
+function isAliasKey(key: string): boolean {
+  return ALL_ALIAS_KEYS.has(key) || ALL_ALIAS_KEYS.has(key.toLowerCase());
+}
+
+/**
+ * Accepts raw limitValues from the backend and returns a normalised copy where:
+ *  - Every alias key has been removed
+ *  - If the canonical key is absent or zero and an alias carries a non-zero value,
+ *    the alias value is promoted into the canonical key
+ */
+function normalizeLimitValues(raw: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+
+  // Best non-zero value found for each canonical key from its aliases
+  const promotedValues = new Map<string, string>();
+
+  for (const [key, val] of Object.entries(raw)) {
+    let handled = false;
+    for (const [canonical, aliases] of LIMIT_CANONICAL_ALIASES) {
+      if (aliases.has(key) || aliases.has(key.toLowerCase())) {
+        // This key is an alias — collect its value for possible promotion
+        const n = parseInt(val, 10);
+        if (!isNaN(n) && n > 0) {
+          const existing = parseInt(promotedValues.get(canonical) ?? "0", 10);
+          if (existing === 0) promotedValues.set(canonical, val);
+        }
+        handled = true;
+        break;
+      }
+    }
+    if (!handled) out[key] = val;
+  }
+
+  // Promote collected alias values into canonical keys only when the canonical
+  // key is absent or zero in the output
+  for (const [canonical, promoted] of promotedValues) {
+    if (!out[canonical] || out[canonical] === "0") {
+      out[canonical] = promoted;
+    }
+  }
+
+  return out;
+}
+
 // ── UnifiedItemCard ───────────────────────────────────────────────────────────
 // Renders one item from UNIFIED_ITEMS.
 // Handles all four types: limit / sim / flt / feature
@@ -998,7 +1067,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [featureSaving, setFeatureSaving] = useState<string | null>(null);
   const [saveStatus, setSaveStatus]       = useState<"idle" | "dirty" | "saving" | "saved">("idle");
   const [limitValues, setLimitValues]     = useState<Record<string, string>>(
-    () => Object.fromEntries((plan?.limits ?? []).map(l => [l.key, String(l.value)]))
+    () => normalizeLimitValues(
+      Object.fromEntries((plan?.limits ?? []).map(l => [l.key, String(l.value)]))
+    )
   );
   // Stores limit values before a simulated-toggle turns them OFF (so we can restore on re-enable)
   const [prevLimitValues, setPrevLimitValues] = useState<Record<string, string>>({});
@@ -1081,7 +1152,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       // Include both CHANGED existing limits AND new non-zero limits not yet on the plan.
       // This covers sim-card limits (max_messages, max_images_per_listing, etc.) that may
       // not exist in the backend until the admin explicitly sets a non-zero value.
+      // Alias keys (e.g. max_conversations → max_messages) are NEVER sent to the backend.
       const changedLimits = Object.entries(limitValues).filter(([key, val]) => {
+        if (isAliasKey(key)) return false; // never send an alias key
         const parsedVal = parseInt(val, 10);
         if (isNaN(parsedVal)) return false;
         const original = result.limits.find(l => l.key === key);
@@ -1103,7 +1176,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       // MERGE server values into local state — do NOT wholesale replace.
       // Merging prevents locally edited values (e.g. a sim-card toggle just turned ON)
       // from being wiped out by a server response that doesn't yet include that key.
-      setLimitValues(prev => ({
+      // normalizeLimitValues strips any alias keys the server may have returned,
+      // ensuring the state invariant (one canonical key per logical limit) is preserved.
+      setLimitValues(prev => normalizeLimitValues({
         ...prev,
         ...Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)])),
       }));
