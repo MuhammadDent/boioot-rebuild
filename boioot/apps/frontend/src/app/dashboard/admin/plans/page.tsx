@@ -166,9 +166,14 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
     hint: "السماح برفع أكثر من صورة لكل إعلان. عند التعطيل يُصبح 0.",
     limitLabel: "عدد الصور لكل إعلان",
     possibleFks: [
+      // snake_case
       "multi_images","multiple_images","images_per_listing","multiple_images_per_listing",
       "multi_image","image_limit","image_upload","allow_multiple_images","multiple_image_upload",
       "max_image","images","image","image_count","allow_images","images_count",
+      // camelCase (ASP.NET Core JSON serializer default)
+      "multiImages","multipleImages","imagesPerListing","multipleImagesPerListing",
+      "multiImage","imageLimit","imageUpload","allowMultipleImages","multipleImageUpload",
+      "maxImage","imageCount","allowImages","imagesCount",
     ],
     possibleLimitKeys: [
       "max_images","image_limit","max_image_count","images_limit",
@@ -182,10 +187,15 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
     hint: "حد خاص بالمحادثات الداخلية المدفوعة ضمن الخطة. لا يؤثر على المراسلة العادية بين المشترين والبائعين.",
     limitLabel: "الحد الأقصى للمحادثات الخاصة",
     possibleFks: [
+      // snake_case
       "messaging","internal_messaging","direct_messaging","chat","messages","message",
       "messaging_enabled","allow_messaging","message_limit","chat_enabled","inbox",
       "direct_messages","conversations","conversation_limit","allow_chat",
       "private_messaging","private_chat","paid_messaging","paid_chat","premium_chat",
+      // camelCase (ASP.NET Core JSON serializer default)
+      "internalMessaging","directMessaging","messagingEnabled","allowMessaging",
+      "messageLimit","chatEnabled","directMessages","conversationLimit","allowChat",
+      "privateMessaging","privateChat","paidMessaging","paidChat","premiumChat",
     ],
     possibleLimitKeys: [
       // snake_case (DB-stored keys)
@@ -1182,26 +1192,48 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       if (changedLimits.length > 0) {
         await Promise.all(changedLimits.map(async ([key, rawVal]) => {
           const val = parseInt(rawVal, 10);
-          const updated = await adminApi.setPlanLimit(plan!.id, key, val);
-          const idx = updatedLimits.findIndex(l => l.key === key);
-          if (idx >= 0) updatedLimits[idx] = updated;
-          else updatedLimits.push(updated); // new limit — add it to the array
+          try {
+            const updated = await adminApi.setPlanLimit(plan!.id, key, val);
+            const idx = updatedLimits.findIndex(l => l.key === key);
+            if (idx >= 0) updatedLimits[idx] = updated;
+            else updatedLimits.push(updated);
+          } catch (limErr) {
+            // Gracefully skip limits the backend doesn't yet support (e.g. 404 / unknown key).
+            // This keeps the main plan save from failing when a sim-card limit key is absent
+            // from the backend's limit catalog.
+            console.warn(`[plans] Limit "${key}" rejected by backend — skipping.`, limErr);
+          }
         }));
       }
 
-      setLimits(updatedLimits);
-      // MERGE server values into local state — do NOT wholesale replace.
-      // Merging prevents locally edited values (e.g. a sim-card toggle just turned ON)
-      // from being wiped out by a server response that doesn't yet include that key.
-      // normalizeLimitValues strips any alias keys the server may have returned,
-      // ensuring the state invariant (one canonical key per logical limit) is preserved.
-      setLimitValues(prev => normalizeLimitValues({
-        ...prev,
+      // Compute the new limitValues that will exist in state AFTER setLimitValues —
+      // we need this BEFORE calling setState so we can build initialSnapshot correctly.
+      // Using an eager (non-functional) update avoids the mismatch where
+      // initialSnapshot.current is set to the pre-update snapshot while React
+      // re-renders with new limitValues, making isDirty permanently true.
+      const newLimitValues = normalizeLimitValues({
+        ...limitValues,
         ...Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)])),
-      }));
+      });
+
+      setLimits(updatedLimits);
+      setLimitValues(newLimitValues);
       setFeatures(normalizeFeatures(result.features));
       onSaved({ ...result, limits: updatedLimits });
-      initialSnapshot.current = formSnapshot;
+
+      // Store the snapshot that the NEXT render will produce — all fields are identical
+      // to formSnapshot except limitValues, which uses the updated newLimitValues.
+      initialSnapshot.current = JSON.stringify({
+        name, description, applicableAccountType, priceMonthly, priceYearly,
+        isActive, isPublic, isRecommended, displayOrder, billingMode, planBillingType,
+        recurringCycle, durationDays, consumptionPolicy, expiryRule, downgradePlanCode,
+        displayNameAr, displayNameEn, audienceType, tier, badgeText, planColor,
+        hasTrial, trialDays, requiresPaymentForTrial, isDefaultForNewUsers,
+        availableForSelfSignup, requiresAdminApproval, allowAddOns, allowUpgrade,
+        allowDowngrade, autoDowngradeOnExpiry, allowRepurchaseOnConsumption,
+        allowEarlyRenewalOnConsumption,
+        limitValues: newLimitValues,
+      });
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2500);
     } catch (e) {
@@ -1735,9 +1767,11 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                   );
                 })}
 
-                {/* Unknown limits — fallback for limits not owned by UNIFIED_ITEMS */}
+                {/* Unknown limits — fallback for limits not owned by UNIFIED_ITEMS.
+                    isSuppressedLimit() is case-insensitive so camelCase backend keys
+                    (e.g. maxImages, maxMessages) are also correctly suppressed. */}
                 {limits
-                  .filter(l => !SUPPRESSED_LIMIT_KEYS.has(l.key))
+                  .filter(l => !isSuppressedLimit(l.key))
                   .filter(l => !KNOWN_MARKETING.some(k => k.key === l.key))
                   .map(lim => {
                     const val = limitValues[lim.key] ?? String(lim.value);

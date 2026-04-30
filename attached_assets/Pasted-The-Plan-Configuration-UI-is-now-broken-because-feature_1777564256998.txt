@@ -1,0 +1,78 @@
+The Plan Configuration UI is now broken because feature/limit normalization is incomplete.
+
+Current problems:
+1. Save does not clear "unsaved changes".
+2. Other features cannot be edited reliably.
+3. Multiple Images still appears twice:
+   - unified card with numeric input
+   - another standalone feature toggle
+4. The same duplicate-state problem may exist for other capabilities.
+
+Required fix:
+Do NOT keep patching one key at a time.
+
+Implement a clean canonical model.
+
+Rules:
+
+1. Create a single canonical map for duplicated plan capabilities:
+- multiple images:
+  canonical limit key = max_images_per_listing
+  suppress feature aliases:
+  multi_images, multiple_images, images_per_listing, multiple_images_per_listing
+
+- private messaging limit:
+  canonical limit key = max_messages
+  suppress feature aliases:
+  internal_messaging, messaging, direct_messaging, chat, messages
+  suppress limit aliases:
+  max_conversations, conversation_limit, max_conversation, chat_limit, inbox_limit, message_limit, messages_limit
+
+2. On initial load:
+- Normalize all aliases into their canonical key.
+- Remove alias keys from features state.
+- Remove alias keys from limitValues state.
+
+3. In rendering:
+- Never render suppressed feature aliases.
+- Never render suppressed limit aliases.
+- Render only the canonical unified card.
+
+4. In dirty check:
+- Compare normalized state only.
+- Suppressed aliases must not mark the form dirty.
+
+5. On save:
+- Send only canonical keys.
+- Do not send suppressed aliases.
+- After successful save:
+  - normalize server response
+  - update formSnapshot using normalized values
+  - clear dirty state
+  - remove "unsaved changes" message
+
+6. For Multiple Images:
+- ONLY one card should appear:
+  "صور متعددة لكل إعلان"
+  Toggle + "عدد الصور لكل إعلان"
+- Remove any second toggle-only image feature.
+
+7. For Messaging:
+- General buyer/seller messaging must not be plan-controlled.
+- Do not render "المراسلة الداخلية" standalone toggle.
+- Only render "حد المحادثات الداخلية الخاصة" if it is a paid/internal limit.
+
+8. Do not break unrelated features.
+Other feature toggles must still be editable and save correctly.
+
+9. Work only in:
+boioot/apps/frontend/src/app/dashboard/admin/plans/page.tsx
+
+10. Do NOT touch booking/backend/other files.
+
+After fixing, confirm:
+- Save clears the unsaved changes message
+- Multiple images appears once only
+- Messaging appears only as the private limit card if applicable
+- Other features can be toggled and saved
+- No duplicate alias keys remain in local state
