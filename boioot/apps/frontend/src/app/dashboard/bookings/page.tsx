@@ -20,7 +20,8 @@ const OWNER_TABS: Array<{ status: BookingStatus; label: string }> = [
   { status: "RevisionRequested",            label: "طلبات تعديل" },
   { status: "Confirmed",                    label: "مؤكدة" },
   { status: "Rejected",                     label: "مرفوضة" },
-  { status: "CancelledByTenant",            label: "ملغاة" },
+  { status: "CancelledByTenant",            label: "ملغاة (مستأجر)" },
+  { status: "CancelledByOwner",             label: "ملغاة (مالك)" },
   { status: "Completed",                    label: "مكتملة" },
 ];
 

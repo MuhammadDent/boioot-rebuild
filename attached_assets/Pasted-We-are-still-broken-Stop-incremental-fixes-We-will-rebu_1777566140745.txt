@@ -1,0 +1,151 @@
+We are still broken. Stop incremental fixes.
+
+We will rebuild the plan editor logic cleanly.
+
+Root problem:
+State, rendering, and saving are inconsistent and fighting each other.
+
+We will enforce a strict architecture.
+
+---------------------------------------
+
+1. SINGLE SOURCE OF TRUTH
+
+There must be ONLY TWO states:
+
+- features (boolean toggles)
+- limits (numeric values)
+
+NO alias keys
+NO normalization
+NO suppression sets
+
+We trust backend keys exactly as-is.
+
+---------------------------------------
+
+2. REMOVE ALL COMPLEXITY
+
+DELETE completely:
+
+- normalizeFeatures
+- normalizeLimitValues
+- SUPPRESSED_FEATURE_KEYS
+- SUPPRESSED_LIMIT_KEYS
+- alias maps
+- fallback renderers
+- duplicate filtering logic
+
+---------------------------------------
+
+3. RENDERING RULE
+
+Render ONLY what backend returns.
+
+Group manually in UI:
+
+- Multiple Images → uses:
+  feature: multiple_images
+  limit: max_images_per_listing
+
+- Contact Requests → uses:
+  feature: contact_requests
+  limit: max_requests
+
+- Boost → feature only
+
+NO automatic mapping logic.
+
+---------------------------------------
+
+4. SAVE PIPELINE (CRITICAL)
+
+On save:
+
+DO THIS EXACTLY:
+
+1. Send features:
+POST /setFeatures (ONLY changed keys)
+
+2. Send limits:
+POST /setPlanLimit per key (loop)
+
+Each request must be wrapped in try/catch
+
+FAILURE OF ONE must NOT break others
+
+---------------------------------------
+
+5. STATE UPDATE RULE
+
+AFTER SAVE:
+
+- DO NOT overwrite local state with API response
+- DO NOT call setFeatures(result.features)
+
+Instead:
+- Keep current UI state as source of truth
+
+---------------------------------------
+
+6. DIRTY STATE FIX
+
+After save:
+
+- snapshot must equal current state
+- isDirty must become false ALWAYS
+
+---------------------------------------
+
+7. REMOVE MESSAGING FROM PLANS
+
+Completely remove:
+
+- internal_messaging
+- max_messages
+- conversations
+
+Messaging is global, not plan-based.
+
+---------------------------------------
+
+8. MULTIPLE IMAGES DUPLICATION
+
+Ensure ONLY ONE component exists:
+
+- Remove ANY other rendering path
+- Remove fallback lists entirely
+
+---------------------------------------
+
+9. DEBUGGING
+
+Log:
+
+- payload sent to API
+- each API response
+- any failed request
+
+---------------------------------------
+
+10. FILE SCOPE
+
+Work ONLY in:
+
+boioot/apps/frontend/src/app/dashboard/admin/plans/page.tsx
+
+---------------------------------------
+
+EXPECTED RESULT:
+
+- toggles stay ON after click
+- save always succeeds (partial success allowed)
+- no duplicate UI
+- no auto-disable
+- no stuck "unsaved changes"
+
+---------------------------------------
+
+Do not optimize. Do not abstract.
+
+Make it simple and stable first.
