@@ -143,7 +143,7 @@ const CURRENCY_OPTIONS = [
 
 type UnifiedItem =
   | { t: "limit";   key: string;  icon: string; label: string; hint: string }
-  | { t: "sim";     key: string;  icon: string; label: string; hint: string; limitLabel: string }
+  | { t: "sim";     key: string;  icon: string; label: string; hint: string; limitLabel: string; hiddenFks?: string[] }
   | { t: "flt";     fk: string; key: string; icon: string; label: string; hint: string; limitLabel: string }
   | { t: "feature"; fk: string;  icon: string; label: string; hint: string };
 
@@ -152,9 +152,10 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
   { t: "limit",   key: "max_active_listings",   icon: "🏠", label: "الإعلانات النشطة",        hint: "الحد الأقصى لعدد الإعلانات النشطة في آن واحد (-1 = غير محدود)." },
 
   // ── Simulated toggles (driven by limit value > 0) ────────────────────────
-  { t: "sim", key: "max_images_per_listing",    icon: "📸", label: "صور متعددة لكل إعلان",    hint: "السماح برفع أكثر من صورة لكل إعلان. عند التعطيل يُصبح 0.",   limitLabel: "عدد الصور لكل إعلان" },
-  { t: "sim", key: "max_messages",              icon: "💬", label: "المراسلة الداخلية",        hint: "تمكين التواصل المباشر بين المستخدمين داخل المنصة.",          limitLabel: "الحد الأقصى للمحادثات" },
-  { t: "sim", key: "max_requests",              icon: "📨", label: "طلبات التواصل",            hint: "الحد الأقصى لعدد طلبات التواصل المستقبَلة.",                limitLabel: "عدد الطلبات" },
+  // hiddenFks: backend feature keys that represent the same capability — suppressed from fallback
+  { t: "sim", key: "max_images_per_listing",    icon: "📸", label: "صور متعددة لكل إعلان",    hint: "السماح برفع أكثر من صورة لكل إعلان. عند التعطيل يُصبح 0.",   limitLabel: "عدد الصور لكل إعلان",    hiddenFks: ["multi_images","multiple_images","images_per_listing","multiple_images_per_listing","multi_image"] },
+  { t: "sim", key: "max_messages",              icon: "💬", label: "المراسلة الداخلية",        hint: "تمكين التواصل المباشر بين المستخدمين داخل المنصة.",          limitLabel: "الحد الأقصى للمحادثات", hiddenFks: ["messaging","internal_messaging","direct_messaging","chat","messages"] },
+  { t: "sim", key: "max_requests",              icon: "📨", label: "طلبات التواصل",            hint: "الحد الأقصى لعدد طلبات التواصل المستقبَلة.",                limitLabel: "عدد الطلبات",           hiddenFks: ["requests","contact_requests","request_limit","max_contact_requests"] },
 
   // ── Backend feature toggle + associated limit ─────────────────────────────
   { t: "flt", fk: "video_upload",       key: "max_videos_per_listing", icon: "🎬", label: "رفع فيديو",             hint: "السماح برفع مقاطع فيديو داخل الإعلان.",          limitLabel: "عدد الفيديوهات لكل إعلان" },
@@ -177,6 +178,18 @@ const KNOWN_MARKETING: { key: string; icon: string; label: string; description: 
   { key: "search_ranking_boost", icon: "🔍", label: "تعزيز الظهور في البحث",  description: "معامل التعزيز في نتائج البحث (0 = لا تعزيز)" },
   { key: "homepage_slots",       icon: "🏠", label: "خانات الصفحة الرئيسية", description: "عدد الخانات المخصصة في الصفحة الرئيسية" },
 ];
+
+// Feature keys owned by UNIFIED_ITEMS (fk fields + sim hiddenFks).
+// Any backend feature whose key is in this set is suppressed from the
+// fallback renderer — it is already represented by a unified card above.
+const SUPPRESSED_FEATURE_KEYS: ReadonlySet<string> = new Set<string>(
+  UNIFIED_ITEMS.flatMap(u => {
+    const keys: string[] = [];
+    if ("fk" in u) keys.push(u.fk);
+    if (u.t === "sim" && u.hiddenFks) keys.push(...u.hiddenFks);
+    return keys;
+  })
+);
 
 // ── UnifiedItemCard ───────────────────────────────────────────────────────────
 // Renders one item from UNIFIED_ITEMS.
@@ -1558,9 +1571,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     );
                   })}
 
-                {/* Unknown features — fallback for features not in UNIFIED_ITEMS */}
+                {/* Unknown features — fallback for features not owned by UNIFIED_ITEMS */}
                 {features
-                  .filter(f => !UNIFIED_ITEMS.some(u => "fk" in u && u.fk === f.key))
+                  .filter(f => !SUPPRESSED_FEATURE_KEYS.has(f.key))
                   .map(feat => (
                     <div key={feat.key} style={{ borderRadius: 10, border: feat.isEnabled ? "1.5px solid #86efac" : "1.5px solid #e2e8f0", background: feat.isEnabled ? "#f0fdf4" : "#fff", padding: "0.9rem 1rem", opacity: featureSaving === feat.key ? 0.6 : 1, transition: "all 0.18s" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
