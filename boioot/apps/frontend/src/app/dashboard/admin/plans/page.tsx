@@ -1105,6 +1105,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const [prevLimitValues, setPrevLimitValues] = useState<Record<string, string>>({});
 
   const initialSnapshot = useRef<string>("");
+  const initialFeaturesRef = useRef<PlanFeatureItem[]>(plan?.features ?? []);
   const formRef = useRef<HTMLFormElement>(null);
 
   const formSnapshot = JSON.stringify({
@@ -1117,6 +1118,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     allowDowngrade, autoDowngradeOnExpiry, allowRepurchaseOnConsumption,
     allowEarlyRenewalOnConsumption,
     limitValues,
+    featureEnabledKeys: features.filter(f => f.isEnabled).map(f => f.key).sort().join(","),
   });
 
   // eslint-disable-next-line react-hooks/refs
@@ -1131,10 +1133,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         .finally(() => setPricingLoading(false));
     }
     initialSnapshot.current = formSnapshot;
+    initialFeaturesRef.current = plan?.features ?? [];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const doSaveRef = useRef<(() => Promise<void>) | null>(null);
 
   async function doSave() {
     if (!plan?.id || saving) return;
@@ -1209,23 +1210,40 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         }
       }
 
-      // ── STEP 3: rebuild clean state purely from server (updatedLimits) ──────
-      // We do NOT merge with local limitValues — the server is the source of truth.
+      // ── STEP 3: rebuild clean limit state from server ────────────────────────
       // normalizeLimitValues promotes any alias keys the server may have returned
       // (e.g. max_images → max_images_per_listing) so the sim cards read correctly.
       const newLimitValues = normalizeLimitValues(
         Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)]))
       );
 
+      // ── STEP 4: save feature toggles that changed vs initial server state ────
+      // Features were edited locally (no API call on toggle); we now flush them.
+      const origFeats = initialFeaturesRef.current;
+      const updatedFeatures = [...features];
+      for (const feat of features) {
+        const orig = origFeats.find(f => f.key === feat.key);
+        const changed = orig ? orig.isEnabled !== feat.isEnabled : feat.isEnabled;
+        if (!changed) continue;
+        try {
+          setFeatureSaving(feat.key);
+          const serverFeat = await adminApi.setPlanFeature(plan!.id, feat.key, feat.isEnabled);
+          const idx = updatedFeatures.findIndex(f => f.key === feat.key);
+          if (idx >= 0) updatedFeatures[idx] = serverFeat;
+        } catch (featErr) {
+          console.warn(`[plans] Feature "${feat.key}" save failed`, featErr);
+        }
+      }
+      setFeatureSaving(null);
+
       setLimits(updatedLimits);
       setLimitValues(newLimitValues);
-      // Do NOT touch features here — features are managed exclusively by handleFeatureToggle.
-      // Overwriting features from the plan-update response causes a race condition where
-      // a concurrently toggled feature (isEnabled=true) gets reset to the server's stale value.
+      setFeatures(updatedFeatures);
+      initialFeaturesRef.current = updatedFeatures;
       onSaved({ ...result, limits: updatedLimits });
 
-      // ── STEP 4: store snapshot matching the NEXT render exactly ─────────────
-      // Uses newLimitValues (not the pre-save limitValues) so formSnapshot === initialSnapshot
+      // ── STEP 5: store snapshot matching the NEXT render exactly ─────────────
+      // Uses newLimitValues + updatedFeatures so formSnapshot === initialSnapshot
       // after re-render → isDirty = false → "unsaved changes" disappears ALWAYS.
       initialSnapshot.current = JSON.stringify({
         name, description, applicableAccountType, priceMonthly, priceYearly,
@@ -1237,6 +1255,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         allowDowngrade, autoDowngradeOnExpiry, allowRepurchaseOnConsumption,
         allowEarlyRenewalOnConsumption,
         limitValues: newLimitValues,
+        featureEnabledKeys: updatedFeatures.filter(f => f.isEnabled).map(f => f.key).sort().join(","),
       });
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2500);
@@ -1247,7 +1266,6 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       setSaving(false);
     }
   }
-  useEffect(() => { doSaveRef.current = doSave; });
 
   function handleCloseModal() {
     if (isDirty) {
@@ -1257,12 +1275,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   useEffect(() => {
-    if (isNew || !isDirty) return;
-    setSaveStatus("dirty");
-    const timer = setTimeout(() => {
-      void doSaveRef.current?.();
-    }, 1200);
-    return () => clearTimeout(timer);
+    if (!isNew && isDirty && saveStatus !== "saving" && saveStatus !== "saved") {
+      setSaveStatus("dirty");
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formSnapshot]);
 
@@ -1336,8 +1351,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     }
   }
 
-  async function handleFeatureLimitToggle(fk: string, limitKey: string, val: boolean) {
-    await handleFeatureToggle(fk, val);
+  function handleFeatureLimitToggle(fk: string, limitKey: string, val: boolean) {
+    handleFeatureToggle(fk, val);
     if (!val) {
       setLimitValues(prev => ({ ...prev, [limitKey]: "0" }));
     } else {
@@ -1348,15 +1363,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     }
   }
 
-  async function handleFeatureToggle(key: string, newVal: boolean) {
-    const planId = plan?.id;
-    if (!planId) return;
-    setFeatureSaving(key); setError("");
-    try {
-      const updated = await adminApi.setPlanFeature(planId, key, newVal);
-      setFeatures(prev => prev.map(f => f.key === key ? updated : f));
-    } catch (e) { setError(normalizeError(e)); }
-    finally { setFeatureSaving(null); }
+  function handleFeatureToggle(key: string, newVal: boolean) {
+    setFeatures(prev => prev.map(f => f.key === key ? { ...f, isEnabled: newVal } : f));
   }
 
   const featureGroups = features.reduce<Record<string, PlanFeatureItem[]>>((acc, feat) => {
