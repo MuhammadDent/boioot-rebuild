@@ -471,21 +471,6 @@ function UnifiedItemCard({
     const val = limitValues[item.key] ?? String(limItem?.value ?? 0);
     const limitDirty = limItem ? val !== String(limItem.value) : false;
 
-    if (!feat) {
-      return (
-        <div style={{ ...cardBase, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-            <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#64748b" }}>{item.label}</p>
-              <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#94a3b8" }}>لم تُعرَّف في كتالوج الميزات — أضفها أولاً.</p>
-            </div>
-            <ToggleSwitch checked={false} onChange={() => {}} disabled />
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div style={{ ...cardBase, background: enabled ? "#f0fdf4" : "#fff", border: enabled ? "1.5px solid #86efac" : "1.5px solid #e2e8f0", opacity: saving ? 0.6 : 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
@@ -520,35 +505,21 @@ function UnifiedItemCard({
 
   // ── t: "feature" — pure feature toggle (no limit) ─────────────────────────
   const feat = features.find(f => f.key === item.fk);
+  const featureEnabled = feat?.isEnabled ?? false;
   const saving = featureSaving === item.fk;
 
-  if (!feat) {
-    return (
-      <div style={{ ...cardBase, background: "#f8fafc", border: "1.5px dashed #d1d5db", opacity: 0.65 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-          <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
-          <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#64748b" }}>{item.label}</p>
-            <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#94a3b8" }}>لم تُعرَّف في كتالوج الميزات — أضفها أولاً.</p>
-          </div>
-          <ToggleSwitch checked={false} onChange={() => {}} disabled />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ ...cardBase, background: feat.isEnabled ? "#f0fdf4" : "#fff", border: feat.isEnabled ? "1.5px solid #86efac" : "1.5px solid #e2e8f0", opacity: saving ? 0.6 : 1 }}>
+    <div style={{ ...cardBase, background: featureEnabled ? "#f0fdf4" : "#fff", border: featureEnabled ? "1.5px solid #86efac" : "1.5px solid #e2e8f0", opacity: saving ? 0.6 : 1 }}>
       <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
         <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: feat.isEnabled ? 600 : 400, color: feat.isEnabled ? "#166534" : "#334155" }}>{item.label}</p>
+          <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: featureEnabled ? 600 : 400, color: featureEnabled ? "#166534" : "#334155" }}>{item.label}</p>
           <p style={{ margin: "0.1rem 0 0", fontSize: "0.72rem", color: "#64748b" }}>{item.hint}</p>
         </div>
-        <span style={{ fontSize: "0.75rem", color: feat.isEnabled ? "#16a34a" : "#94a3b8", fontWeight: 600, flexShrink: 0 }}>
-          {feat.isEnabled ? "مفعّل" : "معطّل"}
+        <span style={{ fontSize: "0.75rem", color: featureEnabled ? "#16a34a" : "#94a3b8", fontWeight: 600, flexShrink: 0 }}>
+          {featureEnabled ? "مفعّل" : "معطّل"}
         </span>
-        <ToggleSwitch checked={feat.isEnabled} onChange={v => onFeatureToggle(item.fk, v)} disabled={saving} />
+        <ToggleSwitch checked={featureEnabled} onChange={v => onFeatureToggle(item.fk, v)} disabled={saving} />
       </div>
     </div>
   );
@@ -1388,7 +1359,14 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }
 
   function handleFeatureToggle(key: string, newVal: boolean) {
-    setFeatures(prev => prev.map(f => f.key === key ? { ...f, isEnabled: newVal } : f));
+    setFeatures(prev => {
+      if (prev.some(f => f.key === key)) {
+        return prev.map(f => f.key === key ? { ...f, isEnabled: newVal } : f);
+      }
+      // Feature exists in catalog but has no PlanFeature record yet — add synthetic entry.
+      // doSave will call setPlanFeature to create the record on the backend.
+      return [...prev, { featureDefinitionId: "", key, name: key, isEnabled: newVal }];
+    });
   }
 
   const featureGroups = features.reduce<Record<string, PlanFeatureItem[]>>((acc, feat) => {
