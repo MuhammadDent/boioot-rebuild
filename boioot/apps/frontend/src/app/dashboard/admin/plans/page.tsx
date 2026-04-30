@@ -144,9 +144,12 @@ const CURRENCY_OPTIONS = [
 type UnifiedItem =
   | { t: "limit";   key: string;  icon: string; label: string; hint: string }
   | { t: "sim";     key: string;  icon: string; label: string; hint: string; limitLabel: string;
-      /** All possible backend feature keys that represent this capability.
-       *  The card claims the FIRST match found; all entries are suppressed from the fallback. */
-      possibleFks: string[] }
+      /** All possible backend FEATURE keys that represent this capability —
+       *  suppressed from the fallback feature renderer via SUPPRESSED_FEATURE_KEYS. */
+      possibleFks: string[];
+      /** All possible backend LIMIT keys (other than `key`) that represent the same capability —
+       *  suppressed from the fallback limit renderer via SUPPRESSED_LIMIT_KEYS. */
+      possibleLimitKeys?: string[] }
   | { t: "flt";     fk: string; key: string; icon: string; label: string; hint: string; limitLabel: string }
   | { t: "feature"; fk: string;  icon: string; label: string; hint: string };
 
@@ -167,6 +170,11 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
       "multi_image","image_limit","image_upload","allow_multiple_images","multiple_image_upload",
       "max_image","images","image","image_count","allow_images","images_count",
     ],
+    possibleLimitKeys: [
+      "max_images","image_limit","max_image_count","images_limit",
+      "image_per_listing","images_per_listing","images_count","max_image",
+      "listing_image_limit","per_listing_images",
+    ],
   },
   {
     t: "sim", key: "max_messages", icon: "💬",
@@ -179,6 +187,11 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
       "direct_messages","conversations","conversation_limit","allow_chat",
       "private_messaging","private_chat","paid_messaging","paid_chat","premium_chat",
     ],
+    possibleLimitKeys: [
+      "max_conversations","conversation_limit","max_conversation","conversations",
+      "message_limit","max_chat","chat_limit","inbox_limit","private_message_limit",
+      "max_private_messages","max_inbox","messaging_limit","max_messaging",
+    ],
   },
   {
     t: "sim", key: "max_requests", icon: "📨",
@@ -188,6 +201,10 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
     possibleFks: [
       "requests","contact_requests","request_limit","max_contact_requests","request",
       "contact_request","allow_requests","inquiry","inquiries","inquiry_limit",
+    ],
+    possibleLimitKeys: [
+      "max_contact_requests","contact_request_limit","inquiry_limit","max_inquiries",
+      "request_limit","max_request","contact_limit","max_leads",
     ],
   },
 
@@ -222,6 +239,20 @@ const SUPPRESSED_FEATURE_KEYS: ReadonlySet<string> = new Set<string>(
   UNIFIED_ITEMS.flatMap(u => {
     if (u.t === "flt" || u.t === "feature") return [u.fk];
     if (u.t === "sim") return [u.key, ...u.possibleFks];
+    if (u.t === "limit") return [u.key];
+    return [];
+  })
+);
+
+// All backend LIMIT keys owned by UNIFIED_ITEMS.
+// Any backend limit whose key is in this set is suppressed from the fallback
+// limit renderer — it is already represented by a unified card above.
+// sim items contribute: their primary key + every possibleLimitKeys entry.
+// flt/limit items contribute their own key.
+const SUPPRESSED_LIMIT_KEYS: ReadonlySet<string> = new Set<string>(
+  UNIFIED_ITEMS.flatMap(u => {
+    if (u.t === "sim") return [u.key, ...(u.possibleLimitKeys ?? [])];
+    if (u.t === "flt") return [u.key];
     if (u.t === "limit") return [u.key];
     return [];
   })
@@ -1602,9 +1633,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                   );
                 })}
 
-                {/* Unknown limits — fallback for limits not in UNIFIED_ITEMS */}
+                {/* Unknown limits — fallback for limits not owned by UNIFIED_ITEMS */}
                 {limits
-                  .filter(l => !UNIFIED_ITEMS.some(u => "key" in u && u.key === l.key))
+                  .filter(l => !SUPPRESSED_LIMIT_KEYS.has(l.key))
                   .filter(l => !KNOWN_MARKETING.some(k => k.key === l.key))
                   .map(lim => {
                     const val = limitValues[lim.key] ?? String(lim.value);
