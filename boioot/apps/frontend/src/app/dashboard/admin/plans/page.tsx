@@ -1133,6 +1133,30 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         .catch(() => {})
         .finally(() => setPricingLoading(false));
     }
+
+    // Back-fill features from the global catalog.
+    // Any FeatureDefinition that exists in the catalog but has no PlanFeature
+    // record for this plan is added as a synthetic entry (isEnabled: false).
+    // doSave() only pushes features whose isEnabled changed vs initialFeaturesRef,
+    // so synthetic false entries are never sent unless the user explicitly enables them.
+    adminApi.getCatalogFeatures().then(catalog => {
+      setFeatures(prev => {
+        const existingKeys = new Set(prev.map(f => f.key));
+        const synthetic: PlanFeatureItem[] = catalog
+          .filter(fd => fd.isActive && !existingKeys.has(fd.key) && !isSuppressedFromState(fd.key))
+          .map(fd => ({
+            featureDefinitionId: fd.id,
+            key:                 fd.key,
+            name:                fd.name,
+            description:         fd.description,
+            featureGroup:        fd.featureGroup,
+            icon:                fd.icon,
+            isEnabled:           false,
+          }));
+        return synthetic.length > 0 ? [...prev, ...synthetic] : prev;
+      });
+    }).catch(() => {});
+
     initialSnapshot.current = formSnapshot;
     initialFeaturesRef.current = plan?.features ?? [];
   // eslint-disable-next-line react-hooks/exhaustive-deps
