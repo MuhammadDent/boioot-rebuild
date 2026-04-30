@@ -170,13 +170,14 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
   },
   {
     t: "sim", key: "max_messages", icon: "💬",
-    label: "المراسلة الداخلية",
-    hint: "تمكين التواصل المباشر بين المستخدمين داخل المنصة.",
-    limitLabel: "الحد الأقصى للمحادثات",
+    label: "حد المحادثات الداخلية الخاصة",
+    hint: "حد خاص بالمحادثات الداخلية المدفوعة ضمن الخطة. لا يؤثر على المراسلة العادية بين المشترين والبائعين.",
+    limitLabel: "الحد الأقصى للمحادثات الخاصة",
     possibleFks: [
       "messaging","internal_messaging","direct_messaging","chat","messages","message",
       "messaging_enabled","allow_messaging","message_limit","chat_enabled","inbox",
       "direct_messages","conversations","conversation_limit","allow_chat",
+      "private_messaging","private_chat","paid_messaging","paid_chat","premium_chat",
     ],
   },
   {
@@ -279,28 +280,19 @@ function UnifiedItemCard({
     );
   }
 
-  // ── t: "sim" — unified toggle + limit card ────────────────────────────────
-  // Finds and CLAIMS the first matching backend feature from possibleFks.
-  // Toggle is driven by: backend feature.isEnabled (if found) OR limit > 0.
-  // ALL possibleFks are suppressed from the fallback renderer via SUPPRESSED_FEATURE_KEYS.
+  // ── t: "sim" — pure limit-driven toggle + numeric limit ───────────────────
+  // Toggle state = limitValue > 0 (never reads backend feature.isEnabled).
+  // possibleFks is used ONLY for suppression via SUPPRESSED_FEATURE_KEYS —
+  // no backend feature is claimed here, so general features (e.g. buyer/seller
+  // messaging) are silently hidden and never exposed as plan configuration.
   if (item.t === "sim") {
-    const claimedFeat = features.find(f => item.possibleFks.includes(f.key)) ?? null;
     const limItem = limits.find(l => l.key === item.key);
     const val = limitValues[item.key] ?? String(limItem?.value ?? 0);
-    // Toggle ON if: backend feature is enabled (primary) OR limit value > 0 (fallback)
-    const enabled = claimedFeat != null ? claimedFeat.isEnabled : (val !== "0" && val !== "");
+    const enabled = val !== "0" && val !== "";
     const dirty = limItem ? val !== String(limItem.value) : false;
-    const saving = claimedFeat != null ? featureSaving === claimedFeat.key : false;
-
-    const handleSimToggleClick = (v: boolean) => {
-      // Always update the limit value (sim-style toggle)
-      onSimToggle(item.key, v);
-      // If a real backend feature is claimed, also fire its toggle (persists to API)
-      if (claimedFeat) onFeatureToggle(claimedFeat.key, v);
-    };
 
     return (
-      <div style={{ ...cardBase, background: enabled ? "#f0fdf4" : "#fff", border: enabled ? "1.5px solid #86efac" : dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0", opacity: saving ? 0.6 : 1, transition: "all 0.18s" }}>
+      <div style={{ ...cardBase, background: enabled ? "#f0fdf4" : "#fff", border: enabled ? "1.5px solid #86efac" : dirty ? "1.5px solid #93c5fd" : "1.5px solid #e2e8f0", transition: "all 0.18s" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
           <span style={{ fontSize: "1.15rem" }}>{item.icon}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -310,7 +302,7 @@ function UnifiedItemCard({
           <span style={{ fontSize: "0.75rem", color: enabled ? "#16a34a" : "#94a3b8", fontWeight: 600, flexShrink: 0 }}>
             {enabled ? "مفعّل" : "معطّل"}
           </span>
-          <ToggleSwitch checked={enabled} onChange={handleSimToggleClick} disabled={saving} />
+          <ToggleSwitch checked={enabled} onChange={v => onSimToggle(item.key, v)} />
         </div>
         {enabled && (
           <div style={{ marginTop: "0.75rem", paddingTop: "0.65rem", borderTop: "1px solid #dcfce7" }}>
