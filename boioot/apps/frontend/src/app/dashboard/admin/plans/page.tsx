@@ -184,7 +184,7 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
   // max_messages sim item removed — backend does not support this limit key (404).
   // Messaging feature aliases are still suppressed via MESSAGING_EXTRA_FEATURES below.
   {
-    t: "sim", key: "max_requests", icon: "📨",
+    t: "sim", key: "monthly_lead_unlocks", icon: "📨",
     label: "طلبات التواصل",
     hint: "الحد الأقصى لعدد طلبات التواصل المستقبَلة.",
     limitLabel: "عدد الطلبات",
@@ -193,8 +193,8 @@ const UNIFIED_ITEMS: UnifiedItem[] = [
       "contact_request","allow_requests","inquiry","inquiries","inquiry_limit",
     ],
     possibleLimitKeys: [
-      "max_contact_requests","contact_request_limit","inquiry_limit","max_inquiries",
-      "request_limit","max_request","contact_limit","max_leads",
+      "monthly_lead_unlocks","max_contact_requests","contact_request_limit","inquiry_limit",
+      "max_inquiries","request_limit","max_request","contact_limit","max_leads",
     ],
   },
 
@@ -278,7 +278,7 @@ function normalizeFeatures(arr: PlanFeatureItem[]): PlanFeatureItem[] {
 const VALID_LIMIT_KEYS: ReadonlySet<string> = new Set([
   "max_active_listings",
   "max_images_per_listing",
-  "max_requests",
+  "monthly_lead_unlocks",   // backend canonical key for contact requests
   "max_videos_per_listing",
   "max_featured_slots",
   "max_projects",
@@ -307,11 +307,12 @@ const LIMIT_CANONICAL_ALIASES: ReadonlyMap<string, ReadonlySet<string>> = new Ma
     "imagePerListing","imagesPerListing","imagesCount","maxImage",
     "listingImageLimit","perListingImages",
   ])],
-  // The backend may store the requests limit under different keys.
-  ["max_requests", new Set([
-    "max_contact_requests","contact_request_limit","inquiry_limit","max_inquiries",
+  // The backend stores contact requests under monthly_lead_unlocks.
+  // max_requests and other aliases are normalised → monthly_lead_unlocks.
+  ["monthly_lead_unlocks", new Set([
+    "max_requests","max_contact_requests","contact_request_limit","inquiry_limit","max_inquiries",
     "request_limit","max_request","contact_limit","max_leads",
-    "maxContactRequests","contactRequestLimit","inquiryLimit","maxInquiries",
+    "maxRequests","maxContactRequests","contactRequestLimit","inquiryLimit","maxInquiries",
     "requestLimit","maxRequest","contactLimit","maxLeads",
   ])],
 ]);
@@ -1183,6 +1184,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       const updatedLimits = [...result.limits];
 
       // ── STEP 1: build validated payload ────────────────────────────────────
+      console.log("[plans][diag] monthly_lead_unlocks before save:", limitValues["monthly_lead_unlocks"]);
       // Only send keys that:
       //  a) Are in VALID_LIMIT_KEYS (backend supports them — unknown keys 404)
       //  b) Are not alias keys (only canonical keys reach the API)
@@ -1216,9 +1218,10 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       // ── STEP 3: rebuild clean limit state from server ────────────────────────
       // normalizeLimitValues promotes any alias keys the server may have returned
       // (e.g. max_images → max_images_per_listing) so the sim cards read correctly.
-      const newLimitValues = normalizeLimitValues(
-        Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)]))
-      );
+      const rawFromServer = Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)]));
+      console.log("[plans][diag] monthly_lead_unlocks from server raw:", rawFromServer["monthly_lead_unlocks"]);
+      const newLimitValues = normalizeLimitValues(rawFromServer);
+      console.log("[plans][diag] monthly_lead_unlocks after normalize:", newLimitValues["monthly_lead_unlocks"]);
 
       // ── STEP 4: save feature toggles that changed vs initial server state ────
       // Features were edited locally (no API call on toggle); we now flush them.
