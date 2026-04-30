@@ -240,14 +240,29 @@ const KNOWN_MARKETING: { key: string; icon: string; label: string; description: 
 // fallback renderer — it is already represented by a unified card above.
 // sim items contribute: their own limit key + every entry in possibleFks.
 // flt/feature items contribute their fk.
+// Both original and lowercase are stored so the check is always case-insensitive.
 const SUPPRESSED_FEATURE_KEYS: ReadonlySet<string> = new Set<string>(
   UNIFIED_ITEMS.flatMap(u => {
-    if (u.t === "flt" || u.t === "feature") return [u.fk];
-    if (u.t === "sim") return [u.key, ...u.possibleFks];
-    if (u.t === "limit") return [u.key];
-    return [];
+    const raw: string[] = [];
+    if (u.t === "flt" || u.t === "feature") raw.push(u.fk);
+    else if (u.t === "sim") raw.push(u.key, ...u.possibleFks);
+    else if (u.t === "limit") raw.push(u.key);
+    return raw.flatMap(k => [k, k.toLowerCase()]);
   })
 );
+
+/** Returns true when a backend feature key is owned by a unified card or is a known
+ *  platform-level feature that must NOT be controlled via plan configuration. */
+function isSuppressedFeature(key: string): boolean {
+  return SUPPRESSED_FEATURE_KEYS.has(key) || SUPPRESSED_FEATURE_KEYS.has(key.toLowerCase());
+}
+
+/** Strips every suppressed feature from an array so it never enters React state.
+ *  Ensures suppressed features cannot cause dirty-detection issues, cannot be
+ *  rendered by the fallback renderer, and cannot be toggled via the UI. */
+function normalizeFeatures(arr: PlanFeatureItem[]): PlanFeatureItem[] {
+  return arr.filter(f => !isSuppressedFeature(f.key));
+}
 
 // All backend LIMIT keys owned by UNIFIED_ITEMS — stored in lowercase for
 // case-insensitive matching (backend may use camelCase or snake_case).
@@ -1040,7 +1055,9 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   }, [audienceType]);
 
   const [limits, setLimits]     = useState<PlanLimitItem[]>(plan?.limits ?? []);
-  const [features, setFeatures] = useState<PlanFeatureItem[]>(plan?.features ?? []);
+  const [features, setFeatures] = useState<PlanFeatureItem[]>(
+    () => normalizeFeatures(plan?.features ?? [])
+  );
 
   // ── Trial ──────────────────────────────────────────────────────────────────
   const [hasTrial, setHasTrial]                           = useState(plan?.hasTrial ?? false);
@@ -1182,7 +1199,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         ...prev,
         ...Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)])),
       }));
-      setFeatures(result.features);
+      setFeatures(normalizeFeatures(result.features));
       onSaved({ ...result, limits: updatedLimits });
       initialSnapshot.current = formSnapshot;
       setSaveStatus("saved");
@@ -1253,7 +1270,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
         allowEarlyRenewalOnConsumption,
       });
       setLimits(result.limits);
-      setFeatures(result.features);
+      setFeatures(normalizeFeatures(result.features));
       onSaved(result);
       onClose();
     } catch (e) {
@@ -1741,9 +1758,11 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
                     );
                   })}
 
-                {/* Unknown features — fallback for features not owned by UNIFIED_ITEMS */}
+                {/* Unknown features — fallback for features not owned by UNIFIED_ITEMS.
+                    isSuppressedFeature() is case-insensitive; normalizeFeatures() already
+                    stripped these from state, so this is a final safety guard. */}
                 {features
-                  .filter(f => !SUPPRESSED_FEATURE_KEYS.has(f.key))
+                  .filter(f => !isSuppressedFeature(f.key))
                   .map(feat => (
                     <div key={feat.key} style={{ borderRadius: 10, border: feat.isEnabled ? "1.5px solid #86efac" : "1.5px solid #e2e8f0", background: feat.isEnabled ? "#f0fdf4" : "#fff", padding: "0.9rem 1rem", opacity: featureSaving === feat.key ? 0.6 : 1, transition: "all 0.18s" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
