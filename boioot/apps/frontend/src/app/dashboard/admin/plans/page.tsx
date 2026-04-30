@@ -1037,9 +1037,15 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       });
       const updatedLimits = [...result.limits];
 
+      // Include both CHANGED existing limits AND new non-zero limits not yet on the plan.
+      // This covers sim-card limits (max_messages, max_images_per_listing, etc.) that may
+      // not exist in the backend until the admin explicitly sets a non-zero value.
       const changedLimits = Object.entries(limitValues).filter(([key, val]) => {
+        const parsedVal = parseInt(val, 10);
+        if (isNaN(parsedVal)) return false;
         const original = result.limits.find(l => l.key === key);
-        return original && val !== String(original.value) && !isNaN(parseInt(val, 10));
+        if (original) return val !== String(original.value); // existing limit that changed
+        return parsedVal !== 0; // new limit with a non-zero value → create it
       });
 
       if (changedLimits.length > 0) {
@@ -1048,11 +1054,18 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
           const updated = await adminApi.setPlanLimit(plan!.id, key, val);
           const idx = updatedLimits.findIndex(l => l.key === key);
           if (idx >= 0) updatedLimits[idx] = updated;
+          else updatedLimits.push(updated); // new limit — add it to the array
         }));
       }
 
       setLimits(updatedLimits);
-      setLimitValues(Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)])));
+      // MERGE server values into local state — do NOT wholesale replace.
+      // Merging prevents locally edited values (e.g. a sim-card toggle just turned ON)
+      // from being wiped out by a server response that doesn't yet include that key.
+      setLimitValues(prev => ({
+        ...prev,
+        ...Object.fromEntries(updatedLimits.map(l => [l.key, String(l.value)])),
+      }));
       setFeatures(result.features);
       onSaved({ ...result, limits: updatedLimits });
       initialSnapshot.current = formSnapshot;
