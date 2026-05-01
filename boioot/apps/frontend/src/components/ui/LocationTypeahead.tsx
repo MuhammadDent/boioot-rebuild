@@ -175,7 +175,10 @@ export default function LocationTypeahead({
 
   // ── Dropdown position via portal ─────────────────────────────────────────
 
+  const [mounted, setMounted]     = useState(false);
   const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!open || !containerRef.current) return;
@@ -297,7 +300,7 @@ export default function LocationTypeahead({
 
       {error && <p className="form-error">{error}</p>}
 
-      {typeof window !== "undefined" && dropdown
+      {mounted && dropdown
         ? createPortal(dropdown, document.body)
         : null}
     </div>
