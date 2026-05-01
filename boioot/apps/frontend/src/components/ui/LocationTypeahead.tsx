@@ -4,8 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { api } from "@/lib/api";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 export interface LocationHit {
   id: string;
   name: string;
@@ -26,8 +24,6 @@ interface Props {
   allowCreate?: boolean;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function LocationTypeahead({
   type,
   label,
@@ -41,34 +37,64 @@ export default function LocationTypeahead({
   placeholder,
   allowCreate = true,
 }: Props) {
-  const [input, setInput]         = useState(value);
-  const [hits, setHits]           = useState<LocationHit[]>([]);
-  const [open, setOpen]           = useState(false);
-  const [creating, setCreating]   = useState(false);
+  const [input, setInput]             = useState(value);
+  const [hits, setHits]               = useState<LocationHit[]>([]);
+  const [open, setOpen]               = useState(false);
+  const [creating, setCreating]       = useState(false);
   const [createError, setCreateError] = useState("");
+  const [activeIdx, setActiveIdx]     = useState(-1);
+  const [mounted, setMounted]         = useState(false);
+  const [dropStyle, setDropStyle]     = useState<React.CSSProperties>({});
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropRef      = useRef<HTMLDivElement>(null);
   const inputRef     = useRef<HTMLInputElement>(null);
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => { setMounted(true); }, []);
+
   // Sync external value → input text
-  useEffect(() => {
-    setInput(value);
-  }, [value]);
+  useEffect(() => { setInput(value); }, [value]);
 
   // Reset when parent context changes
   useEffect(() => {
-    if (type === "city" && !province) {
-      setInput("");
-      setHits([]);
-    }
+    if (type === "city" && !province) { setInput(""); setHits([]); }
   }, [province, type]);
 
   useEffect(() => {
-    if (type === "neighborhood" && !city) {
-      setInput("");
-      setHits([]);
-    }
+    if (type === "neighborhood" && !city) { setInput(""); setHits([]); }
   }, [city, type]);
+
+  useEffect(() => { setActiveIdx(-1); }, [hits]);
+
+  // ── Position portal dropdown under the input ─────────────────────────────
+
+  useEffect(() => {
+    if (!open || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setDropStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+    });
+  }, [open, hits]);
+
+  // ── Click-outside: ignore clicks inside the portal dropdown itself ────────
+
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      const t = e.target as Node;
+      const insideInput = containerRef.current?.contains(t);
+      const insideDrop  = dropRef.current?.contains(t);
+      if (!insideInput && !insideDrop) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, []);
 
   // ── Search ────────────────────────────────────────────────────────────────
 
@@ -79,8 +105,8 @@ export default function LocationTypeahead({
     debounceRef.current = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ q, type, limit: "10" });
-        if (type === "city" && province) params.set("province", province);
-        if (type === "neighborhood" && city) params.set("city", city);
+        if (type === "city"         && province) params.set("province", province);
+        if (type === "neighborhood" && city)     params.set("city", city);
 
         const data = await api.get<LocationHit[]>(`/locations/search?${params}`);
         setHits(Array.isArray(data) ? data : []);
@@ -94,9 +120,7 @@ export default function LocationTypeahead({
     const v = e.target.value;
     setInput(v);
     setCreateError("");
-    if (!v.trim()) {
-      onChange("", undefined);
-    }
+    if (!v.trim()) onChange("", undefined);
     setOpen(true);
     search(v);
   }
@@ -110,15 +134,22 @@ export default function LocationTypeahead({
 
   // ── Instant create ────────────────────────────────────────────────────────
 
+  // canCreate: true only when the required parent context is present
+  const canCreate =
+    allowCreate &&
+    (type === "city" ? !!province : !!city);
+
   async function handleCreate() {
     const name = input.trim();
     if (!name || name.length < 2) return;
+    if (!canCreate) return;
+
     setCreating(true);
     setCreateError("");
     try {
       const body: Record<string, string> = { name, type };
-      if (type === "city" && province) body.province = province;
-      if (type === "neighborhood" && city) body.city = city;
+      if (type === "city"         && province) body.province = province;
+      if (type === "neighborhood" && city)     body.city = city;
 
       const res = await api.post<{ id: string; name: string; parent: string; status: string }>(
         "/locations/instant-create", body
@@ -135,29 +166,15 @@ export default function LocationTypeahead({
     }
   }
 
-  // ── Click-outside ─────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
-
   // ── Keyboard nav ─────────────────────────────────────────────────────────
 
-  const [activeIdx, setActiveIdx] = useState(-1);
-
-  useEffect(() => { setActiveIdx(-1); }, [hits]);
-
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    const totalItems = hits.length + (allowCreate && input.trim().length >= 2 ? 1 : 0);
+    const hasCreateRow = canCreate && input.trim().length >= 2;
+    const total = hits.length + (hasCreateRow ? 1 : 0);
+
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIdx(i => Math.min(i + 1, totalItems - 1));
+      setActiveIdx(i => Math.min(i + 1, total - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIdx(i => Math.max(i - 1, -1));
@@ -165,38 +182,34 @@ export default function LocationTypeahead({
       e.preventDefault();
       if (activeIdx >= 0 && activeIdx < hits.length) {
         handleSelect(hits[activeIdx]);
-      } else if (activeIdx === hits.length && allowCreate) {
-        handleCreate();
+      } else if (activeIdx === hits.length && hasCreateRow) {
+        void handleCreate();
+      } else if (activeIdx < 0 && hits.length === 0 && hasCreateRow) {
+        // No hits and nothing highlighted → create immediately
+        void handleCreate();
       }
     } else if (e.key === "Escape") {
       setOpen(false);
     }
   }
 
-  // ── Dropdown position via portal ─────────────────────────────────────────
+  // ── Derived display flags ─────────────────────────────────────────────────
 
-  const [mounted, setMounted]     = useState(false);
-  const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
-
-  useEffect(() => { setMounted(true); }, []);
-
-  useEffect(() => {
-    if (!open || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setDropStyle({
-      position: "fixed",
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
-      zIndex: 9999,
-    });
-  }, [open, hits]);
-
-  const showCreate = allowCreate && input.trim().length >= 2 && !creating;
+  const trimmed = input.trim();
+  // Show create row when: canCreate, input long enough, not currently creating
+  const showCreate   = canCreate && trimmed.length >= 2 && !creating;
   const showDropdown = open && (hits.length > 0 || showCreate);
+
+  const createLabel =
+    type === "city"
+      ? `إنشاء مدينة جديدة: ${trimmed}`
+      : `إنشاء حي جديد: ${trimmed}`;
+
+  // ── Dropdown JSX (rendered via portal) ────────────────────────────────────
 
   const dropdown = showDropdown ? (
     <div
+      ref={dropRef}
       style={{
         ...dropStyle,
         background: "#fff",
@@ -212,7 +225,7 @@ export default function LocationTypeahead({
       {hits.map((hit, idx) => (
         <div
           key={hit.id}
-          onMouseDown={() => handleSelect(hit)}
+          onMouseDown={(e) => { e.preventDefault(); handleSelect(hit); }}
           style={{
             padding: "0.6rem 0.9rem",
             cursor: "pointer",
@@ -233,31 +246,49 @@ export default function LocationTypeahead({
 
       {showCreate && (
         <div
-          onMouseDown={handleCreate}
+          onMouseDown={(e) => { e.preventDefault(); void handleCreate(); }}
           style={{
             padding: "0.6rem 0.9rem",
-            cursor: creating ? "not-allowed" : "pointer",
-            background: activeIdx === hits.length ? "#f0fdf4" : "#fafafa",
+            cursor: creating ? "wait" : "pointer",
+            background: activeIdx === hits.length ? "#f0fdf4" : "#fafffe",
             borderTop: hits.length > 0 ? "1px solid #e5e7eb" : undefined,
             display: "flex",
             alignItems: "center",
             gap: "0.5rem",
             color: "#15803d",
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: "0.88rem",
           }}
         >
           {creating ? (
             <>
-              <span style={{ display: "inline-block", width: "13px", height: "13px", border: "2px solid #15803d", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite", flexShrink: 0 }} />
+              <span style={{
+                display: "inline-block", width: 13, height: 13,
+                border: "2px solid #15803d", borderTopColor: "transparent",
+                borderRadius: "50%", animation: "spin 0.7s linear infinite",
+                flexShrink: 0,
+              }} />
               جارٍ الإنشاء...
             </>
           ) : (
             <>
               <span style={{ fontSize: "1rem", flexShrink: 0 }}>➕</span>
-              إنشاء: «{input.trim()}»
+              {createLabel}
             </>
           )}
+        </div>
+      )}
+
+      {/* Disabled-create hint: parent context missing */}
+      {allowCreate && trimmed.length >= 2 && !canCreate && (
+        <div style={{
+          padding: "0.55rem 0.9rem",
+          fontSize: "0.82rem",
+          color: "#9ca3af",
+          background: "#fafafa",
+          borderTop: hits.length > 0 ? "1px solid #e5e7eb" : undefined,
+        }}>
+          {type === "city" ? "اختر المحافظة أولاً لإنشاء مدينة" : "اختر المدينة أولاً لإنشاء حي"}
         </div>
       )}
     </div>
@@ -281,8 +312,8 @@ export default function LocationTypeahead({
         placeholder={
           placeholder ??
           (type === "city"
-            ? (disabled ? "اختر المحافظة أولاً" : "ابحث عن مدينة أو أنشئ مدينة جديدة...")
-            : (disabled ? "اختر المدينة أولاً" : "ابحث عن حي أو أنشئ حياً جديداً..."))
+            ? (disabled ? "اختر المحافظة أولاً" : "ابحث أو اكتب اسم مدينة جديدة...")
+            : (disabled ? "اختر المدينة أولاً" : "ابحث أو اكتب اسم حي جديد..."))
         }
         autoComplete="off"
         style={{
@@ -300,9 +331,7 @@ export default function LocationTypeahead({
 
       {error && <p className="form-error">{error}</p>}
 
-      {mounted && dropdown
-        ? createPortal(dropdown, document.body)
-        : null}
+      {mounted && dropdown ? createPortal(dropdown, document.body) : null}
     </div>
   );
 }
