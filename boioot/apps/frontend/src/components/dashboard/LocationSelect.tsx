@@ -3,8 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { api, ApiError } from "@/lib/api";
-import LocationTypeahead from "@/components/ui/LocationTypeahead";
-
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +33,7 @@ interface ProvinceSelectProps {
 interface CitySelectProps {
   label: string;
   value: string;
-  onChange: (val: string) => void;
+  onChange: (name: string, id?: string) => void;
   province?: string;
   required?: boolean;
   error?: string;
@@ -45,7 +43,7 @@ interface CitySelectProps {
 interface NeighborhoodSelectProps {
   label: string;
   value: string;
-  onChange: (val: string) => void;
+  onChange: (name: string, id?: string) => void;
   city: string;
   disabled?: boolean;
 }
@@ -111,14 +109,12 @@ function AddLocationModal({
   const hasSuggestions = suggestions.length > 0;
 
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 60);
-    }
+    if (open) setTimeout(() => inputRef.current?.focus(), 60);
   }, [open]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !hasSuggestions) { e.preventDefault(); onSave(); }
-    if (e.key === "Escape") { onCancel(); }
+    if (e.key === "Escape") onCancel();
   }
 
   if (!open) return null;
@@ -126,29 +122,18 @@ function AddLocationModal({
   const modal = (
     <div
       style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "rgba(0,0,0,0.45)",
-        direction: "rtl",
+        position: "fixed", inset: 0, zIndex: 9999,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(0,0,0,0.45)", direction: "rtl",
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "14px",
-          padding: "1.75rem 1.5rem 1.5rem",
-          width: "min(96vw, 420px)",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.22)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-        }}
-      >
+      <div style={{
+        background: "#fff", borderRadius: "14px",
+        padding: "1.75rem 1.5rem 1.5rem", width: "min(96vw, 420px)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.22)",
+        display: "flex", flexDirection: "column", gap: "1rem",
+      }}>
         <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#1a1a1a" }}>
           {title}
         </h3>
@@ -171,24 +156,16 @@ function AddLocationModal({
           </p>
         )}
 
-        {/* ── Action row ── */}
         {!hasSuggestions ? (
-          /* Normal state: show Save + Cancel */
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
             <button
               type="button"
               style={{
-                padding: "0.5rem 1.3rem",
-                borderRadius: "7px",
-                border: "none",
-                background: saving ? "#aaa" : "#2E7D32",
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: "0.9rem",
+                padding: "0.5rem 1.3rem", borderRadius: "7px", border: "none",
+                background: saving ? "#aaa" : "#2E7D32", color: "#fff",
+                fontWeight: 600, fontSize: "0.9rem",
                 cursor: saving ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
+                display: "flex", alignItems: "center", gap: "0.4rem",
               }}
               onClick={onSave}
               disabled={saving}
@@ -202,14 +179,7 @@ function AddLocationModal({
             </button>
             <button
               type="button"
-              style={{
-                padding: "0.5rem 1.1rem",
-                borderRadius: "7px",
-                border: "1px solid #ccc",
-                background: "transparent",
-                fontSize: "0.9rem",
-                cursor: "pointer",
-              }}
+              style={{ padding: "0.5rem 1.1rem", borderRadius: "7px", border: "1px solid #ccc", background: "transparent", fontSize: "0.9rem", cursor: "pointer" }}
               onClick={onCancel}
               disabled={saving}
             >
@@ -217,63 +187,23 @@ function AddLocationModal({
             </button>
           </div>
         ) : (
-          /* Similar state: warning + suggestions + options */
-          <div
-            style={{
-              borderRadius: "10px",
-              border: "1.5px solid #F4A000",
-              background: "#FFFBEE",
-              padding: "0.9rem 1rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.6rem",
-            }}
-          >
-            {/* Warning header */}
+          <div style={{ borderRadius: "10px", border: "1.5px solid #F4A000", background: "#FFFBEE", padding: "0.9rem 1rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
               <span style={{ fontSize: "1.1rem" }}>⚠️</span>
               <p style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#7A4500" }}>
                 يوجد اسم مشابه — هل تقصد أحد هذه الخيارات؟
               </p>
             </div>
-
             <p style={{ margin: 0, fontSize: "0.82rem", color: "#5D4037" }}>
               اختر الاسم الصحيح من القائمة، أو أضف اسماً جديداً إذا كان مختلفاً فعلاً.
             </p>
-
-            {/* Suggestion list */}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
               {suggestions.map((s) => (
-                <div
-                  key={s.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "0.5rem",
-                    padding: "0.35rem 0.5rem",
-                    borderRadius: "6px",
-                    background: "#fff",
-                    border: "1px solid #E0C060",
-                  }}
-                >
-                  <span style={{ fontSize: "0.9rem", color: "#4E342E", fontWeight: 600 }}>
-                    {s.name}
-                  </span>
+                <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", padding: "0.35rem 0.5rem", borderRadius: "6px", background: "#fff", border: "1px solid #E0C060" }}>
+                  <span style={{ fontSize: "0.9rem", color: "#4E342E", fontWeight: 600 }}>{s.name}</span>
                   <button
                     type="button"
-                    style={{
-                      padding: "0.3rem 0.75rem",
-                      borderRadius: "6px",
-                      border: "none",
-                      background: "#2E7D32",
-                      color: "#fff",
-                      fontWeight: 600,
-                      fontSize: "0.8rem",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
+                    style={{ padding: "0.3rem 0.75rem", borderRadius: "6px", border: "none", background: "#2E7D32", color: "#fff", fontWeight: 600, fontSize: "0.8rem", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
                     onClick={() => onUseSuggestion(s)}
                   >
                     استخدم هذا
@@ -281,48 +211,19 @@ function AddLocationModal({
                 </div>
               ))}
             </div>
-
-            {/* Divider + actions */}
-            <div
-              style={{
-                borderTop: "1px solid #E0C060",
-                paddingTop: "0.55rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: "0.4rem",
-              }}
-            >
+            <div style={{ borderTop: "1px solid #E0C060", paddingTop: "0.55rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.4rem" }}>
               <button
                 type="button"
-                style={{
-                  padding: "0.38rem 0.9rem",
-                  borderRadius: "7px",
-                  border: "1.5px solid #2E7D32",
-                  background: "#f0fdf4",
-                  color: "#2E7D32",
-                  fontWeight: 600,
-                  fontSize: "0.84rem",
-                  cursor: saving ? "not-allowed" : "pointer",
-                }}
+                style={{ padding: "0.38rem 0.9rem", borderRadius: "7px", border: "1.5px solid #2E7D32", background: "#f0fdf4", color: "#2E7D32", fontWeight: 600, fontSize: "0.84rem", cursor: saving ? "not-allowed" : "pointer" }}
                 onClick={onForceAdd}
                 disabled={saving}
                 title="أضف الاسم الجديد حتى لو كان مشابهاً"
               >
                 {saving ? "جارٍ الإنشاء..." : `✚ أضف "${newName}" كاسم جديد`}
               </button>
-
               <button
                 type="button"
-                style={{
-                  padding: "0.38rem 0.9rem",
-                  borderRadius: "7px",
-                  border: "1px solid #ccc",
-                  background: "transparent",
-                  fontSize: "0.88rem",
-                  cursor: "pointer",
-                }}
+                style={{ padding: "0.38rem 0.9rem", borderRadius: "7px", border: "1px solid #ccc", background: "transparent", fontSize: "0.88rem", cursor: "pointer" }}
                 onClick={onCancel}
                 disabled={saving}
               >
@@ -344,9 +245,9 @@ function AddLocationModal({
 export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSelectProps) {
   const [provinces, setProvinces] = useState<string[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [addError, setAddError] = useState("");
+  const [newName,   setNewName]   = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [addError,  setAddError]  = useState("");
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
 
   useEffect(() => { fetchProvinces(); }, []);
@@ -359,31 +260,15 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
     } catch { /* silent */ }
   }
 
-  function openModal() {
-    setNewName("");
-    setAddError("");
-    setSuggestions([]);
-    setModalOpen(true);
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-    setNewName("");
-    setAddError("");
-    setSuggestions([]);
-  }
+  function openModal() { setNewName(""); setAddError(""); setSuggestions([]); setModalOpen(true); }
+  function closeModal() { setModalOpen(false); setNewName(""); setAddError(""); setSuggestions([]); }
 
   const handleAdd = useCallback(async (forceCreate = false) => {
     const name = newName.trim();
     if (!name) { setAddError("اسم المحافظة مطلوب"); return; }
-    setSaving(true);
-    setAddError("");
-    setSuggestions([]);
+    setSaving(true); setAddError(""); setSuggestions([]);
     try {
-      const result = await api.post<LocationApiResult>(
-        "/locations/cities",
-        { name, province: name, forceCreate }
-      );
+      const result = await api.post<LocationApiResult>("/locations/cities", { name, province: name, forceCreate });
       if (result.status === "created" || result.status === "exists") {
         const finalName = result.item?.name ?? name;
         await fetchProvinces(true);
@@ -415,9 +300,7 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
           style={{ flex: 1 }}
         >
           <option value="">اختر محافظة...</option>
-          {provinces.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
+          {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
         <button
           type="button"
@@ -425,11 +308,8 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
           style={disabled ? addBtnDisabledStyle : addBtnStyle}
           disabled={disabled}
           onClick={openModal}
-        >
-          +
-        </button>
+        >+</button>
       </div>
-
       <AddLocationModal
         open={modalOpen}
         title="إضافة محافظة جديدة"
@@ -450,48 +330,219 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
 
 // ─── CitySelect ───────────────────────────────────────────────────────────────
 
-export function CitySelect({
-  label,
-  value,
-  onChange,
-  province,
-  required,
-  error,
-  disabled,
-}: CitySelectProps) {
+export function CitySelect({ label, value, onChange, province, required, error, disabled }: CitySelectProps) {
+  const [cities,    setCities]    = useState<LocationOption[]>([]);
+  const [loading,   setLoading]   = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [newName,   setNewName]   = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [addError,  setAddError]  = useState("");
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+
+  // Load cities whenever province changes
+  useEffect(() => {
+    setCities([]);
+    if (!province) return;
+    setLoading(true);
+    api.get<LocationOption[]>(`/locations/cities?province=${encodeURIComponent(province)}`)
+      .then(data => setCities(Array.isArray(data) ? data.filter(c => c?.id && c?.name) : []))
+      .catch(() => setCities([]))
+      .finally(() => setLoading(false));
+  }, [province]);
+
+  async function refreshCities() {
+    if (!province) return;
+    const data = await api.get<LocationOption[]>(
+      `/locations/cities?province=${encodeURIComponent(province)}&_t=${Date.now()}`
+    ).catch(() => [] as LocationOption[]);
+    setCities(Array.isArray(data) ? data.filter(c => c?.id && c?.name) : []);
+  }
+
+  function openModal() { setNewName(""); setAddError(""); setSuggestions([]); setModalOpen(true); }
+  function closeModal() { setModalOpen(false); setNewName(""); setAddError(""); setSuggestions([]); }
+
+  const handleAdd = useCallback(async (forceCreate = false) => {
+    const name = newName.trim();
+    if (!name) { setAddError("اسم المدينة مطلوب"); return; }
+    if (!province) { setAddError("اختر المحافظة أولاً"); return; }
+    setSaving(true); setAddError(""); setSuggestions([]);
+    try {
+      const result = await api.post<LocationApiResult>("/locations/cities", { name, province, forceCreate });
+      if (result.status === "created" || result.status === "exists") {
+        const finalName = result.item?.name ?? name;
+        const finalId   = result.item?.id   ?? "";
+        await refreshCities();
+        onChange(finalName, finalId);
+        closeModal();
+      } else if (result.status === "similar") {
+        setSuggestions(result.suggestions ?? []);
+      }
+    } catch (err) {
+      setAddError(err instanceof ApiError ? err.message : "تعذّر إضافة المدينة — حاول مجدداً");
+    } finally { setSaving(false); }
+  }, [newName, province, onChange]);
+
+  async function handleUseSuggestion(s: LocationSuggestion) {
+    await refreshCities();
+    onChange(s.name, s.id);
+    closeModal();
+  }
+
+  const isDisabled = disabled || !province;
+
   return (
-    <LocationTypeahead
-      type="city"
-      label={label}
-      value={value}
-      onChange={(name) => onChange(name)}
-      province={province}
-      disabled={disabled}
-      required={required}
-      error={error}
-      allowCreate={true}
-    />
+    <div className="form-group">
+      <label className="form-label">
+        {label}{required && <span style={{ color: "#e53935" }}> *</span>}
+      </label>
+      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+        <select
+          className="form-input"
+          value={value}
+          onChange={(e) => {
+            const name  = e.target.value;
+            const found = cities.find(c => c.name === name);
+            onChange(name, found?.id);
+          }}
+          disabled={isDisabled || loading}
+          style={{ flex: 1, borderColor: error ? "#e53935" : undefined }}
+        >
+          <option value="">
+            {loading ? "جاري التحميل..." : (province ? "اختر مدينة..." : "اختر المحافظة أولاً")}
+          </option>
+          {cities.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+        </select>
+        <button
+          type="button"
+          title="إضافة مدينة جديدة"
+          style={isDisabled ? addBtnDisabledStyle : addBtnStyle}
+          disabled={isDisabled}
+          onClick={openModal}
+        >+</button>
+      </div>
+      {error && <p className="form-error">{error}</p>}
+      <AddLocationModal
+        open={modalOpen}
+        title="إضافة مدينة جديدة"
+        placeholder="اكتب اسم المدينة..."
+        saving={saving}
+        addError={addError}
+        suggestions={suggestions}
+        newName={newName}
+        onNameChange={(v) => { setNewName(v); setSuggestions([]); setAddError(""); }}
+        onSave={() => handleAdd(false)}
+        onCancel={closeModal}
+        onUseSuggestion={handleUseSuggestion}
+        onForceAdd={() => handleAdd(true)}
+      />
+    </div>
   );
 }
 
 // ─── NeighborhoodSelect ───────────────────────────────────────────────────────
 
-export function NeighborhoodSelect({
-  label,
-  value,
-  onChange,
-  city,
-  disabled,
-}: NeighborhoodSelectProps) {
+export function NeighborhoodSelect({ label, value, onChange, city, disabled }: NeighborhoodSelectProps) {
+  const [neighborhoods, setNeighborhoods] = useState<LocationOption[]>([]);
+  const [loading,       setLoading]       = useState(false);
+  const [modalOpen,     setModalOpen]     = useState(false);
+  const [newName,       setNewName]       = useState("");
+  const [saving,        setSaving]        = useState(false);
+  const [addError,      setAddError]      = useState("");
+  const [suggestions,   setSuggestions]   = useState<LocationSuggestion[]>([]);
+
+  // Load neighborhoods whenever city changes
+  useEffect(() => {
+    setNeighborhoods([]);
+    if (!city) return;
+    setLoading(true);
+    api.get<LocationOption[]>(`/locations/neighborhoods?city=${encodeURIComponent(city)}`)
+      .then(data => setNeighborhoods(Array.isArray(data) ? data.filter(n => n?.id && n?.name) : []))
+      .catch(() => setNeighborhoods([]))
+      .finally(() => setLoading(false));
+  }, [city]);
+
+  async function refreshNeighborhoods() {
+    if (!city) return;
+    const data = await api.get<LocationOption[]>(
+      `/locations/neighborhoods?city=${encodeURIComponent(city)}&_t=${Date.now()}`
+    ).catch(() => [] as LocationOption[]);
+    setNeighborhoods(Array.isArray(data) ? data.filter(n => n?.id && n?.name) : []);
+  }
+
+  function openModal() { setNewName(""); setAddError(""); setSuggestions([]); setModalOpen(true); }
+  function closeModal() { setModalOpen(false); setNewName(""); setAddError(""); setSuggestions([]); }
+
+  const handleAdd = useCallback(async (forceCreate = false) => {
+    const name = newName.trim();
+    if (!name) { setAddError("اسم الحي مطلوب"); return; }
+    if (!city)  { setAddError("اختر المدينة أولاً"); return; }
+    setSaving(true); setAddError(""); setSuggestions([]);
+    try {
+      const result = await api.post<LocationApiResult>("/locations/neighborhoods", { name, city, forceCreate });
+      if (result.status === "created" || result.status === "exists") {
+        const finalName = result.item?.name ?? name;
+        const finalId   = result.item?.id   ?? "";
+        await refreshNeighborhoods();
+        onChange(finalName, finalId);
+        closeModal();
+      } else if (result.status === "similar") {
+        setSuggestions(result.suggestions ?? []);
+      }
+    } catch (err) {
+      setAddError(err instanceof ApiError ? err.message : "تعذّر إضافة الحي — حاول مجدداً");
+    } finally { setSaving(false); }
+  }, [newName, city, onChange]);
+
+  async function handleUseSuggestion(s: LocationSuggestion) {
+    await refreshNeighborhoods();
+    onChange(s.name, s.id);
+    closeModal();
+  }
+
+  const isDisabled = disabled || !city;
+
   return (
-    <LocationTypeahead
-      type="neighborhood"
-      label={label}
-      value={value}
-      onChange={(name) => onChange(name)}
-      city={city}
-      disabled={disabled || !city}
-      allowCreate={true}
-    />
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+        <select
+          className="form-input"
+          value={value}
+          onChange={(e) => {
+            const name  = e.target.value;
+            const found = neighborhoods.find(n => n.name === name);
+            onChange(name, found?.id);
+          }}
+          disabled={isDisabled || loading}
+          style={{ flex: 1 }}
+        >
+          <option value="">
+            {loading ? "جاري التحميل..." : (city ? "اختر حياً..." : "اختر المدينة أولاً")}
+          </option>
+          {neighborhoods.map((n) => <option key={n.id} value={n.name}>{n.name}</option>)}
+        </select>
+        <button
+          type="button"
+          title="إضافة حي جديد"
+          style={isDisabled ? addBtnDisabledStyle : addBtnStyle}
+          disabled={isDisabled}
+          onClick={openModal}
+        >+</button>
+      </div>
+      <AddLocationModal
+        open={modalOpen}
+        title="إضافة حي جديد"
+        placeholder="اكتب اسم الحي..."
+        saving={saving}
+        addError={addError}
+        suggestions={suggestions}
+        newName={newName}
+        onNameChange={(v) => { setNewName(v); setSuggestions([]); setAddError(""); }}
+        onSave={() => handleAdd(false)}
+        onCancel={closeModal}
+        onUseSuggestion={handleUseSuggestion}
+        onForceAdd={() => handleAdd(true)}
+      />
+    </div>
   );
 }

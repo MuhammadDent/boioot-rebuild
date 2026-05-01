@@ -11,7 +11,7 @@ import { onboardingApi } from "@/features/onboarding/api";
 import { api, normalizeError } from "@/lib/api";
 import Spinner from "@/components/ui/Spinner";
 import LocationPickerDynamic, { type LatLng } from "@/components/onboarding/LocationPickerDynamic";
-import LocationTypeahead from "@/components/ui/LocationTypeahead";
+import { CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import type { E164Number } from "libphonenumber-js/core";
 
 const BUSINESS_ROLES = ["Broker", "CompanyOwner"];
@@ -439,29 +439,23 @@ export default function OnboardingPage() {
           {/* City + Neighborhood — two columns */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <div style={{ margin: 0 }}>
-              <LocationTypeahead
-                type="city"
+              <CitySelect
                 label="المدينة"
                 value={cityName}
                 onChange={handleCityChange}
                 province={province || undefined}
                 required
                 error={fieldErrors.cityId}
-                allowCreate={true}
               />
             </div>
 
             <div style={{ margin: 0 }}>
-              <LocationTypeahead
-                type="neighborhood"
+              <NeighborhoodSelect
                 label="الحي / المنطقة"
                 value={neighborhoodName}
                 onChange={handleNeighborhoodChange}
-                city={cityName || undefined}
+                city={cityName}
                 disabled={!cityName}
-                required
-                error={fieldErrors.neighborhoodId}
-                allowCreate={true}
               />
             </div>
           </div>
