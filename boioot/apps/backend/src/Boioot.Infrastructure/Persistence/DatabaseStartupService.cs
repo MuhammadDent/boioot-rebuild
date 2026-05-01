@@ -977,6 +977,12 @@ public sealed class DatabaseStartupService
             await _db.Database.ExecuteSqlRawAsync(
                 """ALTER TABLE "BuyerRequests" ADD COLUMN IF NOT EXISTS "NeighborhoodId" uuid""", ct);
 
+            // Companies structured location IDs — required for onboarding matching
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Companies" ADD COLUMN IF NOT EXISTS "CityId" uuid""", ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Companies" ADD COLUMN IF NOT EXISTS "NeighborhoodId" uuid""", ct);
+
             // UserCoverages table — new entity for agent area coverage registration
             await _db.Database.ExecuteSqlRawAsync(
                 """

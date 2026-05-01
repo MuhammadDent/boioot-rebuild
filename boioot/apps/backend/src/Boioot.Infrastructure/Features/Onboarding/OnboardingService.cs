@@ -28,16 +28,18 @@ public class OnboardingService : IOnboardingService
     {
         var company = await ResolveCompanyAsync(userId, ct);
 
-        company.Name          = request.DisplayName.Trim();
-        company.Province      = string.IsNullOrWhiteSpace(request.Province)     ? null : request.Province.Trim();
-        company.City          = string.IsNullOrWhiteSpace(request.City)         ? null : request.City.Trim();
-        company.Neighborhood  = string.IsNullOrWhiteSpace(request.Neighborhood) ? null : request.Neighborhood.Trim();
-        company.Address       = string.IsNullOrWhiteSpace(request.Address)      ? null : request.Address.Trim();
-        company.Phone         = string.IsNullOrWhiteSpace(request.Phone)        ? null : request.Phone.Trim();
-        company.WhatsApp      = string.IsNullOrWhiteSpace(request.WhatsApp)     ? null : request.WhatsApp.Trim();
-        company.Description   = string.IsNullOrWhiteSpace(request.Description)  ? null : request.Description.Trim();
-        company.Latitude      = request.Latitude;
-        company.Longitude     = request.Longitude;
+        company.Name           = request.DisplayName.Trim();
+        company.Province       = string.IsNullOrWhiteSpace(request.Province)     ? null : request.Province.Trim();
+        company.City           = string.IsNullOrWhiteSpace(request.City)         ? null : request.City.Trim();
+        company.Neighborhood   = string.IsNullOrWhiteSpace(request.Neighborhood) ? null : request.Neighborhood.Trim();
+        company.Address        = string.IsNullOrWhiteSpace(request.Address)      ? null : request.Address.Trim();
+        company.Phone          = string.IsNullOrWhiteSpace(request.Phone)        ? null : request.Phone.Trim();
+        company.WhatsApp       = string.IsNullOrWhiteSpace(request.WhatsApp)     ? null : request.WhatsApp.Trim();
+        company.Description    = string.IsNullOrWhiteSpace(request.Description)  ? null : request.Description.Trim();
+        company.Latitude       = request.Latitude;
+        company.Longitude      = request.Longitude;
+        company.CityId         = request.CityId;
+        company.NeighborhoodId = request.NeighborhoodId;
         company.IsProfileComplete = true;
 
         await _context.SaveChangesAsync(ct);
@@ -67,6 +69,8 @@ public class OnboardingService : IOnboardingService
             Province          = c.Province,
             City              = c.City,
             Neighborhood      = c.Neighborhood,
+            CityId            = c.CityId,
+            NeighborhoodId    = c.NeighborhoodId,
             Address           = c.Address,
             Phone             = c.Phone,
             WhatsApp          = c.WhatsApp,

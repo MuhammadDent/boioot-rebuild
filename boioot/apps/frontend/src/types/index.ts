@@ -4,6 +4,8 @@ export interface BusinessProfileResponse {
   province?: string;
   city?: string;
   neighborhood?: string;
+  cityId?: string;
+  neighborhoodId?: string;
   address?: string;
   phone?: string;
   whatsApp?: string;

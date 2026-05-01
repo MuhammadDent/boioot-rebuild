@@ -13,6 +13,8 @@ public class Company : BaseEntity, ISoftDeletable
     public string? Province { get; set; }
     public string? City { get; set; }
     public string? Neighborhood { get; set; }
+    public Guid? CityId { get; set; }
+    public Guid? NeighborhoodId { get; set; }
     public string? WhatsApp { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }

@@ -8,26 +8,24 @@ import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { useAuth } from "@/context/AuthContext";
 import { onboardingApi } from "@/features/onboarding/api";
-import { normalizeError } from "@/lib/api";
+import { api, normalizeError } from "@/lib/api";
 import Spinner from "@/components/ui/Spinner";
 import LocationPickerDynamic, { type LatLng } from "@/components/onboarding/LocationPickerDynamic";
 import type { E164Number } from "libphonenumber-js/core";
 
-// ── Roles that require business profile onboarding ────────────────────────────
 const BUSINESS_ROLES = ["Broker", "CompanyOwner"];
 
-// ── Progress steps ─────────────────────────────────────────────────────────────
 const STEPS = [
   { label: "تم إنشاء الحساب" },
   { label: "الملف التجاري" },
   { label: "مكتمل" },
 ];
 
-// ── Form state — mirrors the payload structure exactly ────────────────────────
+interface LocationCity         { id: string; name: string; province: string; }
+interface LocationNeighborhood { id: string; name: string; city: string; }
+
 interface FormState {
   displayName:  string;
-  city:         string;
-  district:     string;
   address:      string;
   phoneNumber:  string;
   whatsapp:     string;
@@ -40,8 +38,6 @@ type FieldKey = keyof FormState;
 
 const EMPTY: FormState = {
   displayName:  "",
-  city:         "",
-  district:     "",
   address:      "",
   phoneNumber:  "",
   whatsapp:     "",
@@ -54,21 +50,81 @@ export default function OnboardingPage() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
 
-  const [form, setForm]           = useState<FormState>(EMPTY);
-  const [geoLoading, setGeoLoading] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
-  const [error, setError]         = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm]               = useState<FormState>(EMPTY);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey | "cityId" | "neighborhoodId", string>>>({});
+  const [error, setError]             = useState("");
+  const [submitting, setSubmitting]   = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [geoLoading, setGeoLoading]   = useState(false);
 
-  // ── Auth guard ────────────────────────────────────────────────────────────
+  // ── Location cascade state ──────────────────────────────────────────────────
+  const [provinces,          setProvinces]          = useState<string[]>([]);
+  const [province,           setProvince]           = useState("");
+  const [provincesLoading,   setProvincesLoading]   = useState(true);
+
+  const [cities,             setCities]             = useState<LocationCity[]>([]);
+  const [citiesLoading,      setCitiesLoading]      = useState(false);
+  const [cityId,             setCityId]             = useState("");
+  const [cityName,           setCityName]           = useState("");
+
+  const [neighborhoods,         setNeighborhoods]         = useState<LocationNeighborhood[]>([]);
+  const [neighborhoodsLoading,  setNeighborhoodsLoading]  = useState(false);
+  const [neighborhoodId,        setNeighborhoodId]        = useState("");
+  const [neighborhoodName,      setNeighborhoodName]      = useState("");
+
+  // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) { router.replace("/login"); return; }
     if (user && !BUSINESS_ROLES.includes(user.role)) router.replace("/dashboard");
   }, [isLoading, isAuthenticated, user, router]);
 
-  // ── Pre-fill from existing profile ────────────────────────────────────────
+  // ── Load provinces once ─────────────────────────────────────────────────────
+  useEffect(() => {
+    api.get<string[]>("/locations/provinces")
+      .then(data => setProvinces(Array.isArray(data) ? data.filter(Boolean) : []))
+      .catch(() => setProvinces([]))
+      .finally(() => setProvincesLoading(false));
+  }, []);
+
+  // ── Load cities when province changes ───────────────────────────────────────
+  useEffect(() => {
+    setCityId("");
+    setCityName("");
+    setNeighborhoodId("");
+    setNeighborhoodName("");
+    setNeighborhoods([]);
+    if (!province) { setCities([]); return; }
+    setCitiesLoading(true);
+    api.get<LocationCity[]>(`/locations/cities?province=${encodeURIComponent(province)}`)
+      .then(data => {
+        const safe = Array.isArray(data)
+          ? data.filter(c => c?.id && c?.name).sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"))
+          : [];
+        setCities(safe);
+      })
+      .catch(() => setCities([]))
+      .finally(() => setCitiesLoading(false));
+  }, [province]);
+
+  // ── Load neighborhoods when city changes ────────────────────────────────────
+  useEffect(() => {
+    setNeighborhoodId("");
+    setNeighborhoodName("");
+    if (!cityName) { setNeighborhoods([]); return; }
+    setNeighborhoodsLoading(true);
+    api.get<LocationNeighborhood[]>(`/locations/neighborhoods?city=${encodeURIComponent(cityName)}`)
+      .then(data => {
+        const safe = Array.isArray(data)
+          ? data.filter(n => n?.id && n?.name).sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"))
+          : [];
+        setNeighborhoods(safe);
+      })
+      .catch(() => setNeighborhoods([]))
+      .finally(() => setNeighborhoodsLoading(false));
+  }, [cityName]);
+
+  // ── Pre-fill from existing profile ─────────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated || !user || !BUSINESS_ROLES.includes(user.role)) return;
 
@@ -76,8 +132,6 @@ export default function OnboardingPage() {
       .then((p) => {
         setForm({
           displayName:  p.displayName  ?? "",
-          city:         p.city         ?? "",
-          district:     p.neighborhood ?? "",
           address:      p.address      ?? "",
           phoneNumber:  p.phone        ?? "",
           whatsapp:     p.whatsApp     ?? "",
@@ -85,12 +139,23 @@ export default function OnboardingPage() {
           latitude:     p.latitude  ?? null,
           longitude:    p.longitude ?? null,
         });
+
+        if (p.province) setProvince(p.province);
+
+        if (p.cityId) {
+          setCityId(String(p.cityId));
+          setCityName(p.city ?? "");
+        }
+        if (p.neighborhoodId) {
+          setNeighborhoodId(String(p.neighborhoodId));
+          setNeighborhoodName(p.neighborhood ?? "");
+        }
       })
-      .catch(() => { /* start fresh */ })
+      .catch(() => {})
       .finally(() => setProfileLoading(false));
   }, [isAuthenticated, user]);
 
-  // ── Generic field change ──────────────────────────────────────────────────
+  // ── Generic field change ────────────────────────────────────────────────────
   function setField<K extends FieldKey>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
@@ -100,12 +165,30 @@ export default function OnboardingPage() {
     setField(e.target.name as FieldKey, e.target.value);
   }
 
-  // ── Map selection → updates form.latitude / form.longitude ────────────────
+  // ── City dropdown change ────────────────────────────────────────────────────
+  function handleCityChange(id: string) {
+    const city = cities.find(c => c.id === id);
+    setCityId(id);
+    setCityName(city?.name ?? "");
+    setNeighborhoodId("");
+    setNeighborhoodName("");
+    setFieldErrors(prev => ({ ...prev, cityId: undefined }));
+  }
+
+  // ── Neighborhood dropdown change ────────────────────────────────────────────
+  function handleNeighborhoodChange(id: string) {
+    const nb = neighborhoods.find(n => n.id === id);
+    setNeighborhoodId(id);
+    setNeighborhoodName(nb?.name ?? "");
+    setFieldErrors(prev => ({ ...prev, neighborhoodId: undefined }));
+  }
+
+  // ── Map selection ───────────────────────────────────────────────────────────
   const handleMapChange = useCallback((pos: LatLng) => {
     setForm((prev) => ({ ...prev, latitude: pos.lat, longitude: pos.lng }));
   }, []);
 
-  // ── Browser geolocation ───────────────────────────────────────────────────
+  // ── Browser geolocation ─────────────────────────────────────────────────────
   function useCurrentLocation() {
     if (!navigator.geolocation) return;
     setGeoLoading(true);
@@ -119,19 +202,18 @@ export default function OnboardingPage() {
     );
   }
 
-  // ── Validation ────────────────────────────────────────────────────────────
+  // ── Validation ──────────────────────────────────────────────────────────────
   function validate(): boolean {
-    const errors: Partial<Record<FieldKey, string>> = {};
+    const errors: Partial<Record<FieldKey | "cityId" | "neighborhoodId", string>> = {};
     if (!form.displayName.trim()) errors.displayName = "الاسم التجاري مطلوب";
-    if (!form.city.trim())        errors.city        = "المدينة مطلوبة";
-    if (!form.district.trim())    errors.district    = "الحي / المنطقة مطلوب";
-    if (!form.address.trim())     errors.address     = "العنوان التفصيلي مطلوب";
-    if (!form.phoneNumber.trim()) errors.phoneNumber = "رقم الهاتف مطلوب";
+    if (!cityId)                  errors.cityId       = "يرجى اختيار المدينة";
+    if (!neighborhoodId)          errors.neighborhoodId = "يرجى اختيار الحي / المنطقة";
+    if (!form.address.trim())     errors.address      = "العنوان التفصيلي مطلوب";
+    if (!form.phoneNumber.trim()) errors.phoneNumber  = "رقم الهاتف مطلوب";
     setFieldErrors(errors);
 
     if (Object.keys(errors).length > 0) return false;
 
-    // Location check — exact behaviour requested
     if (!form.latitude || !form.longitude) {
       alert("يجب تحديد الموقع على الخريطة");
       return false;
@@ -140,62 +222,70 @@ export default function OnboardingPage() {
     return true;
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────────
+  // ── Submit ──────────────────────────────────────────────────────────────────
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     if (!validate()) return;
 
-    const payload = {
-      city:        form.city,
-      district:    form.district,
-      address:     form.address,
-      phoneNumber: form.phoneNumber,
-      whatsapp:    form.whatsapp,
-      latitude:    form.latitude!,
-      longitude:   form.longitude!,
-    };
-
     setSubmitting(true);
     try {
       await onboardingApi.updateBusinessProfile({
-        displayName:  form.displayName.trim(),
-        city:         payload.city.trim(),
-        neighborhood: payload.district.trim(),
-        address:      payload.address.trim()     || undefined,
-        phone:        payload.phoneNumber.trim()  || undefined,
-        whatsApp:     payload.whatsapp.trim()     || undefined,
-        description:  form.description.trim()    || undefined,
-        latitude:     payload.latitude,
-        longitude:    payload.longitude,
+        displayName:    form.displayName.trim(),
+        province:       province || undefined,
+        city:           cityName   || undefined,
+        neighborhood:   neighborhoodName || undefined,
+        cityId:         cityId     || undefined,
+        neighborhoodId: neighborhoodId || undefined,
+        address:        form.address.trim()     || undefined,
+        phone:          form.phoneNumber.trim() || undefined,
+        whatsApp:       form.whatsapp.trim()    || undefined,
+        description:    form.description.trim() || undefined,
+        latitude:       form.latitude!,
+        longitude:      form.longitude!,
       });
       router.push("/dashboard");
-    } catch (error: unknown) {
-      console.error("API ERROR:", error);
-      console.log("Payload sent:", payload);
-      setError(normalizeError(error));
+    } catch (err: unknown) {
+      setError(normalizeError(err));
     } finally {
       setSubmitting(false);
     }
   }
 
-  // ── Loading states ────────────────────────────────────────────────────────
+  // ── Loading states ──────────────────────────────────────────────────────────
   if (isLoading || profileLoading) return <Spinner />;
   if (!isAuthenticated || !user || !BUSINESS_ROLES.includes(user.role)) return null;
 
   const roleLabel = user.role === "CompanyOwner" ? "شركة تطوير" : "مكتب عقاري";
 
-  // MapPicker value derived from form state
   const mapValue: LatLng | null =
     form.latitude != null && form.longitude != null
       ? { lat: form.latitude, lng: form.longitude }
       : null;
 
+  const selectStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "0.55rem 0.75rem",
+    border: "1px solid var(--color-border)",
+    borderRadius: 8,
+    fontSize: "0.9rem",
+    background: "#fff",
+    color: "var(--color-text)",
+    appearance: "none",
+    WebkitAppearance: "none",
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "left 0.75rem center",
+    paddingLeft: "2rem",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    lineHeight: 1.5,
+  };
+
   return (
     <div className="login-page">
       <div className="form-card" style={{ maxWidth: 580 }}>
 
-        {/* Logo */}
         <div className="login-page__logo">
           <Image
             src="/logo-boioot.png"
@@ -207,14 +297,8 @@ export default function OnboardingPage() {
           />
         </div>
 
-        {/* ── Progress indicator ─────────────────────────────────────────── */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 0,
-          marginBottom: "1.75rem",
-        }}>
+        {/* Progress */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, marginBottom: "1.75rem" }}>
           {STEPS.map((step, i) => {
             const isCompleted = i === 0;
             const isActive    = i === 1;
@@ -233,8 +317,7 @@ export default function OnboardingPage() {
                       : i + 1}
                   </div>
                   <span style={{
-                    fontSize: "0.7rem",
-                    fontWeight: isActive ? 700 : 400,
+                    fontSize: "0.7rem", fontWeight: isActive ? 700 : 400,
                     color: (isCompleted || isActive) ? "var(--color-primary)" : "var(--color-text-muted)",
                     whiteSpace: "nowrap",
                   }}>
@@ -252,11 +335,8 @@ export default function OnboardingPage() {
           })}
         </div>
 
-        {/* ── Header ────────────────────────────────────────────────────────── */}
         <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <h1 className="login-page__title" style={{ marginBottom: "0.35rem" }}>
-            أكمل ملفك التجاري
-          </h1>
+          <h1 className="login-page__title" style={{ marginBottom: "0.35rem" }}>أكمل ملفك التجاري</h1>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.88rem" }}>
             حساب <strong>{roleLabel}</strong> — يُساعدنا ذلك في عرض معلوماتك للعملاء بشكل احترافي
           </p>
@@ -264,10 +344,9 @@ export default function OnboardingPage() {
 
         {error && <div className="error-banner">{error}</div>}
 
-        {/* ── Form ─────────────────────────────────────────────────────────── */}
         <form onSubmit={handleSubmit} noValidate>
 
-          {/* ── المعلومات الأساسية ────────────────────────────────────────── */}
+          {/* ── المعلومات الأساسية ───────────────────────────────────────── */}
           <div style={{
             fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.04em",
             color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)",
@@ -276,7 +355,6 @@ export default function OnboardingPage() {
             المعلومات الأساسية
           </div>
 
-          {/* Display name */}
           <div className="form-group">
             <label className="form-label" htmlFor="displayName">
               {user.role === "CompanyOwner" ? "اسم الشركة" : "اسم المكتب العقاري"}{" "}
@@ -290,7 +368,6 @@ export default function OnboardingPage() {
             {fieldErrors.displayName && <span className="form-error">{fieldErrors.displayName}</span>}
           </div>
 
-          {/* Phone + WhatsApp — two columns */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label" htmlFor="phoneNumber">
@@ -322,7 +399,6 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Description */}
           <div className="form-group">
             <label className="form-label" htmlFor="description">
               نبذة تعريفية{" "}
@@ -337,7 +413,7 @@ export default function OnboardingPage() {
             />
           </div>
 
-          {/* ── معلومات الموقع ───────────────────────────────────────────── */}
+          {/* ── معلومات الموقع ─────────────────────────────────────────────── */}
           <div style={{
             fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.04em",
             color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)",
@@ -346,29 +422,67 @@ export default function OnboardingPage() {
             معلومات الموقع
           </div>
 
-          {/* City + District — two columns */}
+          {/* Province */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="province">المحافظة</label>
+            <select
+              id="province"
+              value={province}
+              onChange={e => { setProvince(e.target.value); setFieldErrors(prev => ({ ...prev, cityId: undefined })); }}
+              disabled={provincesLoading}
+              style={selectStyle}
+            >
+              <option value="">{provincesLoading ? "جاري التحميل..." : "اختر المحافظة"}</option>
+              {provinces.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+
+          {/* City + Neighborhood — two columns */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label" htmlFor="city">
                 المدينة <span style={{ color: "var(--color-error)" }}>*</span>
               </label>
-              <input
-                id="city" name="city" type="text" className="form-input"
-                value={form.city} onChange={handleTextChange} required
-                placeholder="مثال: دمشق"
-              />
-              {fieldErrors.city && <span className="form-error">{fieldErrors.city}</span>}
+              <select
+                id="city"
+                value={cityId}
+                onChange={e => handleCityChange(e.target.value)}
+                disabled={!province || citiesLoading}
+                style={{
+                  ...selectStyle,
+                  borderColor: fieldErrors.cityId ? "var(--color-error)" : "var(--color-border)",
+                  opacity: !province || citiesLoading ? 0.65 : 1,
+                }}
+              >
+                <option value="">
+                  {!province ? "اختر المحافظة أولاً" : citiesLoading ? "جاري التحميل..." : "اختر المدينة"}
+                </option>
+                {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              {fieldErrors.cityId && <span className="form-error">{fieldErrors.cityId}</span>}
             </div>
+
             <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="district">
+              <label className="form-label" htmlFor="neighborhood">
                 الحي / المنطقة <span style={{ color: "var(--color-error)" }}>*</span>
               </label>
-              <input
-                id="district" name="district" type="text" className="form-input"
-                value={form.district} onChange={handleTextChange} required
-                placeholder="مثال: المزة"
-              />
-              {fieldErrors.district && <span className="form-error">{fieldErrors.district}</span>}
+              <select
+                id="neighborhood"
+                value={neighborhoodId}
+                onChange={e => handleNeighborhoodChange(e.target.value)}
+                disabled={!cityId || neighborhoodsLoading}
+                style={{
+                  ...selectStyle,
+                  borderColor: fieldErrors.neighborhoodId ? "var(--color-error)" : "var(--color-border)",
+                  opacity: !cityId || neighborhoodsLoading ? 0.65 : 1,
+                }}
+              >
+                <option value="">
+                  {!cityId ? "اختر المدينة أولاً" : neighborhoodsLoading ? "جاري التحميل..." : "اختر الحي / المنطقة"}
+                </option>
+                {neighborhoods.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
+              </select>
+              {fieldErrors.neighborhoodId && <span className="form-error">{fieldErrors.neighborhoodId}</span>}
             </div>
           </div>
 
@@ -385,7 +499,7 @@ export default function OnboardingPage() {
             {fieldErrors.address && <span className="form-error">{fieldErrors.address}</span>}
           </div>
 
-          {/* ── Map picker ────────────────────────────────────────────────── */}
+          {/* Map picker */}
           <div className="form-group">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
               <label className="form-label" style={{ margin: 0 }}>
@@ -416,19 +530,13 @@ export default function OnboardingPage() {
 
             <LocationPickerDynamic value={mapValue} onChange={handleMapChange} />
 
-            {/* Coordinates display — form.latitude / form.longitude */}
             {form.latitude != null && form.longitude != null && (
-              <p style={{
-                fontSize: "0.72rem", color: "var(--color-text-muted)",
-                marginTop: "0.4rem", fontFamily: "monospace",
-                direction: "ltr", textAlign: "right",
-              }}>
+              <p style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", marginTop: "0.4rem", fontFamily: "monospace", direction: "ltr", textAlign: "right" }}>
                 {form.latitude.toFixed(6)}, {form.longitude.toFixed(6)}
               </p>
             )}
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
             className="btn btn-primary"
@@ -439,13 +547,9 @@ export default function OnboardingPage() {
           </button>
         </form>
 
-        {/* Skip link */}
         <p style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.82rem", color: "var(--color-text-muted)" }}>
           يمكنك{" "}
-          <Link
-            href="/dashboard"
-            style={{ color: "var(--color-text-secondary)", textDecoration: "underline" }}
-          >
+          <Link href="/dashboard" style={{ color: "var(--color-text-secondary)", textDecoration: "underline" }}>
             تخطي هذه الخطوة الآن
           </Link>{" "}
           وإكمالها لاحقاً من الإعدادات

@@ -14,6 +14,8 @@ public class BusinessProfileResponse
     public string? LogoUrl { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
+    public Guid? CityId { get; set; }
+    public Guid? NeighborhoodId { get; set; }
     public bool IsProfileComplete { get; set; }
     public bool IsVerified { get; set; }
 }
