@@ -1,4 +1,5 @@
 "use client";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 
 /**
  * PropertyImageUploader
@@ -477,7 +478,7 @@ function ExistingCard({ img, disabled, isEditMode, onCover, onDelete, onMoveLeft
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={img.imageUrl}
+        src={normalizeImageUrl(img.imageUrl) ?? img.imageUrl}
         alt="صورة العقار"
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />

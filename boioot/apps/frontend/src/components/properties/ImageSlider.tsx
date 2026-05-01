@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import type { PropertyImageResponse } from "@/types";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 
 interface Props {
   images: PropertyImageResponse[];
@@ -60,7 +61,7 @@ export default function ImageSlider({ images }: Props) {
           onTouchEnd={onTouchEnd}
         >
           <Image
-            src={images[currentIndex].imageUrl}
+            src={normalizeImageUrl(images[currentIndex].imageUrl)!}
             alt={`property-image-${currentIndex}`}
             fill
             priority={currentIndex === 0}
@@ -104,7 +105,7 @@ export default function ImageSlider({ images }: Props) {
                 onClick={() => setCurrentIndex(i)}
               >
                 <Image
-                  src={img.thumbnailUrl ?? img.imageUrl}
+                  src={normalizeImageUrl(img.thumbnailUrl ?? img.imageUrl)!}
                   alt={`thumbnail-${i}`}
                   fill
                   sizes="220px"
@@ -126,7 +127,7 @@ export default function ImageSlider({ images }: Props) {
               onClick={() => setCurrentIndex(i)}
             >
               <Image
-                src={img.thumbnailUrl ?? img.imageUrl}
+                src={normalizeImageUrl(img.thumbnailUrl ?? img.imageUrl)!}
                 alt={`thumbnail-${i}`}
                 fill
                 sizes="72px"

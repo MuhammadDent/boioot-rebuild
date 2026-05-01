@@ -12,6 +12,7 @@ import { hasPermission } from "@/lib/permissions";
 import { canAccessFeature } from "@/features/access/featureAccess";
 import { formatPrice, LISTING_TYPE_LABELS } from "@/features/properties/constants";
 import type { DashboardSummary, DashboardAnalytics, FavoriteResponse } from "@/types";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 import { api, ApiError } from "@/lib/api";
 import UpgradePrompt from "@/components/plan/UpgradePrompt";
 
@@ -876,7 +877,7 @@ export default function DashboardPage() {
                     backgroundColor: "#f1f5f9", display: "block", textDecoration: "none",
                   }}>
                     {fav.thumbnailUrl ? (
-                      <img src={fav.thumbnailUrl} alt={fav.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={normalizeImageUrl(fav.thumbnailUrl) ?? fav.thumbnailUrl} alt={fav.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem" }}>🏠</div>
                     )}

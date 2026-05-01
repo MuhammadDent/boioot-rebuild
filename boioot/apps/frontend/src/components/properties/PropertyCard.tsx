@@ -10,6 +10,7 @@ import {
   LISTING_TYPE_LABELS,
   formatPrice,
 } from "@/features/properties/constants";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 import VerificationBadge from "@/components/properties/VerificationBadge";
 import { favoritesApi } from "@/features/favorites/api";
 import { useAuth } from "@/context/AuthContext";
@@ -72,7 +73,7 @@ function PropertyCardInner({ property, initialIsFavorited = false, priority = fa
           <div style={{ position: "relative", overflow: "hidden" }}>
             {mainImage ? (
               <Image
-                src={mainImage.thumbnailUrl ?? mainImage.imageUrl}
+                src={normalizeImageUrl(mainImage.thumbnailUrl ?? mainImage.imageUrl)!}
                 alt={property.title}
                 className="property-card__img"
                 width={400}

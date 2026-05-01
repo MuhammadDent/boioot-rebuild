@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { favoritesApi } from "@/features/favorites/api";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import type { FavoriteResponse } from "@/types";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 
 const LISTING_TYPE_LABELS: Record<string, string> = {
   Sale:       "للبيع",
@@ -149,7 +150,7 @@ export default function FavoritesPage() {
               }}>
                 {fav.thumbnailUrl ? (
                   <img
-                    src={fav.thumbnailUrl}
+                    src={normalizeImageUrl(fav.thumbnailUrl) ?? fav.thumbnailUrl}
                     alt={fav.title}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}

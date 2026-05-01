@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { memo } from "react";
 import type { ProjectResponse } from "@/types";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 import {
   PROJECT_STATUS_LABELS,
   PROJECT_STATUS_BADGE,
@@ -25,7 +26,7 @@ function ProjectCardInner({ project, priority = false }: ProjectCardProps) {
       <article className="card project-card">
         {mainImage ? (
           <Image
-            src={mainImage.thumbnailUrl ?? mainImage.imageUrl}
+            src={normalizeImageUrl(mainImage.thumbnailUrl ?? mainImage.imageUrl)!}
             alt={project.title}
             className="project-card__img"
             width={400}

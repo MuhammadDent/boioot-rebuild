@@ -14,6 +14,7 @@ import {
   formatDeliveryDate,
 } from "@/features/projects/constants";
 import type { ProjectResponse } from "@/types";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -87,7 +88,7 @@ export default function ProjectDetailPage() {
         {activeImage ? (
           <div className="detail-hero-wrap" style={{ marginBottom: "2rem" }}>
             <Image
-              src={activeImage.imageUrl}
+              src={normalizeImageUrl(activeImage.imageUrl)!}
               alt={project.title}
               fill
               priority
@@ -110,7 +111,7 @@ export default function ProjectDetailPage() {
                 onClick={() => setSelectedImageIdx(i)}
               >
                 <Image
-                  src={img.thumbnailUrl ?? img.imageUrl}
+                  src={normalizeImageUrl(img.thumbnailUrl ?? img.imageUrl)!}
                   alt={`صورة ${i + 1}`}
                   fill
                   sizes="80px"
