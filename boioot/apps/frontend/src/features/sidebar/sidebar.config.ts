@@ -180,6 +180,17 @@ const I = {
     createElement("line", { x1: "12", y1: "20", x2: "12", y2: "4"  }),
     createElement("line", { x1: "6",  y1: "20", x2: "6",  y2: "14" }),
   ),
+  mapPin: path(
+    createElement("path", { d: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" }),
+    createElement("circle", { cx: "12", cy: "9", r: "2.5" }),
+  ),
+  target: path(
+    createElement("circle", { cx: "12", cy: "12", r: "10" }),
+    createElement("circle", { cx: "12", cy: "12", r: "4"  }),
+    createElement("line", { x1: "21.17", y1: "8",    x2: "12",    y2: "8"  }),
+    createElement("line", { x1: "3.95",  y1: "6.06", x2: "8.54",  y2: "14" }),
+    createElement("line", { x1: "10.88", y1: "21.94", x2: "15.46", y2: "14" }),
+  ),
 };
 /* eslint-enable react/jsx-key */
 
@@ -334,6 +345,15 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         FAVORITES_ITEM,
       ],
     },
+    {
+      id: "matching",
+      label: "نظام المطابقة",
+      icon: I.target,
+      items: [
+        { href: "/dashboard/coverage", label: "مناطق التغطية",      icon: I.mapPin },
+        { href: "/dashboard/leads",    label: "الطلبات المطابقة",   icon: I.target },
+      ],
+    },
     VERIFICATION_GROUP,
     SUBSCRIPTION_GROUP,
   ],
@@ -353,6 +373,15 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         { href: "/dashboard/my-requests", label: "الطلبات",      icon: I.requests },
         { href: "/dashboard/insights",    label: "الإحصائيات",   icon: I.chart, feature: "analytics_dashboard" as FeatureKey },
         FAVORITES_ITEM,
+      ],
+    },
+    {
+      id: "matching",
+      label: "نظام المطابقة",
+      icon: I.target,
+      items: [
+        { href: "/dashboard/coverage", label: "مناطق التغطية",      icon: I.mapPin },
+        { href: "/dashboard/leads",    label: "الطلبات المطابقة",   icon: I.target },
       ],
     },
     VERIFICATION_GROUP,
@@ -375,6 +404,15 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         { href: "/dashboard/my-requests", label: "الطلبات",      icon: I.requests },
         { href: "/dashboard/insights",    label: "الإحصائيات",   icon: I.chart, feature: "analytics_dashboard" as FeatureKey },
         FAVORITES_ITEM,
+      ],
+    },
+    {
+      id: "matching",
+      label: "نظام المطابقة",
+      icon: I.target,
+      items: [
+        { href: "/dashboard/coverage", label: "مناطق التغطية",      icon: I.mapPin },
+        { href: "/dashboard/leads",    label: "الطلبات المطابقة",   icon: I.target },
       ],
     },
     VERIFICATION_GROUP,

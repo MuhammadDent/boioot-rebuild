@@ -318,14 +318,19 @@ export default function NewBuyerRequestPage() {
     const finalCity         = cityValue === ADD_NEW ? "" : cityValue;
     const finalNeighborhood = neighborhoodValue === ADD_NEW ? "" : neighborhoodValue;
 
+    const selectedCity         = cities.find(c => c.name === finalCity);
+    const selectedNeighborhood = neighborhoods.find(n => n.name === finalNeighborhood);
+
     setSaving(true);
     try {
       await api.post("/buyer-requests", {
-        title:        title.trim(),
+        title:          title.trim(),
         propertyType,
-        description:  description.trim(),
-        city:         finalCity || undefined,
-        neighborhood: finalNeighborhood || undefined,
+        description:    description.trim(),
+        city:           finalCity || undefined,
+        neighborhood:   finalNeighborhood || undefined,
+        cityId:         selectedCity?.id         || undefined,
+        neighborhoodId: selectedNeighborhood?.id || undefined,
       });
       router.push("/dashboard/my-requests?success=1");
     } catch (err) {

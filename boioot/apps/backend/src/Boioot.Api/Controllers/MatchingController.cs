@@ -31,6 +31,68 @@ public class MatchingController : BaseController
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // GET /api/matching/my-leads
+    // Returns buyer requests that fall within the calling user's coverage areas.
+    // Designed for brokers/agents to see their incoming matched leads.
+    // ─────────────────────────────────────────────────────────────────────────
+    [HttpGet("my-leads")]
+    public async Task<IActionResult> GetMyLeads(CancellationToken ct)
+    {
+        var userId = GetUserId();
+
+        // Load the calling user's registered coverage areas
+        var coverages = await _db.Set<Boioot.Domain.Entities.UserCoverage>()
+            .AsNoTracking()
+            .Where(uc => uc.UserId == userId)
+            .ToListAsync(ct);
+
+        if (!coverages.Any())
+            return Ok(new MyLeadsResponseDto { IsLaunchMode = _launchMode, TotalCount = 0, Leads = [] });
+
+        // Partition coverage into city-wide (match any request in that city)
+        // and neighborhood-specific (match only requests in that exact neighborhood)
+        var cityWideCityIds = coverages
+            .Where(c => c.CoverageType == "city_wide")
+            .Select(c => c.CityId)
+            .ToHashSet();
+
+        var customNeighborhoodIds = coverages
+            .Where(c => c.CoverageType == "custom" && c.NeighborhoodId.HasValue)
+            .Select(c => c.NeighborhoodId!.Value)
+            .ToHashSet();
+
+        // Find published buyer requests whose location overlaps with coverage
+        var leads = await _db.BuyerRequests
+            .AsNoTracking()
+            .Where(r => r.IsPublished
+                && (
+                    (r.CityId.HasValue        && cityWideCityIds.Contains(r.CityId.Value))
+                 || (r.NeighborhoodId.HasValue && customNeighborhoodIds.Contains(r.NeighborhoodId.Value))
+                ))
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(100)
+            .Select(r => new BuyerRequestLeadDto
+            {
+                Id              = r.Id,
+                Title           = r.Title,
+                PropertyType    = r.PropertyType,
+                City            = r.City,
+                Neighborhood    = r.Neighborhood,
+                Status          = r.Status,
+                ReferenceNumber = r.ReferenceNumber,
+                CreatedAt       = r.CreatedAt,
+            })
+            .ToListAsync(ct);
+
+        return Ok(new MyLeadsResponseDto
+        {
+            IsLaunchMode = _launchMode,
+            TotalCount   = leads.Count,
+            Leads        = leads,
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // GET /api/matching/buyer-requests/{id}
     // Returns coverage-matched users for a given BuyerRequest.
     // In LaunchMode (default): all results visible, lockedMatchesCount = 0.

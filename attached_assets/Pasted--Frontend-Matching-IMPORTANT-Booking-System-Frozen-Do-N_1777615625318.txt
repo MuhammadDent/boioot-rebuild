@@ -1,0 +1,91 @@
+ابدأ تنفيذ Frontend لنظام Matching فقط.
+
+IMPORTANT:
+Booking System = Frozen
+Do NOT touch:
+- bookings pages
+- bookings api
+- booking components
+- booking services
+- booking status config
+- any DailyRent booking flow
+
+Matching System = New Layer only.
+
+المطلوب بناء Frontend جديد ومعزول للـ matching:
+
+1) API files:
+Create/complete:
+- features/coverage/api.ts
+- features/matching/api.ts
+
+يجب أن تتعامل مع endpoints الموجودة في backend فقط:
+- GET /api/coverage
+- POST /api/coverage
+- DELETE /api/coverage/{id}
+- GET /api/matching/buyer-requests/{id}
+
+ولا تغيّر أسماء endpoints في backend إلا إذا كان هناك خطأ واضح، وفي هذه الحالة توقف وبلّغني.
+
+2) Broker coverage management page:
+Create:
+- app/dashboard/coverage/page.tsx
+
+الهدف:
+- صفحة للمعلن/الوسيط لإدارة مناطق التغطية.
+- عرض المناطق الحالية.
+- إضافة منطقة تغطية cityId / neighborhoodId.
+- حذف منطقة تغطية.
+- UI عربي RTL واضح.
+- لا تربطها بالحجوزات نهائيًا.
+
+3) Broker leads page:
+Create:
+- app/dashboard/leads/page.tsx
+
+الهدف:
+- عرض طلبات الباحثين المطابقة للمعلن حسب coverage.
+- إظهار:
+  - بيانات الطلب
+  - المدينة/الحي
+  - نوع العقار
+  - الميزانية
+  - هل النتيجة locked أم مفتوحة
+  - lockedMatchesCount إن وجد
+- في LaunchMode يجب أن تظهر النتائج مفتوحة بالكامل بدون paywall.
+
+4) Update buyer request creation:
+Update only:
+- app/my-requests/new/page.tsx
+
+المطلوب:
+- عند إرسال طلب الباحث، أرسل cityId و neighborhoodId بجانب أسماء المدينة/الحي.
+- لا تغيّر منطق الطلبات الحالي إلا بالقدر المطلوب لإرسال IDs.
+- لا تلمس bookings.
+
+5) Navigation:
+أضف روابط واضحة في Dashboard sidebar/menu فقط إذا كان مناسبًا:
+- مناطق التغطية
+- الطلبات المطابقة / Leads
+
+بدون إزالة أو تغيير روابط موجودة.
+
+6) Safety:
+- Additive only.
+- No broad refactor.
+- No unrelated formatting.
+- No booking changes.
+- No listings/subscriptions changes.
+- Reuse existing auth/api helper patterns.
+- Keep TypeScript types clean.
+
+7) بعد التنفيذ أعطني تقريرًا واضحًا يحتوي:
+- الملفات الجديدة
+- الملفات المعدلة
+- هل تم لمس أي booking file؟ يجب أن تكون الإجابة: NO
+- كيف أختبر:
+  أ) إضافة coverage
+  ب) إنشاء buyer request مع cityId/neighborhoodId
+  ج) ظهور leads للمعلن
+  د) التأكد أن LaunchMode يفتح كل النتائج بدون lock
+  هـ) التأكد أن booking لا يزال يعمل كما هو
