@@ -11,8 +11,13 @@ DLL_DIR="$(dirname "$DLL")"
 TARGET_PORT="${PORT:-8080}"
 
 # ─── Kill any stale API processes ─────────────────────────────────────────────
+# Process name when using "exec dotnet <DLL>": the binary path without .dll
+# Process name when using "dotnet run": "dotnet" with "run" arg
+# Use SIGKILL (-9) for immediate termination to avoid port-held delays.
+# Do NOT kill proxy.mjs — that is Replit's internal routing process.
 pkill -9 -f "Boioot\.Api" 2>/dev/null || true
 
+# Wait until port is released (up to 10 seconds)
 for i in $(seq 1 10); do
   if ! ss -tlnp 2>/dev/null | grep -q ":${TARGET_PORT}"; then
     break
@@ -23,52 +28,34 @@ done
 
 export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Development}"
 export PORT="${TARGET_PORT}"
-export LD_LIBRARY_PATH="${DLL_DIR}/runtimes/linux-x64/native:${LD_LIBRARY_PATH:-}"
 
 echo "[run-api] Starting .NET on PORT=$PORT"
 
-# ─── Check if rebuild needed ──────────────────────────────────────────────────
+# ─── Fast path: run pre-built Debug binary only if it is up to date ──────────
+# IMPORTANT: --contentroot must point to the DLL directory so ASP.NET Core
+# finds appsettings.json there (otherwise it defaults to the workflow CWD
+# /artifacts/api-server — no appsettings.json → falls back to SQLite).
+#
+# Safety check: if any .cs or .json source file is newer than the DLL, the
+# binary is stale from a previous session — fall through to slow path so the
+# new code is compiled.  This prevents silently running old code after edits.
 NEEDS_REBUILD=false
 if [ -f "$DLL" ]; then
   NEWER=$(find "$SCRIPT_DIR/src" -name "*.cs" -newer "$DLL" 2>/dev/null | head -1)
   if [ -n "$NEWER" ]; then
-    echo "[run-api] Source changed ($NEWER) — rebuilding..."
+    echo "[run-api] Source files changed (e.g. $NEWER) — rebuilding..."
     NEEDS_REBUILD=true
   fi
-else
-  echo "[run-api] DLL missing — will build"
-  NEEDS_REBUILD=true
 fi
 
-# ─── Rebuild path ─────────────────────────────────────────────────────────────
-if [ "$NEEDS_REBUILD" = "true" ]; then
-  # Start a minimal Node.js HTTP placeholder so Replit's health-check sees the
-  # port while the (slow) build runs.  We kill it right before handing off to dotnet.
-  node -e "
-const http = require('http');
-const port = parseInt(process.argv[1]) || 8080;
-const srv = http.createServer((req, res) => {
-  res.writeHead(503, { 'Content-Type': 'text/plain' });
-  res.end('Building...');
-});
-srv.listen(port, '0.0.0.0', () => console.log('[placeholder] listening on ' + port));
-process.on('SIGTERM', () => srv.close());
-" "$TARGET_PORT" &
-  PLACEHOLDER_PID=$!
-  echo "[run-api] Placeholder started (PID $PLACEHOLDER_PID)"
-
-  echo "[run-api] Building (this may take a few minutes on first run)..."
-  cd "$SCRIPT_DIR"
-  if ! dotnet build src/Boioot.Api -c Debug 2>&1; then
-    kill "$PLACEHOLDER_PID" 2>/dev/null || true
-    echo "[run-api] Build FAILED"
-    exit 1
-  fi
-  echo "[run-api] Build complete"
-
-  kill "$PLACEHOLDER_PID" 2>/dev/null || true
-  sleep 2  # let port 8080 be fully released before dotnet binds
+if [ -f "$DLL" ] && [ "$NEEDS_REBUILD" = "false" ]; then
+  echo "[run-api] Binary is up-to-date — starting directly (fast path)"
+  exec dotnet "$DLL" --contentroot "$DLL_DIR"
 fi
 
-echo "[run-api] Launching: dotnet $DLL"
-exec dotnet "$DLL" --contentroot "$DLL_DIR"
+# ─── Slow path: binary missing or stale — compile and run ─────────────────────
+echo "[run-api] Compiling and starting (slow path)..."
+cd "$SCRIPT_DIR"
+exec dotnet run \
+  --project src/Boioot.Api \
+  --no-launch-profile
