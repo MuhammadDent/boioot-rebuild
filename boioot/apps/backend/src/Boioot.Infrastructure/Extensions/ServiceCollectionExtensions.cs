@@ -136,6 +136,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
         services.AddScoped<INotificationEventDispatcher, NotificationEventDispatcher>();
         services.AddScoped<NotificationMatchingService>();
+
+        // ── Matching & Coverage ──────────────────────────────────────────────
+        services.AddScoped<Boioot.Application.Features.Matching.Interfaces.IRequestMatchingService,
+                           Boioot.Infrastructure.Features.Matching.RequestMatchingService>();
+        services.AddScoped<Boioot.Application.Features.Matching.Interfaces.IMatchingPlanAccessService,
+                           Boioot.Infrastructure.Features.Matching.MatchingPlanAccessService>();
+        services.AddScoped<Boioot.Infrastructure.Features.Coverage.CoverageMatchNotificationService>();
         services.AddScoped<Boioot.Application.Features.Email.IEmailService,
                            Boioot.Infrastructure.Features.Email.LoggingEmailService>();
         services.AddScoped<ISiteContentService, SiteContentService>();

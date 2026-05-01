@@ -147,6 +147,15 @@ public class Plan : BaseEntity
     /// <summary>Used to group plans on the pricing page. E.g. "Individual" or "Business".</summary>
     public string? PlanCategory { get; set; }
 
+    /// <summary>
+    /// Product area this plan belongs to.
+    /// null / "listings" = standard real-estate listing plans (default, backward-compatible).
+    /// "matching"        = lead-matching plans for agents/brokers.
+    /// Future values: "verification", "daily_rentals".
+    /// Additive: all existing plans default to null (treated as "listings").
+    /// </summary>
+    public string? ProductArea { get; set; }
+
     /// <summary>Controls which billing providers are offered for this plan. "InternalOnly" | "StripeOnly" | "Hybrid".</summary>
     public string BillingMode { get; set; } = "InternalOnly";
 

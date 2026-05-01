@@ -116,6 +116,7 @@ public sealed class DatabaseStartupService
         await ApplyMessagingPatchAsync(ct);
         await ApplyUserTagsPatchAsync(ct);
         await ApplySubscriptionNumberPatchAsync(ct);
+        await ApplyMatchingAndCoveragePatchAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
         await SyncIsCoverFromIsPrimaryAsync(ct);
@@ -957,6 +958,44 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("[schema-patch] Plans dual-currency patch failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    // ── Matching + Coverage patch ─────────────────────────────────────────────
+
+    private async Task ApplyMatchingAndCoveragePatchAsync(CancellationToken ct)
+    {
+        try
+        {
+            // Plan.ProductArea — nullable product area discriminator
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Plans" ADD COLUMN IF NOT EXISTS "ProductArea" character varying(50)""", ct);
+
+            // BuyerRequest structured location IDs (additive — old rows remain null)
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "BuyerRequests" ADD COLUMN IF NOT EXISTS "CityId" uuid""", ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "BuyerRequests" ADD COLUMN IF NOT EXISTS "NeighborhoodId" uuid""", ct);
+
+            // UserCoverages table — new entity for agent area coverage registration
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS "UserCoverages" (
+                    "Id"             uuid         NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+                    "UserId"         uuid         NOT NULL,
+                    "CityId"         uuid         NOT NULL,
+                    "NeighborhoodId" uuid,
+                    "CoverageType"   varchar(20)  NOT NULL DEFAULT 'city_wide',
+                    "CreatedAt"      timestamptz  NOT NULL DEFAULT now(),
+                    "UpdatedAt"      timestamptz  NOT NULL DEFAULT now()
+                )
+                """, ct);
+
+            _log.LogInformation("[schema-patch] Matching + Coverage schema applied (Plans.ProductArea, BuyerRequests.CityId/NeighborhoodId, UserCoverages).");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] Matching + Coverage patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 }

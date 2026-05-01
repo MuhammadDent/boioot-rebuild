@@ -22,4 +22,10 @@ public class CreateBuyerRequestDto
 
     [MaxLength(200)]
     public string? Neighborhood { get; set; }
+
+    /// <summary>Optional structured city ID. When provided, used by matching engine for fast lookups.</summary>
+    public Guid? CityId { get; set; }
+
+    /// <summary>Optional structured neighborhood ID. When provided, used for precise neighborhood matching.</summary>
+    public Guid? NeighborhoodId { get; set; }
 }

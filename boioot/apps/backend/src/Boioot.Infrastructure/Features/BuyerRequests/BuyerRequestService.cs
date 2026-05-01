@@ -45,9 +45,11 @@ public class BuyerRequestService : IBuyerRequestService
             ReferenceNumber = refNumber,
             PropertyType = dto.PropertyType.Trim(),
             Description  = dto.Description.Trim(),
-            City         = dto.City?.Trim(),
-            Neighborhood = dto.Neighborhood?.Trim(),
-            IsPublished  = true,
+            City           = dto.City?.Trim(),
+            Neighborhood   = dto.Neighborhood?.Trim(),
+            CityId         = dto.CityId,
+            NeighborhoodId = dto.NeighborhoodId,
+            IsPublished    = true,
             UserId       = userId,
         };
 

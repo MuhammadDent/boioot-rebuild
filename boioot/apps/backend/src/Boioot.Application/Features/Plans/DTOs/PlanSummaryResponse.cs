@@ -27,6 +27,7 @@ public class PlanSummaryResponse
     public bool    IsPublic                { get; set; }
     public bool    IsRecommended           { get; set; }
     public string? PlanCategory            { get; set; }
+    public string? ProductArea             { get; set; }
     public string  BillingMode             { get; set; } = "InternalOnly";
     public int     Rank                    { get; set; }
     public string? BadgeText               { get; set; }

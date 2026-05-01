@@ -52,6 +52,7 @@ public class CreatePlanRequest
     public string? PlanColor               { get; set; }
 
     public string? PlanCategory            { get; set; }
+    public string? ProductArea             { get; set; }
 
     public string  BillingMode             { get; set; } = "InternalOnly";
 

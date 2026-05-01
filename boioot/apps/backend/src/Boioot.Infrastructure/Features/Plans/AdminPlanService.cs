@@ -87,6 +87,7 @@ public class AdminPlanService : IAdminPlanService
                 IsPublic                = p.IsPublic,
                 IsRecommended           = p.IsRecommended,
                 PlanCategory            = p.PlanCategory,
+                ProductArea             = p.ProductArea,
                 BillingMode             = p.BillingMode,
                 Rank                    = p.Rank,
                 BadgeText               = p.BadgeText,
@@ -241,6 +242,7 @@ public class AdminPlanService : IAdminPlanService
             BadgeText               = string.IsNullOrWhiteSpace(request.BadgeText)    ? null : request.BadgeText.Trim(),
             PlanColor               = string.IsNullOrWhiteSpace(request.PlanColor)    ? null : request.PlanColor.Trim(),
             PlanCategory            = string.IsNullOrWhiteSpace(request.PlanCategory) ? null : request.PlanCategory.Trim(),
+            ProductArea             = string.IsNullOrWhiteSpace(request.ProductArea)  ? null : request.ProductArea.Trim(),
             BillingMode             = string.IsNullOrWhiteSpace(request.BillingMode)  ? "InternalOnly" : request.BillingMode.Trim(),
             PlanBillingType         = string.IsNullOrWhiteSpace(request.PlanBillingType) ? "recurring" : request.PlanBillingType.Trim(),
             RecurringCycle          = string.IsNullOrWhiteSpace(request.RecurringCycle)  ? null : request.RecurringCycle.Trim(),
@@ -333,6 +335,7 @@ public class AdminPlanService : IAdminPlanService
         plan.IsPublic                = request.IsPublic;
         plan.IsRecommended           = request.IsRecommended;
         plan.PlanCategory            = request.PlanCategory?.Trim();
+        plan.ProductArea             = request.ProductArea?.Trim();
         plan.BillingMode             = request.BillingMode;
         plan.BadgeText               = string.IsNullOrWhiteSpace(request.BadgeText) ? null : request.BadgeText.Trim();
         plan.PlanColor               = string.IsNullOrWhiteSpace(request.PlanColor)  ? null : request.PlanColor.Trim();
@@ -442,6 +445,7 @@ public class AdminPlanService : IAdminPlanService
             IsPublic                = false,
             IsRecommended           = false,
             PlanCategory            = source.PlanCategory,
+            ProductArea             = source.ProductArea,
             BillingMode             = source.BillingMode,
             Rank                    = source.Rank,
             PlanBillingType         = source.PlanBillingType,
@@ -635,6 +639,7 @@ public class AdminPlanService : IAdminPlanService
         IsPublic                = p.IsPublic,
         IsRecommended           = p.IsRecommended,
         PlanCategory            = p.PlanCategory,
+        ProductArea             = p.ProductArea,
         BillingMode             = p.BillingMode,
         Rank                    = p.Rank,
         BadgeText               = p.BadgeText,
@@ -687,6 +692,7 @@ public class AdminPlanService : IAdminPlanService
         IsPublic                = p.IsPublic,
         IsRecommended           = p.IsRecommended,
         PlanCategory            = p.PlanCategory,
+        ProductArea             = p.ProductArea,
         BillingMode             = p.BillingMode,
         Rank                    = p.Rank,
         BadgeText               = p.BadgeText,

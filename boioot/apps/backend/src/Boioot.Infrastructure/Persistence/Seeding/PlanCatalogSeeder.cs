@@ -27,6 +27,7 @@ public sealed class PlanCatalogSeeder
     public async Task SeedAsync(CancellationToken ct = default)
     {
         await SeedPlansAsync(ct);
+        await SeedMatchingPlansAsync(ct);
         await SeedFeatureDefinitionsAsync(ct);
         await SeedLimitDefinitionsAsync(ct);
         await SeedPlanFeaturesAsync(ct);
@@ -114,6 +115,113 @@ public sealed class PlanCatalogSeeder
         };
     }
 
+    // ── Matching Plans (ProductArea = "matching") ─────────────────────────────
+
+    private async Task SeedMatchingPlansAsync(CancellationToken ct)
+    {
+        var matchingIds = new HashSet<Guid>
+        {
+            Guid.Parse("0000000e-0000-0000-0000-000000000000"),
+            Guid.Parse("0000000f-0000-0000-0000-000000000000"),
+            Guid.Parse("00000010-0000-0000-0000-000000000000"),
+        };
+
+        var existingIds = (await _ctx.Plans
+            .IgnoreQueryFilters()
+            .Where(p => matchingIds.Contains(p.Id))
+            .Select(p => p.Id)
+            .ToListAsync(ct)).ToHashSet();
+
+        var toAdd = new List<Plan>();
+
+        if (!existingIds.Contains(Guid.Parse("0000000e-0000-0000-0000-000000000000")))
+            toAdd.Add(new Plan
+            {
+                Id                    = Guid.Parse("0000000e-0000-0000-0000-000000000000"),
+                Name                  = "MatchingFree",
+                Code                  = "matching_free",
+                DisplayNameAr         = "مجاني للمطابقة",
+                DisplayNameEn         = "Matching Free",
+                AudienceType          = "broker",
+                Tier                  = "free",
+                ProductArea           = "matching",
+                PlanCategory          = "Business",
+                ListingLimit          = 0,
+                BasePriceMonthly      = 0,
+                BasePriceYearly       = 0,
+                PlanBillingType       = "free_default",
+                ConsumptionPolicy     = "none",
+                ExpiryRule            = "expire_by_date",
+                IsActive              = true,
+                IsPublic              = true,
+                IsDefaultForNewUsers  = false,
+                BillingMode           = "InternalOnly",
+                Rank                  = 50,
+                DisplayOrder          = 1,
+            });
+
+        if (!existingIds.Contains(Guid.Parse("0000000f-0000-0000-0000-000000000000")))
+            toAdd.Add(new Plan
+            {
+                Id                    = Guid.Parse("0000000f-0000-0000-0000-000000000000"),
+                Name                  = "MatchingStarter",
+                Code                  = "matching_starter",
+                DisplayNameAr         = "مبتدئ للمطابقة",
+                DisplayNameEn         = "Matching Starter",
+                AudienceType          = "broker",
+                Tier                  = "basic",
+                ProductArea           = "matching",
+                PlanCategory          = "Business",
+                ListingLimit          = 0,
+                BasePriceMonthly      = 2500,
+                BasePriceYearly       = 22000,
+                PlanBillingType       = "recurring",
+                RecurringCycle        = "monthly",
+                ConsumptionPolicy     = "none",
+                ExpiryRule            = "expire_by_date",
+                IsActive              = true,
+                IsPublic              = true,
+                BillingMode           = "InternalOnly",
+                Rank                  = 51,
+                DisplayOrder          = 2,
+            });
+
+        if (!existingIds.Contains(Guid.Parse("00000010-0000-0000-0000-000000000000")))
+            toAdd.Add(new Plan
+            {
+                Id                    = Guid.Parse("00000010-0000-0000-0000-000000000000"),
+                Name                  = "MatchingPro",
+                Code                  = "matching_pro",
+                DisplayNameAr         = "احترافي للمطابقة",
+                DisplayNameEn         = "Matching Pro",
+                AudienceType          = "broker",
+                Tier                  = "advanced",
+                ProductArea           = "matching",
+                PlanCategory          = "Business",
+                ListingLimit          = 0,
+                BasePriceMonthly      = 6000,
+                BasePriceYearly       = 55000,
+                PlanBillingType       = "recurring",
+                RecurringCycle        = "monthly",
+                ConsumptionPolicy     = "none",
+                ExpiryRule            = "expire_by_date",
+                IsActive              = true,
+                IsPublic              = true,
+                IsRecommended         = true,
+                BillingMode           = "InternalOnly",
+                Rank                  = 52,
+                DisplayOrder          = 3,
+            });
+
+        if (toAdd.Count > 0)
+        {
+            _ctx.Plans.AddRange(toAdd);
+            await _ctx.SaveChangesAsync(ct);
+            _ctx.ChangeTracker.Clear();
+            _log.LogInformation("Seeded {Count} new matching plan(s).", toAdd.Count);
+        }
+    }
+
     // ── FeatureDefinitions ────────────────────────────────────────────────────
 
     private async Task SeedFeatureDefinitionsAsync(CancellationToken ct)
@@ -144,6 +252,11 @@ public sealed class PlanCatalogSeeder
             // business extras (SortOrder 32-33)
             FD("fd00000c-0000-0000-0000-000000000000", "lead_insights",       "تحليلات العملاء المحتملين","بيانات مفصّلة عن الطلبات والعملاء المحتملين",   "business",      "📈",  "boolean", "analytics", 32),
             FD("fd00000d-0000-0000-0000-000000000000", "team_management",     "إدارة الفريق",            "إضافة وسطاء وأعضاء ضمن الحساب التجاري",          "business",      "👥",  "boolean", "account",   33),
+
+            // ── Matching-specific features (matching product area) ──────────────
+            FD("fd00000e-0000-0000-0000-000000000000", "lead_notifications",    "إشعارات الطلبات",         "تلقي إشعار عند وجود طلب جديد يتطابق مع منطقتك",  "matching",      "🔔",  "boolean", "matching",  60),
+            FD("fd00000f-0000-0000-0000-000000000000", "instant_notifications", "إشعارات فورية",           "تلقي الإشعار فوراً دون تأخير (الأولوية للمشتركين)","matching",     "⚡",  "boolean", "matching",  61),
+            FD("fd000010-0000-0000-0000-000000000000", "full_match_access",     "وصول كامل للمطابقات",    "مشاهدة جميع نتائج المطابقة بدون حد",               "matching",      "🔓",  "boolean", "matching",  62),
         };
 
         var newFDs = catalog.Where(f => !existing.Contains(f.Key)).ToList();
@@ -312,6 +425,13 @@ public sealed class PlanCatalogSeeder
         const string fd0b = "fd00000b-0000-0000-0000-000000000000"; // search_priority
         const string fd0c = "fd00000c-0000-0000-0000-000000000000"; // lead_insights
         const string fd0d = "fd00000d-0000-0000-0000-000000000000"; // team_management
+        const string fd0e = "fd00000e-0000-0000-0000-000000000000"; // lead_notifications
+        const string fd0f = "fd00000f-0000-0000-0000-000000000000"; // instant_notifications
+        const string fd10 = "fd000010-0000-0000-0000-000000000000"; // full_match_access
+
+        const string p0e  = "0000000e-0000-0000-0000-000000000000"; // matching_free
+        const string p0f  = "0000000f-0000-0000-0000-000000000000"; // matching_starter
+        const string p10  = "00000010-0000-0000-0000-000000000000"; // matching_pro
 
         const string p01 = "00000001-0000-0000-0000-000000000000"; // Free
         const string p02 = "00000002-0000-0000-0000-000000000000"; // Silver
@@ -534,6 +654,20 @@ public sealed class PlanCatalogSeeder
             PF("ee000025-0000-0000-0000-000000000000", p0d, fd0b, true),
             PF("ee000026-0000-0000-0000-000000000000", p0d, fd0c, true),
             PF("ee000027-0000-0000-0000-000000000000", p0d, fd0d, true),
+
+            // ── Matching plans feature assignments ──────────────────────────────
+            // MatchingFree (0e): lead_notifications only
+            PF("ef000001-0000-0000-0000-000000000000", p0e, fd0e, true),  // lead_notifications
+            PF("ef000002-0000-0000-0000-000000000000", p0e, fd0f, false), // instant_notifications (disabled)
+            PF("ef000003-0000-0000-0000-000000000000", p0e, fd10, false), // full_match_access (disabled)
+            // MatchingStarter (0f): lead_notifications + instant_notifications
+            PF("ef000004-0000-0000-0000-000000000000", p0f, fd0e, true),  // lead_notifications
+            PF("ef000005-0000-0000-0000-000000000000", p0f, fd0f, true),  // instant_notifications
+            PF("ef000006-0000-0000-0000-000000000000", p0f, fd10, false), // full_match_access (disabled)
+            // MatchingPro (10): all matching features enabled
+            PF("ef000007-0000-0000-0000-000000000000", p10, fd0e, true),  // lead_notifications
+            PF("ef000008-0000-0000-0000-000000000000", p10, fd0f, true),  // instant_notifications
+            PF("ef000009-0000-0000-0000-000000000000", p10, fd10, true),  // full_match_access
         };
     }
 

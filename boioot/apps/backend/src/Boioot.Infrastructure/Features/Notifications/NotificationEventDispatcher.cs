@@ -1,4 +1,5 @@
 using Boioot.Application.Features.Notifications.Interfaces;
+using Boioot.Infrastructure.Features.Coverage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -19,6 +20,7 @@ public class NotificationEventDispatcher : INotificationEventDispatcher
 
     public void DispatchBuyerRequestCreated(Guid buyerRequestId, Guid actorUserId)
     {
+        // ── Existing: property-based notification (notifies property owners) ──
         _ = Task.Run(async () =>
         {
             try
@@ -34,6 +36,23 @@ public class NotificationEventDispatcher : INotificationEventDispatcher
             {
                 _logger.LogWarning(ex,
                     "[Notifications] Background buyer request match dispatch failed for requestId={RequestId}",
+                    buyerRequestId);
+            }
+        });
+
+        // ── Additive: coverage-based notification (notifies agents by area) ──
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var coverage = scope.ServiceProvider.GetRequiredService<CoverageMatchNotificationService>();
+                await coverage.NotifyAsync(buyerRequestId, actorUserId, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "[CoverageMatch] Background coverage match dispatch failed for requestId={RequestId}",
                     buyerRequestId);
             }
         });

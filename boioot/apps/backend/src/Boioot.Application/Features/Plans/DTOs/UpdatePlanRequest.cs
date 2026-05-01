@@ -51,6 +51,7 @@ public class UpdatePlanRequest
     public bool    IsRecommended           { get; set; } = false;
 
     public string? PlanCategory            { get; set; }
+    public string? ProductArea             { get; set; }
 
     /// <summary>"InternalOnly" | "StripeOnly" | "Hybrid"</summary>
     public string  BillingMode             { get; set; } = "InternalOnly";
