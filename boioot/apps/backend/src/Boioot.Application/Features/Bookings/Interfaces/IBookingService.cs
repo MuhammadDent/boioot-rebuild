@@ -8,6 +8,7 @@ public interface IBookingService
     Task<(bool Available, string? Reason)> IsAvailableAsync(Guid propertyId, DateTime startDate, DateTime endDate, CancellationToken ct = default);
     Task<IReadOnlyList<BookingResponse>> GetMineAsync(Guid userId, CancellationToken ct = default);
     Task<IReadOnlyList<BookingResponse>> GetForMyPropertiesAsync(Guid userId, CancellationToken ct = default);
+    Task<BookingResponse> ApproveAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default);
     Task<BookingResponse> ConfirmAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default);
     Task<BookingResponse> RejectAsync(Guid ownerUserId, Guid bookingId, CancellationToken ct = default);
     Task<BookingResponse> CancelAsync(Guid userId, Guid bookingId, CancellationToken ct = default);

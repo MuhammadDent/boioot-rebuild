@@ -131,7 +131,7 @@ public class UploadController : BaseController
             });
         }
 
-        var publicUrl = _storage.GetPublicUrl(fileKey);
+        var publicUrl = ImageUrlHelper.Normalize(_storage.GetPublicUrl(fileKey));
 
         _logger.LogInformation(
             "[Upload/presigned-url] userId={UserId} fileKey={FileKey}", userId, fileKey);
@@ -236,8 +236,8 @@ public class UploadController : BaseController
             return Ok(new
             {
                 id           = userImage.Id,
-                url          = userImage.Url,
-                thumbnailUrl = userImage.ThumbnailUrl,
+                url          = ImageUrlHelper.Normalize(userImage.Url),
+                thumbnailUrl = ImageUrlHelper.Normalize(userImage.ThumbnailUrl),
             });
         }
         catch (Exception ex)
@@ -262,7 +262,7 @@ public class UploadController : BaseController
     {
         var userId = GetUserId();
 
-        var images = await _db.UserImages
+        var rawImages = await _db.UserImages
             .Where(i => i.UserId == userId)
             .OrderByDescending(i => i.CreatedAt)
             .Select(i => new
@@ -275,6 +275,16 @@ public class UploadController : BaseController
                 i.CreatedAt,
             })
             .ToListAsync(ct);
+
+        var images = rawImages.Select(i => new
+        {
+            i.Id,
+            Url = ImageUrlHelper.Normalize(i.Url),
+            i.OriginalFileName,
+            i.MimeType,
+            i.SizeBytes,
+            i.CreatedAt,
+        });
 
         return Ok(images);
     }

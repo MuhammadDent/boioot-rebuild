@@ -3,6 +3,7 @@ using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Properties.DTOs;
 using Boioot.Application.Features.Properties.Interfaces;
+using Boioot.Application.Features.Storage;
 using Boioot.Application.Features.Subscriptions;
 using Boioot.Application.Features.Subscriptions.Interfaces;
 using Boioot.Domain.Constants;
@@ -1246,8 +1247,9 @@ public class PropertyService : IPropertyService
                 Id           = i.Id,
                 // Bridge merge: prefer live R2 URL (UserImage.Url) for new uploads;
                 // fall back to PropertyImage.ImageUrl for legacy rows (base64/external URL).
-                ImageUrl     = !string.IsNullOrEmpty(i.UserImage?.Url) ? i.UserImage!.Url : i.ImageUrl,
-                ThumbnailUrl = i.UserImage?.ThumbnailUrl,
+                // Normalize: rewrite assets.boioot.net → r2.dev (no DNS record for custom domain yet).
+                ImageUrl     = ImageUrlHelper.Normalize(!string.IsNullOrEmpty(i.UserImage?.Url) ? i.UserImage!.Url : i.ImageUrl)!,
+                ThumbnailUrl = ImageUrlHelper.Normalize(i.UserImage?.ThumbnailUrl),
                 IsCover      = i.IsCover,
                 IsPrimary    = i.IsPrimary,   // backward-compat alias
                 Order        = i.Order,

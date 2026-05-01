@@ -1021,8 +1021,8 @@ public class ImagesController : BaseController
         return Ok(new
         {
             id           = userImage.Id,
-            url          = userImage.Url,
-            thumbnailUrl = userImage.ThumbnailUrl,
+            url          = ImageUrlHelper.Normalize(userImage.Url),
+            thumbnailUrl = ImageUrlHelper.Normalize(userImage.ThumbnailUrl),
         });
     }
 
@@ -1033,7 +1033,7 @@ public class ImagesController : BaseController
     private static object MapPropertyImage(PropertyImage i) => new
     {
         i.Id,
-        i.ImageUrl,
+        ImageUrl = ImageUrlHelper.Normalize(i.ImageUrl),
         i.IsCover,
         i.IsPrimary,
         i.Order,
@@ -1044,7 +1044,7 @@ public class ImagesController : BaseController
     private static object MapProjectImage(ProjectImage i) => new
     {
         i.Id,
-        i.ImageUrl,
+        ImageUrl = ImageUrlHelper.Normalize(i.ImageUrl),
         i.IsCover,
         i.IsPrimary,
         i.Order,
