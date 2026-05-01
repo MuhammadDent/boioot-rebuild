@@ -50,19 +50,21 @@ export default function LocationTypeahead({
   const dropRef      = useRef<HTMLDivElement>(null);
   const inputRef     = useRef<HTMLInputElement>(null);
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Prevent double-firing create when mousedown already handled it
+  const creatingRef  = useRef(false);
 
   useEffect(() => { setMounted(true); }, []);
 
   // Sync external value → input text
   useEffect(() => { setInput(value); }, [value]);
 
-  // Reset when parent context changes
+  // Reset when parent context changes (province cleared → city cleared; city cleared → neighborhood cleared)
   useEffect(() => {
-    if (type === "city" && !province) { setInput(""); setHits([]); }
+    if (type === "city" && !province) { setInput(""); setHits([]); setOpen(false); }
   }, [province, type]);
 
   useEffect(() => {
-    if (type === "neighborhood" && !city) { setInput(""); setHits([]); }
+    if (type === "neighborhood" && !city) { setInput(""); setHits([]); setOpen(false); }
   }, [city, type]);
 
   useEffect(() => { setActiveIdx(-1); }, [hits]);
@@ -79,18 +81,16 @@ export default function LocationTypeahead({
       width: rect.width,
       zIndex: 9999,
     });
-  }, [open, hits]);
+  }, [open, hits, creating]);
 
-  // ── Click-outside: ignore clicks inside the portal dropdown itself ────────
+  // ── Click-outside: also ignore clicks on the portal dropdown itself ───────
 
   useEffect(() => {
     function onMouseDown(e: MouseEvent) {
       const t = e.target as Node;
-      const insideInput = containerRef.current?.contains(t);
-      const insideDrop  = dropRef.current?.contains(t);
-      if (!insideInput && !insideDrop) {
-        setOpen(false);
-      }
+      if (containerRef.current?.contains(t)) return;
+      if (dropRef.current?.contains(t)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
@@ -132,24 +132,39 @@ export default function LocationTypeahead({
     onChange(hit.name, hit.id);
   }
 
-  // ── Instant create ────────────────────────────────────────────────────────
+  // ── Derived flags ─────────────────────────────────────────────────────────
 
-  // canCreate: true only when the required parent context is present
+  const trimmed = input.trim();
+
+  // canCreate: parent context must exist (province for city, city for neighborhood)
   const canCreate =
     allowCreate &&
+    trimmed.length >= 2 &&
     (type === "city" ? !!province : !!city);
 
-  async function handleCreate() {
-    const name = input.trim();
-    if (!name || name.length < 2) return;
-    if (!canCreate) return;
+  // Show the create row whenever we can create, regardless of creating state
+  // (the row itself switches between "إنشاء" label and spinner)
+  const showCreateRow = canCreate;
 
+  // Dropdown stays open while creating so the spinner is visible
+  const showDropdown = open && (hits.length > 0 || showCreateRow || creating);
+
+  // ── Instant create ────────────────────────────────────────────────────────
+
+  async function handleCreate() {
+    // Guard: prevent concurrent calls
+    if (creatingRef.current) return;
+    const name = trimmed;
+    if (!name || name.length < 2 || !canCreate) return;
+
+    creatingRef.current = true;
     setCreating(true);
     setCreateError("");
+
     try {
       const body: Record<string, string> = { name, type };
       if (type === "city"         && province) body.province = province;
-      if (type === "neighborhood" && city)     body.city = city;
+      if (type === "neighborhood" && city)     body.city     = city;
 
       const res = await api.post<{ id: string; name: string; parent: string; status: string }>(
         "/locations/instant-create", body
@@ -163,17 +178,18 @@ export default function LocationTypeahead({
       setCreateError(msg);
     } finally {
       setCreating(false);
+      creatingRef.current = false;
     }
   }
 
   // ── Keyboard nav ─────────────────────────────────────────────────────────
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    const hasCreateRow = canCreate && input.trim().length >= 2;
-    const total = hits.length + (hasCreateRow ? 1 : 0);
+    const total = hits.length + (showCreateRow ? 1 : 0);
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      setOpen(true);
       setActiveIdx(i => Math.min(i + 1, total - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -182,10 +198,8 @@ export default function LocationTypeahead({
       e.preventDefault();
       if (activeIdx >= 0 && activeIdx < hits.length) {
         handleSelect(hits[activeIdx]);
-      } else if (activeIdx === hits.length && hasCreateRow) {
-        void handleCreate();
-      } else if (activeIdx < 0 && hits.length === 0 && hasCreateRow) {
-        // No hits and nothing highlighted → create immediately
+      } else if (showCreateRow && (activeIdx === hits.length || hits.length === 0)) {
+        // Highlighted on create row, OR no hits at all → create
         void handleCreate();
       }
     } else if (e.key === "Escape") {
@@ -193,19 +207,7 @@ export default function LocationTypeahead({
     }
   }
 
-  // ── Derived display flags ─────────────────────────────────────────────────
-
-  const trimmed = input.trim();
-  // Show create row when: canCreate, input long enough, not currently creating
-  const showCreate   = canCreate && trimmed.length >= 2 && !creating;
-  const showDropdown = open && (hits.length > 0 || showCreate);
-
-  const createLabel =
-    type === "city"
-      ? `إنشاء مدينة جديدة: ${trimmed}`
-      : `إنشاء حي جديد: ${trimmed}`;
-
-  // ── Dropdown JSX (rendered via portal) ────────────────────────────────────
+  // ── Dropdown JSX (rendered via portal to escape z-index stacking) ─────────
 
   const dropdown = showDropdown ? (
     <div
@@ -222,6 +224,7 @@ export default function LocationTypeahead({
         overflowY: "auto",
       }}
     >
+      {/* ── Existing results ── */}
       {hits.map((hit, idx) => (
         <div
           key={hit.id}
@@ -244,7 +247,8 @@ export default function LocationTypeahead({
         </div>
       ))}
 
-      {showCreate && (
+      {/* ── Create row — always last, shows spinner while creating ── */}
+      {(showCreateRow || creating) && (
         <div
           onMouseDown={(e) => { e.preventDefault(); void handleCreate(); }}
           style={{
@@ -273,14 +277,14 @@ export default function LocationTypeahead({
           ) : (
             <>
               <span style={{ fontSize: "1rem", flexShrink: 0 }}>➕</span>
-              {createLabel}
+              إنشاء: {trimmed}
             </>
           )}
         </div>
       )}
 
-      {/* Disabled-create hint: parent context missing */}
-      {allowCreate && trimmed.length >= 2 && !canCreate && (
+      {/* ── Hint when parent context is missing ── */}
+      {allowCreate && trimmed.length >= 2 && !canCreate && !creating && (
         <div style={{
           padding: "0.55rem 0.9rem",
           fontSize: "0.82rem",
@@ -306,14 +310,16 @@ export default function LocationTypeahead({
         type="text"
         value={input}
         onChange={handleInputChange}
-        onFocus={() => { if (input.trim()) { setOpen(true); search(input); } }}
+        onFocus={() => {
+          if (input.trim()) { setOpen(true); search(input); }
+        }}
         onKeyDown={handleKeyDown}
         disabled={disabled}
         placeholder={
           placeholder ??
           (type === "city"
             ? (disabled ? "اختر المحافظة أولاً" : "ابحث أو اكتب اسم مدينة جديدة...")
-            : (disabled ? "اختر المدينة أولاً" : "ابحث أو اكتب اسم حي جديد..."))
+            : (disabled ? "اختر المدينة أولاً"   : "ابحث أو اكتب اسم حي جديد..."))
         }
         autoComplete="off"
         style={{
