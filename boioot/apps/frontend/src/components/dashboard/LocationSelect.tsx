@@ -440,6 +440,9 @@ export function CitySelect({ label, value, onChange, province, required, error, 
 }
 
 // ─── NeighborhoodSelect ───────────────────────────────────────────────────────
+// value prop  = neighborhoodId (the selected neighborhood's ID, or "")
+// city prop   = cityName (used to call /locations/neighborhoods?city=cityName)
+// onChange    = (name, id?) — passes both for callers that need either
 
 export function NeighborhoodSelect({ label, value, onChange, city, disabled }: NeighborhoodSelectProps) {
   const [neighborhoods, setNeighborhoods] = useState<LocationOption[]>([]);
@@ -450,7 +453,7 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
   const [addError,      setAddError]      = useState("");
   const [suggestions,   setSuggestions]   = useState<LocationSuggestion[]>([]);
 
-  // Load neighborhoods whenever city changes
+  // 1) Load neighborhoods whenever city (name) changes; clear list on city reset
   useEffect(() => {
     setNeighborhoods([]);
     if (!city) return;
@@ -461,12 +464,12 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
       .finally(() => setLoading(false));
   }, [city]);
 
-  async function refreshNeighborhoods() {
+  // Background refresh (cache-busted) used after create to sync with server
+  function refreshNeighborhoods() {
     if (!city) return;
-    const data = await api.get<LocationOption[]>(
-      `/locations/neighborhoods?city=${encodeURIComponent(city)}&_t=${Date.now()}`
-    ).catch(() => [] as LocationOption[]);
-    setNeighborhoods(Array.isArray(data) ? data.filter(n => n?.id && n?.name) : []);
+    api.get<LocationOption[]>(`/locations/neighborhoods?city=${encodeURIComponent(city)}&_t=${Date.now()}`)
+      .then(data => setNeighborhoods(Array.isArray(data) ? data.filter(n => n?.id && n?.name) : []))
+      .catch(() => { /* keep optimistic list */ });
   }
 
   function openModal() { setNewName(""); setAddError(""); setSuggestions([]); setModalOpen(true); }
@@ -482,9 +485,19 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
       if (result.status === "created" || result.status === "exists") {
         const finalName = result.item?.name ?? name;
         const finalId   = result.item?.id   ?? "";
-        await refreshNeighborhoods();
+
+        // 6) Append to list immediately so the new option exists before onChange fires
+        setNeighborhoods(prev => {
+          const already = prev.some(n => n.id === finalId);
+          return already ? prev : [...prev, { id: finalId, name: finalName }];
+        });
+
+        // Select the new neighborhood right away
         onChange(finalName, finalId);
         closeModal();
+
+        // Background refresh to sync any server-side name normalisation
+        refreshNeighborhoods();
       } else if (result.status === "similar") {
         setSuggestions(result.suggestions ?? []);
       }
@@ -494,12 +507,25 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
   }, [newName, city, onChange]);
 
   async function handleUseSuggestion(s: LocationSuggestion) {
-    await refreshNeighborhoods();
+    // Append suggestion to list immediately so it's selectable
+    setNeighborhoods(prev => {
+      const already = prev.some(n => n.id === s.id);
+      return already ? prev : [...prev, { id: s.id, name: s.name }];
+    });
     onChange(s.name, s.id);
     closeModal();
+    refreshNeighborhoods();
   }
 
   const isDisabled = disabled || !city;
+
+  // 3) Map selectedNeighborhoodId → object.
+  // Supports callers that pass either an id or a name as `value` (backwards-compatible).
+  const selectedNeighborhood =
+    neighborhoods.find(n => n.id === value) ??
+    neighborhoods.find(n => n.name === value);
+  // Always drive the <select> with the canonical id (so option value={n.id} matches)
+  const resolvedSelectValue = selectedNeighborhood?.id ?? "";
 
   return (
     <div className="form-group">
@@ -507,11 +533,12 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
       <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
         <select
           className="form-input"
-          value={value}
+          value={resolvedSelectValue}
           onChange={(e) => {
-            const name  = e.target.value;
-            const found = neighborhoods.find(n => n.name === name);
-            onChange(name, found?.id);
+            // 3) Find object by id, pass (name, id) to caller
+            const selectedId = e.target.value;
+            const found = neighborhoods.find(n => n.id === selectedId);
+            onChange(found?.name ?? selectedId, found?.id);
           }}
           disabled={isDisabled || loading}
           style={{ flex: 1 }}
@@ -519,7 +546,10 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
           <option value="">
             {loading ? "جاري التحميل..." : (city ? "اختر حياً..." : "اختر المدينة أولاً")}
           </option>
-          {neighborhoods.map((n) => <option key={n.id} value={n.name}>{n.name}</option>)}
+          {/* 4) Display name; option value is the ID */}
+          {neighborhoods.map((n) => (
+            <option key={n.id} value={n.id}>{n.name}</option>
+          ))}
         </select>
         <button
           type="button"

@@ -452,7 +452,7 @@ export default function OnboardingPage() {
             <div style={{ margin: 0 }}>
               <NeighborhoodSelect
                 label="الحي / المنطقة"
-                value={neighborhoodName}
+                value={neighborhoodId}
                 onChange={handleNeighborhoodChange}
                 city={cityName}
                 disabled={!cityName}
