@@ -207,6 +207,123 @@ public class LocationsController : BaseController
         }
     }
 
+    // ─── Search (typeahead) ────────────────────────────────────────────────────
+
+    [HttpGet("search")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Search(
+        [FromQuery] string  q,
+        [FromQuery] string  type     = "city",
+        [FromQuery] string? province = null,
+        [FromQuery] string? city     = null,
+        [FromQuery] int     limit    = 10,
+        CancellationToken   ct = default)
+    {
+        q = (q ?? "").Trim();
+        if (q.Length < 1)
+            return Ok(Array.Empty<object>());
+
+        limit = Math.Clamp(limit, 1, 20);
+        var norm = Boioot.Infrastructure.Features.Locations.ArabicNormalizer.Normalize(q);
+
+        if (type == "neighborhood")
+        {
+            var nbrs = _db.LocationNeighborhoods
+                .AsNoTracking()
+                .Where(n => n.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(city))
+                nbrs = nbrs.Where(n => n.City == city);
+
+            var hits = await nbrs
+                .Where(n => n.NormalizedName.Contains(norm) || n.Name.Contains(q))
+                .OrderBy(n => n.NormalizedName)
+                .Take(limit)
+                .Select(n => new { n.Id, n.Name, parent = n.City })
+                .ToListAsync(ct);
+
+            return Ok(hits);
+        }
+        else // city
+        {
+            var cities = _db.LocationCities
+                .AsNoTracking()
+                .Where(c => c.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(province))
+                cities = cities.Where(c => c.Province == province);
+
+            var hits = await cities
+                .Where(c => c.NormalizedName.Contains(norm) || c.Name.Contains(q))
+                .OrderBy(c => c.NormalizedName)
+                .Take(limit)
+                .Select(c => new { c.Id, c.Name, parent = c.Province })
+                .ToListAsync(ct);
+
+            return Ok(hits);
+        }
+    }
+
+    // ─── Instant-create (typeahead flow) ───────────────────────────────────────
+
+    [HttpPost("instant-create")]
+    [Authorize]
+    public async Task<IActionResult> InstantCreate(
+        [FromBody] InstantCreateLocationRequest req,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new { error = "الاسم مطلوب" });
+
+        var type = req.Type?.Trim().ToLower();
+
+        try
+        {
+            if (type == "neighborhood")
+            {
+                if (string.IsNullOrWhiteSpace(req.City))
+                    return BadRequest(new { error = "اسم المدينة مطلوب لإضافة حي" });
+
+                var result = await _locationService.AddNeighborhoodAsync(
+                    req.Name, req.City!, forceCreate: true, ct);
+
+                _cache.Remove($"loc:nbrs:{req.City}");
+                return Ok(new
+                {
+                    id     = result.Item!.Id,
+                    name   = result.Item.Name,
+                    parent = result.Item.ParentName,
+                    status = result.Status,
+                });
+            }
+            else // city
+            {
+                if (string.IsNullOrWhiteSpace(req.Province))
+                    return BadRequest(new { error = "اسم المحافظة مطلوب لإضافة مدينة" });
+
+                var result = await _locationService.AddCityAsync(
+                    req.Name, req.Province!, forceCreate: true, ct);
+
+                _cache.Remove("loc:provinces");
+                _cache.Remove("loc:cities");
+                if (!string.IsNullOrWhiteSpace(req.Province))
+                    _cache.Remove($"loc:cities:{req.Province}");
+
+                return Ok(new
+                {
+                    id     = result.Item!.Id,
+                    name   = result.Item.Name,
+                    parent = result.Item.ParentName,
+                    status = result.Status,
+                });
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     // ─── Location Suggestions ──────────────────────────────────────────────────
 
     [HttpPost("suggestions")]
@@ -328,3 +445,5 @@ public record LocationApiResult(
     IReadOnlyList<LocationItemDto>  Suggestions);
 
 public record SubmitLocationSuggestionRequest(string? Name, string? Type, Guid? ParentId);
+
+public record InstantCreateLocationRequest(string? Name, string? Type, string? Province, string? City);

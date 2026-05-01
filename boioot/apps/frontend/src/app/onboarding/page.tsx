@@ -11,12 +11,10 @@ import { onboardingApi } from "@/features/onboarding/api";
 import { api, normalizeError } from "@/lib/api";
 import Spinner from "@/components/ui/Spinner";
 import LocationPickerDynamic, { type LatLng } from "@/components/onboarding/LocationPickerDynamic";
-import SuggestLocationModal from "@/components/ui/SuggestLocationModal";
+import LocationTypeahead from "@/components/ui/LocationTypeahead";
 import type { E164Number } from "libphonenumber-js/core";
 
 const BUSINESS_ROLES = ["Broker", "CompanyOwner"];
-const SUGGEST_CITY   = "__suggest_city__";
-const SUGGEST_NBR    = "__suggest_nbr__";
 
 const STEPS = [
   { label: "تم إنشاء الحساب" },
@@ -74,7 +72,6 @@ export default function OnboardingPage() {
   const [neighborhoodsLoading,  setNeighborhoodsLoading]  = useState(false);
   const [neighborhoodId,        setNeighborhoodId]        = useState("");
   const [neighborhoodName,      setNeighborhoodName]      = useState("");
-  const [suggestType, setSuggestType] = useState<"city" | "neighborhood" | null>(null);
 
   // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -169,23 +166,19 @@ export default function OnboardingPage() {
     setField(e.target.name as FieldKey, e.target.value);
   }
 
-  // ── City dropdown change ────────────────────────────────────────────────────
-  function handleCityChange(id: string) {
-    if (id === SUGGEST_CITY) { setSuggestType("city"); return; }
-    const city = cities.find(c => c.id === id);
-    setCityId(id);
-    setCityName(city?.name ?? "");
+  // ── City typeahead change ────────────────────────────────────────────────────
+  function handleCityChange(name: string, id?: string) {
+    setCityName(name);
+    setCityId(id ?? "");
     setNeighborhoodId("");
     setNeighborhoodName("");
     setFieldErrors(prev => ({ ...prev, cityId: undefined }));
   }
 
-  // ── Neighborhood dropdown change ────────────────────────────────────────────
-  function handleNeighborhoodChange(id: string) {
-    if (id === SUGGEST_NBR) { setSuggestType("neighborhood"); return; }
-    const nb = neighborhoods.find(n => n.id === id);
-    setNeighborhoodId(id);
-    setNeighborhoodName(nb?.name ?? "");
+  // ── Neighborhood typeahead change ────────────────────────────────────────────
+  function handleNeighborhoodChange(name: string, id?: string) {
+    setNeighborhoodName(name);
+    setNeighborhoodId(id ?? "");
     setFieldErrors(prev => ({ ...prev, neighborhoodId: undefined }));
   }
 
@@ -212,8 +205,8 @@ export default function OnboardingPage() {
   function validate(): boolean {
     const errors: Partial<Record<FieldKey | "cityId" | "neighborhoodId", string>> = {};
     if (!form.displayName.trim()) errors.displayName = "الاسم التجاري مطلوب";
-    if (!cityId)                  errors.cityId       = "يرجى اختيار المدينة";
-    if (!neighborhoodId)          errors.neighborhoodId = "يرجى اختيار الحي / المنطقة";
+    if (!cityName)                errors.cityId         = "يرجى اختيار المدينة أو إنشاء مدينة جديدة";
+    if (!neighborhoodName)        errors.neighborhoodId = "يرجى اختيار الحي أو إنشاء حي جديد";
     if (!form.address.trim())     errors.address      = "العنوان التفصيلي مطلوب";
     if (!form.phoneNumber.trim()) errors.phoneNumber  = "رقم الهاتف مطلوب";
     setFieldErrors(errors);
@@ -445,52 +438,31 @@ export default function OnboardingPage() {
 
           {/* City + Neighborhood — two columns */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="city">
-                المدينة <span style={{ color: "var(--color-error)" }}>*</span>
-              </label>
-              <select
-                id="city"
-                value={cityId}
-                onChange={e => handleCityChange(e.target.value)}
-                disabled={!province || citiesLoading}
-                style={{
-                  ...selectStyle,
-                  borderColor: fieldErrors.cityId ? "var(--color-error)" : "var(--color-border)",
-                  opacity: !province || citiesLoading ? 0.65 : 1,
-                }}
-              >
-                <option value="">
-                  {!province ? "اختر المحافظة أولاً" : citiesLoading ? "جاري التحميل..." : "اختر المدينة"}
-                </option>
-                {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                {province && <option value={SUGGEST_CITY}>💡 اقترح مدينة جديدة...</option>}
-              </select>
-              {fieldErrors.cityId && <span className="form-error">{fieldErrors.cityId}</span>}
+            <div style={{ margin: 0 }}>
+              <LocationTypeahead
+                type="city"
+                label="المدينة"
+                value={cityName}
+                onChange={handleCityChange}
+                province={province || undefined}
+                required
+                error={fieldErrors.cityId}
+                allowCreate={true}
+              />
             </div>
 
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" htmlFor="neighborhood">
-                الحي / المنطقة <span style={{ color: "var(--color-error)" }}>*</span>
-              </label>
-              <select
-                id="neighborhood"
-                value={neighborhoodId}
-                onChange={e => handleNeighborhoodChange(e.target.value)}
-                disabled={!cityId || neighborhoodsLoading}
-                style={{
-                  ...selectStyle,
-                  borderColor: fieldErrors.neighborhoodId ? "var(--color-error)" : "var(--color-border)",
-                  opacity: !cityId || neighborhoodsLoading ? 0.65 : 1,
-                }}
-              >
-                <option value="">
-                  {!cityId ? "اختر المدينة أولاً" : neighborhoodsLoading ? "جاري التحميل..." : "اختر الحي / المنطقة"}
-                </option>
-                {neighborhoods.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
-                {cityId && <option value={SUGGEST_NBR}>💡 اقترح حياً جديداً...</option>}
-              </select>
-              {fieldErrors.neighborhoodId && <span className="form-error">{fieldErrors.neighborhoodId}</span>}
+            <div style={{ margin: 0 }}>
+              <LocationTypeahead
+                type="neighborhood"
+                label="الحي / المنطقة"
+                value={neighborhoodName}
+                onChange={handleNeighborhoodChange}
+                city={cityName || undefined}
+                disabled={!cityName}
+                required
+                error={fieldErrors.neighborhoodId}
+                allowCreate={true}
+              />
             </div>
           </div>
 

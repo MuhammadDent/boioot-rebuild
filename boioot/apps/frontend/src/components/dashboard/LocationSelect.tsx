@@ -3,10 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { api, ApiError } from "@/lib/api";
-import SuggestLocationModal from "@/components/ui/SuggestLocationModal";
+import LocationTypeahead from "@/components/ui/LocationTypeahead";
 
-const SUGGEST_CITY = "__suggest_city__";
-const SUGGEST_NBR  = "__suggest_nbr__";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -461,146 +459,18 @@ export function CitySelect({
   error,
   disabled,
 }: CitySelectProps) {
-  const [cities, setCities] = useState<LocationOption[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
-  const [suggestOpen, setSuggestOpen] = useState(false);
-
-  useEffect(() => { fetchCities(province); }, [province]);
-
-  async function fetchCities(prov?: string, nocache = false) {
-    try {
-      let url = prov
-        ? `/locations/cities?province=${encodeURIComponent(prov)}`
-        : "/locations/cities";
-      // Bypass browser HTTP cache after a write operation
-      if (nocache) url += `&_t=${Date.now()}`;
-      const data = await api.get<LocationOption[]>(url);
-      setCities(data);
-    } catch { /* silent */ }
-  }
-
-  function openModal() {
-    // Guard: province is required by the backend
-    if (!province) {
-      setAddError("اختر المحافظة أولاً ثم أضف المدينة");
-      setModalOpen(true);
-      return;
-    }
-    setNewName("");
-    setAddError("");
-    setSuggestions([]);
-    setModalOpen(true);
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-    setNewName("");
-    setAddError("");
-    setSuggestions([]);
-  }
-
-  const handleAdd = useCallback(async (forceCreate = false) => {
-    const name = newName.trim();
-    if (!name) { setAddError("اسم المدينة مطلوب"); return; }
-    if (!province) { setAddError("اختر المحافظة أولاً"); return; }
-    setSaving(true);
-    setAddError("");
-    setSuggestions([]);
-    try {
-      const result = await api.post<LocationApiResult>(
-        "/locations/cities",
-        { name, province: province ?? "", forceCreate }
-      );
-      if (result.status === "created" || result.status === "exists") {
-        const finalName = result.item?.name ?? name;
-        // nocache=true: bypass browser HTTP cache to show fresh list immediately
-        await fetchCities(province, true);
-        onChange(finalName);
-        closeModal();
-      } else if (result.status === "similar") {
-        setSuggestions(result.suggestions ?? []);
-      }
-    } catch (err) {
-      setAddError(err instanceof ApiError ? err.message : "تعذّر إضافة المدينة — حاول مجدداً");
-    } finally { setSaving(false); }
-  }, [newName, province, onChange]);
-
-  async function handleUseSuggestion(s: LocationSuggestion) {
-    await fetchCities(province, true);
-    onChange(s.name);
-    closeModal();
-  }
-
-  const canAdd = !disabled;
-
   return (
-    <div className="form-group">
-      <label className="form-label">
-        {label} {required && <span style={{ color: "#e53935" }}>*</span>}
-      </label>
-
-      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-        <select
-          className="form-input"
-          value={value}
-          onChange={(e) => {
-            if (e.target.value === SUGGEST_CITY) {
-              setSuggestOpen(true);
-              e.target.value = value;
-              return;
-            }
-            onChange(e.target.value);
-          }}
-          disabled={disabled}
-          style={{ flex: 1 }}
-        >
-          <option value="">اختر مدينة...</option>
-          {cities.map((c) => (
-            <option key={c.id} value={c.name}>
-              {c.name}
-            </option>
-          ))}
-          <option value={SUGGEST_CITY}>💡 اقترح مدينة جديدة...</option>
-        </select>
-
-        <button
-          type="button"
-          title={!province ? "اختر المحافظة أولاً" : "إضافة مدينة جديدة"}
-          style={canAdd ? addBtnStyle : addBtnDisabledStyle}
-          disabled={!canAdd}
-          onClick={openModal}
-        >
-          +
-        </button>
-      </div>
-
-      <AddLocationModal
-        open={modalOpen}
-        title="إضافة مدينة جديدة"
-        placeholder="اكتب اسم المدينة..."
-        saving={saving}
-        addError={addError}
-        suggestions={suggestions}
-        newName={newName}
-        onNameChange={(v) => { setNewName(v); setSuggestions([]); setAddError(""); }}
-        onSave={() => handleAdd(false)}
-        onCancel={closeModal}
-        onUseSuggestion={handleUseSuggestion}
-        onForceAdd={() => handleAdd(true)}
-      />
-
-      <SuggestLocationModal
-        open={suggestOpen}
-        type="city"
-        onClose={() => setSuggestOpen(false)}
-      />
-
-      {error && <p className="form-error">{error}</p>}
-    </div>
+    <LocationTypeahead
+      type="city"
+      label={label}
+      value={value}
+      onChange={(name) => onChange(name)}
+      province={province}
+      disabled={disabled}
+      required={required}
+      error={error}
+      allowCreate={true}
+    />
   );
 }
 
@@ -613,139 +483,15 @@ export function NeighborhoodSelect({
   city,
   disabled,
 }: NeighborhoodSelectProps) {
-  const [neighborhoods, setNeighborhoods] = useState<LocationOption[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
-  const [suggestOpen, setSuggestOpen] = useState(false);
-
-  useEffect(() => {
-    if (city) {
-      fetchNeighborhoods(city);
-    } else {
-      setNeighborhoods([]);
-    }
-  }, [city]);
-
-  async function fetchNeighborhoods(cityName: string, nocache = false) {
-    try {
-      let url = `/locations/neighborhoods?city=${encodeURIComponent(cityName)}`;
-      // Bypass browser HTTP cache after a write operation
-      if (nocache) url += `&_t=${Date.now()}`;
-      const data = await api.get<LocationOption[]>(url);
-      setNeighborhoods(data);
-    } catch { /* silent */ }
-  }
-
-  function openModal() {
-    setNewName("");
-    setAddError("");
-    setSuggestions([]);
-    setModalOpen(true);
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-    setNewName("");
-    setAddError("");
-    setSuggestions([]);
-  }
-
-  const handleAdd = useCallback(async (forceCreate = false) => {
-    const name = newName.trim();
-    if (!name) { setAddError("اسم الحي مطلوب"); return; }
-    if (!city) { setAddError("اختر المدينة أولاً"); return; }
-    setSaving(true);
-    setAddError("");
-    setSuggestions([]);
-    try {
-      const result = await api.post<LocationApiResult>(
-        "/locations/neighborhoods",
-        { name, city, forceCreate }
-      );
-      if (result.status === "created" || result.status === "exists") {
-        const finalName = result.item?.name ?? name;
-        // nocache=true: bypass browser HTTP cache to show fresh list immediately
-        await fetchNeighborhoods(city, true);
-        onChange(finalName);
-        closeModal();
-      } else if (result.status === "similar") {
-        setSuggestions(result.suggestions ?? []);
-      }
-    } catch (err) {
-      setAddError(err instanceof ApiError ? err.message : "تعذّر إضافة الحي — حاول مجدداً");
-    } finally { setSaving(false); }
-  }, [newName, city, onChange]);
-
-  async function handleUseSuggestion(s: LocationSuggestion) {
-    await fetchNeighborhoods(city, true);
-    onChange(s.name);
-    closeModal();
-  }
-
-  const canAdd = !disabled && !!city;
-
   return (
-    <div className="form-group">
-      <label className="form-label">{label}</label>
-
-      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-        <select
-          className="form-input"
-          value={value}
-          onChange={(e) => {
-            if (e.target.value === SUGGEST_NBR) {
-              setSuggestOpen(true);
-              e.target.value = value;
-              return;
-            }
-            onChange(e.target.value);
-          }}
-          disabled={disabled || !city}
-          style={{ flex: 1 }}
-        >
-          <option value="">اختر حياً...</option>
-          {neighborhoods.map((n) => (
-            <option key={n.id} value={n.name}>
-              {n.name}
-            </option>
-          ))}
-          {city && <option value={SUGGEST_NBR}>💡 اقترح حياً جديداً...</option>}
-        </select>
-
-        <button
-          type="button"
-          title={city ? "إضافة حي جديد" : "اختر المدينة أولاً"}
-          style={canAdd ? addBtnStyle : addBtnDisabledStyle}
-          disabled={!canAdd}
-          onClick={openModal}
-        >
-          +
-        </button>
-      </div>
-
-      <AddLocationModal
-        open={modalOpen}
-        title="إضافة حي جديد"
-        placeholder="اكتب اسم الحي..."
-        saving={saving}
-        addError={addError}
-        suggestions={suggestions}
-        newName={newName}
-        onNameChange={(v) => { setNewName(v); setSuggestions([]); setAddError(""); }}
-        onSave={() => handleAdd(false)}
-        onCancel={closeModal}
-        onUseSuggestion={handleUseSuggestion}
-        onForceAdd={() => handleAdd(true)}
-      />
-
-      <SuggestLocationModal
-        open={suggestOpen}
-        type="neighborhood"
-        onClose={() => setSuggestOpen(false)}
-      />
-    </div>
+    <LocationTypeahead
+      type="neighborhood"
+      label={label}
+      value={value}
+      onChange={(name) => onChange(name)}
+      city={city}
+      disabled={disabled || !city}
+      allowCreate={true}
+    />
   );
 }
