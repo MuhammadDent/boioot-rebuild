@@ -536,12 +536,6 @@ export default function OnboardingPage() {
         </p>
       </div>
 
-      <SuggestLocationModal
-        open={suggestType !== null}
-        type={suggestType ?? "city"}
-        parentId={suggestType === "neighborhood" ? cityId : undefined}
-        onClose={() => setSuggestType(null)}
-      />
     </div>
   );
 }
