@@ -117,6 +117,7 @@ public sealed class DatabaseStartupService
         await ApplyUserTagsPatchAsync(ct);
         await ApplySubscriptionNumberPatchAsync(ct);
         await ApplyMatchingAndCoveragePatchAsync(ct);
+        await ApplyLocationSuggestionsPatchAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
         await SyncIsCoverFromIsPrimaryAsync(ct);
@@ -1002,6 +1003,31 @@ public sealed class DatabaseStartupService
         catch (Exception ex)
         {
             _log.LogWarning("[schema-patch] Matching + Coverage patch failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    private async Task ApplyLocationSuggestionsPatchAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS "LocationSuggestions" (
+                    "Id"        uuid         NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+                    "Name"      varchar(200) NOT NULL,
+                    "Type"      varchar(20)  NOT NULL,
+                    "ParentId"  uuid,
+                    "Status"    varchar(20)  NOT NULL DEFAULT 'pending',
+                    "CreatedAt" timestamptz  NOT NULL DEFAULT now(),
+                    "UpdatedAt" timestamptz  NOT NULL DEFAULT now()
+                )
+                """, ct);
+
+            _log.LogInformation("[schema-patch] LocationSuggestions table ensured.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] LocationSuggestions patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 }

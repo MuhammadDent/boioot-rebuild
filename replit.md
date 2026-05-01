@@ -85,6 +85,14 @@ I prefer simple language. I want iterative development. Ask before making major 
 - Frontend image optimization pass (Phase 2): project detail hero and gallery thumbnails converted to next/image (fill + lazy). Advertiser avatar in property detail converted to next/image (52×52, lazy). No dynamic import changes needed — leaflet/RichTextEditor already dynamic, InquiryForm has no heavy deps.
 - Rating & Review system (DailyRent listings): Full-stack feature. Backend reuses existing `Review` entity with `TargetType=Property`; unique constraint added via idempotent schema patch; `POST /api/ratings`, `GET /api/listings/{id}/ratings`, `GET /api/listings/{id}/rating-summary`, `GET /api/listings/{id}/can-rate`. Business rules: completed booking required, one review per user per listing (DB-enforced), score 1-5. 5-minute memory cache on summary. Frontend: StarRating, StarSelector, ReviewCard, RatingsSummary, AddRatingForm, ListingRatings components; integrated in PropertyDetailClient for DailyRent listings only.
 
+**Location Suggestion Flow:**
+- New `LocationSuggestions` table (`Id`, `Name`, `Type`, `ParentId`, `Status=pending`, `CreatedAt`, `UpdatedAt`).
+- New endpoint: `POST /api/locations/suggestions` — saves suggestion to `LocationSuggestions` only (no direct insert to `LocationCities` or `LocationNeighborhoods`).
+- Shared `SuggestLocationModal` component (`components/ui/SuggestLocationModal.tsx`) — modal with text input, calls POST /api/locations/suggestions, shows success confirmation.
+- Sentinel options `💡 اقترح مدينة/حي جديد...` added to city and neighborhood dropdowns in: onboarding page, coverage page, buyer-request creation page, and property listing creation (via `LocationSelect.tsx` CitySelect/NeighborhoodSelect).
+- After successful suggestion: success banner shown, modal closes, dropdown retains no selection (user must wait for admin approval).
+- `parentId` (city UUID) passed to neighborhood suggestions where available (onboarding, coverage, buyer-requests).
+
 **Production Readiness (Day 14):**
 - CORS: Environment-based (`AllowedOrigins` config key). In production set comma-separated origins; dev/unset = AllowAnyOrigin.
 - `run-api.sh`: Sets `ASPNETCORE_ENVIRONMENT=Development` by default (can be overridden via env var for real deployments).

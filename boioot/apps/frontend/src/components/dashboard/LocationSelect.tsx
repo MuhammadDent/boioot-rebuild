@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { api, ApiError } from "@/lib/api";
+import SuggestLocationModal from "@/components/ui/SuggestLocationModal";
+
+const SUGGEST_CITY = "__suggest_city__";
+const SUGGEST_NBR  = "__suggest_nbr__";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -463,6 +467,7 @@ export function CitySelect({
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState("");
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+  const [suggestOpen, setSuggestOpen] = useState(false);
 
   useEffect(() => { fetchCities(province); }, [province]);
 
@@ -542,7 +547,14 @@ export function CitySelect({
         <select
           className="form-input"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            if (e.target.value === SUGGEST_CITY) {
+              setSuggestOpen(true);
+              e.target.value = value;
+              return;
+            }
+            onChange(e.target.value);
+          }}
           disabled={disabled}
           style={{ flex: 1 }}
         >
@@ -552,6 +564,7 @@ export function CitySelect({
               {c.name}
             </option>
           ))}
+          <option value={SUGGEST_CITY}>💡 اقترح مدينة جديدة...</option>
         </select>
 
         <button
@@ -580,6 +593,12 @@ export function CitySelect({
         onForceAdd={() => handleAdd(true)}
       />
 
+      <SuggestLocationModal
+        open={suggestOpen}
+        type="city"
+        onClose={() => setSuggestOpen(false)}
+      />
+
       {error && <p className="form-error">{error}</p>}
     </div>
   );
@@ -600,6 +619,7 @@ export function NeighborhoodSelect({
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState("");
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+  const [suggestOpen, setSuggestOpen] = useState(false);
 
   useEffect(() => {
     if (city) {
@@ -675,7 +695,14 @@ export function NeighborhoodSelect({
         <select
           className="form-input"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            if (e.target.value === SUGGEST_NBR) {
+              setSuggestOpen(true);
+              e.target.value = value;
+              return;
+            }
+            onChange(e.target.value);
+          }}
           disabled={disabled || !city}
           style={{ flex: 1 }}
         >
@@ -685,6 +712,7 @@ export function NeighborhoodSelect({
               {n.name}
             </option>
           ))}
+          {city && <option value={SUGGEST_NBR}>💡 اقترح حياً جديداً...</option>}
         </select>
 
         <button
@@ -711,6 +739,12 @@ export function NeighborhoodSelect({
         onCancel={closeModal}
         onUseSuggestion={handleUseSuggestion}
         onForceAdd={() => handleAdd(true)}
+      />
+
+      <SuggestLocationModal
+        open={suggestOpen}
+        type="neighborhood"
+        onClose={() => setSuggestOpen(false)}
       />
     </div>
   );

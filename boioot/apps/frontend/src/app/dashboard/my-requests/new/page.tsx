@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { api, normalizeError } from "@/lib/api";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
+import SuggestLocationModal from "@/components/ui/SuggestLocationModal";
 
 const PROPERTY_TYPES = [
   { value: "Apartment", label: "شقة سكنية" },
@@ -15,7 +16,9 @@ const PROPERTY_TYPES = [
   { value: "Building",  label: "بناء كامل" },
 ];
 
-const ADD_NEW = "__add_new__";
+const ADD_NEW    = "__add_new__";
+const SUGGEST_CITY = "__suggest_city__";
+const SUGGEST_NBR  = "__suggest_nbr__";
 
 interface LocationCity { id: string; name: string; province: string; }
 interface LocationNeighborhood { id: string; name: string; city: string; }
@@ -148,6 +151,7 @@ export default function NewBuyerRequestPage() {
   const [savingNeighborhood, setSavingNeighborhood] = useState(false);
   const [neighborhoodSuggestions, setNeighborhoodSuggestions] = useState<string[]>([]);
   const [pendingNeighborhoodName, setPendingNeighborhoodName] = useState("");
+  const [suggestType, setSuggestType] = useState<"city" | "neighborhood" | null>(null);
 
   // UI state
   const [provincesLoading, setProvincesLoading] = useState(true);
@@ -210,6 +214,7 @@ export default function NewBuyerRequestPage() {
 
   // ── Handle city dropdown change ───────────────────────────────────────────
   function handleCityChange(val: string) {
+    if (val === SUGGEST_CITY) { setSuggestType("city"); return; }
     setCityValue(val);
     setCitySuggestions([]);
     setAddingCity(val === ADD_NEW);
@@ -257,6 +262,7 @@ export default function NewBuyerRequestPage() {
 
   // ── Handle neighborhood dropdown change ───────────────────────────────────
   function handleNeighborhoodChange(val: string) {
+    if (val === SUGGEST_NBR) { setSuggestType("neighborhood"); return; }
     setNeighborhoodValue(val);
     setAddingNeighborhood(val === ADD_NEW);
   }
@@ -480,6 +486,7 @@ export default function NewBuyerRequestPage() {
                           <option key={c.id} value={c.name}>{c.name}</option>
                         ))}
                         <option value={ADD_NEW}>➕ أضف مدينة جديدة...</option>
+                        {province && <option value={SUGGEST_CITY}>💡 اقترح مدينة جديدة...</option>}
                       </select>
 
                       {addingCity && (
@@ -529,6 +536,7 @@ export default function NewBuyerRequestPage() {
                           <option key={n.id} value={n.name}>{n.name}</option>
                         ))}
                         <option value={ADD_NEW}>➕ أضف حياً جديداً...</option>
+                        <option value={SUGGEST_NBR}>💡 اقترح حياً جديداً...</option>
                       </select>
 
                       {addingNeighborhood && (
@@ -589,6 +597,15 @@ export default function NewBuyerRequestPage() {
           100% { background-position: -200% 0; }
         }
       `}</style>
+
+      <SuggestLocationModal
+        open={suggestType !== null}
+        type={suggestType ?? "city"}
+        parentId={suggestType === "neighborhood"
+          ? (cities.find(c => c.name === selectedCityName)?.id ?? undefined)
+          : undefined}
+        onClose={() => setSuggestType(null)}
+      />
     </div>
   );
 }

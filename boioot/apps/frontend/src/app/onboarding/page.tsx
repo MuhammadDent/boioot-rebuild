@@ -11,9 +11,12 @@ import { onboardingApi } from "@/features/onboarding/api";
 import { api, normalizeError } from "@/lib/api";
 import Spinner from "@/components/ui/Spinner";
 import LocationPickerDynamic, { type LatLng } from "@/components/onboarding/LocationPickerDynamic";
+import SuggestLocationModal from "@/components/ui/SuggestLocationModal";
 import type { E164Number } from "libphonenumber-js/core";
 
 const BUSINESS_ROLES = ["Broker", "CompanyOwner"];
+const SUGGEST_CITY   = "__suggest_city__";
+const SUGGEST_NBR    = "__suggest_nbr__";
 
 const STEPS = [
   { label: "تم إنشاء الحساب" },
@@ -71,6 +74,7 @@ export default function OnboardingPage() {
   const [neighborhoodsLoading,  setNeighborhoodsLoading]  = useState(false);
   const [neighborhoodId,        setNeighborhoodId]        = useState("");
   const [neighborhoodName,      setNeighborhoodName]      = useState("");
+  const [suggestType, setSuggestType] = useState<"city" | "neighborhood" | null>(null);
 
   // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -167,6 +171,7 @@ export default function OnboardingPage() {
 
   // ── City dropdown change ────────────────────────────────────────────────────
   function handleCityChange(id: string) {
+    if (id === SUGGEST_CITY) { setSuggestType("city"); return; }
     const city = cities.find(c => c.id === id);
     setCityId(id);
     setCityName(city?.name ?? "");
@@ -177,6 +182,7 @@ export default function OnboardingPage() {
 
   // ── Neighborhood dropdown change ────────────────────────────────────────────
   function handleNeighborhoodChange(id: string) {
+    if (id === SUGGEST_NBR) { setSuggestType("neighborhood"); return; }
     const nb = neighborhoods.find(n => n.id === id);
     setNeighborhoodId(id);
     setNeighborhoodName(nb?.name ?? "");
@@ -458,6 +464,7 @@ export default function OnboardingPage() {
                   {!province ? "اختر المحافظة أولاً" : citiesLoading ? "جاري التحميل..." : "اختر المدينة"}
                 </option>
                 {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {province && <option value={SUGGEST_CITY}>💡 اقترح مدينة جديدة...</option>}
               </select>
               {fieldErrors.cityId && <span className="form-error">{fieldErrors.cityId}</span>}
             </div>
@@ -481,6 +488,7 @@ export default function OnboardingPage() {
                   {!cityId ? "اختر المدينة أولاً" : neighborhoodsLoading ? "جاري التحميل..." : "اختر الحي / المنطقة"}
                 </option>
                 {neighborhoods.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
+                {cityId && <option value={SUGGEST_NBR}>💡 اقترح حياً جديداً...</option>}
               </select>
               {fieldErrors.neighborhoodId && <span className="form-error">{fieldErrors.neighborhoodId}</span>}
             </div>
@@ -555,6 +563,13 @@ export default function OnboardingPage() {
           وإكمالها لاحقاً من الإعدادات
         </p>
       </div>
+
+      <SuggestLocationModal
+        open={suggestType !== null}
+        type={suggestType ?? "city"}
+        parentId={suggestType === "neighborhood" ? cityId : undefined}
+        onClose={() => setSuggestType(null)}
+      />
     </div>
   );
 }

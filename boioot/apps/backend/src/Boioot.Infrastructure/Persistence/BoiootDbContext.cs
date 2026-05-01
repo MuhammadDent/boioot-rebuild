@@ -39,7 +39,8 @@ public class BoiootDbContext : DbContext
     public DbSet<OwnershipTypeConfig> OwnershipTypeConfigs => Set<OwnershipTypeConfig>();
     public DbSet<LocationCity> LocationCities => Set<LocationCity>();
     public DbSet<LocationNeighborhood> LocationNeighborhoods => Set<LocationNeighborhood>();
-    public DbSet<UserCoverage> UserCoverages => Set<UserCoverage>();
+    public DbSet<UserCoverage>         UserCoverages         => Set<UserCoverage>();
+    public DbSet<LocationSuggestion>   LocationSuggestions   => Set<LocationSuggestion>();
 
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Account> Accounts => Set<Account>();

@@ -207,6 +207,37 @@ public class LocationsController : BaseController
         }
     }
 
+    // ─── Location Suggestions ──────────────────────────────────────────────────
+
+    [HttpPost("suggestions")]
+    [Authorize]
+    public async Task<IActionResult> SubmitSuggestion(
+        [FromBody] SubmitLocationSuggestionRequest req,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name))
+            return BadRequest(new { error = "الاسم مطلوب" });
+
+        var type = req.Type?.Trim().ToLower();
+        if (type != "city" && type != "neighborhood")
+            return BadRequest(new { error = "النوع يجب أن يكون city أو neighborhood" });
+
+        var suggestion = new Boioot.Domain.Entities.LocationSuggestion
+        {
+            Id        = Guid.NewGuid(),
+            Name      = req.Name.Trim(),
+            Type      = type!,
+            ParentId  = req.ParentId,
+            Status    = "pending",
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        _db.LocationSuggestions.Add(suggestion);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new { id = suggestion.Id, status = "pending" });
+    }
+
     // ─── Duplicate report (admin-only) ─────────────────────────────────────────
 
     [HttpGet("duplicates/cities")]
@@ -295,3 +326,5 @@ public record LocationApiResult(
     string                          Status,
     LocationItemDto?                Item,
     IReadOnlyList<LocationItemDto>  Suggestions);
+
+public record SubmitLocationSuggestionRequest(string? Name, string? Type, Guid? ParentId);
