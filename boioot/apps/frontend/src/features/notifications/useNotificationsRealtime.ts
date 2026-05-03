@@ -48,7 +48,11 @@ export function useNotificationsRealtime({
       .then(() => {
         if (!disposed) onRecover();
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[SignalR] Failed to connect to notifications hub:", err);
+        }
+      });
 
     return () => {
       disposed = true;

@@ -2,7 +2,13 @@
 //
 // Priority (highest → lowest):
 //   1. NEXT_PUBLIC_API_URL env var — only used if it is NOT the old dns-broken domain
-//   2. /api  — local dev proxy (Next.js rewrites /api/* → BACKEND_URL/api/*)
+//   2. LIVE_BACKEND — direct Fly.io URL, used for both SSR and CSR
+//
+// We always use the full backend URL (never a relative /api path) to avoid
+// Next.js SSR vs CSR hydration mismatches caused by `typeof window` branches.
+// Server-to-server requests are not subject to CORS, so using the full URL
+// during SSR is safe.  Client (browser) requests go cross-origin to Fly.io;
+// CORS is configured on the backend to allow the production domains.
 //
 // The domain api.boioot.net is not yet live (DNS not set up).
 // Any URL containing it is silently replaced with the live backend.
@@ -15,17 +21,7 @@ function resolveApiUrl(): string {
 
   // Reject empty or broken DNS domain — fall through to live backend
   if (!configured || configured.includes(BROKEN_DOMAIN)) {
-    // In a browser context (NEXT_PUBLIC vars are baked in at build time),
-    // use the live backend directly so CORS can apply.
-    // In a server context (SSR / Next.js rewrites), /api is fine but since
-    // this module also runs client-side we use the full URL to be safe.
-    if (typeof window !== "undefined") {
-      // Client-side: use full URL (browser cannot use /api proxy directly
-      // when the Next.js server is on a different host).
-      return LIVE_BACKEND;
-    }
-    // Server-side: prefer /api so Next.js rewrites handle it transparently.
-    return "/api";
+    return LIVE_BACKEND;
   }
 
   return configured;
