@@ -117,6 +117,7 @@ public sealed class DatabaseStartupService
         await ApplyUserTagsPatchAsync(ct);
         await ApplySubscriptionNumberPatchAsync(ct);
         await ApplyMatchingAndCoveragePatchAsync(ct);
+        await ApplyUserCoveragesTablePatchAsync(ct);
         await ApplyLocationSuggestionsPatchAsync(ct);
 
         // ── One-time data fix: sync IsCover from IsPrimary for legacy rows ────
@@ -984,25 +985,51 @@ public sealed class DatabaseStartupService
             await _db.Database.ExecuteSqlRawAsync(
                 """ALTER TABLE "Companies" ADD COLUMN IF NOT EXISTS "NeighborhoodId" uuid""", ct);
 
-            // UserCoverages table — new entity for agent area coverage registration
-            await _db.Database.ExecuteSqlRawAsync(
-                """
-                CREATE TABLE IF NOT EXISTS "UserCoverages" (
-                    "Id"             uuid         NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-                    "UserId"         uuid         NOT NULL,
-                    "CityId"         uuid         NOT NULL,
-                    "NeighborhoodId" uuid,
-                    "CoverageType"   varchar(20)  NOT NULL DEFAULT 'city_wide',
-                    "CreatedAt"      timestamptz  NOT NULL DEFAULT now(),
-                    "UpdatedAt"      timestamptz  NOT NULL DEFAULT now()
-                )
-                """, ct);
-
-            _log.LogInformation("[schema-patch] Matching + Coverage schema applied (Plans.ProductArea, BuyerRequests.CityId/NeighborhoodId, UserCoverages).");
+            _log.LogInformation("[schema-patch] Matching schema applied (Plans.ProductArea, BuyerRequests.CityId/NeighborhoodId, Companies.CityId/NeighborhoodId).");
         }
         catch (Exception ex)
         {
             _log.LogWarning("[schema-patch] Matching + Coverage patch failed (non-critical): {Msg}", ex.Message);
+        }
+    }
+
+    // ── Dedicated patch so UserCoverages is never silently skipped ───────────────
+    private async Task ApplyUserCoveragesTablePatchAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS "UserCoverages" (
+                    "Id"             uuid        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+                    "UserId"         uuid        NOT NULL,
+                    "CityId"         uuid        NOT NULL,
+                    "NeighborhoodId" uuid,
+                    "CoverageType"   varchar(20) NOT NULL DEFAULT 'city_wide',
+                    "CreatedAt"      timestamptz NOT NULL DEFAULT now(),
+                    "UpdatedAt"      timestamptz NOT NULL DEFAULT now()
+                )
+                """, ct);
+
+            // UserId index — speeds up the per-user GET query
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE INDEX IF NOT EXISTS "IX_UserCoverages_UserId"
+                    ON "UserCoverages" ("UserId")
+                """, ct);
+
+            // Unique constraint — prevents duplicate coverage registrations
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_UserCoverages_Unique"
+                    ON "UserCoverages" ("UserId", "CityId", "CoverageType", "NeighborhoodId")
+                """, ct);
+
+            _log.LogInformation("[schema-patch] UserCoverages table + indexes ensured.");
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] UserCoverages patch failed (non-critical): {Msg}", ex.Message);
         }
     }
 
