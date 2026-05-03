@@ -1,0 +1,76 @@
+[33mebdf38db[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Fix broken image links across the platform and update booking flow
+[33mab831a98[m Update image URLs and improve API startup process
+[33m650719e1[m Refine plan configuration for messaging and image features
+[33mf5ef9c40[m Unify messaging and image upload settings into single configuration cards
+[33m84cf2f0f[m Add a favorites section to the main dashboard page
+[33mb6add6aa[m Add image for tracking integration settings in admin panel
+[33maa9408bf[m Add an image file to the project assets
+[33m4e24624b[m Add an image file to the project assets
+[33mb8dbfdb6[m Improve image performance on project and property detail pages
+[33m0d820175[m Improve homepage performance by server-rendering the hero image
+[33m463adbcd[m Improve mobile loading speed by optimizing hero image display
+[33ma32ceb3a[m Improve mobile performance by deferring hero image loading
+[33m63e304d9[m Revert hero image to CSS background to improve loading speed
+[33m4bc82d5a[m Improve website performance by optimizing image loading and delivery
+[33mf864bd03[m Improve property listing performance and image loading
+[33mccfa9cbe[m Update property image gallery and contact buttons to match exact design specifications
+[33m43080433[m Integrate a new image slider component and fix contact button visibility
+[33mc28999bf[m Ensure property details page uses full-size cover images
+[33m2504951d[m Improve property image display and optimization for faster loading
+[33mb116c9a8[m Improve image upload and display experience for creating ads
+[33mb596b260[m Fix image display on property cards and listings
+[33m51e24067[m Fix error when getting image file size after upload
+[33mb048ea18[m Fix image upload to backend with improved error reporting
+[33m14f76ac8[m Update image upload to use backend processing
+[33m16c4ec63[m Add image upload functionality and configure backend CORS
+[33mc96e9777[m Add images to help clarify deployment status
+[33m18e700de[m Prevent browser from adding content type to file uploads
+[33me27f772b[m Add new image asset to advertising posts
+[33m695cfc14[m Update API configuration and backend CORS for image uploads
+[33md2726cc0[m Add direct file upload capabilities to the platform
+[33m725fb619[m Add direct image uploads to Cloudflare R2 for ad postings
+[33mc8a07663[m Improve profile image upload functionality and add detailed logging
+[33m9d74a2cf[m Add a hybrid direct upload system for images
+[33m0c87541a[m Improve image uploads with compression and thumbnails
+[33m11a739db[m Add image upload and management functionality to property forms
+[33m1226b1f8[m Integrate new image uploads with existing image systems
+[33mef444c34[m Update image handling and data synchronization across services
+[33mdf526c71[m Improve image management by unifying endpoints and removing redundancy
+[33m7e86a391[m Add cover image functionality and improve file upload management
+[33mfc1574df[m Improve image assignment and add image viewing for listings
+[33m3b547d9c[m Add functionality for users to upload, view, and delete their images
+[33m9338786a[m Allow anonymous image uploads for temporary testing
+[33m86bb38d6[m Add Cloudflare R2 storage for image uploads
+[33m3e396da1[m Update image upload to use a new storage system
+[33m9d90f390[m Detail the current image processing and upload workflows
+[33m39459259[m Improve how user avatars are displayed throughout the application
+[33mf897518a[m Improve image upload functionality for user profiles
+[33mc04a71f7[m Expand image URL storage to prevent data truncation errors
+[33maec63da5[m Increase image URL storage limit to prevent data truncation errors
+[33mbd7a8225[m Clarify plan subscription eligibility and display categories
+[33m4f826ac2[m Implement skeleton loaders and performance enhancements across the site
+[33m6c4f9118[m Enhance subscription plan entitlements and enforce feature limits
+[33ma465c7a5[m Improve plan display with enhanced limits and feature visibility
+[33mf47e756f[m Improve advertiser image display and contact button visibility
+[33m06392f6b[m Improve property image management to allow partial edits and prevent accidental deletion
+[33m9386a91c[m Improve how property images are displayed and managed on the dashboard
+[33m3f9b41dd[m Add category requirements and new category creation to blog posts
+[33mdc7c90a1[m Add user stats and subscription details to profile pages
+[33mfc4c890b[m Add ability to view and edit user profiles from a dedicated page
+[33m99e4ebb0[m Add comprehensive management features for real estate brokers
+[33m73e97fa7[m Allow users to upload images successfully to the website
+[33m2f2b7283[m Add alt text for images and fix image upload issues
+[33mb46f85ac[m Improve cover image upload area to match Salla's design
+[33m99da1703[m Enhance article creation with image uploads and rich text editing
+[33m2014070d[m Update database files and attach an image
+[33m9db4bac3[m Add image file for documentation purposes
+[33m1c050609[m Add ability to upload and manage property images and videos
+[33mc2237b19[m Add a modal to display attached images for easier viewing and closing
+[33mef82181a[m Fix issues with opening large image and PDF attachments
+[33m6d960b45[m Add ability to attach files to messages in conversations
+[33madbd354e[m Update website to display the correct company logo
+[33m6ac81c33[m Update website to use a logo and improve user registration
+[33mbb53ac0c[m Add an image to illustrate how to access the frontend
+[33ma7ab9a3e[m Update backend and frontend for property and project data management
+[33m9d352d41[m Add the Boioot logo to the project assets
+[33m3bb2fd3c[m Add screenshots for visual reference and platform analysis
