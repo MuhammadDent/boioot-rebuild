@@ -194,11 +194,19 @@ public class AuthController : ControllerBase
 
     private void SetRefreshCookie(string rawToken, DateTime expiresAt)
     {
+        // In production the frontend (boioot.net) and backend (fly.dev) are on
+        // different origins.  SameSite=Lax prevents the browser from attaching
+        // the cookie to cross-origin fetch POST requests, which breaks silent
+        // refresh and causes unexpected logouts.
+        // SameSite=None + Secure=true is required for cross-origin cookie delivery.
+        // In development we keep Lax because Secure=false is needed locally and
+        // browsers reject SameSite=None without Secure.
+        var isProduction = !_env.IsDevelopment();
         Response.Cookies.Append(CookieName, rawToken, new CookieOptions
         {
             HttpOnly  = true,
-            Secure    = !_env.IsDevelopment(),
-            SameSite  = SameSiteMode.Lax,
+            Secure    = isProduction,
+            SameSite  = isProduction ? SameSiteMode.None : SameSiteMode.Lax,
             Path      = CookiePath,
             Expires   = expiresAt,
         });
@@ -206,11 +214,12 @@ public class AuthController : ControllerBase
 
     private void ClearRefreshCookie()
     {
+        var isProduction = !_env.IsDevelopment();
         Response.Cookies.Append(CookieName, string.Empty, new CookieOptions
         {
             HttpOnly = true,
-            Secure   = !_env.IsDevelopment(),
-            SameSite = SameSiteMode.Lax,
+            Secure   = isProduction,
+            SameSite = isProduction ? SameSiteMode.None : SameSiteMode.Lax,
             Path     = CookiePath,
             Expires  = DateTimeOffset.UnixEpoch,
         });

@@ -157,7 +157,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   // ── Preemptive silent refresh ──────────────────────────────────────────────
   // Only try if we actually have an access token that is expiring soon.
   // Without a stored token there is nothing to refresh (unauthenticated request).
-  if (tokenStorage.getToken() && tokenStorage.isExpiredOrExpiringSoon(30)) {
+  // Buffer is 2 minutes (120 s) — gives enough time for network round-trips
+  // while avoiding unnecessary refreshes on every request.
+  if (tokenStorage.getToken() && tokenStorage.isExpiredOrExpiringSoon(120)) {
     const ok = await silentRefresh();
     if (!ok) terminateSession();
   }
