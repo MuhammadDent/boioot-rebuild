@@ -30,7 +30,7 @@ obj/
 .replit.nix
 
 # Misc
-# Test coverage report directories only — NOT Next.js app routes named "coverage"
-coverage/
-!apps/frontend/src/app/dashboard/coverage/
-!apps/frontend/src/app/dashboard/coverage/**
+# NOTE: "coverage/" intentionally removed — it was incorrectly ignoring
+# Next.js app routes (src/app/dashboard/coverage) and feature modules
+# (src/features/coverage). Each package's own .gitignore handles
+# test coverage report directories.
