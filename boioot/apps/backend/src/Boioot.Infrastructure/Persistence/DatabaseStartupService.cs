@@ -973,17 +973,45 @@ public sealed class DatabaseStartupService
             await _db.Database.ExecuteSqlRawAsync(
                 """ALTER TABLE "Plans" ADD COLUMN IF NOT EXISTS "ProductArea" character varying(50)""", ct);
 
-            // BuyerRequest structured location IDs (additive — old rows remain null)
+            // BuyerRequest structured location IDs — text to match EF Core GuidToStringConverter
             await _db.Database.ExecuteSqlRawAsync(
-                """ALTER TABLE "BuyerRequests" ADD COLUMN IF NOT EXISTS "CityId" uuid""", ct);
+                """ALTER TABLE "BuyerRequests" ADD COLUMN IF NOT EXISTS "CityId" text""", ct);
             await _db.Database.ExecuteSqlRawAsync(
-                """ALTER TABLE "BuyerRequests" ADD COLUMN IF NOT EXISTS "NeighborhoodId" uuid""", ct);
+                """ALTER TABLE "BuyerRequests" ADD COLUMN IF NOT EXISTS "NeighborhoodId" text""", ct);
 
-            // Companies structured location IDs — required for onboarding matching
+            // If previously added as uuid, migrate to text
             await _db.Database.ExecuteSqlRawAsync(
-                """ALTER TABLE "Companies" ADD COLUMN IF NOT EXISTS "CityId" uuid""", ct);
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name='BuyerRequests' AND column_name='CityId' AND data_type='uuid')
+                    THEN ALTER TABLE "BuyerRequests"
+                         ALTER COLUMN "CityId"         TYPE text USING "CityId"::text,
+                         ALTER COLUMN "NeighborhoodId" TYPE text USING "NeighborhoodId"::text;
+                    END IF;
+                END $$;
+                """, ct);
+
+            // Companies structured location IDs — text to match EF Core GuidToStringConverter
             await _db.Database.ExecuteSqlRawAsync(
-                """ALTER TABLE "Companies" ADD COLUMN IF NOT EXISTS "NeighborhoodId" uuid""", ct);
+                """ALTER TABLE "Companies" ADD COLUMN IF NOT EXISTS "CityId" text""", ct);
+            await _db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Companies" ADD COLUMN IF NOT EXISTS "NeighborhoodId" text""", ct);
+
+            // If previously added as uuid, migrate to text
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name='Companies' AND column_name='CityId' AND data_type='uuid')
+                    THEN ALTER TABLE "Companies"
+                         ALTER COLUMN "CityId"         TYPE text USING "CityId"::text,
+                         ALTER COLUMN "NeighborhoodId" TYPE text USING "NeighborhoodId"::text;
+                    END IF;
+                END $$;
+                """, ct);
 
             _log.LogInformation("[schema-patch] Matching schema applied (Plans.ProductArea, BuyerRequests.CityId/NeighborhoodId, Companies.CityId/NeighborhoodId).");
         }
@@ -998,13 +1026,39 @@ public sealed class DatabaseStartupService
     {
         try
         {
+            // If the table was previously created with uuid columns (before EF Core
+            // GuidToStringConverter was taken into account), migrate every uuid
+            // column to text so EF Core comparisons (uuid = character varying) stop
+            // failing with Npgsql error 42883.
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name  = 'UserCoverages'
+                          AND column_name = 'Id'
+                          AND data_type   = 'uuid'
+                    ) THEN
+                        DROP INDEX IF EXISTS "IX_UserCoverages_UserId";
+                        DROP INDEX IF EXISTS "IX_UserCoverages_Unique";
+                        ALTER TABLE "UserCoverages"
+                            ALTER COLUMN "Id"             TYPE text USING "Id"::text,
+                            ALTER COLUMN "UserId"         TYPE text USING "UserId"::text,
+                            ALTER COLUMN "CityId"         TYPE text USING "CityId"::text,
+                            ALTER COLUMN "NeighborhoodId" TYPE text USING "NeighborhoodId"::text;
+                    END IF;
+                END $$;
+                """, ct);
+
+            // Create with text columns (matches EF Core GuidToStringConverter)
             await _db.Database.ExecuteSqlRawAsync(
                 """
                 CREATE TABLE IF NOT EXISTS "UserCoverages" (
-                    "Id"             uuid        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-                    "UserId"         uuid        NOT NULL,
-                    "CityId"         uuid        NOT NULL,
-                    "NeighborhoodId" uuid,
+                    "Id"             text        NOT NULL DEFAULT gen_random_uuid()::text PRIMARY KEY,
+                    "UserId"         text        NOT NULL,
+                    "CityId"         text        NOT NULL,
+                    "NeighborhoodId" text,
                     "CoverageType"   varchar(20) NOT NULL DEFAULT 'city_wide',
                     "CreatedAt"      timestamptz NOT NULL DEFAULT now(),
                     "UpdatedAt"      timestamptz NOT NULL DEFAULT now()
@@ -1025,7 +1079,7 @@ public sealed class DatabaseStartupService
                     ON "UserCoverages" ("UserId", "CityId", "CoverageType", "NeighborhoodId")
                 """, ct);
 
-            _log.LogInformation("[schema-patch] UserCoverages table + indexes ensured.");
+            _log.LogInformation("[schema-patch] UserCoverages table + indexes ensured (text columns).");
         }
         catch (Exception ex)
         {
@@ -1037,20 +1091,39 @@ public sealed class DatabaseStartupService
     {
         try
         {
+            // Migrate existing uuid columns to text if needed
+            await _db.Database.ExecuteSqlRawAsync(
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name  = 'LocationSuggestions'
+                          AND column_name = 'Id'
+                          AND data_type   = 'uuid'
+                    ) THEN
+                        ALTER TABLE "LocationSuggestions"
+                            ALTER COLUMN "Id"       TYPE text USING "Id"::text,
+                            ALTER COLUMN "ParentId" TYPE text USING "ParentId"::text;
+                    END IF;
+                END $$;
+                """, ct);
+
+            // Create with text columns to match EF Core GuidToStringConverter
             await _db.Database.ExecuteSqlRawAsync(
                 """
                 CREATE TABLE IF NOT EXISTS "LocationSuggestions" (
-                    "Id"        uuid         NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+                    "Id"        text         NOT NULL DEFAULT gen_random_uuid()::text PRIMARY KEY,
                     "Name"      varchar(200) NOT NULL,
                     "Type"      varchar(20)  NOT NULL,
-                    "ParentId"  uuid,
+                    "ParentId"  text,
                     "Status"    varchar(20)  NOT NULL DEFAULT 'pending',
                     "CreatedAt" timestamptz  NOT NULL DEFAULT now(),
                     "UpdatedAt" timestamptz  NOT NULL DEFAULT now()
                 )
                 """, ct);
 
-            _log.LogInformation("[schema-patch] LocationSuggestions table ensured.");
+            _log.LogInformation("[schema-patch] LocationSuggestions table ensured (text columns).");
         }
         catch (Exception ex)
         {
