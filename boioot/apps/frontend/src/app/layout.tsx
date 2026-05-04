@@ -5,7 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { SubscriptionProvider } from "@/context/SubscriptionContext";
 import { AuthGateProvider } from "@/context/AuthGateContext";
 import { ContentProvider } from "@/context/ContentContext";
-import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
+import { SiteSettingsProvider, DEFAULT_SETTINGS, type SiteSettings } from "@/context/SiteSettingsContext";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import IntegrationHead from "@/components/integrations/IntegrationHead";
 import IntegrationBody from "@/components/integrations/IntegrationBody";
@@ -45,11 +45,29 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({
+// Fetch site settings on the server so the very first SSR paint already
+// reflects the real database values — no flash of disabled sections appearing.
+async function getInitialSiteSettings(): Promise<SiteSettings> {
+  const backendUrl =
+    process.env.BACKEND_URL ?? "http://localhost:8080";
+  try {
+    const res = await fetch(`${backendUrl}/api/settings/public`, {
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) return DEFAULT_SETTINGS;
+    return (await res.json()) as SiteSettings;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const initialSettings = await getInitialSiteSettings();
+
   return (
     <html lang="ar" dir="rtl" className={cairo.variable} suppressHydrationWarning>
       <head>
@@ -60,7 +78,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <IntegrationBody />
-        <SiteSettingsProvider>
+        <SiteSettingsProvider initialSettings={initialSettings}>
           <AuthProvider>
             <SubscriptionProvider>
               <ContentProvider>

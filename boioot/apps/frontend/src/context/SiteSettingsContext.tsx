@@ -25,9 +25,9 @@ interface SiteSettingsContextValue {
   refresh: () => Promise<void>;
 }
 
-// ── Defaults — all sections enabled so nothing disappears before data loads ───
+// ── Defaults — all sections enabled so nothing disappears on error ─────────────
 
-const DEFAULT_SETTINGS: SiteSettings = {
+export const DEFAULT_SETTINGS: SiteSettings = {
   sectionProjectsEnabled:  true,
   sectionRequestsEnabled:  true,
   sectionDailyRentEnabled: true,
@@ -38,11 +38,11 @@ const DEFAULT_SETTINGS: SiteSettings = {
 
 const SiteSettingsContext = createContext<SiteSettingsContextValue>({
   settings:  DEFAULT_SETTINGS,
-  isLoading: true,
+  isLoading: false,
   refresh:   async () => {},
 });
 
-// ── Provider ──────────────────────────────────────────────────────────────────
+// ── Client-side fetch (used for refresh after admin save) ─────────────────────
 
 async function fetchSettings(): Promise<SiteSettings> {
   const res = await fetch(`${apiConfig.baseUrl}/settings/public`, {
@@ -52,22 +52,37 @@ async function fetchSettings(): Promise<SiteSettings> {
   return res.json();
 }
 
-export function SiteSettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings]   = useState<SiteSettings>(DEFAULT_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
+// ── Provider ──────────────────────────────────────────────────────────────────
+// initialSettings: passed from the server component (layout.tsx) so the first
+// SSR paint already reflects the real database values — no flash of hidden
+// sections appearing before the client-side fetch completes.
+
+export function SiteSettingsProvider({
+  children,
+  initialSettings,
+}: {
+  children:        ReactNode;
+  initialSettings?: SiteSettings;
+}) {
+  const [settings, setSettings]   = useState<SiteSettings>(
+    initialSettings ?? DEFAULT_SETTINGS,
+  );
+  const [isLoading, setIsLoading] = useState(!initialSettings);
 
   const load = async () => {
     try {
       const data = await fetchSettings();
       setSettings(data);
     } catch {
-      // Keep defaults — sections remain visible on error
+      // Keep current value — sections remain visible on error
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    // Always re-fetch on mount so the client stays in sync even if the server
+    // snapshot was slightly stale (e.g. cached CDN edge response).
     load();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
