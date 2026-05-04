@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, type CSSProperties } from "react";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 import {
   PROPERTY_STATUS_LABELS,
   PROPERTY_TYPE_LABELS,
@@ -153,7 +154,7 @@ export function PropertyDetailModal({
         {primaryImage ? (
           <div style={{ width: "100%", height: 220, overflow: "hidden", backgroundColor: "#f1f5f9" }}>
             <img
-              src={primaryImage.imageUrl}
+              src={normalizeImageUrl(primaryImage.imageUrl) ?? primaryImage.imageUrl}
               alt={property.title}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />

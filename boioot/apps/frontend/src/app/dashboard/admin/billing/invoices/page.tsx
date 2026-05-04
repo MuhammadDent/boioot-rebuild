@@ -7,6 +7,7 @@ import { DashboardBackLink } from "@/components/dashboard/DashboardBackLink";
 import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { adminApi } from "@/features/admin/api";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 import {
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_BADGE,
@@ -215,7 +216,7 @@ function InvoiceModal({ invoice, onClose, onConfirmed, onRejected }: InvoiceModa
             <Section title="إثبات الدفع">
               <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid var(--color-border)", marginBottom: "0.75rem" }}>
                 <Image
-                  src={invoice.proof.imageUrl}
+                  src={normalizeImageUrl(invoice.proof.imageUrl) ?? invoice.proof.imageUrl}
                   alt="إثبات الدفع"
                   width={600}
                   height={400}

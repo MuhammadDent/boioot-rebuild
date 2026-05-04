@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, type CSSProperties } from "r
 import { useRouter } from "next/navigation";
 import { adminApi } from "@/features/admin/api";
 import { normalizeError } from "@/lib/api";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 import { PROPERTY_STATUS_BADGE } from "@/features/admin/constants";
 import {
   PROPERTY_STATUS_LABELS,
@@ -126,7 +127,7 @@ function PropertyCard({ property, onClick }: { property: PropertyResponse; onCli
         backgroundColor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         {thumb
-          ? <img src={thumb.imageUrl} alt={property.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ? <img src={normalizeImageUrl(thumb.imageUrl) ?? thumb.imageUrl} alt={property.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           : <span style={{ fontSize: "2rem" }}>🏠</span>}
       </div>
 

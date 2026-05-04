@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, type ChangeEvent, type DragEvent } from "r
 import Link from "next/link";
 import { apiConfig } from "@/lib/api-config";
 import { tokenStorage } from "@/lib/token";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 import { imagesService } from "@/services/images.service";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
@@ -865,7 +866,7 @@ export default function PostAdWizard({
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={img.url}
+                        src={normalizeImageUrl(img.url) ?? img.url}
                         alt={`صورة ${idx + 1}`}
                         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                       />

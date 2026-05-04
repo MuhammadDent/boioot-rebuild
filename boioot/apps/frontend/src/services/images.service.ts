@@ -15,6 +15,7 @@
  */
 
 import { apiConfig } from "@/lib/api-config";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 
 const BASE = apiConfig.baseUrl;
 
@@ -92,7 +93,14 @@ export const imagesService = {
       headers:     { Authorization: `Bearer ${token}` },
     });
     await throwIfError(res, "فشل رفع الصورة");
-    return await res.json() as UploadedImageInfo;
+    const raw = await res.json() as UploadedImageInfo;
+    // Normalize the CDN URL: assets.boioot.net has no DNS record.
+    // Rewrite to the always-working r2.dev public URL.
+    return {
+      ...raw,
+      url:          normalizeImageUrl(raw.url)          ?? raw.url,
+      thumbnailUrl: normalizeImageUrl(raw.thumbnailUrl) ?? raw.thumbnailUrl,
+    };
   },
 
   // ── Attach ────────────────────────────────────────────────────────────────
