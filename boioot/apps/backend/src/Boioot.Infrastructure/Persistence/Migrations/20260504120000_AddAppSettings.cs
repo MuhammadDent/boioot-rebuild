@@ -12,9 +12,8 @@ namespace Boioot.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.Sql(@"
                 CREATE TABLE IF NOT EXISTS ""AppSettings"" (
-                    ""Key""         TEXT NOT NULL,
-                    ""Value""       TEXT NOT NULL DEFAULT 'true',
-                    ""Description"" TEXT,
+                    ""Key""   TEXT NOT NULL,
+                    ""Value"" TEXT NOT NULL DEFAULT 'true',
                     CONSTRAINT ""PK_AppSettings"" PRIMARY KEY (""Key"")
                 );
             ");

@@ -12,21 +12,13 @@ public sealed class SiteSettingsService : ISiteSettingsService
     private readonly BoiootDbContext _ctx;
     private readonly ILogger<SiteSettingsService> _logger;
 
-    // The four feature-toggle keys managed by this service.
-    // All default to "true" so nothing disappears if the row is missing.
     private static readonly Dictionary<string, string> DefaultValues = new()
     {
-        ["section_projects_enabled"]    = "true",
-        ["section_requests_enabled"]    = "true",
-        ["section_daily_rent_enabled"]  = "true",
-        ["section_blog_enabled"]        = "true",
+        ["section_projects_enabled"]   = "true",
+        ["section_requests_enabled"]   = "true",
+        ["section_daily_rent_enabled"] = "true",
+        ["section_blog_enabled"]       = "true",
     };
-
-    private static readonly SiteSettingsDto AllEnabled = new(
-        SectionProjectsEnabled:  true,
-        SectionRequestsEnabled:  true,
-        SectionDailyRentEnabled: true,
-        SectionBlogEnabled:      true);
 
     public SiteSettingsService(BoiootDbContext ctx, ILogger<SiteSettingsService> logger)
     {
@@ -38,25 +30,15 @@ public sealed class SiteSettingsService : ISiteSettingsService
 
     public async Task<SiteSettingsDto> GetAsync(CancellationToken ct = default)
     {
-        try
-        {
-            await EnsureTableAsync(ct);
+        await EnsureTableAsync(ct);
 
-            var rows = await _ctx.AppSettings
-                .Where(s => DefaultValues.Keys.Contains(s.Key))
-                .ToListAsync(ct);
+        var rows = await _ctx.AppSettings
+            .Where(s => DefaultValues.Keys.Contains(s.Key))
+            .ToListAsync(ct);
 
-            // Seed any missing keys so future reads are consistent
-            await SeedMissingAsync(rows, ct);
+        await SeedMissingAsync(rows, ct);
 
-            return MapToDto(rows);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "[SiteSettings] Failed to read AppSettings — returning safe defaults (all sections enabled)");
-            return AllEnabled;
-        }
+        return MapToDto(rows);
     }
 
     // ── Write ─────────────────────────────────────────────────────────────────
@@ -81,9 +63,7 @@ public sealed class SiteSettingsService : ISiteSettingsService
         {
             var row = existing.FirstOrDefault(r => r.Key == key);
             if (row is null)
-            {
                 _ctx.AppSettings.Add(new AppSetting { Key = key, Value = value });
-            }
             else
             {
                 row.Value = value;
@@ -97,26 +77,18 @@ public sealed class SiteSettingsService : ISiteSettingsService
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Creates the AppSettings table if it does not yet exist.
-    /// This handles environments (e.g. a Fly Postgres instance) where the EF
-    /// migration has not been run, without crashing the whole request.
+    /// Creates the AppSettings table if it does not yet exist (idempotent).
+    /// Handles environments where the EF migration has not been applied.
+    /// Schema: only Key + Value — no Description column.
     /// </summary>
     private async Task EnsureTableAsync(CancellationToken ct)
     {
-        try
-        {
-            await _ctx.Database.ExecuteSqlRawAsync(@"
-                CREATE TABLE IF NOT EXISTS ""AppSettings"" (
-                    ""Key""         VARCHAR(200) NOT NULL,
-                    ""Value""       TEXT         NOT NULL DEFAULT 'true',
-                    ""Description"" TEXT,
-                    CONSTRAINT ""PK_AppSettings"" PRIMARY KEY (""Key"")
-                );", ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[SiteSettings] Could not ensure AppSettings table — continuing anyway");
-        }
+        await _ctx.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS ""AppSettings"" (
+                ""Key""   VARCHAR(200) NOT NULL,
+                ""Value"" TEXT         NOT NULL DEFAULT 'true',
+                CONSTRAINT ""PK_AppSettings"" PRIMARY KEY (""Key"")
+            );", ct);
     }
 
     private async Task SeedMissingAsync(List<AppSetting> existing, CancellationToken ct)
@@ -139,7 +111,7 @@ public sealed class SiteSettingsService : ISiteSettingsService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[SiteSettings] Could not seed missing AppSettings rows — using in-memory defaults");
+            _logger.LogWarning(ex, "[SiteSettings] SeedMissingAsync: could not persist defaults — using in-memory values");
             _ctx.ChangeTracker.Clear();
         }
     }
@@ -153,9 +125,9 @@ public sealed class SiteSettingsService : ISiteSettingsService
         }
 
         return new SiteSettingsDto(
-            SectionProjectsEnabled:   Get("section_projects_enabled"),
-            SectionRequestsEnabled:   Get("section_requests_enabled"),
-            SectionDailyRentEnabled:  Get("section_daily_rent_enabled"),
-            SectionBlogEnabled:       Get("section_blog_enabled"));
+            SectionProjectsEnabled:  Get("section_projects_enabled"),
+            SectionRequestsEnabled:  Get("section_requests_enabled"),
+            SectionDailyRentEnabled: Get("section_daily_rent_enabled"),
+            SectionBlogEnabled:      Get("section_blog_enabled"));
     }
 }

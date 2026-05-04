@@ -19,9 +19,6 @@ public class AppSettingConfiguration : IEntityTypeConfiguration<AppSetting>
             .HasMaxLength(500)
             .HasDefaultValue("true");
 
-        builder.Property(s => s.Description)
-            .HasMaxLength(300);
-
         builder.ToTable("AppSettings");
     }
 }
