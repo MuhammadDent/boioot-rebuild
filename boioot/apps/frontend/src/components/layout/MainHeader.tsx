@@ -11,6 +11,7 @@ import MessagesIconBtn from "@/components/ui/MessagesIconBtn";
 import NotificationsBell from "@/components/dashboard/NotificationsBell";
 import MobileNavDrawer from "@/components/layout/MobileNavDrawer";
 import { getRoleCategory } from "@/features/admin/constants";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -20,11 +21,11 @@ function userInitials(name: string | null | undefined): string {
 }
 
 export const NAV_LINKS = [
-  { href: "/",              label: "الرئيسية",       exact: true  },
-  { href: "/daily-rentals", label: "الإيجار اليومي",  exact: false },
-  { href: "/projects",      label: "المشاريع",        exact: false },
-  { href: "/requests",      label: "الطلبات",         exact: false },
-  { href: "/blog",          label: "المدونة",         exact: false },
+  { href: "/",              label: "الرئيسية",       exact: true,  settingKey: null                      },
+  { href: "/daily-rentals", label: "الإيجار اليومي",  exact: false, settingKey: "sectionDailyRentEnabled" },
+  { href: "/projects",      label: "المشاريع",        exact: false, settingKey: "sectionProjectsEnabled"  },
+  { href: "/requests",      label: "الطلبات",         exact: false, settingKey: "sectionRequestsEnabled"  },
+  { href: "/blog",          label: "المدونة",         exact: false, settingKey: "sectionBlogEnabled"      },
 ];
 
 // ─── MainHeader ───────────────────────────────────────────────────────────────
@@ -44,6 +45,11 @@ export default function MainHeader() {
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
+
+  const { settings } = useSiteSettings();
+  const visibleLinks = NAV_LINKS.filter(
+    (link) => !link.settingKey || settings[link.settingKey as keyof typeof settings]
+  );
 
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
@@ -100,7 +106,7 @@ export default function MainHeader() {
 
           {/* ── Desktop Nav links ─────────────────────────────────────── */}
           <nav className="main-hdr__nav" aria-label="التنقل الرئيسي">
-            {NAV_LINKS.map(({ href, label, exact }) => {
+            {visibleLinks.map(({ href, label, exact }) => {
               const active = isActive(href, exact);
               return (
                 <Link
@@ -226,7 +232,7 @@ export default function MainHeader() {
           isOpen={mobileOpen}
           onClose={closeMobile}
           pathname={pathname}
-          navLinks={NAV_LINKS}
+          navLinks={visibleLinks}
           isAuthenticated={isAuthenticated}
           isAdminOrStaff={isAdminOrStaff}
           userFullName={user?.fullName}

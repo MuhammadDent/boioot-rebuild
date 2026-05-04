@@ -8,6 +8,8 @@ import { projectsApi, PROJECTS_PAGE_SIZE } from "@/features/projects/api";
 import { PROJECT_STATUS_LABELS } from "@/features/projects/constants";
 import { useCities } from "@/hooks/useCities";
 import type { ProjectResponse } from "@/types";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
+import SectionDisabled from "@/components/ui/SectionDisabled";
 
 // ─── Filter form shape ────────────────────────────────────────────────────────
 
@@ -25,6 +27,7 @@ function ProjectsContent() {
   const router       = useRouter();
   const pathname     = usePathname();
   const { cities }   = useCities();
+  const { settings, isLoading: settingsLoading } = useSiteSettings();
 
   // Applied filter values — derived from URL, used for fetching
   const cityParam   = searchParams.get("city")   || "";
@@ -100,6 +103,8 @@ function ProjectsContent() {
   }
 
   const hasActiveFilters = !!(cityParam || statusParam);
+
+  if (!settingsLoading && !settings.sectionProjectsEnabled) return <SectionDisabled />;
 
   // ── Render ───────────────────────────────────────────────────────────────────
 

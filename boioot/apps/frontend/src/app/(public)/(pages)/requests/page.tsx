@@ -7,6 +7,8 @@ import { api, normalizeError } from "@/lib/api";
 import Spinner from "@/components/ui/Spinner";
 import { useAuth } from "@/context/AuthContext";
 import { useAuthGate } from "@/context/AuthGateContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
+import SectionDisabled from "@/components/ui/SectionDisabled";
 
 const PAGE_SIZE = 12;
 
@@ -57,6 +59,7 @@ function RequestsContent() {
   const pathname     = usePathname();
   const { isAuthenticated } = useAuth();
   const { openAuthModal }   = useAuthGate();
+  const { settings, isLoading: settingsLoading } = useSiteSettings();
 
   function guardNewRequest() {
     if (isAuthenticated) { router.push("/dashboard/my-requests/new"); } else { openAuthModal(() => router.push("/dashboard/my-requests/new")); }
@@ -131,6 +134,8 @@ function RequestsContent() {
   }
 
   const hasActiveFilters = !!(typeParam || cityParam);
+
+  if (!settingsLoading && !settings.sectionRequestsEnabled) return <SectionDisabled />;
 
   return (
     <div dir="rtl" style={{ backgroundColor: "#f8fafc", paddingBottom: "3rem" }}>

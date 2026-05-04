@@ -8,6 +8,7 @@ import { useAuthGate } from "@/context/AuthGateContext";
 import MessagesIconBtn from "./MessagesIconBtn";
 import { useContent } from "@/context/ContentContext";
 import { getRoleCategory } from "@/features/admin/constants";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -16,11 +17,11 @@ function userInitials(name: string): string {
 }
 
 const NAV_LINKS = [
-  { href: "/",              label: "الرئيسية",       exact: true  },
-  { href: "/daily-rentals", label: "الإيجار اليومي",  exact: false, highlight: true },
-  { href: "/projects",      label: "المشاريع",        exact: false },
-  { href: "/requests",      label: "الطلبات",         exact: false },
-  { href: "/blog",          label: "المدونة",         exact: false },
+  { href: "/",              label: "الرئيسية",       exact: true,  highlight: false, settingKey: null                      },
+  { href: "/daily-rentals", label: "الإيجار اليومي",  exact: false, highlight: true,  settingKey: "sectionDailyRentEnabled" },
+  { href: "/projects",      label: "المشاريع",        exact: false, highlight: false, settingKey: "sectionProjectsEnabled"  },
+  { href: "/requests",      label: "الطلبات",         exact: false, highlight: false, settingKey: "sectionRequestsEnabled"  },
+  { href: "/blog",          label: "المدونة",         exact: false, highlight: false, settingKey: "sectionBlogEnabled"      },
 ];
 
 // ─── Navbar ────────────────────────────────────────────────────────────────────
@@ -33,6 +34,11 @@ export default function Navbar() {
 
   const loginText    = useContent("navbar.loginText",    "تسجيل الدخول");
   const registerText = useContent("navbar.registerText", "إنشاء حساب");
+
+  const { settings } = useSiteSettings();
+  const visibleLinks = NAV_LINKS.filter(
+    (link) => !link.settingKey || settings[link.settingKey as keyof typeof settings]
+  );
 
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href);
@@ -83,7 +89,7 @@ export default function Navbar() {
 
           {/* Nav links */}
           <div className="navbar__links">
-            {NAV_LINKS.map(({ href, label, exact, highlight }) => {
+            {visibleLinks.map(({ href, label, exact, highlight }) => {
               const active = isActive(href, exact ?? false);
               return (
                 <Link

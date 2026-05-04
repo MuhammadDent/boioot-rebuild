@@ -8,6 +8,8 @@ import { propertiesApi, PROPERTIES_PAGE_SIZE } from "@/features/properties/api";
 import { PROPERTY_TYPE_LABELS } from "@/features/properties/constants";
 import { useCities } from "@/hooks/useCities";
 import type { PropertyResponse } from "@/types";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
+import SectionDisabled from "@/components/ui/SectionDisabled";
 
 // ─── Type chips ───────────────────────────────────────────────────────────────
 
@@ -38,6 +40,7 @@ function DailyRentalsContent() {
   const router       = useRouter();
   const pathname     = usePathname();
   const { cities }   = useCities();
+  const { settings, isLoading: settingsLoading } = useSiteSettings();
 
   const cityParam     = searchParams.get("city")     || "";
   const typeParam     = searchParams.get("type")     || "";
@@ -134,6 +137,8 @@ function DailyRentalsContent() {
   }
 
   const hasActiveFilters = !!(cityParam || typeParam || minPriceParam || maxPriceParam);
+
+  if (!settingsLoading && !settings.sectionDailyRentEnabled) return <SectionDisabled />;
 
   // ── Render ───────────────────────────────────────────────────────────────────
 

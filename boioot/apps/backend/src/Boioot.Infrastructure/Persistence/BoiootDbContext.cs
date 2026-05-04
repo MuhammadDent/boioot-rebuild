@@ -89,6 +89,9 @@ public class BoiootDbContext : DbContext
     // ── User uploaded images ───────────────────────────────────────────────────
     public DbSet<UserImage> UserImages => Set<UserImage>();
 
+    // ── Site feature toggles ───────────────────────────────────────────────────
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BoiootDbContext).Assembly);

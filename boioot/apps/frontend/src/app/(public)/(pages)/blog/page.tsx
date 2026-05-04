@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { serverGetBlogCategories, serverGetBlogSeoSettings } from "@/lib/server-blog-api";
 import BlogPageClient from "./BlogPageClient";
+import SectionGuard from "@/components/ui/SectionGuard";
 
 interface Props {
   searchParams: Promise<{ category?: string }>;
@@ -55,11 +56,13 @@ export default async function BlogPage({ searchParams }: Props) {
   const categories = await serverGetBlogCategories();
 
   return (
-    <Suspense fallback={<BlogSkeleton />}>
-      <BlogPageClient
-        initialCategory={category ?? null}
-        categories={categories}
-      />
-    </Suspense>
+    <SectionGuard settingKey="sectionBlogEnabled">
+      <Suspense fallback={<BlogSkeleton />}>
+        <BlogPageClient
+          initialCategory={category ?? null}
+          categories={categories}
+        />
+      </Suspense>
+    </SectionGuard>
   );
 }

@@ -65,6 +65,27 @@ namespace Boioot.Infrastructure.Persistence.Migrations
                     b.ToTable("Accounts");
                 });
 
+            modelBuilder.Entity("Boioot.Domain.Entities.AppSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasDefaultValue("true")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("AppSettings");
+                });
+
             modelBuilder.Entity("Boioot.Domain.Entities.AccountUser", b =>
                 {
                     b.Property<string>("AccountId")

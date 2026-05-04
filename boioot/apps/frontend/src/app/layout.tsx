@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { SubscriptionProvider } from "@/context/SubscriptionContext";
 import { AuthGateProvider } from "@/context/AuthGateContext";
 import { ContentProvider } from "@/context/ContentContext";
+import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import IntegrationHead from "@/components/integrations/IntegrationHead";
 import IntegrationBody from "@/components/integrations/IntegrationBody";
@@ -59,13 +60,15 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <IntegrationBody />
-        <AuthProvider>
-          <SubscriptionProvider>
-            <ContentProvider>
-              <AuthGateProvider>{children}</AuthGateProvider>
-            </ContentProvider>
-          </SubscriptionProvider>
-        </AuthProvider>
+        <SiteSettingsProvider>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <ContentProvider>
+                <AuthGateProvider>{children}</AuthGateProvider>
+              </ContentProvider>
+            </SubscriptionProvider>
+          </AuthProvider>
+        </SiteSettingsProvider>
         <ToastProvider />
       </body>
     </html>

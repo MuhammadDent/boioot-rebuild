@@ -1,4 +1,12 @@
 import { api } from "@/lib/api";
+
+export interface SiteSettingsPayload {
+  sectionProjectsEnabled:  boolean;
+  sectionRequestsEnabled:  boolean;
+  sectionDailyRentEnabled: boolean;
+  sectionBlogEnabled:      boolean;
+}
+
 import type {
   PagedResult,
   AdminUserResponse,
@@ -705,5 +713,17 @@ export const adminApi = {
   /** DELETE /api/admin/plan-catalog/limits/{id} */
   deleteCatalogLimit(id: string): Promise<void> {
     return api.delete(`/admin/plan-catalog/limits/${id}`);
+  },
+
+  // ── Site Settings (feature toggles) ────────────────────────────────────────
+
+  /** GET /api/admin/settings */
+  getSiteSettings(): Promise<SiteSettingsPayload> {
+    return api.get("/admin/settings");
+  },
+
+  /** PUT /api/admin/settings */
+  updateSiteSettings(payload: SiteSettingsPayload): Promise<SiteSettingsPayload> {
+    return api.put("/admin/settings", payload);
   },
 };

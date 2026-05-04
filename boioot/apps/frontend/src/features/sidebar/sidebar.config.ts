@@ -463,6 +463,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         { href: "/dashboard/admin/property-types",    label: "أنواع العقارات",   icon: I.check,               permission: "settings.manage" },
         { href: "/dashboard/admin/ownership-types",   label: "أنواع الملكية",    icon: I.check,               permission: "settings.manage" },
         { href: "/dashboard/admin/sections",          label: "مقاطع الصفحات",    icon: I.grid,                permission: "settings.manage" },
+        { href: "/dashboard/admin/site-settings",     label: "إعدادات الموقع",    icon: I.check,               permission: "settings.manage" },
         { href: "/dashboard/admin/integrations",      label: "التطبيقات المدمجة", icon: I.system,              permission: "settings.manage" },
       ],
     },

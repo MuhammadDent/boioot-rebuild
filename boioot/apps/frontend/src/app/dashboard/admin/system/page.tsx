@@ -151,6 +151,20 @@ const SYSTEM_CARDS: SystemCard[] = [
       </Icon>
     ),
   },
+  {
+    href: "/dashboard/admin/site-settings",
+    label: "إعدادات الموقع",
+    description: "إظهار وإخفاء أقسام الموقع (المشاريع، الطلبات، الإيجار، المدونة)",
+    color: "#0f766e",
+    bg: "#f0fdfa",
+    permission: "settings.manage",
+    icon: (
+      <Icon>
+        <rect x="1" y="5" width="22" height="14" rx="7" />
+        <circle cx="16" cy="12" r="3" />
+      </Icon>
+    ),
+  },
 ];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
