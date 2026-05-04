@@ -113,22 +113,36 @@ export default function FavoritesPage() {
           <p style={{ margin: "0 0 2rem", fontSize: "0.875rem", color: "#6B7280", lineHeight: 1.7, maxWidth: 320, marginInline: "auto" }}>
             تصفح العقارات وأضف ما يعجبك إلى المفضلة للرجوع إليها لاحقاً
           </p>
-          <Link
-            href="/properties"
-            style={{
-              display: "inline-block",
-              padding: "0.8rem 2.25rem",
-              backgroundColor: "#16A34A",
-              color: "#fff",
-              borderRadius: 12,
-              fontWeight: 700,
-              fontSize: "1rem",
-              textDecoration: "none",
-              boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
-            }}
-          >
-            تصفح العقارات
-          </Link>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+            <Link
+              href="/properties"
+              style={{
+                display: "inline-block",
+                padding: "0.8rem 2.25rem",
+                backgroundColor: "#16A34A",
+                color: "#fff",
+                borderRadius: 12,
+                fontWeight: 700,
+                fontSize: "1rem",
+                textDecoration: "none",
+                boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
+              }}
+            >
+              تصفح العقارات
+            </Link>
+            <Link
+              href="/requests"
+              style={{
+                display: "inline-block",
+                padding: "0.65rem 1.75rem", borderRadius: 12,
+                border: "1.5px solid #e2e8f0", color: "#475569",
+                textDecoration: "none", fontWeight: 600, fontSize: "0.9rem",
+                background: "#f8fafc",
+              }}
+            >
+              تصفح الطلبات
+            </Link>
+          </div>
         </div>
       )}
 

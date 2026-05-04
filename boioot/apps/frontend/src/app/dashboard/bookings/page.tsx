@@ -934,8 +934,51 @@ export default function DashboardBookingsPage() {
       <section>
         <h2 style={{ margin: "0 0 0.85rem", fontSize: "1.05rem", fontWeight: 800, color: "#0f172a" }}>حجوزاتي</h2>
         {mine.length === 0 ? (
-          <div style={{ background: "#fff", border: "1px dashed #cbd5e1", borderRadius: 14, padding: "1rem", color: "#64748b" }}>
-            لم ترسل أي طلب حجز بعد.
+          <div style={{
+            background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16,
+            padding: "4rem 2rem", textAlign: "center",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: 20,
+              background: "#f0f9ff", border: "1.5px solid #bae6fd",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 1.25rem", fontSize: "2rem",
+            }}>
+              🏠
+            </div>
+            <h3 style={{ margin: "0 0 0.5rem", fontWeight: 800, fontSize: "1.1rem", color: "#0f172a" }}>
+              لم ترسل أي طلب حجز بعد
+            </h3>
+            <p style={{ margin: "0 0 2rem", fontSize: "0.88rem", color: "#64748b", lineHeight: 1.7, maxWidth: 320, marginInline: "auto" }}>
+              تصفح وحدات الإيجار اليومي واحجز إقامتك المناسبة
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+              <Link
+                href="/daily-rent"
+                style={{
+                  display: "inline-block",
+                  padding: "0.8rem 2.25rem", borderRadius: 12,
+                  background: "var(--color-primary)", color: "#fff",
+                  textDecoration: "none", fontWeight: 700, fontSize: "1rem",
+                  boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
+                }}
+              >
+                تصفح الإيجار اليومي
+              </Link>
+              <Link
+                href="/properties"
+                style={{
+                  display: "inline-block",
+                  padding: "0.65rem 1.75rem", borderRadius: 12,
+                  border: "1.5px solid #e2e8f0", color: "#475569",
+                  textDecoration: "none", fontWeight: 600, fontSize: "0.9rem",
+                  background: "#f8fafc",
+                }}
+              >
+                تصفح العقارات
+              </Link>
+            </div>
           </div>
         ) : (
           <div style={{ display: "grid", gap: "0.75rem" }}>
