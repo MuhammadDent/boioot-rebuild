@@ -17,7 +17,10 @@ public record AgencyListItemDto(
     string? VerificationBadge,    // human-readable admin label, e.g. "وسيط موثوق"
     bool    IsFeatured,
     int     SortOrder,
-    int     ListingCount);
+    int     ListingCount,
+    // ── Ratings (aggregated from AgencyRatings table) ─────────────────────────
+    decimal AverageRating,
+    int     RatingsCount);
 
 // ── Public detail ─────────────────────────────────────────────────────────────
 
@@ -36,7 +39,10 @@ public record AgencyDetailDto(
     string?  VerificationBadge,
     bool     IsFeatured,
     int      ListingCount,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    // ── Ratings ───────────────────────────────────────────────────────────────
+    decimal  AverageRating,
+    int      RatingsCount);
 
 // ── Paged wrappers ────────────────────────────────────────────────────────────
 
@@ -91,3 +97,27 @@ public record UpdateAgencyProfileRequest(
     string? City,
     string? LogoUrl,
     int     SortOrder);
+
+// ── Agency ratings ────────────────────────────────────────────────────────────
+
+public record AgencyRatingDto(
+    string  Id,
+    string  ReviewerId,
+    string  ReviewerName,
+    int     Rating,
+    string? Comment,
+    DateTime CreatedAt);
+
+public record CreateAgencyRatingRequest(int Rating, string? Comment);
+
+public record AgencyRatingsPagedResult(
+    IReadOnlyList<AgencyRatingDto> Items,
+    int     Page,
+    int     PageSize,
+    int     TotalCount,
+    decimal AverageRating,
+    int     RatingsCount);
+
+// ── Agency city item for hierarchical filter ──────────────────────────────────
+
+public record AgencyCityItem(string City, string Province);

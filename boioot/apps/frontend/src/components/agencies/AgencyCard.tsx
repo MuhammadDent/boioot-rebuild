@@ -18,16 +18,41 @@ export interface AgencyListItem {
   isFeatured:         boolean;
   sortOrder:          number;
   listingCount:       number;
+  averageRating:      number;
+  ratingsCount:       number;
 }
 
 interface Props {
   agency: AgencyListItem;
 }
 
+function StarRow({ average, count }: { average: number; count: number }) {
+  if (count === 0) return null;
+  const full  = Math.floor(average);
+  const half  = average - full >= 0.3 && average - full < 0.8;
+  const empty = 5 - full - (half ? 1 : 0);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.78rem" }}>
+      {Array.from({ length: full }).map((_, i) => (
+        <span key={`f${i}`} style={{ color: "#f59e0b" }}>★</span>
+      ))}
+      {half && <span style={{ color: "#f59e0b" }}>½</span>}
+      {Array.from({ length: empty }).map((_, i) => (
+        <span key={`e${i}`} style={{ color: "#d1d5db" }}>★</span>
+      ))}
+      <span style={{ color: "#64748b", marginRight: "0.15rem" }}>
+        {average.toFixed(1)} ({count})
+      </span>
+    </div>
+  );
+}
+
 export default function AgencyCard({ agency }: Props) {
-  const initial    = agency.fullName.trim()[0] ?? "؟";
-  // Badge text: prefer the admin-assigned label, fall back to generic "موثق"
-  const badgeLabel = agency.verificationBadge?.trim() || "موثق ✓";
+  const initial = agency.fullName.trim()[0] ?? "؟";
+
+  // Badge text: prefer admin-set label; fall back to role-based Arabic label
+  const autoBadge = agency.role === "Office" ? "مكتب موثوق ✓" : "وسيط موثوق ✓";
+  const badgeLabel = agency.verificationBadge?.trim() || autoBadge;
 
   return (
     <article
@@ -38,7 +63,7 @@ export default function AgencyCard({ agency }: Props) {
         padding:       "1.5rem",
         display:       "flex",
         flexDirection: "column",
-        gap:           "1rem",
+        gap:           "0.85rem",
         position:      "relative",
         boxShadow:     agency.isFeatured
           ? "0 4px 24px rgba(15,118,110,0.10)"
@@ -132,23 +157,12 @@ export default function AgencyCard({ agency }: Props) {
                 {badgeLabel}
               </span>
             )}
-
-            {/* Partial verification indicator */}
-            {!agency.isVerified && agency.verificationStatus === "PartiallyVerified" && (
-              <span style={{
-                fontSize:     "0.75rem",
-                padding:      "0.15rem 0.55rem",
-                borderRadius: "999px",
-                background:   "#fff7ed",
-                color:        "#c2410c",
-                fontWeight:   600,
-              }}>
-                {badgeLabel}
-              </span>
-            )}
           </div>
         </div>
       </div>
+
+      {/* Stars */}
+      <StarRow average={agency.averageRating} count={agency.ratingsCount} />
 
       {/* City + listings */}
       <div style={{ display: "flex", gap: "1rem", fontSize: "0.82rem", color: "#64748b" }}>

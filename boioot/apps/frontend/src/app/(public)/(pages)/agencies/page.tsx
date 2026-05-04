@@ -5,18 +5,38 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import AgencyCard, { type AgencyListItem } from "@/components/agencies/AgencyCard";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import SectionDisabled from "@/components/ui/SectionDisabled";
-import { useCities } from "@/hooks/useCities";
+
+// ── Agency city (for hierarchical filter) ─────────────────────────────────────
+
+interface AgencyCityItem {
+  city:     string;
+  province: string;
+}
+
+function useAgencyCities() {
+  const [cities,  setCities]  = useState<AgencyCityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    fetch("/api/agencies/cities", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : [])
+      .then((data: AgencyCityItem[]) => setCities(data))
+      .catch(() => setCities([]))
+      .finally(() => setLoading(false));
+  }, []);
+  return { cities, loading };
+}
 
 // ── Filter form ───────────────────────────────────────────────────────────────
 
 interface FilterForm {
+  province:   string;
   city:       string;
   type:       string;
   isVerified: string;
   isFeatured: string;
 }
 
-const EMPTY_FILTERS: FilterForm = { city: "", type: "", isVerified: "", isFeatured: "" };
+const EMPTY_FILTERS: FilterForm = { province: "", city: "", type: "", isVerified: "", isFeatured: "" };
 
 // ── API response ──────────────────────────────────────────────────────────────
 
@@ -84,15 +104,20 @@ function EmptyState({ onReset, filtered }: { onReset: () => void; filtered: bool
   );
 }
 
+// ── Select style helper ───────────────────────────────────────────────────────
+
+const selectStyle: React.CSSProperties = { padding: "0.45rem 0.75rem" };
+
 // ── Inner (needs Suspense for useSearchParams) ────────────────────────────────
 
 function AgenciesContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const pathname     = usePathname();
-  const { cities }   = useCities();
+  const { cities: agencyCities } = useAgencyCities();
   const { settings, isLoading: settingsLoading } = useSiteSettings();
 
+  const provinceParam   = searchParams.get("province")   || "";
   const cityParam       = searchParams.get("city")       || "";
   const typeParam       = searchParams.get("type")       || "";
   const isVerifiedParam = searchParams.get("isVerified") || "";
@@ -100,7 +125,8 @@ function AgenciesContent() {
   const pageParam       = Number(searchParams.get("page") || "1");
 
   const [form, setForm] = useState<FilterForm>({
-    city: cityParam, type: typeParam, isVerified: isVerifiedParam, isFeatured: isFeaturedParam,
+    province: provinceParam, city: cityParam, type: typeParam,
+    isVerified: isVerifiedParam, isFeatured: isFeaturedParam,
   });
 
   const [agencies,   setAgencies]   = useState<AgencyListItem[]>([]);
@@ -111,15 +137,15 @@ function AgenciesContent() {
 
   // Sync form when URL changes
   useEffect(() => {
-    setForm({ city: cityParam, type: typeParam, isVerified: isVerifiedParam, isFeatured: isFeaturedParam });
-  }, [cityParam, typeParam, isVerifiedParam, isFeaturedParam]);
+    setForm({ province: provinceParam, city: cityParam, type: typeParam, isVerified: isVerifiedParam, isFeatured: isFeaturedParam });
+  }, [provinceParam, cityParam, typeParam, isVerifiedParam, isFeaturedParam]);
 
-  // Fetch
+  // Fetch agencies
   useEffect(() => {
     setLoading(true);
     setError("");
     fetchAgencies({
-      city: cityParam, type: typeParam,
+      province: provinceParam, city: cityParam, type: typeParam,
       isVerified: isVerifiedParam, isFeatured: isFeaturedParam,
       page: String(pageParam), pageSize: "12",
     })
@@ -130,7 +156,7 @@ function AgenciesContent() {
       })
       .catch(() => setError("تعذّر تحميل البيانات، حاول مجدداً."))
       .finally(() => setLoading(false));
-  }, [cityParam, typeParam, isVerifiedParam, isFeaturedParam, pageParam]);
+  }, [provinceParam, cityParam, typeParam, isVerifiedParam, isFeaturedParam, pageParam]);
 
   // Section guard (after mount to avoid hydration mismatch)
   const [mounted, setMounted] = useState(false);
@@ -139,9 +165,19 @@ function AgenciesContent() {
     return <SectionDisabled />;
   }
 
+  // Derive unique provinces and cities for hierarchical dropdowns
+  const provinces    = Array.from(new Set(agencyCities.map(c => c.province).filter(Boolean))).sort();
+  const citiesForProvince = form.province
+    ? agencyCities.filter(c => c.province === form.province)
+    : agencyCities;
+
   function pushFilter(patch: Partial<FilterForm>) {
     const next = { ...form, ...patch };
-    const qs   = new URLSearchParams(
+    // When province changes, reset city
+    if (patch.province !== undefined && patch.province !== form.province) {
+      next.city = "";
+    }
+    const qs = new URLSearchParams(
       Object.fromEntries(Object.entries({ ...next, page: "1" }).filter(([, v]) => v !== ""))
     ).toString();
     router.push(`${pathname}${qs ? `?${qs}` : ""}`);
@@ -160,7 +196,7 @@ function AgenciesContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  const isFiltered = !!(cityParam || typeParam || isVerifiedParam || isFeaturedParam);
+  const isFiltered = !!(provinceParam || cityParam || typeParam || isVerifiedParam || isFeaturedParam);
 
   return (
     <div dir="rtl" style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem 1rem" }}>
@@ -186,18 +222,35 @@ function AgenciesContent() {
         padding: "1rem 1.25rem", marginBottom: "1.5rem",
         display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end",
       }}>
-        {/* City */}
+
+        {/* Province (المحافظة) */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", flex: "1 1 140px" }}>
+          <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>المحافظة</label>
+          <select
+            className="form-input"
+            style={selectStyle}
+            value={form.province}
+            onChange={e => pushFilter({ province: e.target.value })}
+          >
+            <option value="">كل المحافظات</option>
+            {provinces.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* City (المدينة) — filtered by selected province */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", flex: "1 1 140px" }}>
           <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>المدينة</label>
           <select
             className="form-input"
-            style={{ padding: "0.45rem 0.75rem" }}
+            style={selectStyle}
             value={form.city}
             onChange={e => pushFilter({ city: e.target.value })}
           >
             <option value="">كل المدن</option>
-            {cities.map(c => (
-              <option key={c.id} value={c.nameAr}>{c.nameAr}</option>
+            {citiesForProvince.map(c => (
+              <option key={c.city} value={c.city}>{c.city}</option>
             ))}
           </select>
         </div>
@@ -207,7 +260,7 @@ function AgenciesContent() {
           <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>النوع</label>
           <select
             className="form-input"
-            style={{ padding: "0.45rem 0.75rem" }}
+            style={selectStyle}
             value={form.type}
             onChange={e => pushFilter({ type: e.target.value })}
           >
@@ -222,7 +275,7 @@ function AgenciesContent() {
           <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>التوثيق</label>
           <select
             className="form-input"
-            style={{ padding: "0.45rem 0.75rem" }}
+            style={selectStyle}
             value={form.isVerified}
             onChange={e => pushFilter({ isVerified: e.target.value })}
           >
@@ -236,7 +289,7 @@ function AgenciesContent() {
           <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>الظهور</label>
           <select
             className="form-input"
-            style={{ padding: "0.45rem 0.75rem" }}
+            style={selectStyle}
             value={form.isFeatured}
             onChange={e => pushFilter({ isFeatured: e.target.value })}
           >
