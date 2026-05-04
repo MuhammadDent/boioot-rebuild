@@ -3,7 +3,22 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const FLY_BACKEND = "https://backend-bold-snowflake-8206.fly.dev/api/admin/settings";
+// ── Dev safety: block any attempt to reach the production backend ─────────────
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8080";
+
+if (
+  process.env.NODE_ENV !== "production" &&
+  BACKEND_URL.includes("fly.dev")
+) {
+  throw new Error(
+    `\n\n🚨 DEV SAFETY VIOLATION 🚨\n` +
+    `[admin/settings route] BACKEND_URL points to production:\n` +
+    `  ${BACKEND_URL}\n` +
+    `Fix: set BACKEND_URL=http://localhost:8080 in .env.local\n`
+  );
+}
+
+const BACKEND_ENDPOINT = `${BACKEND_URL}/api/admin/settings`;
 
 async function parseBody(res: Response): Promise<unknown> {
   const text = await res.text();
@@ -13,7 +28,7 @@ async function parseBody(res: Response): Promise<unknown> {
 
 /**
  * GET /api/admin/settings
- * Proxies to the Fly.io backend. Requires Authorization header.
+ * Proxies to the LOCAL backend. Requires Authorization header.
  */
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("Authorization") ?? "";
@@ -22,7 +37,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(FLY_BACKEND, {
+    const res = await fetch(BACKEND_ENDPOINT, {
       headers: { Authorization: auth },
       cache: "no-store",
     });
@@ -39,7 +54,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * PUT /api/admin/settings
- * Proxies to the Fly.io backend. Requires Authorization header.
+ * Proxies to the LOCAL backend. Requires Authorization header.
  */
 export async function PUT(req: NextRequest) {
   const auth = req.headers.get("Authorization") ?? "";
@@ -49,7 +64,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const res = await fetch(FLY_BACKEND, {
+    const res = await fetch(BACKEND_ENDPOINT, {
       method: "PUT",
       headers: {
         Authorization: auth,

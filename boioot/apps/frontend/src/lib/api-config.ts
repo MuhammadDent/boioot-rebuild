@@ -1,52 +1,40 @@
-// ── API base URL resolution ────────────────────────────────────────────────
-//
-// Priority (highest → lowest):
-//   1. NEXT_PUBLIC_API_URL env var — only used if it is NOT the old dns-broken domain
-//   2. LIVE_BACKEND — direct Fly.io URL, used for both SSR and CSR
-//
-// We always use the full backend URL (never a relative /api path) to avoid
-// Next.js SSR vs CSR hydration mismatches caused by `typeof window` branches.
-// Server-to-server requests are not subject to CORS, so using the full URL
-// during SSR is safe.  Client (browser) requests go cross-origin to Fly.io;
-// CORS is configured on the backend to allow the production domains.
-//
-// The domain api.boioot.net is not yet live (DNS not set up).
-// Any URL containing it is silently replaced with the live backend.
-//
-const LIVE_BACKEND = "https://backend-bold-snowflake-8206.fly.dev/api";
-const BROKEN_DOMAIN = "api.boioot.net";
+// ── DEV SAFETY GUARD ──────────────────────────────────────────────────────────
+// Throws at module load time in development if any production URL is detected.
+// This prevents Replit from accidentally talking to the production backend.
 
-function resolveApiUrl(): string {
-  const configured = process.env.NEXT_PUBLIC_API_URL ?? "";
-
-  // Reject empty or broken DNS domain — fall through to live backend
-  if (!configured || configured.includes(BROKEN_DOMAIN)) {
-    return LIVE_BACKEND;
+function assertNotProduction(value: string, varName: string): void {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    value.includes("fly.dev")
+  ) {
+    throw new Error(
+      `\n\n🚨 DEV SAFETY VIOLATION 🚨\n` +
+      `${varName} points to the PRODUCTION backend:\n` +
+      `  ${value}\n\n` +
+      `Fix: set BACKEND_URL=http://localhost:8080 in .env.local\n` +
+      `Replit must NEVER connect to fly.dev.\n`
+    );
   }
-
-  return configured;
 }
 
-const API_URL = resolveApiUrl();
+// ── API base URL resolution ────────────────────────────────────────────────────
+// NEXT_PUBLIC_API_URL must be set in .env.local.
+// Dev:  /api  →  Next.js rewrite  →  BACKEND_URL (http://localhost:8080)
+// Prod: /api  →  Next.js rewrite  →  BACKEND_URL (set in Vercel env vars)
+
+const configuredUrl = process.env.NEXT_PUBLIC_API_URL ?? "/api";
+assertNotProduction(configuredUrl, "NEXT_PUBLIC_API_URL");
 
 export const apiConfig = {
-  baseUrl: API_URL,
-  liveBackend: LIVE_BACKEND,
+  baseUrl: configuredUrl,
 } as const;
 
-/**
- * Resolve a file/document URL returned by the backend.
- *
- * The backend MUST serve all /uploads/* files. The stored URL might be:
- *   - A relative path:           /uploads/docs/file.png
- *   - Absolute with correct host: https://backend-bold-snowflake-8206.fly.dev/uploads/…
- *   - Absolute with WRONG host:  https://www.boioot.net/uploads/…  ← 404 in production
- *
- * Rule: any URL whose path starts with /uploads/ is ALWAYS rewritten to point
- * at the backend origin, regardless of what host is currently in the URL.
- * Only non-upload absolute URLs (e.g. third-party images) are returned as-is.
- */
-const BACKEND_ORIGIN = LIVE_BACKEND.replace(/\/api\/?$/, "");
+// ── File/document URL resolver ────────────────────────────────────────────────
+// The backend stores upload paths that may be absolute or relative.
+// Rule: any /uploads/* URL is normalised to a root-relative path so that
+// Next.js rewrites (/uploads/:path* → BACKEND_URL/uploads/:path*) handle
+// routing in both dev (localhost:8080) and production (Vercel + backend).
+// Third-party absolute URLs (Unsplash, R2, etc.) are returned unchanged.
 
 export function resolveFileUrl(raw: string | null | undefined): string {
   if (!raw || typeof raw !== "string") return "";
@@ -57,8 +45,8 @@ export function resolveFileUrl(raw: string | null | undefined): string {
     try {
       const parsed = new URL(trimmed);
       if (parsed.pathname.startsWith("/uploads/")) {
-        // Rewrite host to backend, keep path + query as-is
-        return `${BACKEND_ORIGIN}${parsed.pathname}${parsed.search}`;
+        // Strip the host — Next.js rewrite will add the correct backend origin
+        return `${parsed.pathname}${parsed.search}`;
       }
     } catch {
       // malformed absolute URL — return as-is
@@ -66,7 +54,6 @@ export function resolveFileUrl(raw: string | null | undefined): string {
     return trimmed;
   }
 
-  // Relative path — prepend backend origin
-  const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return `${BACKEND_ORIGIN}${path}`;
+  // Already a relative path — return as-is
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }

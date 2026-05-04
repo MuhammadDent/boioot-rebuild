@@ -45,11 +45,23 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-// Fetch site settings on the server so the very first SSR paint already
-// reflects the real database values — no flash of disabled sections appearing.
+// ── Dev safety ────────────────────────────────────────────────────────────────
+const _LAYOUT_BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8080";
+if (
+  process.env.NODE_ENV !== "production" &&
+  _LAYOUT_BACKEND_URL.includes("fly.dev")
+) {
+  throw new Error(
+    `\n\n🚨 DEV SAFETY VIOLATION 🚨\n` +
+    `[layout.tsx] BACKEND_URL points to production:\n` +
+    `  ${_LAYOUT_BACKEND_URL}\n` +
+    `Fix: set BACKEND_URL=http://localhost:8080 in .env.local\n`
+  );
+}
+
+// Fetch site settings server-side so the first SSR paint reflects real DB values.
 async function getInitialSiteSettings(): Promise<SiteSettings> {
-  const backendUrl =
-    process.env.BACKEND_URL ?? "http://localhost:8080";
+  const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
   try {
     const res = await fetch(`${backendUrl}/api/settings/public`, {
       next: { revalidate: 30 },
@@ -72,7 +84,6 @@ export default async function RootLayout({
     <html lang="ar" dir="rtl" className={cairo.variable} suppressHydrationWarning>
       <head>
         <IntegrationHead />
-        {/* Preconnect to Unsplash CDN so hero background images load faster */}
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
