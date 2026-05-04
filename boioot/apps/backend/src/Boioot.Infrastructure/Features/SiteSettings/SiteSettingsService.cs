@@ -3,12 +3,14 @@ using Boioot.Application.Features.SiteSettings.Interfaces;
 using Boioot.Domain.Entities;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Boioot.Infrastructure.Features.SiteSettings;
 
 public sealed class SiteSettingsService : ISiteSettingsService
 {
     private readonly BoiootDbContext _ctx;
+    private readonly ILogger<SiteSettingsService> _logger;
 
     // The four feature-toggle keys managed by this service.
     // All default to "true" so nothing disappears if the row is missing.
@@ -20,26 +22,49 @@ public sealed class SiteSettingsService : ISiteSettingsService
         ["section_blog_enabled"]        = "true",
     };
 
-    public SiteSettingsService(BoiootDbContext ctx) => _ctx = ctx;
+    private static readonly SiteSettingsDto AllEnabled = new(
+        SectionProjectsEnabled:  true,
+        SectionRequestsEnabled:  true,
+        SectionDailyRentEnabled: true,
+        SectionBlogEnabled:      true);
+
+    public SiteSettingsService(BoiootDbContext ctx, ILogger<SiteSettingsService> logger)
+    {
+        _ctx    = ctx;
+        _logger = logger;
+    }
 
     // ── Read ──────────────────────────────────────────────────────────────────
 
     public async Task<SiteSettingsDto> GetAsync(CancellationToken ct = default)
     {
-        var rows = await _ctx.AppSettings
-            .Where(s => DefaultValues.Keys.Contains(s.Key))
-            .ToListAsync(ct);
+        try
+        {
+            await EnsureTableAsync(ct);
 
-        // Seed any missing keys so future reads are consistent
-        await SeedMissingAsync(rows, ct);
+            var rows = await _ctx.AppSettings
+                .Where(s => DefaultValues.Keys.Contains(s.Key))
+                .ToListAsync(ct);
 
-        return MapToDto(rows);
+            // Seed any missing keys so future reads are consistent
+            await SeedMissingAsync(rows, ct);
+
+            return MapToDto(rows);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "[SiteSettings] Failed to read AppSettings — returning safe defaults (all sections enabled)");
+            return AllEnabled;
+        }
     }
 
     // ── Write ─────────────────────────────────────────────────────────────────
 
     public async Task UpdateAsync(SiteSettingsDto dto, CancellationToken ct = default)
     {
+        await EnsureTableAsync(ct);
+
         var updates = new Dictionary<string, string>
         {
             ["section_projects_enabled"]   = dto.SectionProjectsEnabled   ? "true" : "false",
@@ -71,6 +96,29 @@ public sealed class SiteSettingsService : ISiteSettingsService
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Creates the AppSettings table if it does not yet exist.
+    /// This handles environments (e.g. a Fly Postgres instance) where the EF
+    /// migration has not been run, without crashing the whole request.
+    /// </summary>
+    private async Task EnsureTableAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _ctx.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""AppSettings"" (
+                    ""Key""         VARCHAR(200) NOT NULL,
+                    ""Value""       TEXT         NOT NULL DEFAULT 'true',
+                    ""Description"" TEXT,
+                    CONSTRAINT ""PK_AppSettings"" PRIMARY KEY (""Key"")
+                );", ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[SiteSettings] Could not ensure AppSettings table — continuing anyway");
+        }
+    }
+
     private async Task SeedMissingAsync(List<AppSetting> existing, CancellationToken ct)
     {
         var presentKeys = existing.Select(r => r.Key).ToHashSet();
@@ -85,7 +133,15 @@ public sealed class SiteSettingsService : ISiteSettingsService
             existing.Add(row);
         }
 
-        await _ctx.SaveChangesAsync(ct);
+        try
+        {
+            await _ctx.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[SiteSettings] Could not seed missing AppSettings rows — using in-memory defaults");
+            _ctx.ChangeTracker.Clear();
+        }
     }
 
     private static SiteSettingsDto MapToDto(List<AppSetting> rows)
