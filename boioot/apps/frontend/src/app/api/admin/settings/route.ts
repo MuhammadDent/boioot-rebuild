@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSettings, updateSettings } from "@/lib/db/settings-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const FLY_BACKEND = "https://backend-bold-snowflake-8206.fly.dev/api/admin/settings";
+
+async function parseBody(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text || !text.trim()) return null;
+  try { return JSON.parse(text); } catch { return text; }
+}
+
 /**
  * GET /api/admin/settings
- * Returns current site-settings. Requires Authorization header.
+ * Proxies to the Fly.io backend. Requires Authorization header.
  */
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("Authorization") ?? "";
@@ -15,17 +22,24 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const settings = await getSettings();
-    return NextResponse.json(settings);
+    const res = await fetch(FLY_BACKEND, {
+      headers: { Authorization: auth },
+      cache: "no-store",
+    });
+    const data = await parseBody(res);
+    if (data === null) {
+      return new NextResponse(null, { status: res.status });
+    }
+    return NextResponse.json(data, { status: res.status });
   } catch (err) {
-    console.error("[admin/settings GET] DB error:", err);
+    console.error("[admin/settings GET] proxy error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 /**
  * PUT /api/admin/settings
- * Updates site-settings. Requires Authorization header.
+ * Proxies to the Fly.io backend. Requires Authorization header.
  */
 export async function PUT(req: NextRequest) {
   const auth = req.headers.get("Authorization") ?? "";
@@ -35,18 +49,21 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-
-    const dto = {
-      sectionProjectsEnabled:  Boolean(body.sectionProjectsEnabled),
-      sectionRequestsEnabled:  Boolean(body.sectionRequestsEnabled),
-      sectionDailyRentEnabled: Boolean(body.sectionDailyRentEnabled),
-      sectionBlogEnabled:      Boolean(body.sectionBlogEnabled),
-    };
-
-    const updated = await updateSettings(dto);
-    return NextResponse.json(updated);
+    const res = await fetch(FLY_BACKEND, {
+      method: "PUT",
+      headers: {
+        Authorization: auth,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await parseBody(res);
+    if (data === null) {
+      return new NextResponse(null, { status: res.status });
+    }
+    return NextResponse.json(data, { status: res.status });
   } catch (err) {
-    console.error("[admin/settings PUT] DB error:", err);
+    console.error("[admin/settings PUT] proxy error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

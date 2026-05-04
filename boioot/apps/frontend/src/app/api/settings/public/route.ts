@@ -1,21 +1,23 @@
 import { NextResponse } from "next/server";
-import { getSettings } from "@/lib/db/settings-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const FLY_BACKEND = "https://backend-bold-snowflake-8206.fly.dev/api/settings/public";
+
 /**
  * GET /api/settings/public
- * Returns feature-toggle values for the four public sections.
- * No authentication required.
+ * Proxies to the Fly.io backend. No authentication required.
+ * Falls back to all-enabled defaults only when the backend is unreachable.
  */
 export async function GET() {
   try {
-    const settings = await getSettings();
-    return NextResponse.json(settings);
+    const res = await fetch(FLY_BACKEND, { cache: "no-store" });
+    if (!res.ok) throw new Error(`backend ${res.status}`);
+    const data = await res.json();
+    return NextResponse.json(data);
   } catch (err) {
-    console.error("[settings/public] DB error:", err);
-    // Fail open — return all-enabled defaults so nothing disappears on DB error
+    console.error("[settings/public] proxy error:", err);
     return NextResponse.json({
       sectionProjectsEnabled:  true,
       sectionRequestsEnabled:  true,
