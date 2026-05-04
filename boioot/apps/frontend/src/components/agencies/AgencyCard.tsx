@@ -3,16 +3,21 @@
 import Link from "next/link";
 
 export interface AgencyListItem {
-  id:           string;
-  fullName:     string;
-  role:         string;
-  roleLabel:    string;
-  city:         string | null;
-  bio:          string | null;
-  logoUrl:      string | null;
-  isVerified:   boolean;
-  isFeatured:   boolean;
-  listingCount: number;
+  id:                 string;
+  fullName:           string;
+  role:               string;
+  roleLabel:          string;
+  city:               string | null;
+  bio:                string | null;
+  logoUrl:            string | null;
+  // isVerified is ALWAYS derived from verificationStatus on the server
+  // (true when verificationStatus is "Verified" or "PartiallyVerified")
+  isVerified:         boolean;
+  verificationStatus: string;   // "None"|"Pending"|"PartiallyVerified"|"Verified"|"Rejected"
+  verificationBadge:  string | null; // admin-assigned label e.g. "وسيط موثوق"
+  isFeatured:         boolean;
+  sortOrder:          number;
+  listingCount:       number;
 }
 
 interface Props {
@@ -20,7 +25,9 @@ interface Props {
 }
 
 export default function AgencyCard({ agency }: Props) {
-  const initial = agency.fullName.trim()[0] ?? "؟";
+  const initial    = agency.fullName.trim()[0] ?? "؟";
+  // Badge text: prefer the admin-assigned label, fall back to generic "موثق"
+  const badgeLabel = agency.verificationBadge?.trim() || "موثق ✓";
 
   return (
     <article
@@ -59,16 +66,16 @@ export default function AgencyCard({ agency }: Props) {
       {/* Logo + name */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
         <div style={{
-          width:         60,
-          height:        60,
-          borderRadius:  "12px",
-          overflow:      "hidden",
-          flexShrink:    0,
-          background:    "var(--color-primary-light, #e8f5e9)",
-          display:       "flex",
-          alignItems:    "center",
-          justifyContent:"center",
-          border:        "1.5px solid #e2e8f0",
+          width:          60,
+          height:         60,
+          borderRadius:   "12px",
+          overflow:       "hidden",
+          flexShrink:     0,
+          background:     "var(--color-primary-light, #e8f5e9)",
+          display:        "flex",
+          alignItems:     "center",
+          justifyContent: "center",
+          border:         "1.5px solid #e2e8f0",
         }}>
           {agency.logoUrl ? (
             <img
@@ -112,6 +119,7 @@ export default function AgencyCard({ agency }: Props) {
               {agency.roleLabel}
             </span>
 
+            {/* Verified badge — shown only when isVerified=true (derived from VerificationStatus) */}
             {agency.isVerified && (
               <span style={{
                 fontSize:     "0.75rem",
@@ -121,7 +129,21 @@ export default function AgencyCard({ agency }: Props) {
                 color:        "#92400e",
                 fontWeight:   600,
               }}>
-                ✓ موثق
+                {badgeLabel}
+              </span>
+            )}
+
+            {/* Partial verification indicator */}
+            {!agency.isVerified && agency.verificationStatus === "PartiallyVerified" && (
+              <span style={{
+                fontSize:     "0.75rem",
+                padding:      "0.15rem 0.55rem",
+                borderRadius: "999px",
+                background:   "#fff7ed",
+                color:        "#c2410c",
+                fontWeight:   600,
+              }}>
+                {badgeLabel}
               </span>
             )}
           </div>
@@ -139,14 +161,14 @@ export default function AgencyCard({ agency }: Props) {
       {/* Bio */}
       {agency.bio && (
         <p style={{
-          margin:        0,
-          fontSize:      "0.85rem",
-          color:         "#475569",
-          lineHeight:    1.6,
-          display:       "-webkit-box",
+          margin:          0,
+          fontSize:        "0.85rem",
+          color:           "#475569",
+          lineHeight:      1.6,
+          display:         "-webkit-box",
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical" as const,
-          overflow:      "hidden",
+          overflow:        "hidden",
         }}>
           {agency.bio}
         </p>

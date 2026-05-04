@@ -10,6 +10,9 @@ namespace Boioot.Api.Controllers;
 /// Public endpoints — no authentication required.
 /// GET /api/agencies       — paged list of visible Broker / Office profiles
 /// GET /api/agencies/{id}  — single agency detail
+///
+/// IsVerified on each result is ALWAYS derived from User.VerificationStatus
+/// (true when VerificationStatus is Verified or PartiallyVerified).
 /// </summary>
 [Route("api/agencies")]
 public class AgenciesController : BaseController
@@ -67,6 +70,7 @@ public class AgenciesController : BaseController
                 query = query.Where(x => x.u.Role == roleEnum);
         }
 
+        // isVerified reads u.IsVerified which is derived from VerificationStatus
         if (isVerified.HasValue)
             query = query.Where(x => x.u.IsVerified == isVerified.Value);
 
@@ -90,9 +94,14 @@ public class AgenciesController : BaseController
                 x.ap.Bio,
                 x.ap.LogoUrl ?? x.u.ProfileImageUrl,
                 x.u.IsVerified,
+                x.u.VerificationStatus.ToString(),
+                x.u.VerificationBadge,
                 x.ap.IsFeatured,
                 x.ap.SortOrder,
-                _ctx.Properties.Count(p => p.CreatedByUserId == x.u.Id.ToString() && p.ModerationStatus == ModerationStatus.Active && !p.IsDeleted)))
+                _ctx.Properties.Count(p =>
+                    p.CreatedByUserId == x.u.Id.ToString() &&
+                    p.ModerationStatus == ModerationStatus.Active &&
+                    !p.IsDeleted)))
             .ToListAsync(ct);
 
         return Ok(new AgenciesPagedResult(
@@ -132,8 +141,14 @@ public class AgenciesController : BaseController
                 x.ap.LogoUrl ?? x.u.ProfileImageUrl,
                 x.u.Phone,
                 x.u.IsVerified,
+                x.u.VerificationStatus.ToString(),
+                x.u.VerificationLevel,
+                x.u.VerificationBadge,
                 x.ap.IsFeatured,
-                _ctx.Properties.Count(p => p.CreatedByUserId == x.u.Id.ToString() && p.ModerationStatus == ModerationStatus.Active && !p.IsDeleted),
+                _ctx.Properties.Count(p =>
+                    p.CreatedByUserId == x.u.Id.ToString() &&
+                    p.ModerationStatus == ModerationStatus.Active &&
+                    !p.IsDeleted),
                 x.u.CreatedAt))
             .FirstOrDefaultAsync(ct);
 

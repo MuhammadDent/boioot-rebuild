@@ -5,18 +5,22 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface AgencyDetail {
-  id:           string;
-  fullName:     string;
-  role:         string;
-  roleLabel:    string;
-  city:         string | null;
-  bio:          string | null;
-  logoUrl:      string | null;
-  phone:        string | null;
-  isVerified:   boolean;
-  isFeatured:   boolean;
-  listingCount: number;
-  createdAt:    string;
+  id:                 string;
+  fullName:           string;
+  role:               string;
+  roleLabel:          string;
+  city:               string | null;
+  bio:                string | null;
+  logoUrl:            string | null;
+  phone:              string | null;
+  // isVerified is derived from verificationStatus on the server
+  isVerified:         boolean;
+  verificationStatus: string;
+  verificationLevel:  number;
+  verificationBadge:  string | null;
+  isFeatured:         boolean;
+  listingCount:       number;
+  createdAt:          string;
 }
 
 export default function AgencyDetailPage() {
@@ -127,7 +131,7 @@ export default function AgencyDetailPage() {
                   fontSize: "0.8rem", padding: "0.2rem 0.7rem", borderRadius: "999px",
                   background: "#fefce8", color: "#92400e", fontWeight: 600,
                 }}>
-                  ✓ موثق
+                  ✓ {agency.verificationBadge?.trim() || "موثق"}
                 </span>
               )}
 

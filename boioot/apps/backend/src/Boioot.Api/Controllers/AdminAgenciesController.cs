@@ -1,4 +1,6 @@
 using Boioot.Api.Authorization;
+using Boioot.Application.Features.Admin.DTOs;
+using Boioot.Application.Features.Admin.Interfaces;
 using Boioot.Application.Features.Agencies.DTOs;
 using Boioot.Domain.Constants;
 using Boioot.Domain.Entities;
@@ -12,8 +14,10 @@ namespace Boioot.Api.Controllers;
 
 /// <summary>
 /// Admin endpoints for managing agency profiles.
-/// GET /api/admin/agencies          — list all Broker/Office users + their profiles
-/// PUT /api/admin/agencies/{userId} — upsert agency profile settings
+///
+/// GET  /api/admin/agencies                   — list all Broker/Office users + profiles
+/// PUT  /api/admin/agencies/{userId}           — upsert agency profile (visibility / bio / city …)
+/// PUT  /api/admin/agencies/{userId}/verification — update verification via the unified system
 /// </summary>
 [Route("api/admin/agencies")]
 [Authorize]
@@ -21,8 +25,13 @@ namespace Boioot.Api.Controllers;
 public class AdminAgenciesController : BaseController
 {
     private readonly BoiootDbContext _ctx;
+    private readonly IAdminService   _admin;
 
-    public AdminAgenciesController(BoiootDbContext ctx) => _ctx = ctx;
+    public AdminAgenciesController(BoiootDbContext ctx, IAdminService admin)
+    {
+        _ctx   = ctx;
+        _admin = admin;
+    }
 
     // ── Ensure table exists (idempotent) ─────────────────────────────────────
 
@@ -85,6 +94,7 @@ public class AdminAgenciesController : BaseController
         if (isFeatured.HasValue)
             query = query.Where(x => x.ap != null && x.ap.IsFeatured == isFeatured.Value);
 
+        // isVerified reads u.IsVerified which is ALWAYS derived from VerificationStatus
         if (isVerified.HasValue)
             query = query.Where(x => x.u.IsVerified == isVerified.Value);
 
@@ -105,12 +115,21 @@ public class AdminAgenciesController : BaseController
                 x.ap != null ? x.ap.Bio     : null,
                 x.ap != null ? (x.ap.LogoUrl ?? x.u.ProfileImageUrl) : x.u.ProfileImageUrl,
                 x.ap != null && x.ap.IsVisible,
+                // verification — read-only from User entity
                 x.u.IsVerified,
+                x.u.VerificationStatus.ToString(),
+                x.u.VerificationLevel,
+                x.u.BusinessVerificationStatus.ToString(),
+                x.u.VerificationBadge,
+                // agency profile
                 x.ap != null && x.ap.IsFeatured,
                 x.ap != null ? x.ap.SortOrder : 0,
                 x.u.IsActive,
                 x.u.CreatedAt,
-                _ctx.Properties.Count(p => p.CreatedByUserId == x.u.Id.ToString() && p.ModerationStatus == ModerationStatus.Active && !p.IsDeleted)))
+                _ctx.Properties.Count(p =>
+                    p.CreatedByUserId == x.u.Id.ToString() &&
+                    p.ModerationStatus == ModerationStatus.Active &&
+                    !p.IsDeleted)))
             .ToListAsync(ct);
 
         return Ok(new AdminAgenciesPagedResult(
@@ -122,6 +141,8 @@ public class AdminAgenciesController : BaseController
     }
 
     // ── PUT /api/admin/agencies/{userId} ─────────────────────────────────────
+    // Updates only the agency profile (visibility, bio, city, logo, sort order, featured).
+    // Verification is intentionally NOT handled here — use the /verification sub-endpoint.
 
     [HttpPut("{userId}")]
     [RequirePermission(Permissions.UsersEdit)]
@@ -142,12 +163,7 @@ public class AdminAgenciesController : BaseController
         if (user is null)
             return NotFound("المستخدم غير موجود أو ليس وسيطاً أو مكتباً");
 
-        // Update IsVerified on User entity
-        user.IsVerified  = req.IsVerified;
-        user.VerifiedAt  = req.IsVerified ? DateTime.UtcNow : null;
-        user.VerifiedBy  = GetUserId().ToString();
-
-        // Upsert AgencyProfile
+        // Upsert AgencyProfile (profile data only — no verification touch)
         var profile = await _ctx.AgencyProfiles.FindAsync(new object[] { userId }, ct);
         if (profile is null)
         {
@@ -155,13 +171,13 @@ public class AdminAgenciesController : BaseController
             _ctx.AgencyProfiles.Add(profile);
         }
 
-        profile.IsVisible   = req.IsVisible;
-        profile.IsFeatured  = req.IsFeatured;
-        profile.Bio         = req.Bio;
-        profile.City        = req.City;
-        profile.LogoUrl     = req.LogoUrl;
-        profile.SortOrder   = req.SortOrder;
-        profile.UpdatedAt   = DateTime.UtcNow;
+        profile.IsVisible  = req.IsVisible;
+        profile.IsFeatured = req.IsFeatured;
+        profile.Bio        = req.Bio;
+        profile.City       = req.City;
+        profile.LogoUrl    = req.LogoUrl;
+        profile.SortOrder  = req.SortOrder;
+        profile.UpdatedAt  = DateTime.UtcNow;
 
         await _ctx.SaveChangesAsync(ct);
 
@@ -177,10 +193,33 @@ public class AdminAgenciesController : BaseController
             profile.LogoUrl ?? user.ProfileImageUrl,
             profile.IsVisible,
             user.IsVerified,
+            user.VerificationStatus.ToString(),
+            user.VerificationLevel,
+            user.BusinessVerificationStatus.ToString(),
+            user.VerificationBadge,
             profile.IsFeatured,
             profile.SortOrder,
             user.IsActive,
             user.CreatedAt,
-            await _ctx.Properties.CountAsync(p => p.CreatedByUserId == user.Id.ToString() && p.ModerationStatus == ModerationStatus.Active && !p.IsDeleted, ct)));
+            await _ctx.Properties.CountAsync(p =>
+                p.CreatedByUserId == user.Id.ToString() &&
+                p.ModerationStatus == ModerationStatus.Active &&
+                !p.IsDeleted, ct)));
+    }
+
+    // ── PUT /api/admin/agencies/{userId}/verification ─────────────────────────
+    // Routes verification changes through the UNIFIED IAdminService.UpdateUserVerificationAsync.
+    // This is the single source of truth — IsVerified is always derived from VerificationStatus.
+
+    [HttpPut("{userId}/verification")]
+    [RequirePermission(Permissions.UsersEdit)]
+    public async Task<IActionResult> UpdateVerification(
+        Guid userId,
+        [FromBody] UpdateUserVerificationRequest req,
+        CancellationToken ct)
+    {
+        var adminId = GetUserId();
+        var result  = await _admin.UpdateUserVerificationAsync(adminId, userId, req, ct);
+        return Ok(result);
     }
 }

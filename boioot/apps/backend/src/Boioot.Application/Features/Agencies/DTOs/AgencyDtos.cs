@@ -1,21 +1,8 @@
 namespace Boioot.Application.Features.Agencies.DTOs;
 
-// ── Public ──────────────────────────────────────────────────────────────────
+// ── Public list ───────────────────────────────────────────────────────────────
 
 public record AgencyListItemDto(
-    string Id,
-    string FullName,
-    string Role,
-    string RoleLabel,
-    string? City,
-    string? Bio,
-    string? LogoUrl,
-    bool   IsVerified,
-    bool   IsFeatured,
-    int    SortOrder,
-    int    ListingCount);
-
-public record AgencyDetailDto(
     string  Id,
     string  FullName,
     string  Role,
@@ -23,11 +10,35 @@ public record AgencyDetailDto(
     string? City,
     string? Bio,
     string? LogoUrl,
-    string? Phone,
+    // IsVerified is derived from VerificationStatus by ApplyVerificationCore
+    // (true when VerificationStatus is Verified or PartiallyVerified)
     bool    IsVerified,
+    string  VerificationStatus,   // "None"|"Pending"|"PartiallyVerified"|"Verified"|"Rejected"
+    string? VerificationBadge,    // human-readable admin label, e.g. "وسيط موثوق"
     bool    IsFeatured,
-    int     ListingCount,
+    int     SortOrder,
+    int     ListingCount);
+
+// ── Public detail ─────────────────────────────────────────────────────────────
+
+public record AgencyDetailDto(
+    string   Id,
+    string   FullName,
+    string   Role,
+    string   RoleLabel,
+    string?  City,
+    string?  Bio,
+    string?  LogoUrl,
+    string?  Phone,
+    bool     IsVerified,
+    string   VerificationStatus,
+    int      VerificationLevel,   // 0=None … 4=Trusted
+    string?  VerificationBadge,
+    bool     IsFeatured,
+    int      ListingCount,
     DateTime CreatedAt);
+
+// ── Paged wrappers ────────────────────────────────────────────────────────────
 
 public record AgenciesPagedResult(
     IReadOnlyList<AgencyListItemDto> Items,
@@ -36,7 +47,7 @@ public record AgenciesPagedResult(
     int TotalCount,
     int TotalPages);
 
-// ── Admin ────────────────────────────────────────────────────────────────────
+// ── Admin list ────────────────────────────────────────────────────────────────
 
 public record AdminAgencyDto(
     string  Id,
@@ -49,7 +60,13 @@ public record AdminAgencyDto(
     string? Bio,
     string? LogoUrl,
     bool    IsVisible,
+    // ── Verification (read from User — never written directly here) ────────
     bool    IsVerified,
+    string  VerificationStatus,
+    int     VerificationLevel,
+    string  BusinessVerificationStatus,
+    string? VerificationBadge,
+    // ── Agency profile fields ──────────────────────────────────────────────
     bool    IsFeatured,
     int     SortOrder,
     bool    IsActive,
@@ -63,9 +80,12 @@ public record AdminAgenciesPagedResult(
     int TotalCount,
     int TotalPages);
 
+// ── Admin write (agency profile only — NOT verification) ─────────────────────
+// Verification is managed exclusively via PUT /api/admin/agencies/{userId}/verification
+// which calls IAdminService.UpdateUserVerificationAsync — the single source of truth.
+
 public record UpdateAgencyProfileRequest(
     bool    IsVisible,
-    bool    IsVerified,
     bool    IsFeatured,
     string? Bio,
     string? City,
