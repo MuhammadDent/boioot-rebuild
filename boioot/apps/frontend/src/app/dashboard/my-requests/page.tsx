@@ -262,16 +262,50 @@ export default function MyRequestsPage() {
         {/* Empty */}
         {!fetching && requests.length === 0 && !fetchError && (
           <div style={{
-            backgroundColor: "#fff", borderRadius: 16, padding: "2.5rem 1.5rem",
+            backgroundColor: "#fff", borderRadius: 16, padding: "4rem 1.5rem",
             textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
           }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📋</div>
-            <p style={{ margin: "0 0 0.4rem", fontWeight: 700, fontSize: "1rem", color: "#1e293b" }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: 20,
+              background: "#f0fdf4", border: "1.5px solid #bbf7d0",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 1.25rem",
+              fontSize: "2rem",
+            }}>
+              📋
+            </div>
+            <h3 style={{ margin: "0 0 0.5rem", fontWeight: 800, fontSize: "1.1rem", color: "#1e293b" }}>
               لا توجد طلبات بعد
-            </p>
-            <p style={{ margin: "0 0 1rem", fontSize: "0.85rem", color: "#64748b" }}>
+            </h3>
+            <p style={{ margin: "0 0 2rem", fontSize: "0.88rem", color: "#64748b", lineHeight: 1.7 }}>
               انشر طلبك وسيتواصل معك الوسطاء والملاك
             </p>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+              <Link
+                href="/dashboard/my-requests/new"
+                style={{
+                  display: "inline-block",
+                  padding: "0.8rem 2.25rem", borderRadius: 12,
+                  background: "var(--color-primary)", color: "#fff",
+                  textDecoration: "none", fontWeight: 700, fontSize: "1rem",
+                  boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
+                }}
+              >
+                أضف طلبك الآن
+              </Link>
+              <Link
+                href="/properties"
+                style={{
+                  display: "inline-block",
+                  padding: "0.65rem 1.75rem", borderRadius: 12,
+                  border: "1.5px solid #e2e8f0", color: "#475569",
+                  textDecoration: "none", fontWeight: 600, fontSize: "0.9rem",
+                  background: "#f8fafc",
+                }}
+              >
+                تصفح العقارات
+              </Link>
+            </div>
           </div>
         )}
 

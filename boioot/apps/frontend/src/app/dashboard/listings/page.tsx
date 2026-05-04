@@ -313,23 +313,52 @@ export default function ListingsPage() {
           </div>
         ) : listings.length === 0 ? (
           /* ── True empty state: no error, no listings yet ── */
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "3.5rem 2rem", textAlign: "center" }}>
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-              style={{ opacity: 0.3, marginBottom: "0.85rem", color: "var(--color-text-secondary)" }}>
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <polyline points="9 22 9 12 15 12 15 22"/>
-            </svg>
-            <p style={{ margin: "0 0 0.5rem", fontSize: "1rem", color: "#374151", fontWeight: 600 }}>لا توجد إعلانات بعد</p>
+          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "4rem 2rem", textAlign: "center" }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: 20,
+              background: "#f0fdf4", border: "1.5px solid #bbf7d0",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 1.25rem",
+            }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="1.5">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </div>
+            <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.15rem", color: "#0f172a", fontWeight: 800 }}>
+              لا توجد إعلانات بعد
+            </h3>
+            <p style={{ margin: "0 0 2rem", fontSize: "0.88rem", color: "#64748b", lineHeight: 1.7, maxWidth: 340, marginInline: "auto" }}>
+              ابدأ بإضافة أول إعلان لك وابدأ باستقبال الطلبات
+            </p>
             {canCreate ? (
-              <>
-                <p style={{ margin: "0 0 1.5rem", fontSize: "0.85rem", color: "#94a3b8" }}>أضف إعلانك الأول الآن وابدأ في التواصل مع المشترين</p>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
                 <Link
                   href="/post-ad"
-                  style={{ padding: "0.65rem 1.5rem", borderRadius: 9, background: "var(--color-primary)", color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: "0.9rem" }}
+                  style={{
+                    display: "inline-block",
+                    padding: "0.8rem 2.25rem", borderRadius: 12,
+                    background: "var(--color-primary)", color: "#fff",
+                    textDecoration: "none", fontWeight: 700, fontSize: "1rem",
+                    boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
+                    transition: "opacity 0.15s",
+                  }}
                 >
-                  + إضافة إعلان جديد
+                  أضف إعلانك الآن
                 </Link>
-              </>
+                <Link
+                  href="/requests"
+                  style={{
+                    display: "inline-block",
+                    padding: "0.65rem 1.75rem", borderRadius: 12,
+                    border: "1.5px solid #e2e8f0", color: "#475569",
+                    textDecoration: "none", fontWeight: 600, fontSize: "0.9rem",
+                    background: "#f8fafc",
+                  }}
+                >
+                  تصفح الطلبات
+                </Link>
+              </div>
             ) : (
               <p style={{ margin: 0, fontSize: "0.85rem", color: "#94a3b8" }}>
                 لا توجد إعلانات مرتبطة بحسابك حالياً.

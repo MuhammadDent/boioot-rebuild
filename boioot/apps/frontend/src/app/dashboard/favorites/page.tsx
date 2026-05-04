@@ -93,28 +93,38 @@ export default function FavoritesPage() {
         <div style={{
           textAlign: "center",
           padding: "4rem 1.5rem",
-          background: "#F9FAFB",
-          borderRadius: 12,
-          border: "1px dashed #D1FAE5",
+          background: "#fff",
+          borderRadius: 16,
+          border: "1px solid #e5e7eb",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
         }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🤍</div>
-          <p style={{ margin: 0, fontWeight: 600, fontSize: "1rem", color: "#374151" }}>
-            لا توجد عناصر مفضلة حتى الآن
-          </p>
-          <p style={{ margin: "0.4rem 0 1.25rem", fontSize: "0.875rem", color: "#6B7280" }}>
-            تصفح العقارات وأضف ما يعجبك إلى المفضلة
+          <div style={{
+            width: 72, height: 72, borderRadius: 20,
+            background: "#FFF5F5", border: "1.5px solid #FEE2E2",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 1.25rem",
+            fontSize: "2rem",
+          }}>
+            🤍
+          </div>
+          <h3 style={{ margin: "0 0 0.5rem", fontWeight: 800, fontSize: "1.1rem", color: "#111827" }}>
+            قائمة المفضلة فارغة
+          </h3>
+          <p style={{ margin: "0 0 2rem", fontSize: "0.875rem", color: "#6B7280", lineHeight: 1.7, maxWidth: 320, marginInline: "auto" }}>
+            تصفح العقارات وأضف ما يعجبك إلى المفضلة للرجوع إليها لاحقاً
           </p>
           <Link
             href="/properties"
             style={{
               display: "inline-block",
-              padding: "0.5rem 1.25rem",
+              padding: "0.8rem 2.25rem",
               backgroundColor: "#16A34A",
               color: "#fff",
-              borderRadius: 8,
-              fontWeight: 600,
-              fontSize: "0.875rem",
+              borderRadius: 12,
+              fontWeight: 700,
+              fontSize: "1rem",
               textDecoration: "none",
+              boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
             }}
           >
             تصفح العقارات

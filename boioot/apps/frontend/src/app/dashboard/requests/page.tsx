@@ -673,35 +673,66 @@ function EmptyState({ hasFilters, onReset }: { hasFilters: boolean; onReset: () 
   return (
     <div style={{
       backgroundColor: "#fff", borderRadius: 16,
-      border: "1px solid #e2e8f0", padding: "3rem 2rem",
+      border: "1px solid #e2e8f0", padding: "4rem 2rem",
       textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
     }}>
       <div style={{
-        width: 60, height: 60, borderRadius: 16,
-        backgroundColor: "#f1f5f9", margin: "0 auto 1rem",
+        width: 72, height: 72, borderRadius: 20,
+        backgroundColor: hasFilters ? "#f1f5f9" : "#f0fdf4",
+        border: `1.5px solid ${hasFilters ? "#e2e8f0" : "#bbf7d0"}`,
+        margin: "0 auto 1.25rem",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        <MessageSquare size={28} color="#94a3b8" />
+        <MessageSquare size={32} color={hasFilters ? "#94a3b8" : "#16a34a"} />
       </div>
-      <p style={{ margin: "0 0 0.35rem", fontWeight: 700, fontSize: "1rem", color: "#1e293b" }}>
+      <h3 style={{ margin: "0 0 0.5rem", fontWeight: 800, fontSize: "1.1rem", color: "#1e293b" }}>
         {hasFilters ? "لا توجد نتائج تطابق الفلاتر المختارة" : "لا توجد طلبات واستفسارات بعد"}
+      </h3>
+      <p style={{ margin: "0 0 2rem", fontSize: "0.88rem", color: "#64748b", lineHeight: 1.7, maxWidth: 360, marginInline: "auto" }}>
+        {hasFilters
+          ? "جرّب تعديل الفلاتر أو إعادة الضبط لرؤية جميع الطلبات"
+          : "أضف إعلانك الآن وابدأ باستقبال طلبات العملاء"}
       </p>
-      <p style={{ margin: "0 0 1.25rem", fontSize: "0.85rem", color: "#94a3b8" }}>
-        {hasFilters ? "جرّب تعديل الفلاتر أو إعادة الضبط" : "ستظهر هنا طلبات العملاء عند ورودها"}
-      </p>
-      {hasFilters && (
+      {hasFilters ? (
         <button
           onClick={onReset}
           style={{
-            padding: "0.5rem 1.25rem", borderRadius: 8,
+            padding: "0.7rem 1.75rem", borderRadius: 10,
             border: "1.5px solid var(--color-primary)",
             backgroundColor: "transparent", color: "var(--color-primary)",
-            cursor: "pointer", fontSize: "0.85rem", fontWeight: 600,
+            cursor: "pointer", fontSize: "0.9rem", fontWeight: 700,
             fontFamily: "inherit",
           }}
         >
           إعادة ضبط الفلاتر
         </button>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+          <Link
+            href="/post-ad"
+            style={{
+              display: "inline-block",
+              padding: "0.8rem 2.25rem", borderRadius: 12,
+              background: "var(--color-primary)", color: "#fff",
+              textDecoration: "none", fontWeight: 700, fontSize: "1rem",
+              boxShadow: "0 4px 14px rgba(22,163,74,0.3)",
+            }}
+          >
+            أضف إعلانك الآن
+          </Link>
+          <Link
+            href="/dashboard/listings"
+            style={{
+              display: "inline-block",
+              padding: "0.65rem 1.75rem", borderRadius: 12,
+              border: "1.5px solid #e2e8f0", color: "#475569",
+              textDecoration: "none", fontWeight: 600, fontSize: "0.9rem",
+              background: "#f8fafc",
+            }}
+          >
+            إعلاناتي
+          </Link>
+        </div>
       )}
     </div>
   );
