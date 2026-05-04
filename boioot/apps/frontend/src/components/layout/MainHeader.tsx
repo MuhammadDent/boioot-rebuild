@@ -21,11 +21,12 @@ function userInitials(name: string | null | undefined): string {
 }
 
 export const NAV_LINKS = [
-  { href: "/",              label: "الرئيسية",       exact: true,  settingKey: null                      },
-  { href: "/daily-rentals", label: "الإيجار اليومي",  exact: false, settingKey: "sectionDailyRentEnabled" },
-  { href: "/projects",      label: "المشاريع",        exact: false, settingKey: "sectionProjectsEnabled"  },
-  { href: "/requests",      label: "الطلبات",         exact: false, settingKey: "sectionRequestsEnabled"  },
-  { href: "/blog",          label: "المدونة",         exact: false, settingKey: "sectionBlogEnabled"      },
+  { href: "/",              label: "الرئيسية",          exact: true,  settingKey: null                       },
+  { href: "/daily-rentals", label: "الإيجار اليومي",    exact: false, settingKey: "sectionDailyRentEnabled"  },
+  { href: "/projects",      label: "المشاريع",           exact: false, settingKey: "sectionProjectsEnabled"   },
+  { href: "/requests",      label: "الطلبات",            exact: false, settingKey: "sectionRequestsEnabled"   },
+  { href: "/agencies",      label: "المكاتب والوسطاء",   exact: false, settingKey: "sectionAgenciesEnabled"   },
+  { href: "/blog",          label: "المدونة",            exact: false, settingKey: "sectionBlogEnabled"       },
 ];
 
 // ─── MainHeader ───────────────────────────────────────────────────────────────

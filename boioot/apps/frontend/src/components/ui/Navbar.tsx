@@ -17,11 +17,12 @@ function userInitials(name: string): string {
 }
 
 const NAV_LINKS = [
-  { href: "/",              label: "الرئيسية",       exact: true,  highlight: false, settingKey: null                      },
-  { href: "/daily-rentals", label: "الإيجار اليومي",  exact: false, highlight: true,  settingKey: "sectionDailyRentEnabled" },
-  { href: "/projects",      label: "المشاريع",        exact: false, highlight: false, settingKey: "sectionProjectsEnabled"  },
-  { href: "/requests",      label: "الطلبات",         exact: false, highlight: false, settingKey: "sectionRequestsEnabled"  },
-  { href: "/blog",          label: "المدونة",         exact: false, highlight: false, settingKey: "sectionBlogEnabled"      },
+  { href: "/",              label: "الرئيسية",          exact: true,  highlight: false, settingKey: null                       },
+  { href: "/daily-rentals", label: "الإيجار اليومي",    exact: false, highlight: true,  settingKey: "sectionDailyRentEnabled"  },
+  { href: "/projects",      label: "المشاريع",           exact: false, highlight: false, settingKey: "sectionProjectsEnabled"   },
+  { href: "/requests",      label: "الطلبات",            exact: false, highlight: false, settingKey: "sectionRequestsEnabled"   },
+  { href: "/agencies",      label: "المكاتب والوسطاء",   exact: false, highlight: false, settingKey: "sectionAgenciesEnabled"   },
+  { href: "/blog",          label: "المدونة",            exact: false, highlight: false, settingKey: "sectionBlogEnabled"       },
 ];
 
 // ─── Navbar ────────────────────────────────────────────────────────────────────

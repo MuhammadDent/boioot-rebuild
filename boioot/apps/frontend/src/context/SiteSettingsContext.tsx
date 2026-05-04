@@ -16,6 +16,7 @@ export interface SiteSettings {
   sectionRequestsEnabled:  boolean;
   sectionDailyRentEnabled: boolean;
   sectionBlogEnabled:      boolean;
+  sectionAgenciesEnabled:  boolean;
 }
 
 interface SiteSettingsContextValue {
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   sectionRequestsEnabled:  true,
   sectionDailyRentEnabled: true,
   sectionBlogEnabled:      true,
+  sectionAgenciesEnabled:  true,
 };
 
 // ── Context ───────────────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ public sealed class SiteSettingsService : ISiteSettingsService
         ["section_requests_enabled"]   = "true",
         ["section_daily_rent_enabled"] = "true",
         ["section_blog_enabled"]       = "true",
+        ["section_agencies_enabled"]   = "true",
     };
 
     public SiteSettingsService(BoiootDbContext ctx, ILogger<SiteSettingsService> logger)
@@ -53,6 +54,7 @@ public sealed class SiteSettingsService : ISiteSettingsService
             ["section_requests_enabled"]   = dto.SectionRequestsEnabled   ? "true" : "false",
             ["section_daily_rent_enabled"] = dto.SectionDailyRentEnabled  ? "true" : "false",
             ["section_blog_enabled"]       = dto.SectionBlogEnabled        ? "true" : "false",
+            ["section_agencies_enabled"]   = dto.SectionAgenciesEnabled    ? "true" : "false",
         };
 
         var existing = await _ctx.AppSettings
@@ -128,6 +130,7 @@ public sealed class SiteSettingsService : ISiteSettingsService
             SectionProjectsEnabled:  Get("section_projects_enabled"),
             SectionRequestsEnabled:  Get("section_requests_enabled"),
             SectionDailyRentEnabled: Get("section_daily_rent_enabled"),
-            SectionBlogEnabled:      Get("section_blog_enabled"));
+            SectionBlogEnabled:      Get("section_blog_enabled"),
+            SectionAgenciesEnabled:  Get("section_agencies_enabled"));
     }
 }

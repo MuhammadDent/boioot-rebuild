@@ -38,6 +38,7 @@ export async function GET() {
       sectionRequestsEnabled:  true,
       sectionDailyRentEnabled: true,
       sectionBlogEnabled:      true,
+      sectionAgenciesEnabled:  true,
     });
   }
 }

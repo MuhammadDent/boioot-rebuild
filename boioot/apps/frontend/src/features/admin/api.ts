@@ -5,6 +5,7 @@ export interface SiteSettingsPayload {
   sectionRequestsEnabled:  boolean;
   sectionDailyRentEnabled: boolean;
   sectionBlogEnabled:      boolean;
+  sectionAgenciesEnabled:  boolean;
 }
 
 import type {

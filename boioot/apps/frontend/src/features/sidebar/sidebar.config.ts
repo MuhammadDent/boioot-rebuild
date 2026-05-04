@@ -446,6 +446,7 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         { href: "/dashboard/admin/buyer-requests",        label: "طلبات السوق",           icon: I.search,    permission: "requests.view"   },
         { href: "/dashboard/admin/special-requests",      label: "الطلبات الخاصة",        icon: I.blog,      permission: "requests.view"   },
         { href: "/dashboard/admin/special-request-types", label: "أنواع الطلبات الخاصة",  icon: I.list,      permission: "requests.view"   },
+        { href: "/dashboard/admin/agencies",              label: "المكاتب والوسطاء",      icon: I.users,     permission: "users.view"      },
         { href: "/dashboard/admin/properties",            label: "العقارات",              icon: I.listings,  permission: "properties.view" },
         { href: "/dashboard/admin/projects",              label: "المشاريع",              icon: I.projects,  permission: "projects.view"   },
       ],

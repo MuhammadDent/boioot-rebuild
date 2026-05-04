@@ -90,7 +90,10 @@ public class BoiootDbContext : DbContext
     public DbSet<UserImage> UserImages => Set<UserImage>();
 
     // ── Site feature toggles ───────────────────────────────────────────────────
-    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+    public DbSet<AppSetting>     AppSettings     => Set<AppSetting>();
+
+    // ── Agency profiles (Broker / Office users) ────────────────────────────────
+    public DbSet<AgencyProfile>  AgencyProfiles  => Set<AgencyProfile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

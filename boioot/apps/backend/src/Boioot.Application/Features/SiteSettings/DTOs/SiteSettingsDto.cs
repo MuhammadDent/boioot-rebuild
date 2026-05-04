@@ -8,4 +8,5 @@ public record SiteSettingsDto(
     bool SectionProjectsEnabled,
     bool SectionRequestsEnabled,
     bool SectionDailyRentEnabled,
-    bool SectionBlogEnabled);
+    bool SectionBlogEnabled,
+    bool SectionAgenciesEnabled);

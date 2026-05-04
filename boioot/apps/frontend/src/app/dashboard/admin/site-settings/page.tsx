@@ -101,6 +101,11 @@ const SECTIONS = [
     label:       "قسم المدونة",
     description: "عرض صفحة المدونة وروابطها في القائمة الرئيسية",
   },
+  {
+    key:         "sectionAgenciesEnabled" as keyof SiteSettingsPayload,
+    label:       "قسم المكاتب والوسطاء",
+    description: "عرض صفحة المكاتب والوسطاء العقاريين وروابطها في القائمة الرئيسية",
+  },
 ] as const;
 
 const DEFAULT_FORM: SiteSettingsPayload = {
@@ -108,6 +113,7 @@ const DEFAULT_FORM: SiteSettingsPayload = {
   sectionRequestsEnabled:  true,
   sectionDailyRentEnabled: true,
   sectionBlogEnabled:      true,
+  sectionAgenciesEnabled:  true,
 };
 
 export default function AdminSiteSettingsPage() {
