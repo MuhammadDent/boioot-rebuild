@@ -1,8 +1,9 @@
 import { Pool } from "pg";
 
 // ── Connection pool ────────────────────────────────────────────────────────────
-// Uses the same Helium PostgreSQL instance as the .NET backend.
-// Env vars: PGHOST, PGPORT, PGDATABASE, PGUSER (all set in Replit + Fly.io).
+// Uses PGHOST / PGPORT / PGDATABASE / PGUSER / PGPASSWORD env vars.
+// These are set automatically in Replit and must be set in any other deployment
+// (Vercel, Fly.io frontend, etc.) to point at the same PostgreSQL instance.
 
 let pool: Pool | null = null;
 
@@ -38,13 +39,13 @@ export interface SiteSettingsRow {
 }
 
 // ── Ensure table exists ───────────────────────────────────────────────────────
+// Schema: only Key + Value — no Description column (matches .NET AppSetting entity).
 
 async function ensureTable(client: import("pg").PoolClient) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS "AppSettings" (
-      "Key"         TEXT NOT NULL,
-      "Value"       TEXT NOT NULL DEFAULT 'true',
-      "Description" TEXT,
+      "Key"   TEXT NOT NULL,
+      "Value" TEXT NOT NULL DEFAULT 'true',
       CONSTRAINT "PK_AppSettings" PRIMARY KEY ("Key")
     )
   `);
