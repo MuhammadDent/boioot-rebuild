@@ -9,14 +9,22 @@ namespace Boioot.Api.Controllers;
 
 /// <summary>
 /// Public endpoints — no authentication required except POST /{id}/ratings.
-/// GET /api/agencies          — paged list of visible Broker / Office profiles
-/// GET /api/agencies/cities   — distinct cities used by visible agencies (for hierarchical filter)
-/// GET /api/agencies/{id}     — single agency detail
+///
+/// GET /api/agencies          — paged list of active Broker/Office users (with AgencyProfile merged if exists)
+/// GET /api/agencies/cities   — distinct cities of active Broker/Office users (from profiles, ignoring IsVisible)
+/// GET /api/agencies/{id}     — single agency detail (accessible if user is active, profile optional)
 /// GET /api/agencies/{id}/ratings  — paginated ratings for an agency
 /// POST /api/agencies/{id}/ratings — create or update the caller's rating (auth required)
 ///
-/// IsVerified on each result is ALWAYS derived from User.VerificationStatus
-/// (true when VerificationStatus is Verified or PartiallyVerified).
+/// Visibility rules:
+///   - A user appears if IsActive + not deleted AND (no AgencyProfile OR AgencyProfile.IsVisible == true)
+///   - Admin can hide a user by setting AgencyProfile.IsVisible = false via PUT /api/admin/agencies/{id}
+///
+/// Verification badge rules (point 5):
+///   - isVerified is ALWAYS derived from User.VerificationStatus
+///     (true when VerificationStatus == Verified || PartiallyVerified)
+///   - The badge label is auto-generated from role (Office→"مكتب موثوق" / Broker→"وسيط موثوق")
+///     or overridden by the admin-set VerificationBadge text.
 /// </summary>
 [Route("api/agencies")]
 public class AgenciesController : BaseController
@@ -97,6 +105,9 @@ public class AgenciesController : BaseController
 
     // ── GET /api/agencies/cities ──────────────────────────────────────────────
     // Literal route takes precedence over {id} parameterised route.
+    // Returns distinct cities from AgencyProfiles of active Broker/Office users.
+    // IsVisible is intentionally NOT filtered here — all profile cities appear
+    // so the dropdown is populated even for temporarily-hidden profiles.
 
     [HttpGet("cities")]
     [AllowAnonymous]
@@ -106,13 +117,15 @@ public class AgenciesController : BaseController
 
         var allowedRoles = new[] { UserRole.Broker, UserRole.Office };
 
+        // Get cities from AgencyProfiles joined to active Broker/Office users.
+        // No IsVisible filter — any profile with a city contributes to the list.
         var usedCities = await _ctx.Users
             .Where(u => allowedRoles.Contains(u.Role) && u.IsActive && !u.IsDeleted)
             .Join(_ctx.AgencyProfiles,
                   u  => u.Id.ToString(),
                   ap => ap.UserId,
                   (u, ap) => ap)
-            .Where(ap => ap.IsVisible && ap.City != null && ap.City != "")
+            .Where(ap => ap.City != null && ap.City != "")
             .Select(ap => ap.City!)
             .Distinct()
             .ToListAsync(ct);
@@ -134,6 +147,10 @@ public class AgenciesController : BaseController
     }
 
     // ── GET /api/agencies ─────────────────────────────────────────────────────
+    // Returns all active Broker/Office users.
+    // AgencyProfile is LEFT JOIN — users without a profile are included.
+    // A user is hidden only if they HAVE a profile with IsVisible=false
+    // (admin explicitly hid them). Users without any profile default to visible.
 
     [HttpGet]
     [AllowAnonymous]
@@ -162,18 +179,24 @@ public class AgenciesController : BaseController
 
         var allowedRoles = new[] { UserRole.Broker, UserRole.Office };
 
+        // LEFT JOIN: include users even if they have no AgencyProfile
         var query = _ctx.Users
             .Where(u => allowedRoles.Contains(u.Role) && u.IsActive && !u.IsDeleted)
-            .Join(_ctx.AgencyProfiles,
-                  u  => u.Id.ToString(),
-                  ap => ap.UserId,
-                  (u, ap) => new { u, ap })
-            .Where(x => x.ap.IsVisible);
+            .GroupJoin(_ctx.AgencyProfiles,
+                       u  => u.Id.ToString(),
+                       ap => ap.UserId,
+                       (u, profiles) => new { u, profiles })
+            .SelectMany(
+                x => x.profiles.DefaultIfEmpty(),
+                (x, ap) => new { x.u, ap })
+            // Visible if: no profile at all, OR profile.IsVisible = true
+            .Where(x => x.ap == null || x.ap.IsVisible);
 
+        // City / province filter — only applies when a profile with city exists
         if (!string.IsNullOrWhiteSpace(city))
-            query = query.Where(x => x.ap.City == city);
+            query = query.Where(x => x.ap != null && x.ap.City == city);
         else if (provinceCities is not null && provinceCities.Count > 0)
-            query = query.Where(x => provinceCities.Contains(x.ap.City!));
+            query = query.Where(x => x.ap != null && provinceCities.Contains(x.ap.City!));
 
         if (!string.IsNullOrWhiteSpace(type))
         {
@@ -181,19 +204,26 @@ public class AgenciesController : BaseController
                 query = query.Where(x => x.u.Role == roleEnum);
         }
 
-        // isVerified reads u.IsVerified which is derived from VerificationStatus
+        // isVerified is derived from VerificationStatus (never an independent flag)
         if (isVerified.HasValue)
             query = query.Where(x => x.u.IsVerified == isVerified.Value);
 
+        // isFeatured: users without profile are never featured
         if (isFeatured.HasValue)
-            query = query.Where(x => x.ap.IsFeatured == isFeatured.Value);
+        {
+            if (isFeatured.Value)
+                query = query.Where(x => x.ap != null && x.ap.IsFeatured);
+            else
+                query = query.Where(x => x.ap == null || !x.ap.IsFeatured);
+        }
 
         var total = await query.CountAsync(ct);
 
         // Step 1: intermediate projection (no ratings yet)
+        // Null-safe: ap may be null (user without profile)
         var rawItems = await query
-            .OrderBy(x => x.ap.SortOrder)
-            .ThenByDescending(x => x.ap.IsFeatured)
+            .OrderBy(x => x.ap != null ? x.ap.SortOrder : 999)
+            .ThenByDescending(x => x.ap != null && x.ap.IsFeatured)
             .ThenBy(x => x.u.FullName)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -203,14 +233,15 @@ public class AgenciesController : BaseController
                 x.u.FullName,
                 Role               = x.u.Role.ToString(),
                 RoleLabel          = x.u.Role == UserRole.Broker ? "وسيط عقاري" : "مكتب عقاري",
-                x.ap.City,
-                x.ap.Bio,
-                LogoUrl            = x.ap.LogoUrl ?? x.u.ProfileImageUrl,
+                City               = x.ap != null ? x.ap.City    : null,
+                Bio                = x.ap != null ? x.ap.Bio     : null,
+                LogoUrl            = x.ap != null ? (x.ap.LogoUrl ?? x.u.ProfileImageUrl) : x.u.ProfileImageUrl,
+                // isVerified is ALWAYS derived from VerificationStatus (ApplyVerificationCore)
                 x.u.IsVerified,
                 VerificationStatus = x.u.VerificationStatus.ToString(),
                 x.u.VerificationBadge,
-                x.ap.IsFeatured,
-                x.ap.SortOrder,
+                IsFeatured         = x.ap != null && x.ap.IsFeatured,
+                SortOrder          = x.ap != null ? x.ap.SortOrder : 999,
                 ListingCount       = _ctx.Properties.Count(p =>
                     p.CreatedByUserId == x.u.Id.ToString() &&
                     p.ModerationStatus == ModerationStatus.Active &&
@@ -240,6 +271,7 @@ public class AgenciesController : BaseController
     }
 
     // ── GET /api/agencies/{id} ────────────────────────────────────────────────
+    // Accessible if user is active Broker/Office AND (no profile OR profile.IsVisible=true).
 
     [HttpGet("{id}")]
     [AllowAnonymous]
@@ -253,28 +285,33 @@ public class AgenciesController : BaseController
 
         var allowedRoles = new[] { UserRole.Broker, UserRole.Office };
 
+        // LEFT JOIN: accessible even without a profile
         var raw = await _ctx.Users
             .Where(u => u.Id == guid && allowedRoles.Contains(u.Role) && u.IsActive && !u.IsDeleted)
-            .Join(_ctx.AgencyProfiles,
-                  u  => u.Id.ToString(),
-                  ap => ap.UserId,
-                  (u, ap) => new { u, ap })
-            .Where(x => x.ap.IsVisible)
+            .GroupJoin(_ctx.AgencyProfiles,
+                       u  => u.Id.ToString(),
+                       ap => ap.UserId,
+                       (u, profiles) => new { u, profiles })
+            .SelectMany(
+                x => x.profiles.DefaultIfEmpty(),
+                (x, ap) => new { x.u, ap })
+            // Hidden only if profile explicitly sets IsVisible=false
+            .Where(x => x.ap == null || x.ap.IsVisible)
             .Select(x => new
             {
                 Id                 = x.u.Id.ToString(),
                 x.u.FullName,
                 Role               = x.u.Role.ToString(),
                 RoleLabel          = x.u.Role == UserRole.Broker ? "وسيط عقاري" : "مكتب عقاري",
-                x.ap.City,
-                x.ap.Bio,
-                LogoUrl            = x.ap.LogoUrl ?? x.u.ProfileImageUrl,
+                City               = x.ap != null ? x.ap.City    : null,
+                Bio                = x.ap != null ? x.ap.Bio     : null,
+                LogoUrl            = x.ap != null ? (x.ap.LogoUrl ?? x.u.ProfileImageUrl) : x.u.ProfileImageUrl,
                 x.u.Phone,
                 x.u.IsVerified,
                 VerificationStatus = x.u.VerificationStatus.ToString(),
                 x.u.VerificationLevel,
                 x.u.VerificationBadge,
-                x.ap.IsFeatured,
+                IsFeatured         = x.ap != null && x.ap.IsFeatured,
                 ListingCount       = _ctx.Properties.Count(p =>
                     p.CreatedByUserId == x.u.Id.ToString() &&
                     p.ModerationStatus == ModerationStatus.Active &&
