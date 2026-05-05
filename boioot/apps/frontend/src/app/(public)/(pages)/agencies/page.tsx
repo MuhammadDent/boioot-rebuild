@@ -6,24 +6,37 @@ import AgencyCard, { type AgencyListItem } from "@/components/agencies/AgencyCar
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import SectionDisabled from "@/components/ui/SectionDisabled";
 
-// ── Agency city (for hierarchical filter) ─────────────────────────────────────
+// ── Static Syrian governorates + cities ───────────────────────────────────────
+// Province list is always shown in full regardless of what's in the DB.
+// When a province is selected, cities come from this list.
+// API results are still filtered by what actually exists in the DB.
 
-interface AgencyCityItem {
-  city:     string;
-  province: string;
+interface ProvinceEntry {
+  name:   string;
+  cities: string[];
 }
 
-function useAgencyCities() {
-  const [cities,  setCities]  = useState<AgencyCityItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    fetch("/api/agencies/cities", { cache: "no-store" })
-      .then(r => r.ok ? r.json() : [])
-      .then((data: AgencyCityItem[]) => setCities(data))
-      .catch(() => setCities([]))
-      .finally(() => setLoading(false));
-  }, []);
-  return { cities, loading };
+const SYRIA_PROVINCES: ProvinceEntry[] = [
+  { name: "دمشق",       cities: ["دمشق"] },
+  { name: "ريف دمشق",  cities: ["دوما","جرمانا","القطيفة","يبرود","الزبداني","قطنا","داريا","صيدنايا","معلولا","عدرا","التل","حرستا","جديدة عرطوز"] },
+  { name: "حلب",        cities: ["حلب","منبج","الباب","أعزاز","جرابلس","عفرين","السفيرة","الأتارب"] },
+  { name: "حمص",        cities: ["حمص","تدمر","القصير","الرستن","تلكلخ","مضايا"] },
+  { name: "حماه",       cities: ["حماه","سلمية","مصياف","السقيلبية","محردة"] },
+  { name: "اللاذقية",   cities: ["اللاذقية","جبلة","القرداحة","الحفة"] },
+  { name: "طرطوس",     cities: ["طرطوس","بانياس","صافيتا","دريكيش","الشيخ بدر"] },
+  { name: "إدلب",       cities: ["إدلب","جسر الشغور","معرة النعمان","سراقب","أريحا","حارم"] },
+  { name: "الحسكة",     cities: ["الحسكة","القامشلي","رأس العين","المالكية","قامشلو"] },
+  { name: "دير الزور",  cities: ["دير الزور","الميادين","البوكمال","الأشارة"] },
+  { name: "الرقة",      cities: ["الرقة","تل أبيض","الطبقة"] },
+  { name: "درعا",       cities: ["درعا","نوى","الصنمين","إزرع","خربة غزالة"] },
+  { name: "السويداء",   cities: ["السويداء","شهبا","صلخد","القريا"] },
+  { name: "القنيطرة",   cities: ["القنيطرة","فيق","خان أرنبة"] },
+];
+
+const PROVINCE_NAMES = SYRIA_PROVINCES.map(p => p.name);
+
+function citiesForProvince(province: string): string[] {
+  return SYRIA_PROVINCES.find(p => p.name === province)?.cities ?? [];
 }
 
 // ── Filter form ───────────────────────────────────────────────────────────────
@@ -77,7 +90,29 @@ function AgencyCardSkeleton() {
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyState({ onReset, filtered }: { onReset: () => void; filtered: boolean }) {
+function EmptyState({
+  onReset,
+  filtered,
+  provinceOnly,
+  provinceName,
+}: {
+  onReset:      () => void;
+  filtered:     boolean;
+  provinceOnly: boolean;
+  provinceName: string;
+}) {
+  const message = provinceOnly
+    ? `لا توجد مكاتب أو وسطاء في ${provinceName} حاليًا`
+    : filtered
+    ? "لا توجد نتائج مطابقة"
+    : "لا توجد مكاتب أو وسطاء متاحون حالياً";
+
+  const hint = provinceOnly
+    ? "يمكنك تصفح المكاتب في محافظة أخرى أو عرض الكل."
+    : filtered
+    ? "جرّب تعديل الفلاتر أو إعادة الضبط."
+    : "سيتم إضافة المكاتب والوسطاء قريباً.";
+
   return (
     <div style={{
       textAlign: "center", padding: "4rem 1rem",
@@ -85,11 +120,9 @@ function EmptyState({ onReset, filtered }: { onReset: () => void; filtered: bool
     }}>
       <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>🏢</div>
       <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0f172a", margin: "0 0 0.5rem" }}>
-        {filtered ? "لا توجد نتائج مطابقة" : "لا توجد مكاتب أو وسطاء متاحون حالياً"}
+        {message}
       </h3>
-      <p style={{ margin: "0 0 1.5rem", fontSize: "0.9rem" }}>
-        {filtered ? "جرّب تعديل الفلاتر أو إعادة الضبط." : "سيتم إضافة المكاتب والوسطاء قريباً."}
-      </p>
+      <p style={{ margin: "0 0 1.5rem", fontSize: "0.9rem" }}>{hint}</p>
       <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
         {filtered && (
           <button onClick={onReset} className="btn btn-primary" style={{ padding: "0.5rem 1.25rem" }}>
@@ -114,7 +147,6 @@ function AgenciesContent() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const pathname     = usePathname();
-  const { cities: agencyCities } = useAgencyCities();
   const { settings, isLoading: settingsLoading } = useSiteSettings();
 
   const provinceParam   = searchParams.get("province")   || "";
@@ -140,7 +172,7 @@ function AgenciesContent() {
     setForm({ province: provinceParam, city: cityParam, type: typeParam, isVerified: isVerifiedParam, isFeatured: isFeaturedParam });
   }, [provinceParam, cityParam, typeParam, isVerifiedParam, isFeaturedParam]);
 
-  // Fetch agencies
+  // Fetch agencies — results still driven by what exists in the DB
   useEffect(() => {
     setLoading(true);
     setError("");
@@ -165,11 +197,8 @@ function AgenciesContent() {
     return <SectionDisabled />;
   }
 
-  // Derive unique provinces and cities for hierarchical dropdowns
-  const provinces    = Array.from(new Set(agencyCities.map(c => c.province).filter(Boolean))).sort();
-  const citiesForProvince = form.province
-    ? agencyCities.filter(c => c.province === form.province)
-    : agencyCities;
+  // Cities for the selected province come from the static list
+  const currentProvinceCities = provinceParam ? citiesForProvince(provinceParam) : [];
 
   function pushFilter(patch: Partial<FilterForm>) {
     const next = { ...form, ...patch };
@@ -196,7 +225,9 @@ function AgenciesContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  const isFiltered = !!(provinceParam || cityParam || typeParam || isVerifiedParam || isFeaturedParam);
+  const isFiltered  = !!(provinceParam || cityParam || typeParam || isVerifiedParam || isFeaturedParam);
+  // True when only the province filter is active (no city/type/verified/featured)
+  const provinceOnly = !!(provinceParam && !cityParam && !typeParam && !isVerifiedParam && !isFeaturedParam);
 
   return (
     <div dir="rtl" style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem 1rem" }}>
@@ -223,7 +254,7 @@ function AgenciesContent() {
         display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end",
       }}>
 
-        {/* Province (المحافظة) */}
+        {/* Province — always shows all 14 Syrian governorates */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", flex: "1 1 140px" }}>
           <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>المحافظة</label>
           <select
@@ -233,13 +264,13 @@ function AgenciesContent() {
             onChange={e => pushFilter({ province: e.target.value })}
           >
             <option value="">كل المحافظات</option>
-            {provinces.map(p => (
+            {PROVINCE_NAMES.map(p => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
         </div>
 
-        {/* City (المدينة) — filtered by selected province */}
+        {/* City — shows static cities of selected province, disabled when no province */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", flex: "1 1 140px" }}>
           <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>المدينة</label>
           <select
@@ -247,10 +278,11 @@ function AgenciesContent() {
             style={selectStyle}
             value={form.city}
             onChange={e => pushFilter({ city: e.target.value })}
+            disabled={!provinceParam}
           >
-            <option value="">كل المدن</option>
-            {citiesForProvince.map(c => (
-              <option key={c.city} value={c.city}>{c.city}</option>
+            <option value="">{provinceParam ? "كل المدن" : "اختر محافظة أولاً"}</option>
+            {currentProvinceCities.map(c => (
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
@@ -323,7 +355,12 @@ function AgenciesContent() {
         {loading ? (
           Array.from({ length: 6 }).map((_, i) => <AgencyCardSkeleton key={i} />)
         ) : agencies.length === 0 ? (
-          <EmptyState onReset={handleReset} filtered={isFiltered} />
+          <EmptyState
+            onReset={handleReset}
+            filtered={isFiltered}
+            provinceOnly={provinceOnly}
+            provinceName={provinceParam}
+          />
         ) : (
           agencies.map(a => <AgencyCard key={a.id} agency={a} />)
         )}
