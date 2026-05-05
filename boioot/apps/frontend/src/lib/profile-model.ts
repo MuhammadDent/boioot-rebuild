@@ -5,7 +5,8 @@ import type { UserProfileResponse } from "@/types";
 export const ROLE_LABELS: Record<string, string> = {
   Admin:        "مدير النظام",
   CompanyOwner: "شركة تطوير عقاري",
-  Broker:       "مكتب عقاري",
+  Office:       "مكتب عقاري",
+  Broker:       "وسيط عقاري",
   Agent:        "وكيل عقاري",
   Owner:        "مالك عقار",
   User:         "مستخدم",
@@ -16,9 +17,9 @@ export const ROLE_LABELS: Record<string, string> = {
 export type RoleGroup = "admin" | "business" | "agent" | "individual";
 
 export function getRoleGroup(role: string): RoleGroup {
-  if (role === "Admin")                          return "admin";
-  if (role === "CompanyOwner" || role === "Broker") return "business";
-  if (role === "Agent")                          return "agent";
+  if (role === "Admin")                                          return "admin";
+  if (role === "CompanyOwner" || role === "Office" || role === "Broker") return "business";
+  if (role === "Agent")                                          return "agent";
   return "individual";
 }
 

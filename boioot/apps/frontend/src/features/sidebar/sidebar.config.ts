@@ -495,6 +495,9 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
 // Staff mirrors Admin
 SIDEBAR_CONFIG["Staff"] = SIDEBAR_CONFIG["Admin"];
 
+// Office mirrors CompanyOwner (backend uses "Office" role for office accounts)
+SIDEBAR_CONFIG["Office"] = SIDEBAR_CONFIG["CompanyOwner"];
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
@@ -512,10 +515,10 @@ export function getSidebarGroups(
 ): SidebarGroup[] {
   const groups: SidebarGroup[] = SIDEBAR_CONFIG[role ?? ""] ?? SIDEBAR_CONFIG["User"];
 
-  if (role !== "CompanyOwner") return groups;
+  if (role !== "CompanyOwner" && role !== "Office") return groups;
 
   const canProjects = canAccessProjects(accountType);
-  const canAgents   = canAccessAgents(role);
+  const canAgents   = canAccessAgents("CompanyOwner");
 
   return groups.map((g) => {
     if (g.id !== "business") return g;
