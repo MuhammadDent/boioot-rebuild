@@ -38,16 +38,29 @@ public class AgenciesController : BaseController
     private Task EnsureTableAsync(CancellationToken ct) =>
         _ctx.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS ""AgencyProfiles"" (
-                ""UserId""     TEXT    NOT NULL,
-                ""Bio""        TEXT,
-                ""City""       TEXT,
-                ""LogoUrl""    TEXT,
-                ""IsVisible""  BOOLEAN NOT NULL DEFAULT false,
-                ""IsFeatured"" BOOLEAN NOT NULL DEFAULT false,
-                ""SortOrder""  INTEGER NOT NULL DEFAULT 0,
-                ""UpdatedAt""  TIMESTAMP WITH TIME ZONE,
+                ""UserId""        TEXT    NOT NULL,
+                ""BusinessName""  TEXT,
+                ""Bio""           TEXT,
+                ""City""          TEXT,
+                ""Province""      TEXT,
+                ""LogoUrl""       TEXT,
+                ""ContactNumber"" TEXT,
+                ""WhatsappLink""  TEXT,
+                ""Address""       TEXT,
+                ""WebsiteUrl""    TEXT,
+                ""IsVisible""     BOOLEAN NOT NULL DEFAULT false,
+                ""IsFeatured""    BOOLEAN NOT NULL DEFAULT false,
+                ""SortOrder""     INTEGER NOT NULL DEFAULT 0,
+                ""UpdatedAt""     TIMESTAMP WITH TIME ZONE,
                 CONSTRAINT ""PK_AgencyProfiles"" PRIMARY KEY (""UserId"")
-            );", ct);
+            );
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""BusinessName""  TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""Province""      TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""ContactNumber"" TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""WhatsappLink""  TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""Address""       TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""WebsiteUrl""    TEXT;
+        ", ct);
 
     private Task EnsureRatingsTableAsync(CancellationToken ct) =>
         _ctx.Database.ExecuteSqlRawAsync(@"

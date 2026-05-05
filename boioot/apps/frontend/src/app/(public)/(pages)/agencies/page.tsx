@@ -5,39 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import AgencyCard, { type AgencyListItem } from "@/components/agencies/AgencyCard";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import SectionDisabled from "@/components/ui/SectionDisabled";
-
-// ── Static Syrian governorates + cities ───────────────────────────────────────
-// Province list is always shown in full regardless of what's in the DB.
-// When a province is selected, cities come from this list.
-// API results are still filtered by what actually exists in the DB.
-
-interface ProvinceEntry {
-  name:   string;
-  cities: string[];
-}
-
-const SYRIA_PROVINCES: ProvinceEntry[] = [
-  { name: "دمشق",       cities: ["دمشق"] },
-  { name: "ريف دمشق",  cities: ["دوما","جرمانا","القطيفة","يبرود","الزبداني","قطنا","داريا","صيدنايا","معلولا","عدرا","التل","حرستا","جديدة عرطوز"] },
-  { name: "حلب",        cities: ["حلب","منبج","الباب","أعزاز","جرابلس","عفرين","السفيرة","الأتارب"] },
-  { name: "حمص",        cities: ["حمص","تدمر","القصير","الرستن","تلكلخ","مضايا"] },
-  { name: "حماه",       cities: ["حماه","سلمية","مصياف","السقيلبية","محردة"] },
-  { name: "اللاذقية",   cities: ["اللاذقية","جبلة","القرداحة","الحفة"] },
-  { name: "طرطوس",     cities: ["طرطوس","بانياس","صافيتا","دريكيش","الشيخ بدر"] },
-  { name: "إدلب",       cities: ["إدلب","جسر الشغور","معرة النعمان","سراقب","أريحا","حارم"] },
-  { name: "الحسكة",     cities: ["الحسكة","القامشلي","رأس العين","المالكية","قامشلو"] },
-  { name: "دير الزور",  cities: ["دير الزور","الميادين","البوكمال","الأشارة"] },
-  { name: "الرقة",      cities: ["الرقة","تل أبيض","الطبقة"] },
-  { name: "درعا",       cities: ["درعا","نوى","الصنمين","إزرع","خربة غزالة"] },
-  { name: "السويداء",   cities: ["السويداء","شهبا","صلخد","القريا"] },
-  { name: "القنيطرة",   cities: ["القنيطرة","فيق","خان أرنبة"] },
-];
-
-const PROVINCE_NAMES = SYRIA_PROVINCES.map(p => p.name);
-
-function citiesForProvince(province: string): string[] {
-  return SYRIA_PROVINCES.find(p => p.name === province)?.cities ?? [];
-}
+import { PROVINCE_NAMES, citiesForProvince } from "@/lib/syria-provinces";
 
 // ── Filter form ───────────────────────────────────────────────────────────────
 

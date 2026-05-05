@@ -9,9 +9,29 @@ namespace Boioot.Domain.Entities;
 public class AgencyProfile
 {
     public string UserId    { get; set; } = string.Empty;
+
+    /// <summary>Displayed business/trade name (set by owner).</summary>
+    public string? BusinessName { get; set; }
+
     public string? Bio      { get; set; }
     public string? City     { get; set; }
+
+    /// <summary>Syrian province/governorate (set by owner).</summary>
+    public string? Province { get; set; }
+
     public string? LogoUrl  { get; set; }
+
+    /// <summary>Contact phone/WhatsApp number shown on the profile (may differ from account phone).</summary>
+    public string? ContactNumber { get; set; }
+
+    /// <summary>Full WhatsApp link, e.g. https://wa.me/963...</summary>
+    public string? WhatsappLink { get; set; }
+
+    /// <summary>Physical address or area description.</summary>
+    public string? Address { get; set; }
+
+    /// <summary>Business website URL.</summary>
+    public string? WebsiteUrl { get; set; }
 
     /// <summary>Admin must approve before the profile appears on the public /agencies page.</summary>
     public bool IsVisible  { get; set; } = false;

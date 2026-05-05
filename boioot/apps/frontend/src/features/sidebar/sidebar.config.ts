@@ -364,6 +364,14 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
     ACCOUNT_GROUP,
     MESSAGES_GROUP,
     {
+      id: "agency-profile",
+      label: "ملف الوسيط",
+      icon: I.star,
+      items: [
+        { href: "/dashboard/agency-profile", label: "ملف الوسيط", icon: I.star },
+      ],
+    },
+    {
       id: "business",
       label: "الأعمال",
       icon: I.listings,
@@ -394,6 +402,14 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
     OVERVIEW_GROUP,
     ACCOUNT_GROUP,
     MESSAGES_GROUP,
+    {
+      id: "agency-profile",
+      label: "ملف المكتب",
+      icon: I.star,
+      items: [
+        { href: "/dashboard/agency-profile", label: "ملف المكتب", icon: I.star },
+      ],
+    },
     {
       id: "business",
       label: "الأعمال",

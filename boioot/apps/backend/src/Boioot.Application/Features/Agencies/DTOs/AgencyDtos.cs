@@ -121,3 +121,35 @@ public record AgencyRatingsPagedResult(
 // ── Agency city item for hierarchical filter ──────────────────────────────────
 
 public record AgencyCityItem(string City, string Province);
+
+// ── Self-service: profile the owner sees/edits ───────────────────────────────
+
+public record MyAgencyProfileDto(
+    string? BusinessName,
+    string? Bio,
+    string? City,
+    string? Province,
+    string? LogoUrl,
+    string? ContactNumber,
+    string? WhatsappLink,
+    string? Address,
+    string? WebsiteUrl,
+    // Read-only admin fields shown for info only
+    bool    IsVisible,
+    bool    IsFeatured,
+    string  VerificationStatus,
+    string? VerificationBadge,
+    bool    IsVerified);
+
+// ── Self-service: what the owner can submit (no admin fields) ─────────────────
+
+public record UpsertMyAgencyProfileRequest(
+    string? BusinessName,
+    string? Bio,
+    string? City,
+    string? Province,
+    string? LogoUrl,
+    string? ContactNumber,
+    string? WhatsappLink,
+    string? Address,
+    string? WebsiteUrl);
