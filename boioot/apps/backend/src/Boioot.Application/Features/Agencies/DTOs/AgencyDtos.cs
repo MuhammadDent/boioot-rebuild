@@ -134,6 +134,7 @@ public record MyAgencyProfileDto(
     string? WhatsappLink,
     string? Address,
     string? WebsiteUrl,
+    string? CommercialRegistrationNumber,
     // Read-only admin fields shown for info only
     bool    IsVisible,
     bool    IsFeatured,
@@ -150,4 +151,5 @@ public record UpsertMyAgencyProfileRequest(
     string? ContactNumber,
     string? WhatsappLink,
     string? Address,
-    string? WebsiteUrl);
+    string? WebsiteUrl,
+    string? CommercialRegistrationNumber);

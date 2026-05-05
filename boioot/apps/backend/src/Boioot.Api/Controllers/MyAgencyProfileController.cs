@@ -46,12 +46,13 @@ public class MyAgencyProfileController : BaseController
                 ""UpdatedAt""     TIMESTAMP WITH TIME ZONE,
                 CONSTRAINT ""PK_AgencyProfiles"" PRIMARY KEY (""UserId"")
             );
-            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""BusinessName""  TEXT;
-            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""Province""      TEXT;
-            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""ContactNumber"" TEXT;
-            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""WhatsappLink""  TEXT;
-            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""Address""       TEXT;
-            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""WebsiteUrl""    TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""BusinessName""                TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""Province""                    TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""ContactNumber""               TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""WhatsappLink""                TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""Address""                     TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""WebsiteUrl""                  TEXT;
+            ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""CommercialRegistrationNumber"" TEXT;
         ", ct);
 
     // ── Verify caller is Broker or Office ─────────────────────────────────────
@@ -79,7 +80,7 @@ public class MyAgencyProfileController : BaseController
         {
             // Return empty-but-valid response so the frontend can render the empty form
             return Ok(new MyAgencyProfileDto(
-                null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null,
                 false, false,
                 user.VerificationStatus.ToString(),
                 user.VerificationBadge,
@@ -94,6 +95,7 @@ public class MyAgencyProfileController : BaseController
             profile.WhatsappLink,
             profile.Address,
             profile.WebsiteUrl,
+            profile.CommercialRegistrationNumber,
             profile.IsVisible,
             profile.IsFeatured,
             user.VerificationStatus.ToString(),
@@ -136,14 +138,15 @@ public class MyAgencyProfileController : BaseController
         }
 
         // User-editable fields only (BusinessName and LogoUrl excluded — use FullName and ProfileImageUrl)
-        profile.Bio           = req.Bio?.Trim();
-        profile.City          = req.City?.Trim();
-        profile.Province      = req.Province?.Trim();
-        profile.ContactNumber = req.ContactNumber?.Trim();
-        profile.WhatsappLink  = req.WhatsappLink?.Trim();
-        profile.Address       = req.Address?.Trim();
-        profile.WebsiteUrl    = req.WebsiteUrl?.Trim();
-        profile.UpdatedAt     = DateTime.UtcNow;
+        profile.Bio                           = req.Bio?.Trim();
+        profile.City                          = req.City?.Trim();
+        profile.Province                      = req.Province?.Trim();
+        profile.ContactNumber                 = req.ContactNumber?.Trim();
+        profile.WhatsappLink                  = req.WhatsappLink?.Trim();
+        profile.Address                       = req.Address?.Trim();
+        profile.WebsiteUrl                    = req.WebsiteUrl?.Trim();
+        profile.CommercialRegistrationNumber  = req.CommercialRegistrationNumber?.Trim();
+        profile.UpdatedAt                     = DateTime.UtcNow;
 
         await _ctx.SaveChangesAsync(ct);
 
@@ -155,6 +158,7 @@ public class MyAgencyProfileController : BaseController
             profile.WhatsappLink,
             profile.Address,
             profile.WebsiteUrl,
+            profile.CommercialRegistrationNumber,
             profile.IsVisible,
             profile.IsFeatured,
             user.VerificationStatus.ToString(),

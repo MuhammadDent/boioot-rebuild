@@ -33,6 +33,9 @@ public class AgencyProfile
     /// <summary>Business website URL.</summary>
     public string? WebsiteUrl { get; set; }
 
+    /// <summary>Syrian commercial registration number (optional).</summary>
+    public string? CommercialRegistrationNumber { get; set; }
+
     /// <summary>Admin must approve before the profile appears on the public /agencies page.</summary>
     public bool IsVisible  { get; set; } = false;
 

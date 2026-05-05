@@ -1643,23 +1643,42 @@ function BusinessLocationTab() {
   );
 }
 
-// ─── AgencyFieldsSection — inline business fields inside the "info" tab ───────
+// ─── AgencyFieldsSection — rendered inside the "بيانات المكتب" tab ────────────
 // Shown only for Office / Broker users. Fetches and saves to /my/agency-profile.
 // Name comes from User.FullName; photo comes from User.ProfileImageUrl — no duplication.
 
 interface AgencyProfileData {
-  bio?:               string;
-  city?:              string;
-  province?:          string;
-  contactNumber?:     string;
-  whatsappLink?:      string;
-  address?:           string;
-  websiteUrl?:        string;
-  isVisible:          boolean;
-  isFeatured:         boolean;
-  verificationStatus: string;
-  verificationBadge?: string;
-  isVerified:         boolean;
+  bio?:                          string;
+  city?:                         string;
+  province?:                     string;
+  contactNumber?:                string;
+  whatsappLink?:                 string;
+  address?:                      string;
+  websiteUrl?:                   string;
+  commercialRegistrationNumber?: string;
+  isVisible:                     boolean;
+  isFeatured:                    boolean;
+  verificationStatus:            string;
+  verificationBadge?:            string;
+  isVerified:                    boolean;
+}
+
+// Shared section-header style for grouping fields
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h4 style={{
+      margin: "0 0 0.75rem",
+      fontSize: "0.88rem",
+      fontWeight: 700,
+      color: "var(--color-text-secondary)",
+      textTransform: "uppercase",
+      letterSpacing: "0.04em",
+      borderBottom: "1px solid var(--color-border)",
+      paddingBottom: "0.4rem",
+    }}>
+      {children}
+    </h4>
+  );
 }
 
 function AgencyFieldsSection() {
@@ -1667,33 +1686,35 @@ function AgencyFieldsSection() {
   const [saving,  setSaving]  = useState(false);
   const [banner,  setBanner]  = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  const [bio,           setBio]           = useState("");
-  const [province,      setProvince]      = useState("");
-  const [city,          setCity]          = useState("");
-  const [contactNumber, setContactNumber] = useState("");
-  const [whatsappLink,  setWhatsappLink]  = useState("");
-  const [address,       setAddress]       = useState("");
-  const [websiteUrl,    setWebsiteUrl]    = useState("");
+  const [bio,                          setBio]                          = useState("");
+  const [province,                     setProvince]                     = useState("");
+  const [city,                         setCity]                         = useState("");
+  const [address,                      setAddress]                      = useState("");
+  const [commercialRegistrationNumber, setCommercialRegistrationNumber] = useState("");
+  const [contactNumber,                setContactNumber]                = useState("");
+  const [whatsappLink,                 setWhatsappLink]                 = useState("");
+  const [websiteUrl,                   setWebsiteUrl]                   = useState("");
 
-  const [isVisible,         setIsVisible]         = useState(false);
-  const [isFeatured,        setIsFeatured]         = useState(false);
-  const [verificationBadge, setVerificationBadge]  = useState<string | null>(null);
-  const [isVerified,        setIsVerified]         = useState(false);
+  const [isVisible,         setIsVisible]        = useState(false);
+  const [isFeatured,        setIsFeatured]        = useState(false);
+  const [verificationBadge, setVerificationBadge] = useState<string | null>(null);
+  const [isVerified,        setIsVerified]        = useState(false);
 
   useEffect(() => {
     api
       .get<AgencyProfileData>("/my/agency-profile")
       .then((d) => {
-        setBio(d.bio                    ?? "");
-        setProvince(d.province          ?? "");
-        setCity(d.city                  ?? "");
-        setContactNumber(d.contactNumber ?? "");
-        setWhatsappLink(d.whatsappLink   ?? "");
-        setAddress(d.address             ?? "");
-        setWebsiteUrl(d.websiteUrl       ?? "");
+        setBio(d.bio                                    ?? "");
+        setProvince(d.province                          ?? "");
+        setCity(d.city                                  ?? "");
+        setAddress(d.address                            ?? "");
+        setCommercialRegistrationNumber(d.commercialRegistrationNumber ?? "");
+        setContactNumber(d.contactNumber                ?? "");
+        setWhatsappLink(d.whatsappLink                  ?? "");
+        setWebsiteUrl(d.websiteUrl                      ?? "");
         setIsVisible(d.isVisible);
         setIsFeatured(d.isFeatured);
-        setVerificationBadge(d.verificationBadge ?? null);
+        setVerificationBadge(d.verificationBadge        ?? null);
         setIsVerified(d.isVerified);
       })
       .catch(() => setBanner({ type: "error", msg: "تعذّر تحميل بيانات المكتب/الوسيط." }))
@@ -1706,15 +1727,16 @@ function AgencyFieldsSection() {
     setSaving(true);
     try {
       await api.put("/my/agency-profile", {
-        bio:           bio.trim()           || null,
-        province:      province.trim()      || null,
-        city:          city.trim()          || null,
-        contactNumber: contactNumber.trim() || null,
-        whatsappLink:  whatsappLink.trim()  || null,
-        address:       address.trim()       || null,
-        websiteUrl:    websiteUrl.trim()    || null,
+        bio:                          bio.trim()                          || null,
+        province:                     province.trim()                     || null,
+        city:                         city.trim()                         || null,
+        address:                      address.trim()                      || null,
+        commercialRegistrationNumber: commercialRegistrationNumber.trim() || null,
+        contactNumber:                contactNumber.trim()                || null,
+        whatsappLink:                 whatsappLink.trim()                 || null,
+        websiteUrl:                   websiteUrl.trim()                   || null,
       });
-      setBanner({ type: "success", msg: "تم حفظ بيانات المكتب/الوسيط بنجاح." });
+      setBanner({ type: "success", msg: "تم حفظ بيانات المكتب بنجاح." });
     } catch (err: unknown) {
       setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ أثناء الحفظ." });
     } finally {
@@ -1722,26 +1744,22 @@ function AgencyFieldsSection() {
     }
   }
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", padding: "2.5rem", color: "var(--color-text-secondary)" }}>
+        جارٍ تحميل البيانات…
+      </div>
+    );
+  }
 
   const visibleBg     = isVisible ? "#d1fae5" : "#fef3c7";
   const visibleColor  = isVisible ? "#065f46" : "#92400e";
   const visibleBorder = isVisible ? "#6ee7b7" : "#fcd34d";
 
   return (
-    <form onSubmit={handleSave} noValidate style={{ marginTop: "2rem", borderTop: "1px solid var(--color-border)", paddingTop: "2rem" }}>
+    <form onSubmit={handleSave} noValidate>
 
-      {/* Section header */}
-      <div style={{ marginBottom: "1.25rem" }}>
-        <h3 style={{ margin: "0 0 0.3rem", fontSize: "1rem", fontWeight: 700, color: "var(--color-text)" }}>
-          ملف المكتب / الوسيط
-        </h3>
-        <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--color-text-secondary)" }}>
-          هذه البيانات تظهر في صفحة <strong>المكاتب والوسطاء</strong>. اسمك وصورتك يُستخدمان تلقائياً من بيانات حسابك.
-        </p>
-      </div>
-
-      {/* Status bar */}
+      {/* Status badges */}
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
         <span style={{ padding: "0.25rem 0.75rem", borderRadius: 20, fontSize: "0.78rem", fontWeight: 600, background: visibleBg, color: visibleColor, border: `1px solid ${visibleBorder}` }}>
           {isVisible ? "ظاهر في صفحة الوسطاء" : "بانتظار موافقة الإدارة للظهور"}
@@ -1758,62 +1776,81 @@ function AgencyFieldsSection() {
 
       {banner && <Banner type={banner.type} msg={banner.msg} />}
 
-      <div style={{ display: "grid", gap: "1rem", maxWidth: 560 }}>
+      {/* ── قسم: المعلومات الأساسية ───────────────────────────────────────── */}
+      <div style={{ marginBottom: "2rem" }}>
+        <SectionHeading>المعلومات الأساسية</SectionHeading>
+        <div style={{ display: "grid", gap: "1rem", maxWidth: 560 }}>
 
-        {/* Bio */}
-        <div>
-          <FieldLabel>النبذة التعريفية</FieldLabel>
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="اكتب وصفاً مختصراً عن مكتبك أو خدماتك…"
-            maxLength={500}
-            rows={4}
-            style={{
-              width: "100%", padding: "0.6rem 0.85rem",
-              border: "1px solid var(--color-border)", borderRadius: 8,
-              fontSize: "0.95rem", fontFamily: "var(--font-arabic)",
-              background: "#fff", color: "var(--color-text)",
-              outline: "none", boxSizing: "border-box", resize: "vertical",
-            }}
-          />
+          {/* Bio */}
+          <div>
+            <FieldLabel>النبذة التعريفية</FieldLabel>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="اكتب وصفاً مختصراً عن مكتبك أو خدماتك…"
+              maxLength={500}
+              rows={4}
+              style={{
+                width: "100%", padding: "0.6rem 0.85rem",
+                border: "1px solid var(--color-border)", borderRadius: 8,
+                fontSize: "0.95rem", fontFamily: "var(--font-arabic)",
+                background: "#fff", color: "var(--color-text)",
+                outline: "none", boxSizing: "border-box", resize: "vertical",
+              }}
+            />
+          </div>
+
+          {/* Commercial registration number */}
+          <div>
+            <FieldLabel>رقم السجل التجاري (اختياري)</FieldLabel>
+            <Input
+              value={commercialRegistrationNumber}
+              onChange={(e) => setCommercialRegistrationNumber(e.target.value)}
+              placeholder="مثال: 12345"
+              maxLength={100}
+              dir="ltr"
+            />
+          </div>
+
+          {/* Province + City */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <ProvinceSelect label="المحافظة" value={province} onChange={(v) => { setProvince(v); setCity(""); }} />
+            <CitySelect label="المدينة" value={city} onChange={setCity} province={province} />
+          </div>
+
+          {/* Address */}
+          <div>
+            <FieldLabel>العنوان التفصيلي</FieldLabel>
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="مثال: شارع بغداد، بناء رقم 12" maxLength={250} />
+          </div>
+
         </div>
-
-        {/* Province + City */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-          <ProvinceSelect label="المحافظة" value={province} onChange={(v) => { setProvince(v); setCity(""); }} />
-          <CitySelect label="المدينة" value={city} onChange={setCity} province={province} />
-        </div>
-
-        {/* Address */}
-        <div>
-          <FieldLabel>العنوان التفصيلي</FieldLabel>
-          <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="مثال: شارع بغداد، بناء رقم 12" maxLength={250} />
-        </div>
-
-        {/* Contact number */}
-        <div>
-          <FieldLabel>رقم التواصل</FieldLabel>
-          <Input value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} placeholder="+963…" maxLength={30} dir="ltr" />
-        </div>
-
-        {/* WhatsApp */}
-        <div>
-          <FieldLabel>رابط واتساب</FieldLabel>
-          <Input value={whatsappLink} onChange={(e) => setWhatsappLink(e.target.value)} placeholder="https://wa.me/963…" maxLength={200} dir="ltr" />
-        </div>
-
-        {/* Website */}
-        <div>
-          <FieldLabel>الموقع الإلكتروني (اختياري)</FieldLabel>
-          <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://…" maxLength={200} dir="ltr" />
-        </div>
-
       </div>
 
-      <div style={{ marginTop: "1.5rem" }}>
-        <SaveBtn loading={saving} label="حفظ بيانات المكتب/الوسيط" />
+      {/* ── قسم: معلومات التواصل ──────────────────────────────────────────── */}
+      <div style={{ marginBottom: "1.75rem" }}>
+        <SectionHeading>معلومات التواصل</SectionHeading>
+        <div style={{ display: "grid", gap: "1rem", maxWidth: 560 }}>
+
+          <div>
+            <FieldLabel>رقم التواصل</FieldLabel>
+            <Input value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} placeholder="+963…" maxLength={30} dir="ltr" />
+          </div>
+
+          <div>
+            <FieldLabel>رابط واتساب</FieldLabel>
+            <Input value={whatsappLink} onChange={(e) => setWhatsappLink(e.target.value)} placeholder="https://wa.me/963…" maxLength={200} dir="ltr" />
+          </div>
+
+          <div>
+            <FieldLabel>الموقع الإلكتروني (اختياري)</FieldLabel>
+            <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://…" maxLength={200} dir="ltr" />
+          </div>
+
+        </div>
       </div>
+
+      <SaveBtn loading={saving} label="حفظ بيانات المكتب" />
     </form>
   );
 }
@@ -1840,7 +1877,8 @@ function ProfileTabs({
     { id: "security", label: "الأمان"         },
     { id: "media",    label: "الصورة الشخصية" },
     ...(isBusiness ? [
-      { id: "location", label: "موقع المكتب" },
+      { id: "business", label: "بيانات المكتب" },
+      { id: "location", label: "موقع المكتب"   },
     ] : []),
     { id: "settings", label: "الإعدادات"      },
   ];
@@ -1893,14 +1931,10 @@ function ProfileTabs({
 
       {/* Tab content */}
       <div style={{ padding: "1.75rem" }}>
-        {activeTab === "info"     && (
-          <>
-            <ProfileBasicInfoForm raw={raw} onUpdate={onUpdate} />
-            {isBusiness && <AgencyFieldsSection />}
-          </>
-        )}
+        {activeTab === "info"     && <ProfileBasicInfoForm raw={raw} onUpdate={onUpdate} />}
         {activeTab === "security" && <ProfileSecurityTab raw={raw} />}
         {activeTab === "media"    && <ProfileAvatarTab raw={raw} onUpdate={onUpdate} />}
+        {activeTab === "business" && isBusiness && <AgencyFieldsSection />}
         {activeTab === "location" && isBusiness && <BusinessLocationTab />}
         {activeTab === "settings" && <ProfileSettingsTab profile={profile} />}
       </div>
