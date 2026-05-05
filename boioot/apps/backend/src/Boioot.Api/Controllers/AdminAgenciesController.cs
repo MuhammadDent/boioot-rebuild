@@ -188,7 +188,6 @@ public class AdminAgenciesController : BaseController
         profile.IsFeatured = req.IsFeatured;
         profile.Bio        = req.Bio;
         profile.City       = req.City;
-        profile.LogoUrl    = req.LogoUrl;
         profile.SortOrder  = req.SortOrder;
         profile.UpdatedAt  = DateTime.UtcNow;
 
@@ -203,7 +202,7 @@ public class AdminAgenciesController : BaseController
             user.Role == UserRole.Broker ? "وسيط عقاري" : "مكتب عقاري",
             profile.City,
             profile.Bio,
-            profile.LogoUrl ?? user.ProfileImageUrl,
+            user.ProfileImageUrl,
             profile.IsVisible,
             user.IsVerified,
             user.VerificationStatus.ToString(),

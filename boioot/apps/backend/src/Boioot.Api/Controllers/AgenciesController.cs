@@ -248,7 +248,8 @@ public class AgenciesController : BaseController
                 RoleLabel          = x.u.Role == UserRole.Broker ? "وسيط عقاري" : "مكتب عقاري",
                 City               = x.ap != null ? x.ap.City    : null,
                 Bio                = x.ap != null ? x.ap.Bio     : null,
-                LogoUrl            = x.ap != null ? (x.ap.LogoUrl ?? x.u.ProfileImageUrl) : x.u.ProfileImageUrl,
+                // Logo is always the user's profile photo — no separate logoUrl
+                LogoUrl            = x.u.ProfileImageUrl,
                 // isVerified is ALWAYS derived from VerificationStatus (ApplyVerificationCore)
                 x.u.IsVerified,
                 VerificationStatus = x.u.VerificationStatus.ToString(),
@@ -316,9 +317,10 @@ public class AgenciesController : BaseController
                 x.u.FullName,
                 Role               = x.u.Role.ToString(),
                 RoleLabel          = x.u.Role == UserRole.Broker ? "وسيط عقاري" : "مكتب عقاري",
-                City               = x.ap != null ? x.ap.City    : null,
-                Bio                = x.ap != null ? x.ap.Bio     : null,
-                LogoUrl            = x.ap != null ? (x.ap.LogoUrl ?? x.u.ProfileImageUrl) : x.u.ProfileImageUrl,
+                City               = x.ap != null ? x.ap.City : null,
+                Bio                = x.ap != null ? x.ap.Bio  : null,
+                // Logo is always the user's profile photo — no separate logoUrl
+                LogoUrl            = x.u.ProfileImageUrl,
                 x.u.Phone,
                 x.u.IsVerified,
                 VerificationStatus = x.u.VerificationStatus.ToString(),

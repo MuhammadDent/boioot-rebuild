@@ -79,7 +79,7 @@ public class MyAgencyProfileController : BaseController
         {
             // Return empty-but-valid response so the frontend can render the empty form
             return Ok(new MyAgencyProfileDto(
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 false, false,
                 user.VerificationStatus.ToString(),
                 user.VerificationBadge,
@@ -87,11 +87,9 @@ public class MyAgencyProfileController : BaseController
         }
 
         return Ok(new MyAgencyProfileDto(
-            profile.BusinessName,
             profile.Bio,
             profile.City,
             profile.Province,
-            profile.LogoUrl,
             profile.ContactNumber,
             profile.WhatsappLink,
             profile.Address,
@@ -137,12 +135,10 @@ public class MyAgencyProfileController : BaseController
             _ctx.AgencyProfiles.Add(profile);
         }
 
-        // User-editable fields only
-        profile.BusinessName  = req.BusinessName?.Trim();
+        // User-editable fields only (BusinessName and LogoUrl excluded — use FullName and ProfileImageUrl)
         profile.Bio           = req.Bio?.Trim();
         profile.City          = req.City?.Trim();
         profile.Province      = req.Province?.Trim();
-        profile.LogoUrl       = req.LogoUrl?.Trim();
         profile.ContactNumber = req.ContactNumber?.Trim();
         profile.WhatsappLink  = req.WhatsappLink?.Trim();
         profile.Address       = req.Address?.Trim();
@@ -152,11 +148,9 @@ public class MyAgencyProfileController : BaseController
         await _ctx.SaveChangesAsync(ct);
 
         return Ok(new MyAgencyProfileDto(
-            profile.BusinessName,
             profile.Bio,
             profile.City,
             profile.Province,
-            profile.LogoUrl,
             profile.ContactNumber,
             profile.WhatsappLink,
             profile.Address,

@@ -90,12 +90,12 @@ public record AdminAgenciesPagedResult(
 // Verification is managed exclusively via PUT /api/admin/agencies/{userId}/verification
 // which calls IAdminService.UpdateUserVerificationAsync — the single source of truth.
 
+// LogoUrl removed — photo always comes from User.ProfileImageUrl.
 public record UpdateAgencyProfileRequest(
     bool    IsVisible,
     bool    IsFeatured,
     string? Bio,
     string? City,
-    string? LogoUrl,
     int     SortOrder);
 
 // ── Agency ratings ────────────────────────────────────────────────────────────
@@ -123,13 +123,13 @@ public record AgencyRatingsPagedResult(
 public record AgencyCityItem(string City, string Province);
 
 // ── Self-service: profile the owner sees/edits ───────────────────────────────
+// BusinessName removed — name comes from User.FullName.
+// LogoUrl removed    — photo comes from User.ProfileImageUrl.
 
 public record MyAgencyProfileDto(
-    string? BusinessName,
     string? Bio,
     string? City,
     string? Province,
-    string? LogoUrl,
     string? ContactNumber,
     string? WhatsappLink,
     string? Address,
@@ -144,11 +144,9 @@ public record MyAgencyProfileDto(
 // ── Self-service: what the owner can submit (no admin fields) ─────────────────
 
 public record UpsertMyAgencyProfileRequest(
-    string? BusinessName,
     string? Bio,
     string? City,
     string? Province,
-    string? LogoUrl,
     string? ContactNumber,
     string? WhatsappLink,
     string? Address,

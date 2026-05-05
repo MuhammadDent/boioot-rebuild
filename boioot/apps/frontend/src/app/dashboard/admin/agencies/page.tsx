@@ -87,7 +87,6 @@ function EditPanel({
     isFeatured: agency.isFeatured,
     bio:        agency.bio        ?? "",
     city:       agency.city       ?? "",
-    logoUrl:    agency.logoUrl    ?? "",
     sortOrder:  agency.sortOrder,
   });
   const [saving, setSaving] = useState(false);
@@ -165,17 +164,6 @@ function EditPanel({
             onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))}
           />
         </div>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", marginBottom: "0.75rem" }}>
-        <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>رابط الشعار</label>
-        <input
-          className="form-input"
-          style={{ padding: "0.4rem 0.75rem" }}
-          value={form.logoUrl}
-          onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
-          placeholder="https://..."
-        />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", marginBottom: "1rem" }}>
