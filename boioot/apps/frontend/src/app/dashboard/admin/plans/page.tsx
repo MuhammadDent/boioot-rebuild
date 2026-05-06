@@ -1011,6 +1011,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const isNew = plan === null;
 
   const [name, setName]                           = useState(plan?.name ?? "");
+  const [code, setCode]                           = useState(plan?.code ?? "");
   const [description, setDescription]             = useState(plan?.description ?? "");
   const [applicableAccountType, setApplicableAccountType] = useState(plan?.applicableAccountType ?? "");
   const [priceMonthly, setPriceMonthly]           = useState(String(plan?.basePriceMonthly ?? 0));
@@ -1081,7 +1082,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
   const formSnapshot = JSON.stringify({
-    name, description, applicableAccountType, priceMonthly, priceYearly,
+    name, code, description, applicableAccountType, priceMonthly, priceYearly,
     isActive, isPublic, isRecommended, displayOrder, billingMode, planBillingType,
     recurringCycle, durationDays, consumptionPolicy, expiryRule, downgradePlanCode,
     displayNameAr, displayNameEn, audienceType, tier, badgeText, planColor,
@@ -1138,7 +1139,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     setSaving(true); setSaveStatus("saving"); setError("");
     try {
       const result = await adminApi.updatePlan(plan.id, {
-        name:                   name.trim(),
+        name:                   name.trim() || code.trim(),
+        code:                   code.trim() || undefined,
         description:            description.trim() || undefined,
         basePriceMonthly:       parseFloat(priceMonthly) || 0,
         basePriceYearly:        parseFloat(priceYearly)  || 0,
@@ -1282,7 +1284,8 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
     setSaving(true); setSaveStatus("saving"); setError("");
     try {
       const result = await adminApi.createPlan({
-        name:                   name.trim(),
+        name:                   code.trim() || name.trim(),
+        code:                   code.trim() || undefined,
         displayNameAr:          displayNameAr.trim() || undefined,
         displayNameEn:          displayNameEn.trim() || undefined,
         audienceType:           audienceType || undefined,
@@ -1467,10 +1470,10 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
             <SectionCard title="المعلومات الأساسية" icon="📋">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
 
-                {/* Row: internal name full width */}
+                {/* Row: internal code full width */}
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={labelStyle}>اسم الخطة الداخلي *</label>
-                  <input required value={name} onChange={e => setName(e.target.value)} style={inputStyle} placeholder="مثال: owner_advanced" />
+                  <label style={labelStyle}>اسم الخطة الداخلي (Code) *</label>
+                  <input required value={code} onChange={e => setCode(e.target.value)} style={{ ...inputStyle, fontFamily: "monospace", direction: "ltr" }} placeholder="مثال: broker_free" />
                 </div>
 
                 {/* Row: Arabic + English display names */}
@@ -1829,7 +1832,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
             <CollapsibleSection title="معاينة الخطة" icon="🔍" defaultOpen={false}>
               <p style={{ margin: "0 0 0.75rem", fontSize: "0.8rem", color: "#64748b" }}>معاينة مباشرة لكيفية ظهور الخطة في صفحة التسعير.</p>
               <PlanPreviewCard
-                displayNameAr={displayNameAr} displayNameEn={displayNameEn} internalName={name}
+                displayNameAr={displayNameAr} displayNameEn={displayNameEn} internalName={code || name}
                 badgeText={badgeText} planColor={planColor} isRecommended={isRecommended}
                 basePriceMonthly={priceMonthly}
                 enabledFeatures={features} limits={limits}

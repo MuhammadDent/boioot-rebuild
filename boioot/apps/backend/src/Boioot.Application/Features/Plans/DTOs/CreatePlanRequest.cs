@@ -7,6 +7,10 @@ public class CreatePlanRequest
     [Required, MaxLength(100)]
     public string  Name                    { get; set; } = string.Empty;
 
+    /// <summary>Canonical snake_case code (e.g. "broker_free"). Shown in admin UI as the internal name.</summary>
+    [MaxLength(100)]
+    public string? Code                    { get; set; }
+
     /// <summary>Primary Arabic display name shown in UI (e.g. "وسيط أساسي").</summary>
     [MaxLength(100)]
     public string? DisplayNameAr           { get; set; }

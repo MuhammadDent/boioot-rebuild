@@ -228,6 +228,7 @@ public class AdminPlanService : IAdminPlanService
         var plan = new Plan
         {
             Name                    = request.Name.Trim(),
+            Code                    = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code.Trim(),
             DisplayNameAr           = string.IsNullOrWhiteSpace(request.DisplayNameAr) ? null : request.DisplayNameAr.Trim(),
             DisplayNameEn           = string.IsNullOrWhiteSpace(request.DisplayNameEn) ? null : request.DisplayNameEn.Trim(),
             AudienceType            = string.IsNullOrWhiteSpace(request.AudienceType)  ? null : request.AudienceType.Trim().ToLowerInvariant(),
@@ -320,6 +321,9 @@ public class AdminPlanService : IAdminPlanService
             accountType = at;
 
         plan.Name                    = request.Name.Trim();
+        // Only update Code when the admin explicitly provides a value; preserve existing code otherwise.
+        if (request.Code is not null)
+            plan.Code = string.IsNullOrWhiteSpace(request.Code) ? null : request.Code.Trim();
         plan.DisplayNameAr           = string.IsNullOrWhiteSpace(request.DisplayNameAr) ? null : request.DisplayNameAr.Trim();
         plan.DisplayNameEn           = string.IsNullOrWhiteSpace(request.DisplayNameEn) ? null : request.DisplayNameEn.Trim();
         plan.AudienceType            = string.IsNullOrWhiteSpace(request.AudienceType)  ? null : request.AudienceType.Trim().ToLowerInvariant();
