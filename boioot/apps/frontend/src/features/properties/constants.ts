@@ -109,8 +109,11 @@ export const FLOOR_LABELS: Record<string, string> = {
 /** Ownership type labels — common values used in Syria. */
 export const OWNERSHIP_TYPE_LABELS: Record<string, string> = {
   Customary:       "عادي (عرفي)",
-  Freehold:        "ملكية حرة",
-  Leasehold:       "حق انتفاع",
+  Freehold:        "ملكية",
+  Leasehold:       "إيجار طويل الأمد",
+  Usufruct:        "حق انتفاع",
+  SharedOwnership: "ملكية مشتركة",
+  Cooperative:     "تعاوني",
   Waqf:            "وقف",
   RegisteredDeed:  "سند مسجل",
 };

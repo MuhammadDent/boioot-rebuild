@@ -164,7 +164,8 @@ export default function ReviewCard({ review }: ReviewCardProps) {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
+                  justifyContent: "flex-start",
+                  gap: "0.5rem",
                   padding: "0.35rem 0",
                   borderBottom: last ? "none" : "1px solid #edf0f4",
                 }}
