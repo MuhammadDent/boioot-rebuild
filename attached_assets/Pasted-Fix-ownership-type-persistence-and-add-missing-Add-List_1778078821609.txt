@@ -1,0 +1,64 @@
+Fix ownership type persistence and add missing Add Listing button.
+
+There are two issues:
+
+Issue 1: Ownership type display is still wrong after creating a listing
+The dropdown options may look Arabic, but after publishing, the property details page still shows raw/internal/custom values such as:
+- greentabo
+- LongLease
+- Usufruct
+or other non-Arabic/non-user-facing values.
+
+This means the problem is in the value being saved or in the displayed value coming from the API, not only in the dropdown label.
+
+Required fix:
+1. Inspect the create listing form and edit listing form.
+2. Ensure the ownership type select uses fixed backend enum values as option values, not Arabic labels or custom text.
+
+Correct option structure:
+- value: Freehold, label: ملكية
+- value: Usufruct, label: حق انتفاع
+- value: LongLease, label: إيجار طويل الأمد
+- value: SharedOwnership, label: ملكية مشتركة
+- value: Cooperative, label: تعاوني
+
+3. When submitting create/edit listing, send only the fixed backend value.
+4. Do not allow free text or unknown custom values for ownershipType.
+5. On property details display, use the shared Arabic helper:
+   Freehold => ملكية
+   Usufruct => حق انتفاع
+   LongLease => إيجار طويل الأمد
+   LongTermLease => إيجار طويل الأمد
+   Leasehold => إيجار طويل الأمد
+   SharedOwnership => ملكية مشتركة
+   Cooperative => تعاوني
+   invalid/null/unknown => غير محدد
+
+6. Important:
+If an old listing already has invalid ownershipType like "greentabo", display "غير محدد", never display the raw value.
+
+7. Verify this exact flow:
+- Create a new listing
+- Select "طابو أخضر" or the proper Arabic ownership option
+- Submit
+- Open property details
+- The displayed ownership type must be Arabic and user-friendly, not raw backend/internal text.
+
+Issue 2: Add Listing button missing in many places
+Previously we wanted the "أضف إعلان +" button to appear in most main pages and dashboard areas, but it is missing in the dashboard/listings page and likely other dashboard pages.
+
+Required fix:
+1. Add a clear "أضف إعلان +" button in the dashboard header / dashboard listings page.
+2. Link it to:
+   /post-ad
+3. The button should be visible for users allowed to post listings.
+4. Keep the design consistent with the main navbar button.
+5. Also inspect shared dashboard layout/header. If appropriate, add it globally to dashboard pages without cluttering mobile.
+
+After completion:
+- list modified files
+- confirm ownershipType option values are fixed backend enums
+- confirm new listings no longer save custom/raw ownership values
+- confirm invalid old ownership values display as "غير محدد"
+- confirm Add Listing button appears in dashboard/listings and relevant dashboard pages
+- confirm no TypeScript/build errors

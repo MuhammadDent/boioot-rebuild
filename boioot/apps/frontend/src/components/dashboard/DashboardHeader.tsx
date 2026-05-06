@@ -30,9 +30,10 @@ type Props = {
 };
 
 export default function DashboardHeader({ onMenuToggle }: Props) {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const initial = user?.fullName?.charAt(0).toUpperCase() ?? "؟";
+  const canPostAd = hasPermission("properties.create");
 
   return (
     <header className="dash-hdr">
@@ -75,6 +76,30 @@ export default function DashboardHeader({ onMenuToggle }: Props) {
 
         {/* Notifications bell */}
         <NotificationsBell />
+
+        {/* Add listing button — visible only for users who can create listings */}
+        {canPostAd && (
+          <Link
+            href="/post-ad"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.3rem",
+              padding: "0.35rem 0.85rem",
+              borderRadius: 8,
+              background: "var(--color-primary, #16a34a)",
+              color: "#fff",
+              textDecoration: "none",
+              fontWeight: 700,
+              fontSize: "0.82rem",
+              whiteSpace: "nowrap",
+              lineHeight: 1,
+            }}
+          >
+            <Ic size={14} d={<><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>} />
+            أضف إعلان
+          </Link>
+        )}
 
         {/* Back to site */}
         <Link

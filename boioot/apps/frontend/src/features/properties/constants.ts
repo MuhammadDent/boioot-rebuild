@@ -131,6 +131,22 @@ export function getOwnershipTypeLabel(value: string | null | undefined): string 
   return OWNERSHIP_TYPE_LABELS[value] ?? "غير محدد";
 }
 
+/**
+ * Canonical hardcoded list of ownership type options for form selects.
+ * Always use this list — never use API-fetched ownership types as option values,
+ * because the API may return custom/internal strings that break display.
+ */
+export const OWNERSHIP_OPTIONS: { value: string; label: string }[] = [
+  { value: "Freehold",        label: "ملكية" },
+  { value: "Usufruct",        label: "حق انتفاع" },
+  { value: "LongLease",       label: "إيجار طويل الأمد" },
+  { value: "SharedOwnership", label: "ملكية مشتركة" },
+  { value: "Cooperative",     label: "تعاوني" },
+  { value: "Customary",       label: "عادي (عرفي)" },
+  { value: "Waqf",            label: "وقف" },
+  { value: "RegisteredDeed",  label: "سند مسجل" },
+];
+
 /** Formats a numeric price with currency suffix. */
 export function formatPrice(price: number, currency = "SYP"): string {
   if (currency === "USD") {

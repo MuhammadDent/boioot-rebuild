@@ -9,7 +9,7 @@ import { api, normalizeError } from "@/lib/api";
 import { tokenStorage } from "@/lib/token";
 import { imagesService } from "@/services/images.service";
 import PostAdWizard from "@/components/post-ad/PostAdWizard";
-import type { CreatePropertyRequest, PropertyResponse, ListingTypeConfig, PropertyTypeConfig, OwnershipTypeConfig } from "@/types";
+import type { CreatePropertyRequest, PropertyResponse, ListingTypeConfig, PropertyTypeConfig } from "@/types";
 import Spinner from "@/components/ui/Spinner";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -73,7 +73,6 @@ export default function PostAdPage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [listingTypes, setListingTypes]   = useState<ListingTypeConfig[]>([]);
   const [propertyTypes, setPropertyTypes] = useState<PropertyTypeConfig[]>([]);
-  const [ownershipTypes, setOwnershipTypes] = useState<OwnershipTypeConfig[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError]   = useState("");
 
@@ -103,7 +102,6 @@ export default function PostAdPage() {
 
     api.get<ListingTypeConfig[]>("/listing-types").then(setListingTypes).catch(() => {});
     api.get<PropertyTypeConfig[]>("/property-types").then(setPropertyTypes).catch(() => {});
-    api.get<OwnershipTypeConfig[]>("/ownership-types").then(setOwnershipTypes).catch(() => {});
   }, [user]);
 
   async function handleWizardSubmit(wizardData: {
@@ -351,7 +349,6 @@ export default function PostAdPage() {
             <PostAdWizard
               listingTypes={listingTypes}
               propertyTypes={propertyTypes}
-              ownershipTypes={ownershipTypes}
               onSubmit={handleWizardSubmit}
               isSubmitting={isSubmitting}
               serverError={serverError}
