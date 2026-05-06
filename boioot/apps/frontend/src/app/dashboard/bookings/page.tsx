@@ -488,7 +488,12 @@ function BookingCard({
   const isRevisionRequested = normalizedStatus === "RevisionRequested";
   const isConfirmed         = normalizedStatus === "Confirmed";
   const isCompleted         = normalizedStatus === "Completed";
+  // isReviewable: booking reached a final/confirmed state (status check only — no date)
   const isReviewable        = isConfirmed || isCompleted;
+  // stayEnded: checkout date has actually passed — required before submitting a review
+  const stayEnded           = new Date(booking.endDate) < new Date();
+  // canReview: both conditions must be true for the review UI to be shown
+  const canReview           = isReviewable && stayEnded;
   const isCancellable       = isPending || isAwaitProof || isProofSub || isRevisionRequested;
 
   async function handleRevisionSubmit() {
@@ -686,7 +691,14 @@ function BookingCard({
         </div>
       )}
 
-      {mode === "owner" && isReviewable && reviewStatus && !reviewStatus.hasOwnerReview && !reviewOpen && (
+      {/* Owner: stay confirmed but not yet ended → waiting message */}
+      {mode === "owner" && isReviewable && !stayEnded && !reviewStatus?.hasOwnerReview && (
+        <div style={{ marginTop: "0.85rem", border: "1px solid #e9d5ff", borderRadius: 10, padding: "0.65rem 0.85rem", background: "#faf5ff", color: "#6d28d9", fontSize: "0.85rem" }}>
+          🕐 يمكنك تقييم المستأجر بعد انتهاء مدة الإقامة.
+        </div>
+      )}
+
+      {mode === "owner" && canReview && reviewStatus && !reviewStatus.hasOwnerReview && !reviewOpen && (
         <div style={{ marginTop: "0.85rem" }}>
           <button
             type="button"
@@ -701,7 +713,7 @@ function BookingCard({
         <OwnerReviewDisplay review={reviewStatus.ownerReview} />
       )}
 
-      {mode === "owner" && isReviewable && reviewOpen && !reviewStatus?.hasOwnerReview && (
+      {mode === "owner" && canReview && reviewOpen && !reviewStatus?.hasOwnerReview && (
         <div style={{ marginTop: "0.85rem", border: "1px solid #ddd6fe", borderRadius: 12, padding: "0.9rem", background: "#faf5ff" }}>
           <p style={{ margin: "0 0 0.75rem", fontWeight: 800, color: "#6d28d9", fontSize: "0.9rem" }}>⭐ قيّم المستأجر</p>
           <StarInput label="التواصل" value={ownerScores.communication} onChange={(v) => setOwnerScores((s) => ({ ...s, communication: v }))} />
@@ -732,7 +744,20 @@ function BookingCard({
         </div>
       )}
 
-      {mode === "renter" && isReviewable && reviewStatus && !reviewStatus.hasTenantReview && !reviewOpen && (
+      {/* Renter: stay confirmed but checkout date not yet passed → waiting message */}
+      {mode === "renter" && isReviewable && !stayEnded && !reviewStatus?.hasTenantReview && (
+        <div style={{ marginTop: "0.85rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ border: "1px solid #bbf7d0", borderRadius: 10, padding: "0.65rem 0.85rem", background: "#f0fdf4", color: "#166534", fontWeight: 800, fontSize: "0.86rem", flex: 1 }}>
+            ✅ تم تأكيد الحجز
+          </div>
+          <div style={{ border: "1px solid #fde68a", borderRadius: 9, padding: "0.55rem 0.85rem", background: "#fffbeb", color: "#92400e", fontSize: "0.83rem" }}>
+            🕐 يمكنك تقييم العقار بعد انتهاء مدة الإقامة.
+          </div>
+        </div>
+      )}
+
+      {/* Renter: stay ended, not reviewed yet → show review button */}
+      {mode === "renter" && canReview && reviewStatus && !reviewStatus.hasTenantReview && !reviewOpen && (
         <div style={{ marginTop: "0.85rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
           <div style={{ border: "1px solid #bbf7d0", borderRadius: 10, padding: "0.65rem 0.85rem", background: "#f0fdf4", color: "#166534", fontWeight: 800, fontSize: "0.86rem", flex: 1 }}>
             ✅ تم تأكيد الحجز
@@ -756,7 +781,7 @@ function BookingCard({
         <TenantReviewDisplay review={reviewStatus.tenantReview} />
       )}
 
-      {mode === "renter" && isReviewable && reviewOpen && !reviewStatus?.hasTenantReview && (
+      {mode === "renter" && canReview && reviewOpen && !reviewStatus?.hasTenantReview && (
         <div style={{ marginTop: "0.85rem", border: "1px solid #fbbf24", borderRadius: 12, padding: "0.9rem", background: "#fffbeb" }}>
           <p style={{ margin: "0 0 0.75rem", fontWeight: 800, color: "#92400e", fontSize: "0.9rem" }}>⭐ قيّم تجربة إقامتك</p>
           <StarInput label="النظافة" value={tenantScores.cleanliness} onChange={(v) => setTenantScores((s) => ({ ...s, cleanliness: v }))} />

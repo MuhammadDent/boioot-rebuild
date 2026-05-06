@@ -75,8 +75,9 @@ public class BookingReviewsController : BaseController
         if (!string.Equals(booking.RequestedByUserIdText, userIdStr, StringComparison.OrdinalIgnoreCase))
             return StatusCode(403, new { message = "غير مصرح بهذا الإجراء" });
 
-        if (!IsEligibleForReview(booking.Status))
-            return BadRequest(new { message = "لا يمكن تقييم هذا الحجز إلا بعد تأكيده" });
+        var tenantIneligibility = GetIneligibilityReason(booking);
+        if (tenantIneligibility is not null)
+            return BadRequest(new { message = tenantIneligibility });
 
         if (await ReviewExistsAsync(id, "TenantToProperty", ct))
             return Conflict(new { message = "لقد قدّمت تقييمك لهذا الحجز مسبقاً" });
@@ -144,8 +145,9 @@ public class BookingReviewsController : BaseController
         if (!string.Equals(booking.PropertyOwnerUserIdText, userIdStr, StringComparison.OrdinalIgnoreCase))
             return StatusCode(403, new { message = "غير مصرح بهذا الإجراء" });
 
-        if (!IsEligibleForReview(booking.Status))
-            return BadRequest(new { message = "لا يمكن تقييم هذا الحجز إلا بعد تأكيده" });
+        var ownerIneligibility = GetIneligibilityReason(booking);
+        if (ownerIneligibility is not null)
+            return BadRequest(new { message = ownerIneligibility });
 
         if (await ReviewExistsAsync(id, "OwnerToTenant", ct))
             return Conflict(new { message = "لقد قدّمت تقييمك للمستأجر مسبقاً" });
@@ -303,8 +305,23 @@ public class BookingReviewsController : BaseController
 
     // ─── Private helpers ──────────────────────────────────────────────────────
 
-    private static bool IsEligibleForReview(string status) =>
-        status is "Confirmed" or "Completed";
+    /// <summary>
+    /// Returns null when eligible, or an Arabic error message explaining why not.
+    /// Eligibility requires:
+    ///   1. Booking status is Confirmed or Completed.
+    ///   2. The checkout date (EndDate) has already passed (UTC).
+    /// </summary>
+    private static string? GetIneligibilityReason(BookingInfo booking)
+    {
+        if (booking.Status is not ("Confirmed" or "Completed"))
+            return "لا يمكن تقييم هذا الحجز إلا بعد تأكيده";
+
+        // Ensure end-date comparison is done in UTC to avoid timezone issues.
+        if (booking.EndDate.ToUniversalTime() >= DateTime.UtcNow)
+            return "يمكنك تقييم العقار بعد انتهاء مدة الإقامة";
+
+        return null; // eligible
+    }
 
     private async Task<bool> ReviewExistsAsync(Guid bookingId, string reviewType, CancellationToken ct)
     {
@@ -330,16 +347,17 @@ public class BookingReviewsController : BaseController
     }
 
     private sealed record BookingInfo(
-        Guid   Id,
-        Guid   PropertyId,
-        string RequestedByUserIdText,
-        string? PropertyOwnerUserIdText,
-        string Status);
+        Guid     Id,
+        Guid     PropertyId,
+        string   RequestedByUserIdText,
+        string?  PropertyOwnerUserIdText,
+        string   Status,
+        DateTime EndDate);   // checkout date — used for post-stay review eligibility
 
     private async Task<BookingInfo?> GetBookingInfoAsync(Guid bookingId, CancellationToken ct)
     {
         const string sql = """
-            SELECT "Id", "PropertyId", "RequestedByUserId"::text, "PropertyOwnerUserId", "Status"
+            SELECT "Id", "PropertyId", "RequestedByUserId"::text, "PropertyOwnerUserId", "Status", "EndDate"
             FROM "Bookings"
             WHERE "Id" = @BookingId
             LIMIT 1
@@ -355,7 +373,8 @@ public class BookingReviewsController : BaseController
             rdr.GetGuid(1),
             rdr.GetString(2),
             rdr.IsDBNull(3) ? null : rdr.GetString(3),
-            rdr.GetString(4));
+            rdr.GetString(4),
+            rdr.GetDateTime(5));
     }
 
     private sealed record ReviewRow(
