@@ -22,7 +22,7 @@ function ProjectCardInner({ project, priority = false }: ProjectCardProps) {
   const statusBadge = PROJECT_STATUS_BADGE[project.status] ?? "badge-gray";
 
   return (
-    <Link href={`/projects/${project.id}`} style={{ textDecoration: "none", display: "block" }}>
+    <Link href={`/projects/${project.id}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
       <article className="card project-card">
         {mainImage ? (
           <Image

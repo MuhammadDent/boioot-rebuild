@@ -65,6 +65,8 @@ export default function AgencyCard({ agency }: Props) {
         flexDirection: "column",
         gap:           "0.85rem",
         position:      "relative",
+        height:        "100%",   /* fills grid-item box — equal height per row */
+        boxSizing:     "border-box",
         boxShadow:     agency.isFeatured
           ? "0 4px 24px rgba(15,118,110,0.10)"
           : "0 1px 6px rgba(0,0,0,0.05)",

@@ -64,10 +64,10 @@ function PropertyCardInner({ property, initialIsFavorited = false, priority = fa
   }, [router, property.id]);
 
   return (
-    <div style={{ position: "relative" }} onMouseEnter={handleMouseEnter}>
+    <div style={{ position: "relative", height: "100%" }} onMouseEnter={handleMouseEnter}>
       <Link
         href={`/properties/${property.id}`}
-        style={{ textDecoration: "none", display: "block" }}
+        style={{ textDecoration: "none", display: "block", height: "100%" }}
       >
         <article className="card property-card">
           <div style={{ position: "relative", overflow: "hidden" }}>
@@ -94,13 +94,16 @@ function PropertyCardInner({ property, initialIsFavorited = false, priority = fa
             <p className="property-card__price">{formatPrice(property.price, property.currency)}</p>
             <p className="property-card__city">📍 {property.city}</p>
 
-            {property.ratingsCount != null && property.ratingsCount > 0 && (
-              <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", color: "#92400e", display: "flex", alignItems: "center", gap: "0.2rem" }}>
-                <span style={{ color: "#f59e0b" }}>★</span>
-                <span style={{ fontWeight: 600 }}>{property.averageRating?.toFixed(1)}</span>
-                <span style={{ color: "#6b7280" }}>({property.ratingsCount})</span>
-              </p>
-            )}
+            {/* Rating row — always reserves the same vertical space via min-height */}
+            <p style={{ margin: 0, fontSize: "0.8rem", color: "#92400e", display: "flex", alignItems: "center", gap: "0.2rem", minHeight: "1.2em" }}>
+              {property.ratingsCount != null && property.ratingsCount > 0 && (
+                <>
+                  <span style={{ color: "#f59e0b" }}>★</span>
+                  <span style={{ fontWeight: 600 }}>{property.averageRating?.toFixed(1)}</span>
+                  <span style={{ color: "#6b7280" }}>({property.ratingsCount})</span>
+                </>
+              )}
+            </p>
 
             <div className="property-card__tags">
               {property.listingType && (

@@ -90,9 +90,17 @@
 }
 
 /* ─────────────── Property Card ─────────────── */
+/*
+ * Equal-height cards in a grid row:
+ * Grid stretches each item to the tallest in its row (align-items:stretch default).
+ * The card chain (outer-div → Link → article) must all be height:100% so the
+ * visual card fills the stretched grid-item box.
+ * The body uses flex:1 + margin-top:auto on .tags to push badges to the bottom.
+ */
 .property-card {
   display: flex;
   flex-direction: column;
+  height: 100%;   /* fills the <Link> wrapper which fills the grid item */
 }
 .property-card__img {
   width: 100%;
@@ -100,6 +108,7 @@
   object-fit: cover;
   background: var(--color-bg-secondary);
   display: block;
+  flex-shrink: 0;  /* image never compresses when body content is short */
 }
 .property-card__img-placeholder {
   width: 100%;
@@ -110,28 +119,36 @@
   justify-content: center;
   color: var(--color-text-muted);
   font-size: 2.5rem;
+  flex-shrink: 0;
 }
 .property-card__body {
   padding: 1rem;
-  flex: 1;
+  flex: 1;            /* absorbs leftover space so tags reach the bottom */
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 .property-card__title {
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 0;
+  /* Hard 2-line clamp — prevents long titles from stretching cards */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: calc(1rem * 1.4 * 2); /* reserve exactly 2 lines so short titles don't collapse */
+  line-height: 1.4;
 }
 .property-card__price {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .property-card__meta {
   display: flex;
@@ -147,12 +164,16 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .property-card__tags {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
-  margin-top: auto;
+  margin-top: auto;   /* pushes badge row to card bottom regardless of content height */
   padding-top: 0.5rem;
 }
 
@@ -160,6 +181,7 @@
 .project-card {
   display: flex;
   flex-direction: column;
+  height: 100%;   /* fills the <Link> wrapper which fills the grid item */
 }
 .project-card__img {
   width: 100%;
@@ -167,6 +189,7 @@
   object-fit: cover;
   background: var(--color-bg-secondary);
   display: block;
+  flex-shrink: 0;
 }
 .project-card__img-placeholder {
   width: 100%;
@@ -177,28 +200,38 @@
   justify-content: center;
   color: var(--color-text-muted);
   font-size: 2.5rem;
+  flex-shrink: 0;
 }
 .project-card__body {
   padding: 1rem;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 .project-card__title {
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 0;
+  /* 2-line clamp — same rule as property card title */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(1rem * 1.4 * 2);
+  line-height: 1.4;
 }
 .project-card__price {
   font-size: 0.9rem;
   color: var(--color-primary);
   font-weight: 600;
+  margin: 0;
 }
 .project-card__city {
   color: var(--color-text-secondary);
   font-size: 0.82rem;
+  margin: 0;
 }
 .project-card__company {
   color: var(--color-text-muted);
@@ -217,6 +250,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
+  align-items: stretch; /* explicit — each row's items share the tallest height */
+}
+/* Every direct child fills its grid-item box so the visual card reaches full height */
+.grid-cards > * {
+  height: 100%;
 }
 
 /* ─────────────── Spinner ─────────────── */
