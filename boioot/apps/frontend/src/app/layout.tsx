@@ -28,6 +28,14 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "بيوت — منصة العقارات السورية",
   description: "ابحث عن شقتك أو منزلك المثالي في سوريا",
+  icons: {
+    icon:     [
+      { url: "/favicon.ico",  sizes: "any" },
+      { url: "/icon.png",     type: "image/png", sizes: "64x64" },
+    ],
+    shortcut: "/favicon.ico",
+    apple:    { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+  },
   openGraph: {
     siteName: "بيوت",
     locale: "ar_SY",
