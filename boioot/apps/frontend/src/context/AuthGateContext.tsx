@@ -385,7 +385,12 @@ function AuthModal({ onClose, onSuccess }: { onClose: () => void; onSuccess?: ()
       {/* Backdrop */}
       <div
         onClick={onClose}
-        style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.48)", backdropFilter: "blur(3px)" }}
+        style={{
+          position: "fixed", inset: 0, zIndex: 9998,
+          background: "rgba(15, 23, 42, 0.55)",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+        }}
       />
 
       {/* Centering container */}
