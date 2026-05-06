@@ -22,7 +22,7 @@ import {
   PROPERTY_STATUS_LABELS,
   FEATURE_LABEL,
   FLOOR_LABELS,
-  OWNERSHIP_TYPE_LABELS,
+  getOwnershipTypeLabel,
   formatPrice,
 } from "@/features/properties/constants";
 import type { PropertyResponse } from "@/types";
@@ -698,7 +698,7 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
               {property.hallsCount != null && <DetailRow label="صالات"       value={String(property.hallsCount)} />}
               {property.floor && <DetailRow label="الطابق"       value={FLOOR_LABELS[property.floor] ?? property.floor} />}
               {property.propertyAge != null && <DetailRow label="عمر العقار" value={`${property.propertyAge} سنة`} />}
-              {property.ownershipType && <DetailRow label="نوع الملكية" value={OWNERSHIP_TYPE_LABELS[property.ownershipType] ?? property.ownershipType} />}
+              {property.ownershipType && <DetailRow label="نوع الملكية" value={getOwnershipTypeLabel(property.ownershipType)} />}
               <DetailRow label="المدينة"  value={`${property.province ? property.province + " — " : ""}${property.city}`} />
             </div>
 

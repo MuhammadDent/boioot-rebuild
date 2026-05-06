@@ -8,7 +8,7 @@ import { normalizeImageUrl } from "@/lib/imageUrl";
 import { imagesService } from "@/services/images.service";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
-import { FEATURES_LIST } from "@/features/properties/constants";
+import { FEATURES_LIST, getOwnershipTypeLabel } from "@/features/properties/constants";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useFeature } from "@/hooks/useFeature";
 import UpgradePrompt from "@/components/plan/UpgradePrompt";
@@ -1054,7 +1054,7 @@ uploadedImages: ${data.uploadedImages.length} (already on R2)`}
             <ReviewSection title="نوع العقار" onEdit={() => setStep(1)}>
               <ReviewRow label="نوع العقار"   value={propertyTypes.find((p) => p.value === data.propertyType)?.label ?? data.propertyType} />
               <ReviewRow label="الإدراج"       value={listingTypes.find((l) => l.value === data.listingType)?.label ?? data.listingType} />
-              {data.ownershipType && <ReviewRow label="الملكية" value={ownershipTypes.find((o) => o.value === data.ownershipType)?.label ?? data.ownershipType} />}
+              {data.ownershipType && <ReviewRow label="الملكية" value={ownershipTypes.find((o) => o.value === data.ownershipType)?.label ?? getOwnershipTypeLabel(data.ownershipType)} />}
               {data.floor && <ReviewRow label="الدور" value={FLOOR_OPTIONS.find((f) => f.value === data.floor)?.label ?? data.floor} />}
             </ReviewSection>
 

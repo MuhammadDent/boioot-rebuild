@@ -106,17 +106,30 @@ export const FLOOR_LABELS: Record<string, string> = {
   Basement:    "الطابق السفلي",
 };
 
-/** Ownership type labels — common values used in Syria. */
+/** Ownership type labels — all known backend enum values mapped to Arabic. */
 export const OWNERSHIP_TYPE_LABELS: Record<string, string> = {
-  Customary:       "عادي (عرفي)",
   Freehold:        "ملكية",
-  Leasehold:       "إيجار طويل الأمد",
   Usufruct:        "حق انتفاع",
+  Leasehold:       "إيجار طويل الأمد",
+  LongLease:       "إيجار طويل الأمد",
+  LongTermLease:   "إيجار طويل الأمد",
   SharedOwnership: "ملكية مشتركة",
   Cooperative:     "تعاوني",
+  Customary:       "عادي (عرفي)",
   Waqf:            "وقف",
   RegisteredDeed:  "سند مسجل",
+  Unknown:         "غير محدد",
 };
+
+/**
+ * Returns the Arabic display label for an ownership type value.
+ * Falls back to "غير محدد" for any unknown, null, or empty value —
+ * never exposes raw backend enum strings to users.
+ */
+export function getOwnershipTypeLabel(value: string | null | undefined): string {
+  if (!value) return "غير محدد";
+  return OWNERSHIP_TYPE_LABELS[value] ?? "غير محدد";
+}
 
 /** Formats a numeric price with currency suffix. */
 export function formatPrice(price: number, currency = "SYP"): string {
