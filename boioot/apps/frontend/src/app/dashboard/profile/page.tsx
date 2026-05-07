@@ -50,6 +50,35 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
+/**
+ * Extracts a clean digit-only phone number from either a wa.me URL or a plain
+ * phone string. Strips leading + signs so the number can be stored consistently.
+ *
+ * Examples:
+ *   "https://wa.me/963912345678"  → "963912345678"
+ *   "wa.me/+963912345678"         → "963912345678"
+ *   "+963912345678"               → "963912345678"
+ *   "0912345678"                  → "0912345678"
+ *   ""  / null / undefined        → ""
+ */
+function extractWhatsAppPhone(val: string | null | undefined): string {
+  if (!val) return "";
+  const urlMatch = val.match(/wa\.me\/\+?(\d+)/);
+  if (urlMatch) return urlMatch[1];
+  if (val.startsWith("http")) return ""; // unknown URL — don't mangle it
+  return val.replace(/[^\d]/g, "");      // plain number — keep digits only
+}
+
+/**
+ * Converts a plain phone number (digits) into a wa.me link.
+ * Returns undefined when the input is empty so callers can pass `|| undefined`.
+ */
+function buildWhatsAppUrl(phone: string): string | undefined {
+  const digits = phone.replace(/[^\d]/g, "");
+  if (!digits) return undefined;
+  return `https://wa.me/${digits}`;
+}
+
 // ─── Shared UI atoms ──────────────────────────────────────────────────────────
 
 function Banner({ type, msg }: { type: "success" | "error"; msg: string }) {
@@ -1437,8 +1466,8 @@ function BrokerProfessionalTab() {
         setProvince(data.province ?? "");
         setCity(data.city         ?? "");
         setDistrict(data.neighborhood ?? "");
-        setWhatsapp(data.whatsApp ?? "");
-        setContact(data.phone     ?? "");
+        setWhatsapp(extractWhatsAppPhone(data.whatsApp));
+        setContact(data.phone ?? "");
       })
       .catch((err: unknown) => {
         console.error("[BrokerProfessionalTab] load error:", err);
@@ -1459,8 +1488,8 @@ function BrokerProfessionalTab() {
         province:     province.trim() || undefined,
         city:         city.trim()     || undefined,
         neighborhood: district.trim() || undefined,
-        phone:        contact.trim()  || undefined,
-        whatsApp:     whatsapp.trim() || undefined,
+        phone:    contact.trim() || undefined,
+        whatsApp: buildWhatsAppUrl(whatsapp.trim()),
       });
       setBanner({ type: "success", msg: "تم حفظ ملفك المهني بنجاح." });
     } catch (err: unknown) {
@@ -1548,16 +1577,41 @@ function BrokerProfessionalTab() {
           />
         </div>
 
-        {/* WhatsApp */}
+        {/* WhatsApp number */}
         <div>
-          <FieldLabel>رابط واتساب</FieldLabel>
-          <Input
-            value={whatsapp}
-            onChange={(e) => setWhatsapp(e.target.value)}
-            placeholder="https://wa.me/963…"
-            maxLength={200}
-            dir="ltr"
-          />
+          <FieldLabel>رقم واتساب</FieldLabel>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span
+              style={{
+                flexShrink: 0,
+                padding: "0.6rem 0.75rem",
+                background: "#25d366",
+                color: "#fff",
+                borderRadius: 8,
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                letterSpacing: "0.01em",
+                lineHeight: 1,
+                userSelect: "none",
+              }}
+            >
+              WA
+            </span>
+            <Input
+              type="tel"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value.replace(/[^\d]/g, ""))}
+              placeholder={contact.trim() ? contact.trim().replace(/[^\d]/g, "") : "963912345678"}
+              maxLength={20}
+              dir="ltr"
+            />
+          </div>
+          <p style={{ margin: "0.3rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+            أدخل الرقم الدولي بدون + (مثال: <span dir="ltr">963912345678</span>) — سيُولَّد رابط واتساب تلقائياً
+            {!whatsapp.trim() && contact.trim() && (
+              <> · <strong>سيُستخدم رقم التواصل تلقائياً كبديل</strong></>
+            )}
+          </p>
         </div>
 
       </div>
@@ -1872,8 +1926,8 @@ function AgencyFieldsSection() {
         setAddress(d.address                            ?? "");
         setCommercialRegistrationNumber(d.commercialRegistrationNumber ?? "");
         setContactNumber(d.contactNumber                ?? "");
-        setWhatsappLink(d.whatsappLink                  ?? "");
-        setWebsiteUrl(d.websiteUrl                      ?? "");
+        setWhatsappLink(extractWhatsAppPhone(d.whatsappLink));
+        setWebsiteUrl(d.websiteUrl ?? "");
         setIsVisible(d.isVisible);
         setIsFeatured(d.isFeatured);
         setVerificationBadge(d.verificationBadge        ?? null);
@@ -1895,7 +1949,7 @@ function AgencyFieldsSection() {
         address:                      address.trim()                      || null,
         commercialRegistrationNumber: commercialRegistrationNumber.trim() || null,
         contactNumber:                contactNumber.trim()                || null,
-        whatsappLink:                 whatsappLink.trim()                 || null,
+        whatsappLink:                 buildWhatsAppUrl(whatsappLink.trim()) ?? null,
         websiteUrl:                   websiteUrl.trim()                   || null,
       });
       setBanner({ type: "success", msg: "تم حفظ بيانات المكتب بنجاح." });
@@ -2000,8 +2054,38 @@ function AgencyFieldsSection() {
           </div>
 
           <div>
-            <FieldLabel>رابط واتساب</FieldLabel>
-            <Input value={whatsappLink} onChange={(e) => setWhatsappLink(e.target.value)} placeholder="https://wa.me/963…" maxLength={200} dir="ltr" />
+            <FieldLabel>رقم واتساب</FieldLabel>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span
+                style={{
+                  flexShrink: 0,
+                  padding: "0.6rem 0.75rem",
+                  background: "#25d366",
+                  color: "#fff",
+                  borderRadius: 8,
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  userSelect: "none",
+                }}
+              >
+                WA
+              </span>
+              <Input
+                type="tel"
+                value={whatsappLink}
+                onChange={(e) => setWhatsappLink(e.target.value.replace(/[^\d]/g, ""))}
+                placeholder={contactNumber.trim() ? contactNumber.trim().replace(/[^\d]/g, "") : "963912345678"}
+                maxLength={20}
+                dir="ltr"
+              />
+            </div>
+            <p style={{ margin: "0.3rem 0 0", fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>
+              أدخل الرقم الدولي بدون + (مثال: <span dir="ltr">963912345678</span>) — سيُولَّد رابط واتساب تلقائياً
+              {!whatsappLink.trim() && contactNumber.trim() && (
+                <> · <strong>سيُستخدم رقم التواصل تلقائياً كبديل</strong></>
+              )}
+            </p>
           </div>
 
           <div>
