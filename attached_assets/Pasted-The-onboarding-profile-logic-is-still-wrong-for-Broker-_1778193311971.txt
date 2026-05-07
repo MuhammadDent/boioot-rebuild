@@ -1,0 +1,78 @@
+The onboarding/profile logic is still wrong for Broker accounts.
+
+Important business rule:
+A Broker is an individual professional, not a real estate office/company.
+
+Current wrong behavior:
+The Broker profile page still shows office/company tabs and fields such as:
+
+* بيانات المكتب
+* موقع المكتب / الشركة
+* رقم السجل التجاري
+* المحافظة / المدينة / الحي repeated inside office location
+* office/company commercial data
+
+This is incorrect and duplicated because the broker already has personal/profile information.
+
+Required fix:
+
+1. For Broker accounts:
+
+* Remove/hide the office/company tabs completely.
+* Do NOT show:
+
+  * بيانات المكتب
+  * موقع المكتب / الشركة
+  * رقم السجل التجاري
+  * اسم المكتب العقاري
+  * أي بيانات مكتب أو شركة
+* The Broker should only have an individual professional profile.
+
+2. Broker profile should include only:
+
+* الملف الشخصي
+* الصورة الشخصية
+* الأمان
+* بيانات التواصل if needed
+* نبذة مهنية
+* المحافظة
+* المدينة
+* الحي / المنطقة
+* واتساب optional
+* verification/trust status if applicable
+
+3. Location fields for Broker should belong to the professional/person profile, not to an office/company profile.
+
+4. For Office / CompanyOwner accounts:
+   Keep office/company tabs and fields:
+
+* بيانات المكتب
+* موقع المكتب / الشركة
+* السجل التجاري
+* شعار المكتب
+* بيانات المكتب التجارية
+
+5. For Office Agent:
+   Do not create independent office/company data.
+   The agent should be linked to a parent office if supported.
+   If not linked, show a clear message that the account must be associated with an office.
+
+6. Avoid duplicated fields:
+   Do not ask for the same phone/location data twice across onboarding and profile unless there is a clear reason.
+
+7. Do not change database schema unless absolutely necessary.
+   Prefer role-based UI rendering and safe backend branching.
+
+8. Make sure Matching remains free and accessible for:
+
+* Broker
+* Office
+* CompanyOwner
+* Office Agent
+
+After implementation, explain:
+
+* Which files were changed
+* How the profile tabs differ by role
+* Why Broker no longer sees office/company fields
+* How duplicated phone/location fields were handled

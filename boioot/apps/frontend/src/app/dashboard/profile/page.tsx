@@ -278,9 +278,13 @@ function ProfileRoleSection({ profile }: { profile: NormalizedProfile }) {
       }}
     >
       <div style={{ fontWeight: 700, marginBottom: "0.2rem" }}>
-        {roleGroup === "admin"    && "حساب إداري — صلاحيات كاملة على لوحة التحكم"}
-        {roleGroup === "business" && `حساب تجاري — ${roleLabel}`}
-        {roleGroup === "agent"    && `حساب وكيل — ${roleLabel}`}
+        {roleGroup === "admin" && "حساب إداري — صلاحيات كاملة على لوحة التحكم"}
+        {roleGroup === "business" && (
+          profile.role === "Broker"
+            ? "وسيط عقاري مستقل — ملف مهني فردي"
+            : `حساب تجاري — ${roleLabel}`
+        )}
+        {roleGroup === "agent" && `حساب وكيل — ${roleLabel}`}
       </div>
       {companyName && (
         <div>اسم الشركة: <strong>{companyName}</strong></div>
@@ -1407,6 +1411,164 @@ function ProfileSettingsTab({ profile }: { profile: NormalizedProfile }) {
   );
 }
 
+// ─── Tab 4b: BrokerProfessionalTab — professional profile for Broker accounts ──
+// Broker users do NOT see office/company tabs. Instead they get this tab which
+// saves their professional info (bio, location, contact) via the onboarding API.
+
+function BrokerProfessionalTab() {
+  const [loadingData, setLoadingData] = useState(true);
+  const [saving,      setSaving]      = useState(false);
+  const [banner,      setBanner]      = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  const [snapshot,    setSnapshot]    = useState<BusinessProfileResponse | null>(null);
+  const [bio,         setBio]         = useState("");
+  const [province,    setProvince]    = useState("");
+  const [city,        setCity]        = useState("");
+  const [district,    setDistrict]    = useState("");
+  const [whatsapp,    setWhatsapp]    = useState("");
+  const [contact,     setContact]     = useState("");
+
+  useEffect(() => {
+    onboardingApi
+      .getBusinessProfile()
+      .then((data) => {
+        setSnapshot(data);
+        setBio(data.description   ?? "");
+        setProvince(data.province ?? "");
+        setCity(data.city         ?? "");
+        setDistrict(data.neighborhood ?? "");
+        setWhatsapp(data.whatsApp ?? "");
+        setContact(data.phone     ?? "");
+      })
+      .catch((err: unknown) => {
+        console.error("[BrokerProfessionalTab] load error:", err);
+        setBanner({ type: "error", msg: "تعذّر تحميل بيانات ملفك المهني." });
+      })
+      .finally(() => setLoadingData(false));
+  }, []);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!snapshot) return;
+    setBanner(null);
+    setSaving(true);
+    try {
+      await onboardingApi.updateBusinessProfile({
+        displayName:  snapshot.displayName,
+        description:  bio.trim()      || undefined,
+        province:     province.trim() || undefined,
+        city:         city.trim()     || undefined,
+        neighborhood: district.trim() || undefined,
+        phone:        contact.trim()  || undefined,
+        whatsApp:     whatsapp.trim() || undefined,
+      });
+      setBanner({ type: "success", msg: "تم حفظ ملفك المهني بنجاح." });
+    } catch (err: unknown) {
+      console.error("[BrokerProfessionalTab] save error:", err);
+      setBanner({ type: "error", msg: (err as Error).message ?? "حدث خطأ أثناء الحفظ." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loadingData) {
+    return (
+      <div style={{ textAlign: "center", padding: "2.5rem", color: "var(--color-text-secondary)" }}>
+        جارٍ تحميل بيانات الملف المهني…
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSave} noValidate>
+      {banner && <Banner type={banner.type} msg={banner.msg} />}
+
+      <div style={{ marginBottom: "1.5rem" }}>
+        <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "var(--color-text)" }}>
+          الملف المهني
+        </h3>
+        <p style={{ margin: "0.3rem 0 0", fontSize: "0.85rem", color: "var(--color-text-secondary)" }}>
+          معلومات وساطتك العقارية التي تظهر للعملاء والشركاء
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gap: "1.1rem", maxWidth: 560 }}>
+
+        {/* Bio */}
+        <div>
+          <FieldLabel>النبذة المهنية</FieldLabel>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="اكتب وصفاً مختصراً عن خبرتك في الوساطة العقارية…"
+            maxLength={500}
+            rows={4}
+            style={{
+              width: "100%", padding: "0.6rem 0.85rem",
+              border: "1px solid var(--color-border)", borderRadius: 8,
+              fontSize: "0.95rem", fontFamily: "var(--font-arabic)",
+              background: "#fff", color: "var(--color-text)",
+              outline: "none", boxSizing: "border-box", resize: "vertical",
+            }}
+          />
+        </div>
+
+        {/* Province + City */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+          <ProvinceSelect
+            label="المحافظة"
+            value={province}
+            onChange={(v) => { setProvince(v); setCity(""); setDistrict(""); }}
+          />
+          <CitySelect
+            label="المدينة"
+            value={city}
+            onChange={(v) => { setCity(v); setDistrict(""); }}
+            province={province}
+          />
+        </div>
+
+        {/* Neighborhood */}
+        <NeighborhoodSelect
+          label="الحي / المنطقة"
+          value={district}
+          onChange={setDistrict}
+          city={city}
+        />
+
+        {/* Contact number */}
+        <div>
+          <FieldLabel>رقم التواصل المهني</FieldLabel>
+          <Input
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="+963…"
+            maxLength={30}
+            dir="ltr"
+          />
+        </div>
+
+        {/* WhatsApp */}
+        <div>
+          <FieldLabel>رابط واتساب</FieldLabel>
+          <Input
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="https://wa.me/963…"
+            maxLength={200}
+            dir="ltr"
+          />
+        </div>
+
+      </div>
+
+      <div style={{ marginTop: "1.75rem" }}>
+        <SaveBtn loading={saving} label="حفظ الملف المهني" />
+      </div>
+    </form>
+  );
+}
+
 // ─── Tab 5: BusinessLocationTab — office/company location ─────────────────────
 
 function BusinessLocationTab() {
@@ -1870,17 +2032,21 @@ function ProfileTabs({
   setActiveTab: (id: string) => void;
   onUpdate:     (u: UserProfileResponse) => void;
 }) {
-  const isBusiness = profile.roleGroup === "business";
+  const isBroker          = raw.role === "Broker";
+  const isOfficeOrCompany = raw.role === "CompanyOwner" || raw.role === "Office";
 
   const tabs = [
-    { id: "info",     label: "الملف الشخصي"  },
-    { id: "security", label: "الأمان"         },
-    { id: "media",    label: "الصورة الشخصية" },
-    ...(isBusiness ? [
+    { id: "info",         label: "الملف الشخصي"  },
+    { id: "security",     label: "الأمان"         },
+    { id: "media",        label: "الصورة الشخصية" },
+    ...(isBroker ? [
+      { id: "professional", label: "الملف المهني" },
+    ] : []),
+    ...(isOfficeOrCompany ? [
       { id: "business", label: "بيانات المكتب" },
       { id: "location", label: "موقع المكتب"   },
     ] : []),
-    { id: "settings", label: "الإعدادات"      },
+    { id: "settings",     label: "الإعدادات"      },
   ];
 
   return (
@@ -1934,8 +2100,9 @@ function ProfileTabs({
         {activeTab === "info"     && <ProfileBasicInfoForm raw={raw} onUpdate={onUpdate} />}
         {activeTab === "security" && <ProfileSecurityTab raw={raw} />}
         {activeTab === "media"    && <ProfileAvatarTab raw={raw} onUpdate={onUpdate} />}
-        {activeTab === "business" && isBusiness && <AgencyFieldsSection />}
-        {activeTab === "location" && isBusiness && <BusinessLocationTab />}
+        {activeTab === "professional" && isBroker          && <BrokerProfessionalTab />}
+        {activeTab === "business"     && isOfficeOrCompany  && <AgencyFieldsSection />}
+        {activeTab === "location"     && isOfficeOrCompany  && <BusinessLocationTab />}
         {activeTab === "settings" && <ProfileSettingsTab profile={profile} />}
       </div>
     </div>
