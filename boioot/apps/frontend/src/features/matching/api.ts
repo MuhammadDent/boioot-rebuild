@@ -11,11 +11,23 @@ export interface MatchResult {
   neighborhoodName: string | null;
 }
 
+/**
+ * Professional access entitlements for the matching system.
+ * Phase 1: all professional accounts (Broker / Agent / CompanyOwner / Office)
+ * receive full access for free — no subscription required.
+ */
 export interface MatchingUserFeatures {
+  /** True for all professional accounts. Primary gate for full matching access. */
+  hasProfessionalAccess: boolean;
+  /** Receive notifications when matching requests arrive. True for professionals. */
   leadNotifications: boolean;
+  /** Receive notifications immediately (no delay). True for professionals. */
   instantNotifications: boolean;
+  /** See all matched results without restriction. True for professionals. */
   fullMatchAccess: boolean;
+  /** Monthly lead quota. -1 = unlimited (professionals), 0 = none. */
   monthlyLeadUnlocks: number;
+  /** Backward-compat alias for hasProfessionalAccess. */
   hasMatchingSubscription: boolean;
 }
 

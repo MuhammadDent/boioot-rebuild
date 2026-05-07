@@ -350,8 +350,9 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       label: "نظام المطابقة",
       icon: I.target,
       items: [
-        { href: "/dashboard/coverage", label: "مناطق التغطية",      icon: I.mapPin },
-        { href: "/dashboard/leads",    label: "الطلبات المطابقة",   icon: I.target },
+        { href: "/dashboard/coverage",          label: "مناطق التغطية",       icon: I.mapPin  },
+        { href: "/dashboard/leads",             label: "الطلبات المطابقة",    icon: I.target  },
+        { href: "/dashboard/matching/settings", label: "إعدادات المطابقة",    icon: I.system  },
       ],
     },
     VERIFICATION_GROUP,
@@ -380,8 +381,9 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       label: "نظام المطابقة",
       icon: I.target,
       items: [
-        { href: "/dashboard/coverage", label: "مناطق التغطية",      icon: I.mapPin },
-        { href: "/dashboard/leads",    label: "الطلبات المطابقة",   icon: I.target },
+        { href: "/dashboard/coverage",          label: "مناطق التغطية",       icon: I.mapPin },
+        { href: "/dashboard/leads",             label: "الطلبات المطابقة",    icon: I.target },
+        { href: "/dashboard/matching/settings", label: "إعدادات المطابقة",    icon: I.system },
       ],
     },
     VERIFICATION_GROUP,
@@ -411,8 +413,9 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       label: "نظام المطابقة",
       icon: I.target,
       items: [
-        { href: "/dashboard/coverage", label: "مناطق التغطية",      icon: I.mapPin },
-        { href: "/dashboard/leads",    label: "الطلبات المطابقة",   icon: I.target },
+        { href: "/dashboard/coverage",          label: "مناطق التغطية",       icon: I.mapPin },
+        { href: "/dashboard/leads",             label: "الطلبات المطابقة",    icon: I.target },
+        { href: "/dashboard/matching/settings", label: "إعدادات المطابقة",    icon: I.system },
       ],
     },
     VERIFICATION_GROUP,
@@ -449,6 +452,16 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
         { href: "/dashboard/admin/agencies",              label: "المكاتب والوسطاء",      icon: I.users,     permission: "users.view"      },
         { href: "/dashboard/admin/properties",            label: "العقارات",              icon: I.listings,  permission: "properties.view" },
         { href: "/dashboard/admin/projects",              label: "المشاريع",              icon: I.projects,  permission: "projects.view"   },
+      ],
+    },
+    {
+      id: "matching-config",
+      label: "نظام المطابقة",
+      icon: I.target,
+      permission: "settings.view",
+      items: [
+        { href: "/dashboard/admin/matching",      label: "ضبط المطابقة",    icon: I.target, permission: "settings.view"   },
+        { href: "/dashboard/admin/buyer-requests", label: "طلبات السوق",     icon: I.search, permission: "requests.view"  },
       ],
     },
     {

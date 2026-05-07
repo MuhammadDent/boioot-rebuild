@@ -1,0 +1,92 @@
+We need to restructure the Matching system architecture and UI professionally.
+
+IMPORTANT:
+The matching/request receiving system must currently be COMPLETELY FREE for:
+
+* Brokers
+* Real estate offices
+* Office agents
+* Sales teams
+
+The current implementation incorrectly treats matching as paid subscription plans similar to advertisement plans.
+
+We need to change the product logic and UX.
+
+GOALS:
+
+1. Matching itself must be free and available to all eligible professional accounts.
+2. Remove the SaaS-style subscription experience from matching.
+3. Keep the system technically extensible for future premium tools without rebuilding the architecture.
+
+REQUIRED CHANGES:
+
+1. Remove from Matching:
+
+* Monthly/yearly pricing
+* “Subscribe now” buttons
+* Matching pricing cards
+* Matching package purchase UX
+* Paid subscription language
+
+2. Replace the concept of “Matching Plans” with:
+
+* Matching Settings
+* Matching Permissions
+* Professional Tools
+* Access Controls
+
+3. Keep request receiving enabled by default for:
+
+* brokers
+* offices
+* office agents
+
+4. The following features should remain FREE:
+
+* Receiving matching requests
+* Viewing requests
+* Customer communication
+* Request management
+* Notifications
+* Basic dashboard
+
+5. Keep the backend architecture flexible for future optional premium tools such as:
+
+* CRM
+* Analytics
+* Team management
+* Auto matching
+* WhatsApp integrations
+* Export tools
+* Priority exposure
+
+BUT:
+Do NOT activate monetization now.
+Do NOT display prices now.
+Do NOT create purchase flows now.
+
+6. Admin dashboard:
+   Transform the current matching plans area into:
+
+* Matching configuration
+* Feature toggles
+* Access management
+* Limits/settings
+  instead of subscription package management.
+
+7. IMPORTANT:
+   Do not break existing request flows or current matching logic.
+   Do not remove existing database structures unless truly unnecessary.
+   Prefer refactoring/reusing current structures safely.
+
+8. UX direction:
+   The platform should feel like:
+   “Matching is available to all professionals”
+   NOT:
+   “Pay first to access matching”
+
+After implementation:
+
+* Explain the new architecture
+* Explain which files/components changed
+* Explain how future premium tools can be enabled later without redesigning the system.

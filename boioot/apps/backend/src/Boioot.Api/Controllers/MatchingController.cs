@@ -16,7 +16,11 @@ public class MatchingController : BaseController
     private readonly IRequestMatchingService    _matching;
     private readonly IMatchingPlanAccessService _planAccess;
     private readonly BoiootDbContext            _db;
-    private readonly bool                       _launchMode;
+
+    // LaunchMode is preserved in config for operational flexibility
+    // (e.g. temporarily open all results for testing / beta periods).
+    // In Phase 1, professional accounts always have full access regardless of this flag.
+    private readonly bool _launchMode;
 
     public MatchingController(
         IRequestMatchingService    matching,
@@ -33,7 +37,7 @@ public class MatchingController : BaseController
     // ─────────────────────────────────────────────────────────────────────────
     // GET /api/matching/my-leads
     // Returns buyer requests that fall within the calling user's coverage areas.
-    // Designed for brokers/agents to see their incoming matched leads.
+    // Free for all professional accounts (Broker / Agent / CompanyOwner / Office).
     // ─────────────────────────────────────────────────────────────────────────
     [HttpGet("my-leads")]
     public async Task<IActionResult> GetMyLeads(CancellationToken ct)
@@ -94,8 +98,9 @@ public class MatchingController : BaseController
 
     // ─────────────────────────────────────────────────────────────────────────
     // GET /api/matching/buyer-requests/{id}
-    // Returns coverage-matched users for a given BuyerRequest.
-    // In LaunchMode (default): all results visible, lockedMatchesCount = 0.
+    // Returns coverage-matched professionals for a given BuyerRequest.
+    // Professional accounts (Broker / Agent / CompanyOwner / Office) always
+    // receive full access — no subscription required.
     // ─────────────────────────────────────────────────────────────────────────
     [HttpGet("buyer-requests/{id:guid}")]
     public async Task<IActionResult> GetMatches(Guid id, CancellationToken ct)
@@ -114,25 +119,24 @@ public class MatchingController : BaseController
             throw new BoiootException("غير مصرح لك بعرض نتائج هذا الطلب", 403);
 
         // ── Get all matches ───────────────────────────────────────────────────
-        var allMatches  = await _matching.GetMatchesAsync(id, ct);
+        var allMatches   = await _matching.GetMatchesAsync(id, ct);
         var userFeatures = await _planAccess.GetFeaturesAsync(userId, ct);
 
         // ── Apply visibility rules ────────────────────────────────────────────
+        // Phase 1: professional accounts always get full access.
+        // LaunchMode also grants full access (preserved for operational flexibility).
+        // Future: non-professional viewers may receive a limited preview.
         List<MatchResultDto> visible;
         int                  locked;
 
-        if (_launchMode)
-        {
-            visible = allMatches;
-            locked  = 0;
-        }
-        else if (userFeatures.FullMatchAccess)
+        if (_launchMode || userFeatures.HasProfessionalAccess || userFeatures.FullMatchAccess)
         {
             visible = allMatches;
             locked  = 0;
         }
         else
         {
+            // Limited preview for non-professional accounts (future path)
             visible = allMatches.Take(2).ToList();
             locked  = Math.Max(0, allMatches.Count - 2);
         }
@@ -145,7 +149,7 @@ public class MatchingController : BaseController
             RequestNeighborhood = request.Neighborhood,
             TotalCount          = allMatches.Count,
             IsLaunchMode        = _launchMode,
-            IsUnlocked          = false,
+            IsUnlocked          = userFeatures.HasProfessionalAccess,
             LockedMatchesCount  = locked,
             UserFeatures        = userFeatures,
             Matches             = visible,

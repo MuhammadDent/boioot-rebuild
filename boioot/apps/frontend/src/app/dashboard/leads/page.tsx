@@ -59,6 +59,7 @@ function LeadCard({ lead }: { lead: BuyerRequestLead }) {
       display: "flex",
       flexDirection: "column",
       gap: "0.5rem",
+      transition: "box-shadow 0.15s",
     }}>
       {/* Title row */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem" }}>
@@ -116,12 +117,11 @@ function LeadCard({ lead }: { lead: BuyerRequestLead }) {
 export default function LeadsPage() {
   const { user, isLoading } = useProtectedRoute();
 
-  const [leads,       setLeads]      = useState<BuyerRequestLead[]>([]);
-  const [totalCount,  setTotalCount] = useState(0);
-  const [isLaunchMode, setIsLaunchMode] = useState(false);
-  const [fetching,    setFetching]   = useState(true);
-  const [fetchError,  setFetchError] = useState("");
-  const [filter,      setFilter]     = useState<"all" | "Open" | "Closed">("all");
+  const [leads,      setLeads]     = useState<BuyerRequestLead[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [fetching,   setFetching]  = useState(true);
+  const [fetchError, setFetchError] = useState("");
+  const [filter,     setFilter]    = useState<"all" | "Open" | "Closed">("all");
 
   const load = useCallback(async () => {
     setFetching(true);
@@ -130,7 +130,6 @@ export default function LeadsPage() {
       const data = await matchingApi.getMyLeads();
       setLeads(data.leads ?? []);
       setTotalCount(data.totalCount ?? 0);
-      setIsLaunchMode(data.isLaunchMode ?? false);
     } catch (e) {
       setFetchError(normalizeError(e));
     } finally {
@@ -169,7 +168,9 @@ export default function LeadsPage() {
             <line x1="10.88" y1="21.94" x2="15.46" y2="14"/>
           </svg>
           <div>
-            <h1 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#111827" }}>الطلبات المطابقة (Leads)</h1>
+            <h1 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#111827" }}>
+              الطلبات المطابقة
+            </h1>
             <p style={{ margin: 0, fontSize: "0.78rem", color: "#6b7280" }}>
               طلبات الباحثين في المناطق التي تغطيها
             </p>
@@ -177,24 +178,29 @@ export default function LeadsPage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          {isLaunchMode && (
-            <span style={{
-              padding: "3px 10px",
-              borderRadius: 20,
-              fontSize: "0.72rem",
-              fontWeight: 700,
-              background: "#fefce8",
-              color: "#92400e",
-              border: "1px solid #fde68a",
-            }}>
-              🚀 وضع الإطلاق — كل النتائج مفتوحة
-            </span>
-          )}
+          {/* Free professional access badge */}
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.3rem",
+            padding: "3px 10px",
+            borderRadius: 20,
+            fontSize: "0.72rem",
+            fontWeight: 700,
+            background: "#f0fdf4",
+            color: "#15803d",
+            border: "1px solid #bbf7d0",
+          }}>
+            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            مجاني للمحترفين
+          </span>
           <span style={{
             fontSize: "0.78rem",
-            background: "#f0fdf4",
-            color: "#166534",
-            border: "1px solid #bbf7d0",
+            background: "#eff6ff",
+            color: "#1d4ed8",
+            border: "1px solid #bfdbfe",
             borderRadius: 12,
             padding: "3px 10px",
             fontWeight: 600,
@@ -207,6 +213,35 @@ export default function LeadsPage() {
       <div style={{ maxWidth: 820, margin: "0 auto", padding: "1.25rem 1rem" }}>
 
         {fetchError && <div style={{ marginBottom: "1rem" }}><InlineBanner type="error" message={fetchError} /></div>}
+
+        {/* Info banner — shown only when there are leads */}
+        {!fetching && leads.length > 0 && (
+          <div style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "0.6rem",
+            padding: "0.75rem 1rem",
+            borderRadius: 10,
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            marginBottom: "1.25rem",
+            fontSize: "0.83rem",
+            color: "#15803d",
+          }}>
+            <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>
+              استقبال الطلبات المطابقة مجاني تماماً لجميع الوسطاء والمكاتب العقارية.
+              لضبط مناطق التغطية وإعدادات الإشعارات،{" "}
+              <Link href="/dashboard/matching/settings" style={{ color: "#15803d", fontWeight: 700 }}>
+                اذهب إلى إعدادات المطابقة
+              </Link>.
+            </span>
+          </div>
+        )}
 
         {/* Filter tabs */}
         <div style={{
@@ -263,22 +298,39 @@ export default function LeadsPage() {
                 : "جرب تغيير الفلتر لعرض نتائج مختلفة."}
             </p>
             {leads.length === 0 && (
-              <Link
-                href="/dashboard/coverage"
-                style={{
-                  display: "inline-block",
-                  marginTop: "1rem",
-                  padding: "0.5rem 1.25rem",
-                  borderRadius: 8,
-                  background: "#16a34a",
-                  color: "#fff",
-                  fontWeight: 600,
-                  fontSize: "0.85rem",
-                  textDecoration: "none",
-                }}
-              >
-                إدارة مناطق التغطية
-              </Link>
+              <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap", marginTop: "1rem" }}>
+                <Link
+                  href="/dashboard/coverage"
+                  style={{
+                    display: "inline-block",
+                    padding: "0.5rem 1.25rem",
+                    borderRadius: 8,
+                    background: "#16a34a",
+                    color: "#fff",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    textDecoration: "none",
+                  }}
+                >
+                  إدارة مناطق التغطية
+                </Link>
+                <Link
+                  href="/dashboard/matching/settings"
+                  style={{
+                    display: "inline-block",
+                    padding: "0.5rem 1.25rem",
+                    borderRadius: 8,
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    color: "#374151",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    textDecoration: "none",
+                  }}
+                >
+                  إعدادات المطابقة
+                </Link>
+              </div>
             )}
           </div>
         ) : (
