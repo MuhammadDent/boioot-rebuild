@@ -1244,7 +1244,7 @@ function EditPlanModal({ plan, onClose, onSaved }: EditModalProps) {
       // Uses newLimitValues + updatedFeatures so formSnapshot === initialSnapshot
       // after re-render → isDirty = false → "unsaved changes" disappears ALWAYS.
       initialSnapshot.current = JSON.stringify({
-        name, description, applicableAccountType, priceMonthly, priceYearly,
+        name, code, description, applicableAccountType, priceMonthly, priceYearly,
         isActive, isPublic, isRecommended, displayOrder, billingMode, planBillingType,
         recurringCycle, durationDays, consumptionPolicy, expiryRule, downgradePlanCode,
         displayNameAr, displayNameEn, audienceType, tier, badgeText, planColor,
