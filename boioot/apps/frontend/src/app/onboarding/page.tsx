@@ -14,11 +14,12 @@ import LocationPickerDynamic, { type LatLng } from "@/components/onboarding/Loca
 import { CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import type { E164Number } from "libphonenumber-js/core";
 
+// Roles that go through onboarding
 const BUSINESS_ROLES = ["Broker", "CompanyOwner"];
 
 const STEPS = [
   { label: "تم إنشاء الحساب" },
-  { label: "الملف التجاري" },
+  { label: "الملف المهني" },
   { label: "مكتمل" },
 ];
 
@@ -26,26 +27,55 @@ interface LocationCity         { id: string; name: string; province: string; }
 interface LocationNeighborhood { id: string; name: string; city: string; }
 
 interface FormState {
-  displayName:  string;
-  address:      string;
-  phoneNumber:  string;
-  whatsapp:     string;
-  description:  string;
-  latitude:     number | null;
-  longitude:    number | null;
+  displayName: string;
+  address:     string;
+  phoneNumber: string;
+  whatsapp:    string;
+  description: string;
+  latitude:    number | null;
+  longitude:   number | null;
 }
 
 type FieldKey = keyof FormState;
 
 const EMPTY: FormState = {
-  displayName:  "",
-  address:      "",
-  phoneNumber:  "",
-  whatsapp:     "",
-  description:  "",
-  latitude:     null,
-  longitude:    null,
+  displayName: "",
+  address:     "",
+  phoneNumber: "",
+  whatsapp:    "",
+  description: "",
+  latitude:    null,
+  longitude:   null,
 };
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+const SECTION_HEADER: React.CSSProperties = {
+  fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.04em",
+  color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)",
+  paddingBottom: "0.4rem", marginBottom: "1rem",
+};
+
+const SELECT_STYLE: React.CSSProperties = {
+  width: "100%",
+  padding: "0.55rem 0.75rem",
+  border: "1px solid var(--color-border)",
+  borderRadius: 8,
+  fontSize: "0.9rem",
+  background: "#fff",
+  color: "var(--color-text)",
+  appearance: "none",
+  WebkitAppearance: "none",
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "left 0.75rem center",
+  paddingLeft: "2rem",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  lineHeight: 1.5,
+};
+
+// ── Page component ────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -58,29 +88,33 @@ export default function OnboardingPage() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [geoLoading, setGeoLoading]   = useState(false);
 
-  // ── Location cascade state ──────────────────────────────────────────────────
-  const [provinces,          setProvinces]          = useState<string[]>([]);
-  const [province,           setProvince]           = useState("");
-  const [provincesLoading,   setProvincesLoading]   = useState(true);
+  // ── Location cascade ──────────────────────────────────────────────────────
+  const [provinces,        setProvinces]        = useState<string[]>([]);
+  const [province,         setProvince]         = useState("");
+  const [provincesLoading, setProvincesLoading] = useState(true);
 
-  const [cities,             setCities]             = useState<LocationCity[]>([]);
-  const [citiesLoading,      setCitiesLoading]      = useState(false);
-  const [cityId,             setCityId]             = useState("");
-  const [cityName,           setCityName]           = useState("");
+  const [cities,           setCities]           = useState<LocationCity[]>([]);
+  const [citiesLoading,    setCitiesLoading]    = useState(false);
+  const [cityId,           setCityId]           = useState("");
+  const [cityName,         setCityName]         = useState("");
 
-  const [neighborhoods,         setNeighborhoods]         = useState<LocationNeighborhood[]>([]);
-  const [neighborhoodsLoading,  setNeighborhoodsLoading]  = useState(false);
-  const [neighborhoodId,        setNeighborhoodId]        = useState("");
-  const [neighborhoodName,      setNeighborhoodName]      = useState("");
+  const [neighborhoods,        setNeighborhoods]        = useState<LocationNeighborhood[]>([]);
+  const [neighborhoodsLoading, setNeighborhoodsLoading] = useState(false);
+  const [neighborhoodId,       setNeighborhoodId]       = useState("");
+  const [neighborhoodName,     setNeighborhoodName]     = useState("");
 
-  // ── Auth guard ──────────────────────────────────────────────────────────────
+  // ── Role helpers ──────────────────────────────────────────────────────────
+  const isBroker       = user?.role === "Broker";
+  const isCompanyOwner = user?.role === "CompanyOwner";
+
+  // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) { router.replace("/login"); return; }
     if (user && !BUSINESS_ROLES.includes(user.role)) router.replace("/dashboard");
   }, [isLoading, isAuthenticated, user, router]);
 
-  // ── Load provinces once ─────────────────────────────────────────────────────
+  // ── Load provinces once ───────────────────────────────────────────────────
   useEffect(() => {
     api.get<string[]>("/locations/provinces")
       .then(data => setProvinces(Array.isArray(data) ? data.filter(Boolean) : []))
@@ -88,13 +122,9 @@ export default function OnboardingPage() {
       .finally(() => setProvincesLoading(false));
   }, []);
 
-  // ── Load cities when province changes ───────────────────────────────────────
+  // ── Load cities when province changes ─────────────────────────────────────
   useEffect(() => {
-    setCityId("");
-    setCityName("");
-    setNeighborhoodId("");
-    setNeighborhoodName("");
-    setNeighborhoods([]);
+    setCityId(""); setCityName(""); setNeighborhoodId(""); setNeighborhoodName(""); setNeighborhoods([]);
     if (!province) { setCities([]); return; }
     setCitiesLoading(true);
     api.get<LocationCity[]>(`/locations/cities?province=${encodeURIComponent(province)}`)
@@ -108,10 +138,9 @@ export default function OnboardingPage() {
       .finally(() => setCitiesLoading(false));
   }, [province]);
 
-  // ── Load neighborhoods when city changes ────────────────────────────────────
+  // ── Load neighborhoods when city changes ──────────────────────────────────
   useEffect(() => {
-    setNeighborhoodId("");
-    setNeighborhoodName("");
+    setNeighborhoodId(""); setNeighborhoodName("");
     if (!cityName) { setNeighborhoods([]); return; }
     setNeighborhoodsLoading(true);
     api.get<LocationNeighborhood[]>(`/locations/neighborhoods?city=${encodeURIComponent(cityName)}`)
@@ -125,38 +154,35 @@ export default function OnboardingPage() {
       .finally(() => setNeighborhoodsLoading(false));
   }, [cityName]);
 
-  // ── Pre-fill from existing profile ─────────────────────────────────────────
+  // ── Pre-fill from existing profile ────────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated || !user || !BUSINESS_ROLES.includes(user.role)) return;
 
     onboardingApi.getBusinessProfile()
       .then((p) => {
         setForm({
-          displayName:  p.displayName  ?? "",
-          address:      p.address      ?? "",
-          phoneNumber:  p.phone        ?? "",
-          whatsapp:     p.whatsApp     ?? "",
-          description:  p.description  ?? "",
-          latitude:     p.latitude  ?? null,
-          longitude:    p.longitude ?? null,
+          displayName: p.displayName ?? "",
+          address:     p.address     ?? "",
+          // Pre-fill phone from profile; fall back to account phone from auth user
+          phoneNumber: p.phone ?? (user as { phone?: string }).phone ?? "",
+          whatsapp:    p.whatsApp    ?? "",
+          description: p.description ?? "",
+          latitude:    p.latitude    ?? null,
+          longitude:   p.longitude   ?? null,
         });
-
         if (p.province) setProvince(p.province);
-
-        if (p.cityId) {
-          setCityId(String(p.cityId));
-          setCityName(p.city ?? "");
-        }
-        if (p.neighborhoodId) {
-          setNeighborhoodId(String(p.neighborhoodId));
-          setNeighborhoodName(p.neighborhood ?? "");
-        }
+        if (p.cityId)   { setCityId(String(p.cityId)); setCityName(p.city ?? ""); }
+        if (p.neighborhoodId) { setNeighborhoodId(String(p.neighborhoodId)); setNeighborhoodName(p.neighborhood ?? ""); }
       })
-      .catch(() => {})
+      .catch(() => {
+        // If profile fetch fails entirely, at least pre-fill phone from auth user
+        const phone = (user as { phone?: string }).phone ?? "";
+        setForm(prev => ({ ...prev, phoneNumber: prev.phoneNumber || phone }));
+      })
       .finally(() => setProfileLoading(false));
   }, [isAuthenticated, user]);
 
-  // ── Generic field change ────────────────────────────────────────────────────
+  // ── Field helpers ─────────────────────────────────────────────────────────
   function setField<K extends FieldKey>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
@@ -166,54 +192,55 @@ export default function OnboardingPage() {
     setField(e.target.name as FieldKey, e.target.value);
   }
 
-  // ── City typeahead change ────────────────────────────────────────────────────
   function handleCityChange(name: string, id?: string) {
-    setCityName(name);
-    setCityId(id ?? "");
-    setNeighborhoodId("");
-    setNeighborhoodName("");
+    setCityName(name); setCityId(id ?? "");
+    setNeighborhoodId(""); setNeighborhoodName("");
     setFieldErrors(prev => ({ ...prev, cityId: undefined }));
   }
 
-  // ── Neighborhood typeahead change ────────────────────────────────────────────
   function handleNeighborhoodChange(name: string, id?: string) {
-    setNeighborhoodName(name);
-    setNeighborhoodId(id ?? "");
+    setNeighborhoodName(name); setNeighborhoodId(id ?? "");
     setFieldErrors(prev => ({ ...prev, neighborhoodId: undefined }));
   }
 
-  // ── Map selection ───────────────────────────────────────────────────────────
   const handleMapChange = useCallback((pos: LatLng) => {
     setForm((prev) => ({ ...prev, latitude: pos.lat, longitude: pos.lng }));
   }, []);
 
-  // ── Browser geolocation ─────────────────────────────────────────────────────
   function useCurrentLocation() {
     if (!navigator.geolocation) return;
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        handleMapChange({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setGeoLoading(false);
-      },
+      (pos) => { handleMapChange({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGeoLoading(false); },
       () => setGeoLoading(false),
       { timeout: 8000 },
     );
   }
 
-  // ── Validation ──────────────────────────────────────────────────────────────
+  // ── Validation (role-aware) ───────────────────────────────────────────────
   function validate(): boolean {
     const errors: Partial<Record<FieldKey | "cityId" | "neighborhoodId", string>> = {};
-    if (!form.displayName.trim()) errors.displayName = "الاسم التجاري مطلوب";
-    if (!cityName)                errors.cityId         = "يرجى اختيار المدينة أو إنشاء مدينة جديدة";
-    if (!neighborhoodName)        errors.neighborhoodId = "يرجى اختيار الحي أو إنشاء حي جديد";
-    if (!form.address.trim())     errors.address      = "العنوان التفصيلي مطلوب";
-    if (!form.phoneNumber.trim()) errors.phoneNumber  = "رقم الهاتف مطلوب";
-    setFieldErrors(errors);
 
+    if (!form.displayName.trim())
+      errors.displayName = isBroker ? "الاسم المهني مطلوب" : "الاسم التجاري مطلوب";
+
+    if (!cityName)
+      errors.cityId = "يرجى اختيار المدينة";
+
+    if (!neighborhoodName)
+      errors.neighborhoodId = "يرجى اختيار الحي أو المنطقة";
+
+    // Address and map are required only for office/company accounts
+    if (!isBroker) {
+      if (!form.address.trim())
+        errors.address = "العنوان التفصيلي مطلوب";
+    }
+
+    setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return false;
 
-    if (!form.latitude || !form.longitude) {
+    // Map location required only for office/company
+    if (!isBroker && (!form.latitude || !form.longitude)) {
       alert("يجب تحديد الموقع على الخريطة");
       return false;
     }
@@ -221,7 +248,7 @@ export default function OnboardingPage() {
     return true;
   }
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────────────────────
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -231,17 +258,17 @@ export default function OnboardingPage() {
     try {
       await onboardingApi.updateBusinessProfile({
         displayName:    form.displayName.trim(),
-        province:       province || undefined,
-        city:           cityName   || undefined,
-        neighborhood:   neighborhoodName || undefined,
-        cityId:         cityId     || undefined,
-        neighborhoodId: neighborhoodId || undefined,
+        province:       province          || undefined,
+        city:           cityName          || undefined,
+        neighborhood:   neighborhoodName  || undefined,
+        cityId:         cityId            || undefined,
+        neighborhoodId: neighborhoodId    || undefined,
         address:        form.address.trim()     || undefined,
         phone:          form.phoneNumber.trim() || undefined,
         whatsApp:       form.whatsapp.trim()    || undefined,
         description:    form.description.trim() || undefined,
-        latitude:       form.latitude!,
-        longitude:      form.longitude!,
+        latitude:       form.latitude   ?? undefined,
+        longitude:      form.longitude  ?? undefined,
       });
       router.push("/dashboard");
     } catch (err: unknown) {
@@ -251,52 +278,41 @@ export default function OnboardingPage() {
     }
   }
 
-  // ── Loading states ──────────────────────────────────────────────────────────
+  // ── Loading / guard ───────────────────────────────────────────────────────
   if (isLoading || profileLoading) return <Spinner />;
   if (!isAuthenticated || !user || !BUSINESS_ROLES.includes(user.role)) return null;
-
-  const roleLabel = user.role === "CompanyOwner" ? "شركة تطوير" : "مكتب عقاري";
 
   const mapValue: LatLng | null =
     form.latitude != null && form.longitude != null
       ? { lat: form.latitude, lng: form.longitude }
       : null;
 
-  const selectStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "0.55rem 0.75rem",
-    border: "1px solid var(--color-border)",
-    borderRadius: 8,
-    fontSize: "0.9rem",
-    background: "#fff",
-    color: "var(--color-text)",
-    appearance: "none",
-    WebkitAppearance: "none",
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-    backgroundRepeat: "no-repeat",
-    backgroundPosition: "left 0.75rem center",
-    paddingLeft: "2rem",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    lineHeight: 1.5,
-  };
+  // ── Role-specific copy ────────────────────────────────────────────────────
+  const pageTitle    = isBroker ? "أكمل ملفك المهني"    : "أكمل ملفك التجاري";
+  const roleLabel    = isBroker ? "وسيط عقاري"
+    : isCompanyOwner && user.accountType === "Company" ? "شركة تطوير" : "مكتب عقاري";
+  const nameLabel    = isBroker ? "الاسم المهني أو اسم الوسيط"
+    : user.accountType === "Company" ? "اسم الشركة" : "اسم المكتب العقاري";
+  const namePlaceholder = isBroker ? "مثال: محمد خالد — وسيط عقاري"
+    : user.accountType === "Company" ? "مثال: شركة الأمل للتطوير العقاري"
+    : "مثال: مكتب النجاح العقاري";
+  const submitLabel  = isBroker ? "حفظ الملف المهني والمتابعة" : "حفظ الملف التجاري والمتابعة";
+  const sectionIntro = isBroker ? "المعلومات المهنية" : "المعلومات الأساسية";
 
   return (
     <div className="login-page">
       <div className="form-card" style={{ maxWidth: 580 }}>
 
+        {/* Logo */}
         <div className="login-page__logo">
           <Image
-            src="/logo-boioot.png"
-            alt="بيوت"
-            width={110}
-            height={44}
-            style={{ objectFit: "contain" }}
-            priority
+            src="/logo-boioot.png" alt="بيوت"
+            width={110} height={44}
+            style={{ objectFit: "contain" }} priority
           />
         </div>
 
-        {/* Progress */}
+        {/* Progress steps */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, marginBottom: "1.75rem" }}>
           {STEPS.map((step, i) => {
             const isCompleted = i === 0;
@@ -312,7 +328,7 @@ export default function OnboardingPage() {
                     fontSize: "0.85rem", fontWeight: 700,
                   }}>
                     {isCompleted
-                      ? (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>)
+                      ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       : i + 1}
                   </div>
                   <span style={{
@@ -334,10 +350,14 @@ export default function OnboardingPage() {
           })}
         </div>
 
+        {/* Page title */}
         <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <h1 className="login-page__title" style={{ marginBottom: "0.35rem" }}>أكمل ملفك التجاري</h1>
+          <h1 className="login-page__title" style={{ marginBottom: "0.35rem" }}>{pageTitle}</h1>
           <p style={{ color: "var(--color-text-muted)", fontSize: "0.88rem" }}>
-            حساب <strong>{roleLabel}</strong> — يُساعدنا ذلك في عرض معلوماتك للعملاء بشكل احترافي
+            حساب <strong>{roleLabel}</strong>{" "}
+            {isBroker
+              ? "— يُساعدنا ذلك في عرض ملفك المهني للعملاء الباحثين"
+              : "— يُساعدنا ذلك في عرض معلوماتك للعملاء بشكل احترافي"}
           </p>
         </div>
 
@@ -345,32 +365,45 @@ export default function OnboardingPage() {
 
         <form onSubmit={handleSubmit} noValidate>
 
-          {/* ── المعلومات الأساسية ───────────────────────────────────────── */}
-          <div style={{
-            fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.04em",
-            color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)",
-            paddingBottom: "0.4rem", marginBottom: "1rem",
-          }}>
-            المعلومات الأساسية
-          </div>
+          {/* ── Section: Basic / Professional info ─────────────────────────── */}
+          <div style={{ ...SECTION_HEADER }}>{sectionIntro}</div>
 
+          {/* Display name */}
           <div className="form-group">
             <label className="form-label" htmlFor="displayName">
-              {user.role === "CompanyOwner" ? "اسم الشركة" : "اسم المكتب العقاري"}{" "}
-              <span style={{ color: "var(--color-error)" }}>*</span>
+              {nameLabel} <span style={{ color: "var(--color-error)" }}>*</span>
             </label>
             <input
               id="displayName" name="displayName" type="text" className="form-input"
               value={form.displayName} onChange={handleTextChange} required
-              placeholder={user.role === "CompanyOwner" ? "مثال: شركة الأمل للتطوير العقاري" : "مثال: مكتب النجاح العقاري"}
+              placeholder={namePlaceholder}
             />
             {fieldErrors.displayName && <span className="form-error">{fieldErrors.displayName}</span>}
           </div>
 
+          {/* Description */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="description">
+              نبذة تعريفية{" "}
+              <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
+            </label>
+            <textarea
+              id="description" name="description" className="form-input"
+              value={form.description} onChange={handleTextChange}
+              rows={3}
+              placeholder={isBroker
+                ? "اكتب نبذة عن خبرتك في السوق العقاري، تخصصك، والمناطق التي تعمل فيها..."
+                : "اكتب نبذة مختصرة عن نشاطك العقاري..."}
+              style={{ resize: "vertical", minHeight: 80 }}
+            />
+          </div>
+
+          {/* Phone + WhatsApp */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label" htmlFor="phoneNumber">
-                رقم الهاتف <span style={{ color: "var(--color-error)" }}>*</span>
+                رقم الهاتف{" "}
+                <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
               </label>
               <PhoneInput
                 id="phoneNumber"
@@ -380,6 +413,11 @@ export default function OnboardingPage() {
                 onChange={(val) => setField("phoneNumber", val ?? "")}
                 className="phone-input-wrapper"
               />
+              {isBroker && (
+                <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>
+                  مُعبَّأ من حسابك — يمكنك تعديله
+                </p>
+              )}
               {fieldErrors.phoneNumber && <span className="form-error">{fieldErrors.phoneNumber}</span>}
             </div>
             <div className="form-group" style={{ margin: 0 }}>
@@ -398,45 +436,25 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="description">
-              نبذة تعريفية{" "}
-              <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
-            </label>
-            <textarea
-              id="description" name="description" className="form-input"
-              value={form.description} onChange={handleTextChange}
-              rows={3}
-              placeholder="اكتب نبذة مختصرة عن نشاطك العقاري..."
-              style={{ resize: "vertical", minHeight: 80 }}
-            />
-          </div>
-
-          {/* ── معلومات الموقع ─────────────────────────────────────────────── */}
-          <div style={{
-            fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.04em",
-            color: "var(--color-text-muted)", borderBottom: "1px solid var(--color-border)",
-            paddingBottom: "0.4rem", marginBottom: "1rem", marginTop: "0.5rem",
-          }}>
-            معلومات الموقع
+          {/* ── Section: Location ──────────────────────────────────────────── */}
+          <div style={{ ...SECTION_HEADER, marginTop: "0.5rem" }}>
+            {isBroker ? "منطقة العمل" : "معلومات الموقع"}
           </div>
 
           {/* Province */}
           <div className="form-group">
             <label className="form-label" htmlFor="province">المحافظة</label>
             <select
-              id="province"
-              value={province}
+              id="province" value={province} disabled={provincesLoading}
               onChange={e => { setProvince(e.target.value); setFieldErrors(prev => ({ ...prev, cityId: undefined })); }}
-              disabled={provincesLoading}
-              style={selectStyle}
+              style={SELECT_STYLE}
             >
               <option value="">{provincesLoading ? "جاري التحميل..." : "اختر المحافظة"}</option>
               {provinces.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
 
-          {/* City + Neighborhood — two columns */}
+          {/* City + Neighborhood */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <div style={{ margin: 0 }}>
               <CitySelect
@@ -448,7 +466,6 @@ export default function OnboardingPage() {
                 error={fieldErrors.cityId}
               />
             </div>
-
             <div style={{ margin: 0 }}>
               <NeighborhoodSelect
                 label="الحي / المنطقة"
@@ -457,59 +474,76 @@ export default function OnboardingPage() {
                 city={cityName}
                 disabled={!cityName}
               />
+              {fieldErrors.neighborhoodId && <span className="form-error">{fieldErrors.neighborhoodId}</span>}
             </div>
           </div>
 
-          {/* Address */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="address">
-              العنوان التفصيلي <span style={{ color: "var(--color-error)" }}>*</span>
-            </label>
-            <input
-              id="address" name="address" type="text" className="form-input"
-              value={form.address} onChange={handleTextChange} required
-              placeholder="مثال: شارع الثورة، بناء رقم 7، الطابق الثالث"
-            />
-            {fieldErrors.address && <span className="form-error">{fieldErrors.address}</span>}
-          </div>
-
-          {/* Map picker */}
-          <div className="form-group">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <label className="form-label" style={{ margin: 0 }}>
-                الموقع على الخريطة <span style={{ color: "var(--color-error)" }}>*</span>
+          {/* Address — required for office/company only */}
+          {!isBroker && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="address">
+                العنوان التفصيلي <span style={{ color: "var(--color-error)" }}>*</span>
               </label>
-              <button
-                type="button"
-                onClick={useCurrentLocation}
-                disabled={geoLoading}
-                style={{
-                  fontSize: "0.78rem", fontWeight: 600, color: "var(--color-primary)",
-                  background: "none", border: "none",
-                  cursor: geoLoading ? "wait" : "pointer",
-                  padding: "0.2rem 0", display: "flex", alignItems: "center", gap: "0.3rem",
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-                </svg>
-                {geoLoading ? "جاري التحديد..." : "استخدم موقعي الحالي"}
-              </button>
+              <input
+                id="address" name="address" type="text" className="form-input"
+                value={form.address} onChange={handleTextChange} required
+                placeholder="مثال: شارع الثورة، بناء رقم 7، الطابق الثالث"
+              />
+              {fieldErrors.address && <span className="form-error">{fieldErrors.address}</span>}
             </div>
+          )}
 
-            <p style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginBottom: "0.6rem" }}>
-              انقر على الخريطة لتحديد موقع مكتبك، أو اسحب العلامة لضبط الموقع بدقة
-            </p>
+          {/* Address — optional for broker */}
+          {isBroker && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="address">
+                العنوان{" "}
+                <span style={{ color: "var(--color-text-muted)", fontWeight: 400 }}>(اختياري)</span>
+              </label>
+              <input
+                id="address" name="address" type="text" className="form-input"
+                value={form.address} onChange={handleTextChange}
+                placeholder="مثال: دمشق — شارع الثورة"
+              />
+            </div>
+          )}
 
-            <LocationPickerDynamic value={mapValue} onChange={handleMapChange} />
-
-            {form.latitude != null && form.longitude != null && (
-              <p style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", marginTop: "0.4rem", fontFamily: "monospace", direction: "ltr", textAlign: "right" }}>
-                {form.latitude.toFixed(6)}, {form.longitude.toFixed(6)}
+          {/* Map picker — required for office/company, hidden for broker */}
+          {!isBroker && (
+            <div className="form-group">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                <label className="form-label" style={{ margin: 0 }}>
+                  الموقع على الخريطة <span style={{ color: "var(--color-error)" }}>*</span>
+                </label>
+                <button
+                  type="button" onClick={useCurrentLocation} disabled={geoLoading}
+                  style={{
+                    fontSize: "0.78rem", fontWeight: 600, color: "var(--color-primary)",
+                    background: "none", border: "none",
+                    cursor: geoLoading ? "wait" : "pointer",
+                    padding: "0.2rem 0", display: "flex", alignItems: "center", gap: "0.3rem",
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                  </svg>
+                  {geoLoading ? "جاري التحديد..." : "استخدم موقعي الحالي"}
+                </button>
+              </div>
+              <p style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginBottom: "0.6rem" }}>
+                انقر على الخريطة لتحديد موقع مكتبك، أو اسحب العلامة لضبط الموقع بدقة
               </p>
-            )}
-          </div>
+              <LocationPickerDynamic value={mapValue} onChange={handleMapChange} />
+              {form.latitude != null && form.longitude != null && (
+                <p style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", marginTop: "0.4rem", fontFamily: "monospace", direction: "ltr", textAlign: "right" }}>
+                  {form.latitude.toFixed(6)}, {form.longitude.toFixed(6)}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Info box for Agent accounts (shouldn't reach here, just in case) ─ */}
 
           <button
             type="submit"
@@ -517,7 +551,7 @@ export default function OnboardingPage() {
             disabled={submitting}
             style={{ width: "100%", marginTop: "0.5rem" }}
           >
-            {submitting ? "جاري الحفظ..." : "حفظ الملف التجاري والمتابعة"}
+            {submitting ? "جاري الحفظ..." : submitLabel}
           </button>
         </form>
 
@@ -529,7 +563,6 @@ export default function OnboardingPage() {
           وإكمالها لاحقاً من الإعدادات
         </p>
       </div>
-
     </div>
   );
 }

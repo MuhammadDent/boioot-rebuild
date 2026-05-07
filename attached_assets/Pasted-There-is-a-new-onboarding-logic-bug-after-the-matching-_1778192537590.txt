@@ -1,0 +1,94 @@
+There is a new onboarding logic bug after the matching access changes.
+
+Current problem:
+When creating/logging in as a Broker account, the onboarding page says:
+"أكمل ملفك التجاري"
+and asks for:
+
+* اسم المكتب العقاري
+* phone number again
+
+This is wrong.
+
+Business logic:
+A Broker is NOT a real estate office.
+An Office / CompanyOwner can have a commercial office profile.
+A Broker should have an individual professional profile, not a company/office commercial profile.
+
+Required fixes:
+
+1. Separate onboarding profile types by account role:
+
+For Broker:
+
+* Page title should be:
+  "أكمل ملفك المهني"
+* Ask for:
+
+  * الاسم المهني أو اسم الوسيط
+  * نبذة تعريفية
+  * المحافظة
+  * المدينة
+  * الحي / المنطقة
+  * واتساب optional if different from account phone
+* Do NOT ask for:
+
+  * اسم المكتب العقاري
+  * الملف التجاري
+  * رقم سجل تجاري
+  * office/company fields
+
+For Office / CompanyOwner:
+
+* Keep commercial profile flow:
+  "أكمل ملفك التجاري"
+* Ask for:
+
+  * اسم المكتب العقاري
+  * رقم السجل التجاري if applicable
+  * بيانات المكتب
+  * الموقع
+  * الهاتف / واتساب if needed
+
+For Office Agent:
+
+* Do not ask for a separate commercial profile.
+* It should be linked to the parent office profile if this structure exists.
+* If no parent office link exists yet, show a clear message:
+  "يجب ربط حساب الوكيل بمكتب عقاري لإكمال التفعيل"
+
+2. Do not ask the user to re-enter the phone number if it already exists on the account.
+
+* Pre-fill phone from the account.
+* Allow editing only if necessary.
+* WhatsApp should be optional and can default to the same phone.
+
+3. Fix the submit error:
+   The form currently shows:
+   "لم يتم العثور على الملف التجاري لهذا الحساب"
+   after filling the required information.
+   This is wrong for Broker accounts because brokers should not require a commercial profile.
+
+For Broker submission:
+
+* Create/update the broker professional profile.
+* Do not search for a commercial office profile.
+* Do not block completion because of missing commercial profile.
+
+4. Make sure matching access remains free for:
+
+* Broker
+* Office
+* Office Agent
+* CompanyOwner
+
+5. Do not break existing office profile logic.
+6. Do not change production database schema unless absolutely necessary.
+7. Prefer safe refactoring and role-based branching in onboarding logic.
+
+After fixing, explain:
+
+* Which files were changed
+* How onboarding now differs between Broker, Office, CompanyOwner, and Office Agent
+* How the phone number is reused from the account
+* Why the broker no longer requires a commercial profile
