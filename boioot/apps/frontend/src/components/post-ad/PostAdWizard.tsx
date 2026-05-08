@@ -8,7 +8,7 @@ import { normalizeImageUrl } from "@/lib/imageUrl";
 import { imagesService } from "@/services/images.service";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
-import { FEATURES_LIST, getOwnershipTypeLabel, OWNERSHIP_OPTIONS } from "@/features/properties/constants";
+import { FEATURES_LIST, getOwnershipTypeLabel } from "@/features/properties/constants";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useFeature } from "@/hooks/useFeature";
 import UpgradePrompt from "@/components/plan/UpgradePrompt";
@@ -512,7 +512,7 @@ export default function PostAdWizard({
               <select className="form-input" value={data.ownershipType} disabled={disabled}
                 onChange={(e) => set("ownershipType", e.target.value)}>
                 <option value="">— اختر نوع الملكية —</option>
-                {OWNERSHIP_OPTIONS.map((o) => (
+                {ownershipTypes.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
