@@ -34,10 +34,8 @@ const nextConfig: NextConfig = {
         source: "/uploads/:path*",
         destination: `${backend}/uploads/:path*`,
       },
-      // SignalR negotiate (HTTP) goes through this rewrite.
-      // Note: WebSocket upgrade itself may bypass rewrites; for production
-      // set NEXT_PUBLIC_SIGNALR_URL in Vercel env vars to a direct backend
-      // origin so SignalR connects without going through the Vercel proxy.
+      // SignalR: proxied identically to /api/* so the hub runs on the same
+      // origin as the frontend (https://www.boioot.net/hubs/notifications).
       {
         source: "/hubs/:path*",
         destination: `${backend}/hubs/:path*`,
