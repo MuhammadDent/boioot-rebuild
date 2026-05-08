@@ -13,6 +13,14 @@ interface UseNotificationsRealtimeOptions {
 }
 
 function getNotificationsHubUrl(): string {
+  // NEXT_PUBLIC_SIGNALR_URL must be the backend ORIGIN (e.g. https://boioot-api.fly.dev).
+  // SignalR WebSocket upgrades cannot be routed through Next.js HTTP rewrites,
+  // so this must point directly to the backend — never to the Vercel/frontend origin.
+  if (apiConfig.signalrBaseUrl) {
+    return `${apiConfig.signalrBaseUrl.replace(/\/$/, "")}/hubs/notifications`;
+  }
+  // Fallback for environments where NEXT_PUBLIC_SIGNALR_URL is not set.
+  // Strips the /api suffix from the base URL to get the backend origin.
   const baseUrl = apiConfig.baseUrl.replace(/\/api\/?$/, "");
   return `${baseUrl}/hubs/notifications`;
 }

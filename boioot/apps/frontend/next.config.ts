@@ -20,18 +20,27 @@ const nextConfig: NextConfig = {
     "*.repl.co",
   ],
   async rewrites() {
+    const backend = process.env.BACKEND_URL ?? "http://localhost:8080";
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.BACKEND_URL ?? "http://localhost:8080"}/api/:path*`,
+        destination: `${backend}/api/:path*`,
       },
       {
         source: "/videos/:path*",
-        destination: `${process.env.BACKEND_URL ?? "http://localhost:8080"}/videos/:path*`,
+        destination: `${backend}/videos/:path*`,
       },
       {
         source: "/uploads/:path*",
-        destination: `${process.env.BACKEND_URL ?? "http://localhost:8080"}/uploads/:path*`,
+        destination: `${backend}/uploads/:path*`,
+      },
+      // SignalR negotiate (HTTP) goes through this rewrite.
+      // Note: WebSocket upgrade itself may bypass rewrites; for production
+      // set NEXT_PUBLIC_SIGNALR_URL in Vercel env vars to a direct backend
+      // origin so SignalR connects without going through the Vercel proxy.
+      {
+        source: "/hubs/:path*",
+        destination: `${backend}/hubs/:path*`,
       },
     ];
   },

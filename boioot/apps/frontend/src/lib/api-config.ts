@@ -25,8 +25,21 @@ function assertNotProduction(value: string, varName: string): void {
 const configuredUrl = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 assertNotProduction(configuredUrl, "NEXT_PUBLIC_API_URL");
 
+// ── SignalR / WebSocket backend URL ───────────────────────────────────────────
+// SignalR WebSocket connections CANNOT go through Next.js HTTP rewrites —
+// the rewrite layer is HTTP-only and cannot upgrade WebSocket protocol.
+//
+// This must be the ORIGIN of the backend (no /api suffix, no trailing slash):
+//   Dev:  http://localhost:8080          (set in .env.local)
+//   Prod: https://boioot-api.fly.dev    (set in Vercel environment variables)
+//
+// When unset, falls back to deriving from baseUrl (legacy dev behaviour).
+const signalrUrl = process.env.NEXT_PUBLIC_SIGNALR_URL ?? null;
+
 export const apiConfig = {
   baseUrl: configuredUrl,
+  /** Direct backend origin for SignalR WebSocket connections. */
+  signalrBaseUrl: signalrUrl,
 } as const;
 
 // ── File/document URL resolver ────────────────────────────────────────────────
