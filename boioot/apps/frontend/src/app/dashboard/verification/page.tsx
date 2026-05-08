@@ -1252,6 +1252,13 @@ export default function UserVerificationPage() {
     }
   }, []);
 
+  const silentRefresh = useCallback(async () => {
+    try {
+      const res: PagedResult<VRequestSummary> = await api.get("/verification/requests/my");
+      setRequests(res.items ?? []);
+    } catch { /* ignore errors in background refresh */ }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
 
   function handleCreated() {
@@ -1418,7 +1425,7 @@ export default function UserVerificationPage() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {requests.map((req) => (
-            <RequestCard key={req.id} summary={req} onRefresh={load} />
+            <RequestCard key={req.id} summary={req} onRefresh={silentRefresh} />
           ))}
         </div>
       )}

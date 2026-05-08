@@ -506,6 +506,7 @@ export default function VerificationDetailPage() {
       setRequest(res);
       setSuccess("تم تقديم الطلب بنجاح. سيتم مراجعته من قبل الإدارة.");
       setShowSubmitConfirm(false);
+      router.refresh();
     } catch (e) {
       setError(normalizeError(e));
     } finally {
@@ -558,6 +559,7 @@ export default function VerificationDetailPage() {
       setSavedNotes(saved);
       setHasNewDoc(false);
       toast.success("تم إعادة إرسال طلبك للمراجعة بنجاح");
+      router.refresh();
     } catch (e) {
       setError(normalizeError(e));
     } finally {

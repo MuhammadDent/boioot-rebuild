@@ -877,6 +877,17 @@ export default function DashboardBookingsPage() {
     }
   }, []);
 
+  const silentRefresh = useCallback(async () => {
+    try {
+      const [ownerBookings, renterBookings] = await Promise.all([
+        bookingsApi.forMyProperties(),
+        bookingsApi.mine(),
+      ]);
+      setIncoming(ownerBookings.map((b) => ({ ...b, status: normalizeBookingStatus(b.status) })));
+      setMine(renterBookings.map((b) => ({ ...b, status: normalizeBookingStatus(b.status) })));
+    } catch { /* ignore errors in background refresh */ }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
 
   async function updateBooking(id: string, action: "approve" | "reject" | "confirm" | "cancel" | "cancelOwner") {
@@ -949,7 +960,7 @@ export default function DashboardBookingsPage() {
                 onReject={(id) => updateBooking(id, "reject")}
                 onConfirm={(id) => updateBooking(id, "confirm")}
                 onCancelOwner={(id) => updateBooking(id, "cancelOwner")}
-                onRefresh={load}
+                onRefresh={silentRefresh}
               />
             ))}
           </div>
@@ -1010,7 +1021,7 @@ export default function DashboardBookingsPage() {
             {mine.map((booking) => (
               <BookingCard key={booking.id} booking={booking} mode="renter" busy={busyId === booking.id}
                 onCancel={(id) => updateBooking(id, "cancel")}
-                onRefresh={load}
+                onRefresh={silentRefresh}
               />
             ))}
           </div>
