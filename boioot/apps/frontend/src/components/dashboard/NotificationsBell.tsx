@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -29,13 +30,22 @@ function BellIcon({ size = 18 }: { size?: number }) {
 export default function NotificationsBell() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [unread, setUnread] = useState(0);
-  const [items, setItems] = useState<NotificationModel[]>([]);
-  const [loading, setLoading] = useState(false);
+
+  const [open, setOpen]           = useState(false);
+  const [unread, setUnread]       = useState(0);
+  const [items, setItems]         = useState<NotificationModel[]>([]);
+  const [loading, setLoading]     = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted]     = useState(false);
+
+  const buttonRef   = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  type DropdownPos = { top: number; right: number };
+  const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const fetchUnread = useCallback(async () => {
     try {
@@ -62,13 +72,11 @@ export default function NotificationsBell() {
 
   const handleRealtimeNotification = useCallback((notification: NotificationModel) => {
     let inserted = false;
-
     setItems(prev => {
       if (prev.some(item => item.id === notification.id)) return prev;
       inserted = true;
       return [notification, ...prev].slice(0, 10);
     });
-
     if (!notification.isRead && inserted) {
       setUnread(prev => prev + 1);
     }
@@ -80,22 +88,46 @@ export default function NotificationsBell() {
     onRecover: loadList,
   });
 
+  const computePos = useCallback((): DropdownPos | null => {
+    if (!buttonRef.current) return null;
+    const rect = buttonRef.current.getBoundingClientRect();
+    return {
+      top:   rect.bottom + 8,
+      right: window.innerWidth - rect.right,
+    };
+  }, []);
+
   const handleToggle = () => {
     const next = !open;
+    if (next) {
+      setDropdownPos(computePos());
+      loadList();
+    }
     setOpen(next);
-    if (next) loadList();
   };
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      const insideButton   = buttonRef.current?.contains(target);
+      const insideDropdown = dropdownRef.current?.contains(target);
+      if (!insideButton && !insideDropdown) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const refresh = () => setDropdownPos(computePos());
+    window.addEventListener("scroll", refresh, { passive: true, capture: true });
+    window.addEventListener("resize", refresh);
+    return () => {
+      window.removeEventListener("scroll", refresh, { capture: true });
+      window.removeEventListener("resize", refresh);
+    };
+  }, [open, computePos]);
 
   const handleMarkRead = async (id: string) => {
     try { await notificationsApi.markRead(id); } catch { /* still update UI */ }
@@ -118,110 +150,120 @@ export default function NotificationsBell() {
     } finally { setMarkingAll(false); }
   };
 
-  return (
-    <>
-      <div ref={panelRef} style={{ position: "relative" }}>
-        <button
-          type="button"
-          className="dash-hdr__icon-btn"
-          onClick={handleToggle}
-          aria-label="الإشعارات"
-          title="الإشعارات"
-          style={{ position: "relative" }}
-        >
-          <BellIcon />
+  const dropdown = mounted && open && dropdownPos ? (
+    <div
+      ref={dropdownRef}
+      style={{
+        position: "fixed",
+        top:   dropdownPos.top,
+        right: dropdownPos.right,
+        width: "340px",
+        maxHeight: "480px",
+        overflowY: "auto",
+        background: "#fff",
+        border: "1px solid #e5e7eb",
+        borderRadius: "12px",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "12px 16px", borderBottom: "1px solid #f3f4f6",
+          position: "sticky", top: 0, background: "#fff", zIndex: 1,
+        }}
+      >
+        <span style={{ fontWeight: 700, fontSize: "14px", color: "#111827" }}>
+          الإشعارات
           {unread > 0 && (
-            <span
-              aria-label={`${unread} إشعار غير مقروء`}
-              style={{
-                position: "absolute", top: "2px", insetInlineEnd: "2px",
-                minWidth: "16px", height: "16px", borderRadius: "999px",
-                background: "#ef4444", color: "#fff",
-                fontSize: "10px", fontWeight: 700,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                padding: "0 3px", lineHeight: 1, pointerEvents: "none",
-              }}
-            >
-              {unread > 99 ? "99+" : unread}
+            <span style={{ marginRight: "6px", background: "#ef4444", color: "#fff", fontSize: "11px", fontWeight: 700, borderRadius: "999px", padding: "1px 6px" }}>
+              {unread}
             </span>
           )}
-        </button>
-
-        {open && (
-          <div
-            style={{
-              position: "absolute", top: "calc(100% + 8px)", insetInlineEnd: 0,
-              width: "340px", maxHeight: "480px", overflowY: "auto",
-              background: "#fff", border: "1px solid #e5e7eb",
-              borderRadius: "12px", boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-              zIndex: 9999, display: "flex", flexDirection: "column",
-            }}
+        </span>
+        {unread > 0 && (
+          <button
+            type="button" onClick={handleMarkAll} disabled={markingAll}
+            style={{ background: "none", border: "none", color: "#16a34a", fontSize: "12px", fontWeight: 600, cursor: "pointer", padding: "2px 4px" }}
           >
-            <div
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "12px 16px", borderBottom: "1px solid #f3f4f6",
-                position: "sticky", top: 0, background: "#fff", zIndex: 1,
-              }}
-            >
-              <span style={{ fontWeight: 700, fontSize: "14px", color: "#111827" }}>
-                الإشعارات
-                {unread > 0 && (
-                  <span style={{ marginRight: "6px", background: "#ef4444", color: "#fff", fontSize: "11px", fontWeight: 700, borderRadius: "999px", padding: "1px 6px" }}>
-                    {unread}
-                  </span>
-                )}
-              </span>
-              {unread > 0 && (
-                <button
-                  type="button" onClick={handleMarkAll} disabled={markingAll}
-                  style={{ background: "none", border: "none", color: "#16a34a", fontSize: "12px", fontWeight: 600, cursor: "pointer", padding: "2px 4px" }}
-                >
-                  {markingAll ? "..." : "تعليم الكل كمقروء"}
-                </button>
-              )}
-            </div>
-
-            {loading ? (
-              <div style={{ padding: "32px", textAlign: "center", color: "#9ca3af", fontSize: "13px", flex: 1 }}>
-                جاري التحميل...
-              </div>
-            ) : items.length === 0 ? (
-              <div style={{ padding: "40px 16px", textAlign: "center", color: "#9ca3af", fontSize: "13px", flex: 1 }}>
-                لا توجد إشعارات بعد
-              </div>
-            ) : (
-              <ul style={{ listStyle: "none", margin: 0, padding: 0, flex: 1 }}>
-                {items.map(notification => (
-                  <NotificationItem
-                    key={notification.id}
-                    notification={notification}
-                    variant="dropdown"
-                    isHovered={hoveredId === notification.id}
-                    onHover={setHoveredId}
-                    onClick={handleNotificationClick}
-                  />
-                ))}
-              </ul>
-            )}
-
-            <div
-              style={{
-                padding: "10px 16px", borderTop: "1px solid #f3f4f6",
-                position: "sticky", bottom: 0, background: "#fff", textAlign: "center",
-              }}
-            >
-              <Link
-                href="/notifications"
-                onClick={() => setOpen(false)}
-                style={{ fontSize: "12px", fontWeight: 600, color: "#16a34a", textDecoration: "none" }}
-              >
-                عرض كل الإشعارات
-              </Link>
-            </div>
-          </div>
+            {markingAll ? "..." : "تعليم الكل كمقروء"}
+          </button>
         )}
       </div>
+
+      {loading ? (
+        <div style={{ padding: "32px", textAlign: "center", color: "#9ca3af", fontSize: "13px", flex: 1 }}>
+          جاري التحميل...
+        </div>
+      ) : items.length === 0 ? (
+        <div style={{ padding: "40px 16px", textAlign: "center", color: "#9ca3af", fontSize: "13px", flex: 1 }}>
+          لا توجد إشعارات بعد
+        </div>
+      ) : (
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, flex: 1 }}>
+          {items.map(notification => (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              variant="dropdown"
+              isHovered={hoveredId === notification.id}
+              onHover={setHoveredId}
+              onClick={handleNotificationClick}
+            />
+          ))}
+        </ul>
+      )}
+
+      <div
+        style={{
+          padding: "10px 16px", borderTop: "1px solid #f3f4f6",
+          position: "sticky", bottom: 0, background: "#fff", textAlign: "center",
+        }}
+      >
+        <Link
+          href="/notifications"
+          onClick={() => setOpen(false)}
+          style={{ fontSize: "12px", fontWeight: 600, color: "#16a34a", textDecoration: "none" }}
+        >
+          عرض كل الإشعارات
+        </Link>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="dash-hdr__icon-btn"
+        onClick={handleToggle}
+        aria-label="الإشعارات"
+        title="الإشعارات"
+        style={{ position: "relative" }}
+      >
+        <BellIcon />
+        {unread > 0 && (
+          <span
+            aria-label={`${unread} إشعار غير مقروء`}
+            style={{
+              position: "absolute", top: "2px", insetInlineEnd: "2px",
+              minWidth: "16px", height: "16px", borderRadius: "999px",
+              background: "#ef4444", color: "#fff",
+              fontSize: "10px", fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "0 3px", lineHeight: 1, pointerEvents: "none",
+            }}
+          >
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
+      </button>
+
+      {mounted && dropdown !== null && createPortal(dropdown, document.body)}
     </>
   );
 }
