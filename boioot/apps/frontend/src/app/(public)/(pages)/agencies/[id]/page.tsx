@@ -13,6 +13,7 @@ interface AgencyDetail {
   role:               string;
   roleLabel:          string;
   city:               string | null;
+  province:           string | null;
   bio:                string | null;
   logoUrl:            string | null;
   phone:              string | null;
@@ -294,7 +295,14 @@ export default function AgencyDetailPage() {
             )}
 
             <div style={{ display: "flex", gap: "1.25rem", fontSize: "0.85rem", color: "#64748b", flexWrap: "wrap" }}>
-              {agency.city && <span>📍 {agency.city}</span>}
+              {(agency.province || agency.city) && (
+                <span>
+                  📍{" "}
+                  {agency.role === "Broker" && !agency.city && agency.province
+                    ? `يغطي: ${agency.province}`
+                    : [agency.province, agency.city].filter(Boolean).join(" - ")}
+                </span>
+              )}
               <span>🏠 {agency.listingCount} إعلان</span>
               <span>📅 عضو منذ {new Date(agency.createdAt).getFullYear()}</span>
             </div>

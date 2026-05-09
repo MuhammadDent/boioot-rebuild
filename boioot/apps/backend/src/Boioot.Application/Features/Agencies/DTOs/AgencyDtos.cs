@@ -8,6 +8,7 @@ public record AgencyListItemDto(
     string  Role,
     string  RoleLabel,
     string? City,
+    string? Province,
     string? Bio,
     string? LogoUrl,
     // IsVerified is derived from VerificationStatus by ApplyVerificationCore
@@ -30,6 +31,7 @@ public record AgencyDetailDto(
     string   Role,
     string   RoleLabel,
     string?  City,
+    string?  Province,
     string?  Bio,
     string?  LogoUrl,
     string?  Phone,

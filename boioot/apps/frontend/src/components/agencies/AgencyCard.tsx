@@ -8,6 +8,7 @@ export interface AgencyListItem {
   role:               string;
   roleLabel:          string;
   city:               string | null;
+  province:           string | null;
   bio:                string | null;
   logoUrl:            string | null;
   // isVerified is ALWAYS derived from verificationStatus on the server
@@ -166,10 +167,15 @@ export default function AgencyCard({ agency }: Props) {
       {/* Stars */}
       <StarRow average={agency.averageRating} count={agency.ratingsCount} />
 
-      {/* City + listings */}
-      <div style={{ display: "flex", gap: "1rem", fontSize: "0.82rem", color: "#64748b" }}>
-        {agency.city && (
-          <span>📍 {agency.city}</span>
+      {/* Location + listings */}
+      <div style={{ display: "flex", gap: "1rem", fontSize: "0.82rem", color: "#64748b", flexWrap: "wrap" }}>
+        {(agency.province || agency.city) && (
+          <span>
+            📍{" "}
+            {agency.role === "Broker" && !agency.city && agency.province
+              ? `يغطي: ${agency.province}`
+              : [agency.province, agency.city].filter(Boolean).join(" - ")}
+          </span>
         )}
         <span>🏠 {agency.listingCount} إعلان</span>
       </div>

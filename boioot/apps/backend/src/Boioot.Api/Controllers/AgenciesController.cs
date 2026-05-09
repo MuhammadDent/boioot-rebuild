@@ -205,11 +205,21 @@ public class AgenciesController : BaseController
             // Visible if: no profile at all, OR profile.IsVisible = true
             .Where(x => x.ap == null || x.ap.IsVisible);
 
-        // City / province filter — only applies when a profile with city exists
+        // City / province filter — only applies when a profile exists
         if (!string.IsNullOrWhiteSpace(city))
             query = query.Where(x => x.ap != null && x.ap.City == city);
-        else if (provinceCities is not null && provinceCities.Count > 0)
-            query = query.Where(x => x.ap != null && provinceCities.Contains(x.ap.City!));
+        else if (!string.IsNullOrWhiteSpace(province))
+        {
+            // Primary: match cities that belong to the province (via LocationCities lookup).
+            // Fallback: match AgencyProfile.Province directly — covers profiles where only
+            // Province is filled in (City is null) or where LocationCities has no matching row.
+            if (provinceCities != null && provinceCities.Count > 0)
+                query = query.Where(x =>
+                    x.ap != null &&
+                    (provinceCities.Contains(x.ap.City!) || x.ap.Province == province));
+            else
+                query = query.Where(x => x.ap != null && x.ap.Province == province);
+        }
 
         if (!string.IsNullOrWhiteSpace(type))
         {
@@ -246,8 +256,9 @@ public class AgenciesController : BaseController
                 x.u.FullName,
                 Role               = x.u.Role.ToString(),
                 RoleLabel          = x.u.Role == UserRole.Broker ? "وسيط عقاري" : "مكتب عقاري",
-                City               = x.ap != null ? x.ap.City    : null,
-                Bio                = x.ap != null ? x.ap.Bio     : null,
+                City               = x.ap != null ? x.ap.City     : null,
+                Province           = x.ap != null ? x.ap.Province  : null,
+                Bio                = x.ap != null ? x.ap.Bio      : null,
                 // Logo is always the user's profile photo — no separate logoUrl
                 LogoUrl            = x.u.ProfileImageUrl,
                 // isVerified is ALWAYS derived from VerificationStatus (ApplyVerificationCore)
@@ -273,7 +284,7 @@ public class AgenciesController : BaseController
             var (avg, count) = ratingsMap.GetValueOrDefault(x.Id, (0m, 0));
             return new AgencyListItemDto(
                 x.Id, x.FullName, x.Role, x.RoleLabel,
-                x.City, x.Bio, x.LogoUrl,
+                x.City, x.Province, x.Bio, x.LogoUrl,
                 x.IsVerified, x.VerificationStatus, x.VerificationBadge,
                 x.IsFeatured, x.SortOrder, x.ListingCount,
                 avg, count);
@@ -317,8 +328,9 @@ public class AgenciesController : BaseController
                 x.u.FullName,
                 Role               = x.u.Role.ToString(),
                 RoleLabel          = x.u.Role == UserRole.Broker ? "وسيط عقاري" : "مكتب عقاري",
-                City               = x.ap != null ? x.ap.City : null,
-                Bio                = x.ap != null ? x.ap.Bio  : null,
+                City               = x.ap != null ? x.ap.City     : null,
+                Province           = x.ap != null ? x.ap.Province  : null,
+                Bio                = x.ap != null ? x.ap.Bio      : null,
                 // Logo is always the user's profile photo — no separate logoUrl
                 LogoUrl            = x.u.ProfileImageUrl,
                 x.u.Phone,
@@ -342,7 +354,7 @@ public class AgenciesController : BaseController
 
         return Ok(new AgencyDetailDto(
             raw.Id, raw.FullName, raw.Role, raw.RoleLabel,
-            raw.City, raw.Bio, raw.LogoUrl, raw.Phone,
+            raw.City, raw.Province, raw.Bio, raw.LogoUrl, raw.Phone,
             raw.IsVerified, raw.VerificationStatus, raw.VerificationLevel, raw.VerificationBadge,
             raw.IsFeatured, raw.ListingCount, raw.CreatedAt,
             avg, count));

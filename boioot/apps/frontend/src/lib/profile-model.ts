@@ -12,6 +12,16 @@ export const ROLE_LABELS: Record<string, string> = {
   User:         "مستخدم",
 };
 
+/**
+ * Resolves the Arabic display label for a role.
+ * CompanyOwner with accountType="Office" is a real-estate office (مكتب عقاري),
+ * not a developer company — the two share the same UserRole but differ in accountType.
+ */
+export function resolveRoleLabel(role: string, accountType?: string | null): string {
+  if (role === "CompanyOwner" && accountType === "Office") return "مكتب عقاري";
+  return ROLE_LABELS[role] ?? role;
+}
+
 // ─── Role group — drives badge colour only ────────────────────────────────────
 
 export type RoleGroup = "admin" | "business" | "agent" | "individual";
@@ -67,7 +77,7 @@ export function normalizeProfile(raw: UserProfileResponse): NormalizedProfile {
     phone:       raw.phone     ?? null,
     avatarUrl:   raw.profileImageUrl ?? null,
     role:        raw.role,
-    roleLabel:   ROLE_LABELS[raw.role] ?? raw.role,
+    roleLabel:   resolveRoleLabel(raw.role, raw.accountType),
     roleGroup:   getRoleGroup(raw.role),
     createdAt:   raw.createdAt,
     permissions: raw.permissions ?? [],
