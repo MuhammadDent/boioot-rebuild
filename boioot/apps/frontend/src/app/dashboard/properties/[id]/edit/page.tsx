@@ -12,7 +12,10 @@ import PropertyForm from "@/components/dashboard/properties/PropertyForm";
 import { ApiError, normalizeError } from "@/lib/api";
 import type { PropertyResponse, CreatePropertyRequest, UpdatePropertyRequest } from "@/types";
 
-const OWNER_ROLES = ["Admin", "CompanyOwner", "Agent", "Broker", "Owner"];
+// "User" is included because users with that role can post via /post-ad
+// and must be able to edit their own listings. Backend authorization is
+// enforced at the service level via EnsureCanManagePropertyAsync (OwnerId check).
+const OWNER_ROLES = ["Admin", "CompanyOwner", "Agent", "Broker", "Owner", "User"];
 
 export default function EditPropertyPage() {
   const { user, isLoading } = useProtectedRoute({
