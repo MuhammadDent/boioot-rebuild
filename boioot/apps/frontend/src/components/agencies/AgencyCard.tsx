@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import ContactAgencyButton from "./ContactAgencyButton";
 
 export interface AgencyListItem {
   id:                 string;
@@ -215,22 +216,7 @@ export default function AgencyCard({ agency }: Props) {
           عرض الملف
         </Link>
 
-        <Link
-          href={`/dashboard/messages?userId=${agency.id}`}
-          style={{
-            flex:           1,
-            textAlign:      "center",
-            padding:        "0.5rem",
-            background:     "#f1f5f9",
-            color:          "#0f172a",
-            borderRadius:   "8px",
-            textDecoration: "none",
-            fontSize:       "0.85rem",
-            fontWeight:     600,
-          }}
-        >
-          مراسلة
-        </Link>
+        <ContactAgencyButton agencyId={agency.id} agencyName={agency.fullName} variant="card" />
       </div>
     </article>
   );

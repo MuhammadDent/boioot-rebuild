@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import ContactAgencyButton from "@/components/agencies/ContactAgencyButton";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -324,16 +325,8 @@ export default function AgencyDetailPage() {
         )}
 
         {/* Actions */}
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <Link
-            href={`/dashboard/messages?userId=${agency.id}`}
-            style={{
-              padding: "0.65rem 1.5rem", background: "#0f766e", color: "#fff",
-              borderRadius: 10, textDecoration: "none", fontWeight: 700, fontSize: "0.92rem",
-            }}
-          >
-            💬 مراسلة
-          </Link>
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "flex-start" }}>
+          <ContactAgencyButton agencyId={agency.id} agencyName={agency.fullName} variant="detail" />
 
           {agency.phone && (
             <a
