@@ -74,6 +74,14 @@ public class PropertyService : IPropertyService
         try { await EnrichWithRatingSummaryAsync(mapped, ct); }
         catch (Exception ex) { _logger.LogWarning("[PropertyService] Enrich skipped: {Msg}", ex.Message); }
 
+        // TRUST FIX: batch-set personal-listing owner verification strictly from VerificationStatus.
+        // MapToResponse uses company.IsVerified for the initial value; for personal listings that
+        // maps to the PersonalCompanyId sentinel which has no real company → already false.
+        // For users who belong to a verified company, their personal listing would otherwise
+        // inherit the company's IsVerified — this corrects that.
+        try { await EnrichWithOwnerVerificationAsync(mapped, ct); }
+        catch (Exception ex) { _logger.LogWarning("[PropertyService] Owner verification enrich skipped: {Msg}", ex.Message); }
+
         return new PagedResult<PropertyResponse>(mapped, page, pageSize, total);
     }
 
@@ -108,18 +116,23 @@ public class PropertyService : IPropertyService
             // Case 1: personal listing — owner is a registered user
             var user = await _context.Users
                 .AsNoTracking()
-                .Select(u => new { u.Id, u.FullName, u.Phone, u.ProfileImageUrl, u.VerificationLevel, u.IsVerified })
+                .Select(u => new { u.Id, u.FullName, u.Phone, u.ProfileImageUrl, u.VerificationLevel, u.IsVerified, u.VerificationStatus })
                 .FirstOrDefaultAsync(u => u.Id == ownerGuid, ct);
             if (user != null)
             {
+                // TRUST FIX: derive verification strictly from VerificationStatus,
+                // never from the IsVerified bool alone (may hold stale data).
+                var userIsApproved = user.VerificationStatus is VerificationStatus.Verified
+                                                              or VerificationStatus.PartiallyVerified;
+
                 resolvedRecipientId          = user.Id.ToString();
                 response.OwnerName           = user.FullName;
                 response.OwnerPhone          = !string.IsNullOrEmpty(user.Phone) ? user.Phone : property.Company?.Phone;
                 response.OwnerPhoto          = !string.IsNullOrEmpty(user.ProfileImageUrl)
                     ? user.ProfileImageUrl
                     : property.Company?.LogoUrl;
-                response.OwnerVerificationLevel = user.VerificationLevel;
-                response.OwnerIsVerified        = user.IsVerified;
+                response.OwnerVerificationLevel = userIsApproved ? user.VerificationLevel : 0;
+                response.OwnerIsVerified        = userIsApproved;
             }
         }
         else if (property.AgentId.HasValue)
@@ -128,18 +141,21 @@ public class PropertyService : IPropertyService
             var agent = await _context.Set<Agent>()
                 .AsNoTracking()
                 .Where(a => a.Id == property.AgentId.Value)
-                .Select(a => new { a.UserId, a.User.FullName, a.User.Phone, a.User.ProfileImageUrl, a.User.VerificationLevel, a.User.IsVerified })
+                .Select(a => new { a.UserId, a.User.FullName, a.User.Phone, a.User.ProfileImageUrl, a.User.VerificationLevel, a.User.IsVerified, a.User.VerificationStatus })
                 .FirstOrDefaultAsync(ct);
             if (agent != null)
             {
+                var agentIsApproved = agent.VerificationStatus is VerificationStatus.Verified
+                                                                or VerificationStatus.PartiallyVerified;
+
                 resolvedRecipientId          = agent.UserId.ToString();
                 response.OwnerName           = agent.FullName;
                 response.OwnerPhone          = !string.IsNullOrEmpty(agent.Phone) ? agent.Phone : property.Company?.Phone;
                 response.OwnerPhoto          = !string.IsNullOrEmpty(agent.ProfileImageUrl)
                     ? agent.ProfileImageUrl
                     : property.Company?.LogoUrl;
-                response.OwnerVerificationLevel = agent.VerificationLevel;
-                response.OwnerIsVerified        = agent.IsVerified;
+                response.OwnerVerificationLevel = agentIsApproved ? agent.VerificationLevel : 0;
+                response.OwnerIsVerified        = agentIsApproved;
             }
             else
             {
@@ -912,6 +928,53 @@ public class PropertyService : IPropertyService
             page, pageSize, total);
     }
 
+    public async Task<PropertyResponse> GetMyListingByIdAsync(
+        Guid userId, string userRole, Guid propertyId, CancellationToken ct = default)
+    {
+        _logger.LogInformation(
+            "[GetMyListingById] userId={UserId} role={Role} propertyId={PropertyId}",
+            userId, userRole, propertyId);
+
+        // Admin can access any listing
+        if (userRole == RoleNames.Admin)
+        {
+            var adminProp = await _context.Properties
+                .Include(p => p.Company)
+                .Include(p => p.Images).ThenInclude(i => i.UserImage)
+                .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
+                .FirstOrDefaultAsync(p => p.Id == propertyId, ct)
+                ?? throw new BoiootException("العقار غير موجود", 404);
+            return MapToResponse(adminProp);
+        }
+
+        var ownerIdStr   = userId.ToString();
+        var userAgentIds = await _context.Agents
+            .Where(a => a.UserId == userId)
+            .Select(a => a.Id)
+            .ToListAsync(ct);
+        var userCompanyIds = await _context.Agents
+            .Where(a => a.UserId == userId && a.CompanyId != null)
+            .Select(a => a.CompanyId!.Value)
+            .ToListAsync(ct);
+
+        var property = await _context.Properties
+            .Include(p => p.Company)
+            .Include(p => p.Images).ThenInclude(i => i.UserImage)
+            .Include(p => p.AmenitySelections).ThenInclude(s => s.Amenity)
+            .FirstOrDefaultAsync(p => p.Id == propertyId && (
+                p.OwnerId == ownerIdStr ||
+                (p.AgentId != null && userAgentIds.Contains(p.AgentId.Value)) ||
+                userCompanyIds.Contains(p.CompanyId)
+            ), ct)
+            ?? throw new BoiootException("الإعلان غير موجود أو لا تملك صلاحية تعديله", 404);
+
+        _logger.LogInformation(
+            "[GetMyListingById] found — OwnerId={OwnerId} userId={UserId}",
+            property.OwnerId, userId);
+
+        return MapToResponse(property);
+    }
+
     public async Task DeleteMyListingAsync(
         Guid userId, Guid propertyId, CancellationToken ct = default)
     {
@@ -1275,6 +1338,41 @@ public class PropertyService : IPropertyService
     /// Uses two raw SQL queries (Reviews + BookingReviews) — no EF Core model interaction.
     /// Gracefully no-ops when not on PostgreSQL or when BookingReviews table is absent.
     /// </summary>
+    private async Task EnrichWithOwnerVerificationAsync(
+        List<PropertyResponse> items, CancellationToken ct)
+    {
+        var personalItems = items
+            .Where(r => r.IsPersonalListing && !string.IsNullOrEmpty(r.OwnerId))
+            .ToList();
+
+        if (personalItems.Count == 0) return;
+
+        var ownerIds = personalItems
+            .Select(r => Guid.TryParse(r.OwnerId, out var g) ? g : (Guid?)null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .Distinct()
+            .ToList();
+
+        if (ownerIds.Count == 0) return;
+
+        var verificationMap = await _context.Users
+            .Where(u => ownerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.VerificationLevel, u.VerificationStatus })
+            .ToDictionaryAsync(u => u.Id, ct);
+
+        foreach (var item in personalItems)
+        {
+            if (!Guid.TryParse(item.OwnerId, out var ownerId)) continue;
+            if (!verificationMap.TryGetValue(ownerId, out var verif)) continue;
+
+            var isApproved = verif.VerificationStatus is VerificationStatus.Verified
+                                                       or VerificationStatus.PartiallyVerified;
+            item.OwnerVerificationLevel = isApproved ? verif.VerificationLevel : 0;
+            item.OwnerIsVerified        = isApproved;
+        }
+    }
+
     private async Task EnrichWithRatingSummaryAsync(
         List<PropertyResponse> responses,
         CancellationToken ct)

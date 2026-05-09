@@ -176,6 +176,34 @@ public class PropertiesController : BaseController
         return Ok(result);
     }
 
+    /// <summary>
+    /// Returns a single listing the caller owns so they can populate the edit form.
+    /// Uses the same broad ownership check as GET my-listings — works for any authenticated
+    /// role (User, Owner, Broker, Agent, CompanyOwner, Admin) without an extra policy gate.
+    /// </summary>
+    [Authorize]
+    [HttpGet("my-listings/{id:guid}")]
+    public async Task<IActionResult> GetMyListingById(Guid id, CancellationToken ct)
+    {
+        var result = await _propertyService.GetMyListingByIdAsync(GetUserId(), GetUserRole(), id, ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Updates a listing the caller owns.
+    /// Authorization is enforced inside PropertyService.UpdateAsync via EnsureCanManagePropertyAsync
+    /// (OwnerId == userId passes for every role, including "User") — no extra policy gate needed.
+    /// </summary>
+    [Authorize]
+    [HttpPut("my-listings/{id:guid}")]
+    [RequestSizeLimit(104_857_600)]
+    public async Task<IActionResult> UpdateMyListing(
+        Guid id, [FromBody] UpdatePropertyRequest request, CancellationToken ct)
+    {
+        var result = await _propertyService.UpdateAsync(GetUserId(), GetUserRole(), id, request, ct);
+        return Ok(result);
+    }
+
     [Authorize]
     [HttpDelete("my-listings/{id:guid}")]
     public async Task<IActionResult> DeleteMyListing(Guid id, CancellationToken ct)

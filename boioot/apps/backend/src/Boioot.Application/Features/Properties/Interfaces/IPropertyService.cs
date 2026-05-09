@@ -16,6 +16,11 @@ public interface IPropertyService
     Task<PagedResult<PropertyResponse>> GetMyListingsAsync(Guid userId, int page, int pageSize, CancellationToken ct = default);
     Task DeleteMyListingAsync(Guid userId, Guid propertyId, CancellationToken ct = default);
     /// <summary>
+    /// Returns a single listing the caller owns (personal, agent-assigned, or company).
+    /// Uses the same broad ownership check as GetMyListingsAsync — safe for any authenticated role.
+    /// </summary>
+    Task<PropertyResponse> GetMyListingByIdAsync(Guid userId, string userRole, Guid propertyId, CancellationToken ct = default);
+    /// <summary>
     /// Returns listing usage stats.
     /// isFreeTrial = true when the user is on the free-trial tier (User role, all-time limit of 2).
     /// isFreeTrial = false for all other roles (monthly limits apply).

@@ -19,10 +19,12 @@ export const dashboardPropertiesApi = {
     );
   },
 
-  // Uses the dashboard-specific endpoint which has no status filter,
-  // allowing editing of Inactive properties (unlike GET /api/properties/{id}).
+  // Uses the my-listings endpoint — broad ownership check that works for every
+  // authenticated role (User, Owner, Broker, Agent, CompanyOwner, Admin).
+  // The old /dashboard/properties/{id} was gated by AdminOrCompanyOwnerOrAgent
+  // which excluded "User" role, causing a 403 for regular listing owners.
   getById(id: string): Promise<PropertyResponse> {
-    return api.get(`/dashboard/properties/${id}`);
+    return api.get(`/properties/my-listings/${id}`);
   },
 
   // For CompanyOwner / Admin — attaches property to their company.
@@ -35,8 +37,11 @@ export const dashboardPropertiesApi = {
     return api.post("/properties/post", data);
   },
 
+  // Uses the my-listings PUT endpoint — any authenticated owner can update
+  // their own listing regardless of role. EnsureCanManagePropertyAsync inside
+  // UpdateAsync handles the ownership check at the service level.
   update(id: string, data: UpdatePropertyRequest): Promise<PropertyResponse> {
-    return api.put(`/properties/${id}`, data);
+    return api.put(`/properties/my-listings/${id}`, data);
   },
 
   delete(id: string): Promise<void> {
