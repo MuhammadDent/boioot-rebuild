@@ -190,7 +190,7 @@ public class AgenciesController : BaseController
                 .ToListAsync(ct);
         }
 
-        var allowedRoles = new[] { UserRole.Broker, UserRole.Office };
+        var allowedRoles = new[] { UserRole.Broker, UserRole.Office, UserRole.CompanyOwner };
 
         // LEFT JOIN: include users even if they have no AgencyProfile
         var query = _ctx.Users
@@ -308,7 +308,7 @@ public class AgenciesController : BaseController
         if (!Guid.TryParse(id, out var guid))
             return NotFound();
 
-        var allowedRoles = new[] { UserRole.Broker, UserRole.Office };
+        var allowedRoles = new[] { UserRole.Broker, UserRole.Office, UserRole.CompanyOwner };
 
         // LEFT JOIN: accessible even without a profile
         var raw = await _ctx.Users

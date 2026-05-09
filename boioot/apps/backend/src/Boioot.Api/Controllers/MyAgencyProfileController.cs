@@ -57,7 +57,7 @@ public class MyAgencyProfileController : BaseController
 
     // ── Verify caller is Broker or Office ─────────────────────────────────────
 
-    private static readonly UserRole[] AllowedRoles = [UserRole.Broker, UserRole.Office];
+    private static readonly UserRole[] AllowedRoles = [UserRole.Broker, UserRole.Office, UserRole.CompanyOwner];
 
     // ── GET /api/my/agency-profile ───────────────────────────────────────────
 
@@ -129,8 +129,8 @@ public class MyAgencyProfileController : BaseController
         {
             profile = new AgencyProfile
             {
-                UserId    = userIdStr,
-                IsVisible  = false,   // admin must enable
+                UserId     = userIdStr,
+                IsVisible  = true,
                 IsFeatured = false,
                 SortOrder  = 0,
             };

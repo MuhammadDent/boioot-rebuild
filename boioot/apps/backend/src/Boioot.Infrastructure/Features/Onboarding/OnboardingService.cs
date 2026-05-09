@@ -52,12 +52,26 @@ public class OnboardingService : IOnboardingService
     {
         var user = await RequireUserAsync(userId, ct);
 
+        Company company;
         if (user.Role == UserRole.Broker)
-            return await UpdateBrokerProfileAsync(user, request, ct);
+        {
+            // UpdateBrokerProfileAsync saves company data internally.
+            // We then sync those fields to AgencyProfile and save again.
+            var response = await UpdateBrokerProfileAsync(user, request, ct);
+            company = await _context.Agents
+                .Include(a => a.Company)
+                .Where(a => a.UserId == userId)
+                .Select(a => a.Company!)
+                .FirstAsync(ct);
+            await SyncAgencyProfileAsync(userId, company, ct);
+            await _context.SaveChangesAsync(ct);
+            return response;
+        }
 
-        var company = await ResolveCompanyAsync(userId, ct);
+        company = await ResolveCompanyAsync(userId, ct);
         ApplyUpdate(company, request);
         company.IsProfileComplete = true;
+        await SyncAgencyProfileAsync(userId, company, ct);
         await _context.SaveChangesAsync(ct);
         return MapToResponse(company);
     }
@@ -156,6 +170,39 @@ public class OnboardingService : IOnboardingService
             throw new BoiootException("لم يتم العثور على الملف التجاري لهذا الحساب", 404);
 
         return agent.Company;
+    }
+
+    // ── AgencyProfile sync ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// After onboarding saves company/broker profile data, mirror key fields to AgencyProfile
+    /// so the user appears in the public /agencies listing with correct city/bio/province data.
+    /// IsVisible is set to true ONLY when creating a new profile — admin can still hide it afterwards.
+    /// </summary>
+    private async Task SyncAgencyProfileAsync(Guid userId, Company company, CancellationToken ct)
+    {
+        var userIdStr = userId.ToString();
+        var profile   = await _context.AgencyProfiles.FindAsync(new object[] { userIdStr }, ct);
+
+        if (profile is null)
+        {
+            profile = new AgencyProfile
+            {
+                UserId     = userIdStr,
+                IsVisible  = true,
+                IsFeatured = false,
+                SortOrder  = 0,
+            };
+            _context.AgencyProfiles.Add(profile);
+        }
+
+        profile.Bio           = company.Description;
+        profile.City          = company.City;
+        profile.Province      = company.Province;
+        profile.ContactNumber = company.Phone;
+        profile.WhatsappLink  = company.WhatsApp;
+        profile.Address       = company.Address;
+        profile.UpdatedAt     = DateTime.UtcNow;
     }
 
     // ── Shared helpers ────────────────────────────────────────────────────────

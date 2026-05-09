@@ -78,7 +78,7 @@ public class AdminAgenciesController : BaseController
     {
         await EnsureTableAsync(ct);
 
-        var allowedRoles = new[] { UserRole.Broker, UserRole.Office };
+        var allowedRoles = new[] { UserRole.Broker, UserRole.Office, UserRole.CompanyOwner };
 
         var query = _ctx.Users
             .Where(u => allowedRoles.Contains(u.Role) && !u.IsDeleted)
@@ -169,7 +169,7 @@ public class AdminAgenciesController : BaseController
         if (!Guid.TryParse(userId, out var guid))
             return BadRequest("معرف المستخدم غير صالح");
 
-        var allowedRoles = new[] { UserRole.Broker, UserRole.Office };
+        var allowedRoles = new[] { UserRole.Broker, UserRole.Office, UserRole.CompanyOwner };
         var user = await _ctx.Users
             .FirstOrDefaultAsync(u => u.Id == guid && allowedRoles.Contains(u.Role) && !u.IsDeleted, ct);
 
