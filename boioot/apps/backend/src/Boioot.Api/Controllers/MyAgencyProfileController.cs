@@ -112,6 +112,9 @@ public class MyAgencyProfileController : BaseController
         [FromBody] UpsertMyAgencyProfileRequest req,
         CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(req.Province))
+            return BadRequest(new { error = "يرجى اختيار المحافظة" });
+
         await EnsureColumnsAsync(ct);
 
         var userId = GetUserId();

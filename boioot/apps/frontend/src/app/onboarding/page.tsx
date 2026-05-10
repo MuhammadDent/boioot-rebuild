@@ -82,7 +82,7 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   const [form, setForm]               = useState<FormState>(EMPTY);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey | "cityId" | "neighborhoodId", string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey | "cityId" | "neighborhoodId" | "province", string>>>({});
   const [error, setError]             = useState("");
   const [submitting, setSubmitting]   = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -219,18 +219,15 @@ export default function OnboardingPage() {
 
   // ── Validation (role-aware) ───────────────────────────────────────────────
   function validate(): boolean {
-    const errors: Partial<Record<FieldKey | "cityId" | "neighborhoodId", string>> = {};
+    const errors: Partial<Record<FieldKey | "cityId" | "neighborhoodId" | "province", string>> = {};
 
     if (!form.displayName.trim())
       errors.displayName = isBroker ? "الاسم المهني مطلوب" : "الاسم التجاري مطلوب";
 
-    if (!cityName)
-      errors.cityId = "يرجى اختيار المدينة";
+    if (!province)
+      errors.province = "يرجى اختيار المحافظة";
 
-    if (!neighborhoodName)
-      errors.neighborhoodId = "يرجى اختيار الحي أو المنطقة";
-
-    // Address and map are required only for office/company accounts
+    // Address is required only for office/company accounts
     if (!isBroker) {
       if (!form.address.trim())
         errors.address = "العنوان التفصيلي مطلوب";
@@ -443,15 +440,24 @@ export default function OnboardingPage() {
 
           {/* Province */}
           <div className="form-group">
-            <label className="form-label" htmlFor="province">المحافظة</label>
+            <label className="form-label" htmlFor="province">
+              المحافظة <span style={{ color: "var(--color-error)" }}>*</span>
+            </label>
             <select
               id="province" value={province} disabled={provincesLoading}
-              onChange={e => { setProvince(e.target.value); setFieldErrors(prev => ({ ...prev, cityId: undefined })); }}
-              style={SELECT_STYLE}
+              onChange={e => {
+                setProvince(e.target.value);
+                setFieldErrors(prev => ({ ...prev, province: undefined, cityId: undefined }));
+              }}
+              style={{
+                ...SELECT_STYLE,
+                ...(fieldErrors.province ? { borderColor: "#e53935" } : {}),
+              }}
             >
               <option value="">{provincesLoading ? "جاري التحميل..." : "اختر المحافظة"}</option>
               {provinces.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
+            {fieldErrors.province && <span className="form-error">{fieldErrors.province}</span>}
           </div>
 
           {/* City + Neighborhood */}
@@ -462,7 +468,6 @@ export default function OnboardingPage() {
                 value={cityName}
                 onChange={handleCityChange}
                 province={province || undefined}
-                required
                 error={fieldErrors.cityId}
               />
             </div>

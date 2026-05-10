@@ -58,6 +58,8 @@ export default function DashboardPage() {
   const [summaryRetryKey, setSummaryRetryKey]     = useState(0);
   const [analyticsRetryKey, setAnalyticsRetryKey] = useState(0);
 
+  const [locationIncomplete, setLocationIncomplete] = useState(false);
+
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
     setSummaryError(false);
@@ -145,6 +147,15 @@ export default function DashboardPage() {
         .then(s => setTrialStats({ used: s.used, limit: s.limit, isFreeTrial: !!s.isFreeTrial }))
         .catch(() => setTrialStats(null));
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const businessRoles = ["Broker", "CompanyOwner", "Office"];
+    if (!businessRoles.includes(user.role)) return;
+    api.get<{ province?: string | null }>("/my/agency-profile")
+      .then((d) => { if (!d.province) setLocationIncomplete(true); })
+      .catch(() => {});
   }, [user]);
 
   // Block render while redirecting admin/staff users
@@ -242,6 +253,52 @@ export default function DashboardPage() {
           تعديل الملف
         </Link>
       </div>
+
+      {/* ── Location completion banner (Broker / Office / CompanyOwner) ── */}
+      {locationIncomplete && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "1rem",
+            flexWrap: "wrap",
+            padding: "0.85rem 1.1rem",
+            marginBottom: "1.25rem",
+            background: "#fffbeb",
+            border: "1.5px solid #fcd34d",
+            borderRadius: 12,
+            fontSize: "0.88rem",
+            color: "#92400e",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>📍</span>
+            <span>
+              ملفك لا يتضمن المحافظة — أضفها ليظهر مكتبك بشكل أفضل للعملاء.
+            </span>
+          </div>
+          <Link
+            href="/dashboard/profile"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              padding: "0.45rem 1rem",
+              background: "#d97706",
+              color: "#fff",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: "0.84rem",
+              textDecoration: "none",
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+            }}
+          >
+            إكمال الموقع
+          </Link>
+        </div>
+      )}
 
       {/* ════════════════════════════════════════════════════════════
           ZONE 1 — SUMMARY  (non-management roles: simple stat tiles)

@@ -1456,6 +1456,7 @@ function BrokerProfessionalTab() {
   const [district,    setDistrict]    = useState("");
   const [whatsapp,    setWhatsapp]    = useState("");
   const [contact,     setContact]     = useState("");
+  const [provinceError, setProvinceError] = useState<string | null>(null);
 
   useEffect(() => {
     onboardingApi
@@ -1480,12 +1481,16 @@ function BrokerProfessionalTab() {
     e.preventDefault();
     if (!snapshot) return;
     setBanner(null);
+    if (!province.trim()) {
+      setProvinceError("يرجى اختيار المحافظة");
+      return;
+    }
     setSaving(true);
     try {
       await onboardingApi.updateBusinessProfile({
         displayName:  snapshot.displayName,
         description:  bio.trim()      || undefined,
-        province:     province.trim() || undefined,
+        province:     province.trim(),
         city:         city.trim()     || undefined,
         neighborhood: district.trim() || undefined,
         phone:    contact.trim() || undefined,
@@ -1547,7 +1552,9 @@ function BrokerProfessionalTab() {
           <ProvinceSelect
             label="المحافظة"
             value={province}
-            onChange={(v) => { setProvince(v); setCity(""); setDistrict(""); }}
+            required
+            error={provinceError ?? undefined}
+            onChange={(v) => { setProvince(v); setCity(""); setDistrict(""); if (provinceError) setProvinceError(null); }}
           />
           <CitySelect
             label="المدينة"
@@ -1637,6 +1644,7 @@ function BusinessLocationTab() {
   const [address,   setAddress]   = useState("");
   const [latitude,  setLatitude]  = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const [provinceError, setProvinceError] = useState<string | null>(null);
 
   useEffect(() => {
     onboardingApi
@@ -1663,11 +1671,16 @@ function BusinessLocationTab() {
 
     if (!snapshot) return;
 
+    if (!province.trim()) {
+      setProvinceError("يرجى اختيار المحافظة");
+      return;
+    }
+
     setSaving(true);
     try {
       await onboardingApi.updateBusinessProfile({
         displayName:  snapshot.displayName,
-        province:     province.trim()  || undefined,
+        province:     province.trim(),
         city:         city.trim()      || undefined,
         neighborhood: district.trim()  || undefined,
         address:      address.trim()  || undefined,
@@ -1734,7 +1747,9 @@ function BusinessLocationTab() {
         <ProvinceSelect
           label="المحافظة"
           value={province}
-          onChange={(val) => { setProvince(val); setCity(""); setDistrict(""); }}
+          required
+          error={provinceError ?? undefined}
+          onChange={(val) => { setProvince(val); setCity(""); setDistrict(""); if (provinceError) setProvinceError(null); }}
         />
 
         <CitySelect
@@ -1915,6 +1930,7 @@ function AgencyFieldsSection() {
   const [isFeatured,        setIsFeatured]        = useState(false);
   const [verificationBadge, setVerificationBadge] = useState<string | null>(null);
   const [isVerified,        setIsVerified]        = useState(false);
+  const [provinceError,     setProvinceError]     = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -1940,11 +1956,15 @@ function AgencyFieldsSection() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setBanner(null);
+    if (!province.trim()) {
+      setProvinceError("يرجى اختيار المحافظة");
+      return;
+    }
     setSaving(true);
     try {
       await api.put("/my/agency-profile", {
         bio:                          bio.trim()                          || null,
-        province:                     province.trim()                     || null,
+        province:                     province.trim(),
         city:                         city.trim()                         || null,
         address:                      address.trim()                      || null,
         commercialRegistrationNumber: commercialRegistrationNumber.trim() || null,
@@ -2030,7 +2050,13 @@ function AgencyFieldsSection() {
 
           {/* Province + City */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <ProvinceSelect label="المحافظة" value={province} onChange={(v) => { setProvince(v); setCity(""); }} />
+            <ProvinceSelect
+              label="المحافظة"
+              value={province}
+              required
+              error={provinceError ?? undefined}
+              onChange={(v) => { setProvince(v); setCity(""); if (provinceError) setProvinceError(null); }}
+            />
             <CitySelect label="المدينة" value={city} onChange={setCity} province={province} />
           </div>
 

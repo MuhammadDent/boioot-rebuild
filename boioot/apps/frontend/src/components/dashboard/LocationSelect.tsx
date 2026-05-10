@@ -28,6 +28,8 @@ interface ProvinceSelectProps {
   value: string;
   onChange: (val: string) => void;
   disabled?: boolean;
+  required?: boolean;
+  error?: string;
 }
 
 interface CitySelectProps {
@@ -242,7 +244,7 @@ function AddLocationModal({
 
 // ─── ProvinceSelect ───────────────────────────────────────────────────────────
 
-export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSelectProps) {
+export function ProvinceSelect({ label, value, onChange, disabled, required, error }: ProvinceSelectProps) {
   const [provinces, setProvinces] = useState<string[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [newName,   setNewName]   = useState("");
@@ -290,14 +292,16 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
 
   return (
     <div className="form-group">
-      <label className="form-label">{label}</label>
+      <label className="form-label">
+        {label}{required && <span style={{ color: "#e53935" }}> *</span>}
+      </label>
       <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
         <select
           className="form-input"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          style={{ flex: 1 }}
+          style={{ flex: 1, borderColor: error ? "#e53935" : undefined }}
         >
           <option value="">اختر محافظة...</option>
           {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -310,6 +314,7 @@ export function ProvinceSelect({ label, value, onChange, disabled }: ProvinceSel
           onClick={openModal}
         >+</button>
       </div>
+      {error && <p className="form-error">{error}</p>}
       <AddLocationModal
         open={modalOpen}
         title="إضافة محافظة جديدة"
