@@ -296,14 +296,16 @@ export default function AgencyDetailPage() {
             )}
 
             <div style={{ display: "flex", gap: "1.25rem", fontSize: "0.85rem", color: "#64748b", flexWrap: "wrap" }}>
-              {(agency.province || agency.city) && (
-                <span>
-                  📍{" "}
-                  {agency.role === "Broker" && !agency.city && agency.province
+              <span>
+                📍{" "}
+                {agency.province && agency.city
+                  ? `${agency.province} - ${agency.city}`
+                  : agency.province
                     ? `يغطي: ${agency.province}`
-                    : [agency.province, agency.city].filter(Boolean).join(" - ")}
-                </span>
-              )}
+                    : agency.city
+                      ? agency.city
+                      : "الموقع غير محدد"}
+              </span>
               <span>🏠 {agency.listingCount} إعلان</span>
               <span>📅 عضو منذ {new Date(agency.createdAt).getFullYear()}</span>
             </div>

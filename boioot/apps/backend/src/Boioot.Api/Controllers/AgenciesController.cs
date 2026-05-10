@@ -60,6 +60,43 @@ public class AgenciesController : BaseController
             ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""WhatsappLink""  TEXT;
             ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""Address""       TEXT;
             ALTER TABLE ""AgencyProfiles"" ADD COLUMN IF NOT EXISTS ""WebsiteUrl""    TEXT;
+
+            -- ── Sync Company data → AgencyProfile for existing accounts ──────────
+            -- Creates profile rows for users who completed onboarding but have no
+            -- AgencyProfile. For existing rows, only fills in NULL fields (never
+            -- overwrites values the user or admin already set). IsVisible is set to
+            -- true only for newly inserted rows (ON CONFLICT leaves it unchanged).
+            INSERT INTO ""AgencyProfiles""
+                (""UserId"", ""City"", ""Province"", ""Bio"", ""ContactNumber"",
+                 ""WhatsappLink"", ""Address"", ""IsVisible"", ""IsFeatured"", ""SortOrder"", ""UpdatedAt"")
+            SELECT
+                u.""Id""::text,
+                co.""City"",
+                co.""Province"",
+                co.""Description"",
+                co.""Phone"",
+                co.""WhatsApp"",
+                co.""Address"",
+                true,
+                false,
+                0,
+                NOW()
+            FROM ""Users"" u
+            INNER JOIN ""Agents"" ag ON ag.""UserId"" = u.""Id""
+            INNER JOIN ""Companies"" co ON co.""Id""::text = ag.""CompanyId""::text
+            WHERE u.""Role"" IN ('Broker', 'Office', 'CompanyOwner')
+              AND NOT u.""IsDeleted""
+              AND (co.""City"" IS NOT NULL
+                OR co.""Province"" IS NOT NULL
+                OR co.""Description"" IS NOT NULL)
+            ON CONFLICT (""UserId"") DO UPDATE
+                SET ""City""          = COALESCE(""AgencyProfiles"".""City"",          EXCLUDED.""City""),
+                    ""Province""      = COALESCE(""AgencyProfiles"".""Province"",      EXCLUDED.""Province""),
+                    ""Bio""           = COALESCE(""AgencyProfiles"".""Bio"",           EXCLUDED.""Bio""),
+                    ""ContactNumber"" = COALESCE(""AgencyProfiles"".""ContactNumber"", EXCLUDED.""ContactNumber""),
+                    ""WhatsappLink""  = COALESCE(""AgencyProfiles"".""WhatsappLink"",  EXCLUDED.""WhatsappLink""),
+                    ""Address""       = COALESCE(""AgencyProfiles"".""Address"",       EXCLUDED.""Address""),
+                    ""UpdatedAt""     = NOW();
         ", ct);
 
     private Task EnsureRatingsTableAsync(CancellationToken ct) =>
@@ -128,9 +165,9 @@ public class AgenciesController : BaseController
     {
         await EnsureTableAsync(ct);
 
-        var allowedRoles = new[] { UserRole.Broker, UserRole.Office };
+        var allowedRoles = new[] { UserRole.Broker, UserRole.Office, UserRole.CompanyOwner };
 
-        // Get cities from AgencyProfiles joined to active Broker/Office users.
+        // Get cities from AgencyProfiles joined to active Broker/Office/CompanyOwner users.
         // No IsVisible filter — any profile with a city contributes to the list.
         var usedCities = await _ctx.Users
             .Where(u => allowedRoles.Contains(u.Role) && u.IsActive && !u.IsDeleted)
