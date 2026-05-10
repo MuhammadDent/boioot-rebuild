@@ -13,6 +13,10 @@ namespace Boioot.Infrastructure.Features.Locations;
 ///   1. Strict normalization  — deterministic duplicate prevention
 ///   2. Soft similarity       — "did you mean?" detection
 ///   3. DB uniqueness index   — last-resort race-condition guard
+///
+/// IsVerified:
+///   Admin-seeded entries: true (set by DataSeeder or admin verify endpoint)
+///   User-created entries: false (set here — visible and usable, but sorted lower)
 /// </summary>
 public sealed class LocationMasterService : ILocationMasterService
 {
@@ -49,7 +53,6 @@ public sealed class LocationMasterService : ILocationMasterService
         var normalizedName = ArabicNormalizer.Normalize(name);
 
         // ── 1. Strict duplicate — ACTIVE rows only ────────────────────────────
-        // Inactive rows are deactivated duplicates; they do NOT block creation.
         var strictDup = await _db.LocationCities
             .Where(c => c.IsActive && c.Province == province && c.NormalizedName == normalizedName)
             .Select(c => new LocationItemDto(c.Id, c.Name, c.Province))
@@ -62,8 +65,6 @@ public sealed class LocationMasterService : ILocationMasterService
         }
 
         // ── 2. Soft similarity — ACTIVE rows only; blocked unless forceCreate ─
-        // If similar active entries exist and the user has NOT explicitly confirmed,
-        // return suggestions. Creation is BLOCKED until forceCreate = true.
         if (!forceCreate)
         {
             var softKey = ArabicNormalizer.SoftNormalize(name);
@@ -86,22 +87,24 @@ public sealed class LocationMasterService : ILocationMasterService
             }
         }
 
-        // ── 3. Create ─────────────────────────────────────────────────────────
+        // ── 3. Create — user-contributed: IsVerified = false ──────────────────
         var city = new LocationCity
         {
             Name           = displayName,
             NormalizedName = normalizedName,
             Province       = province,
             IsActive       = true,
+            IsVerified     = false,   // user-contributed cities start unverified
         };
         _db.LocationCities.Add(city);
 
         try
         {
             await _db.SaveChangesAsync(ct);
-            _logger.LogInformation("City '{Name}' created in province '{Province}'.", displayName, province);
+            _logger.LogInformation("City '{Name}' created in province '{Province}' (user-contributed, unverified).", displayName, province);
         }
-        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true)
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true
+                                        || ex.InnerException?.Message.Contains("duplicate key") == true)
         {
             // Race condition — another active request beat us; return that existing row.
             var race = await _db.LocationCities
@@ -178,22 +181,24 @@ public sealed class LocationMasterService : ILocationMasterService
             }
         }
 
-        // ── 3. Create ─────────────────────────────────────────────────────────
+        // ── 3. Create — user-contributed: IsVerified = false ──────────────────
         var neighborhood = new LocationNeighborhood
         {
             Name           = displayName,
             NormalizedName = normalizedName,
             City           = city,
             IsActive       = true,
+            IsVerified     = false,   // user-contributed neighborhoods start unverified
         };
         _db.LocationNeighborhoods.Add(neighborhood);
 
         try
         {
             await _db.SaveChangesAsync(ct);
-            _logger.LogInformation("Neighborhood '{Name}' created in city '{City}'.", displayName, city);
+            _logger.LogInformation("Neighborhood '{Name}' created in city '{City}' (user-contributed, unverified).", displayName, city);
         }
-        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true)
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true
+                                        || ex.InnerException?.Message.Contains("duplicate key") == true)
         {
             // Race condition — another active request beat us; return that existing row.
             var race = await _db.LocationNeighborhoods
@@ -248,10 +253,6 @@ public sealed class LocationMasterService : ILocationMasterService
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Keeps the user's display casing while trimming extra whitespace.
-    /// Arabic text has no case, so this just cleans spacing.
-    /// </summary>
     private static string CapitalizeArabic(string name) =>
         string.Join(' ', name.Split(' ', StringSplitOptions.RemoveEmptyEntries));
 }

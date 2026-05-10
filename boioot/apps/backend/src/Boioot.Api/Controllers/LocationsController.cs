@@ -18,6 +18,47 @@ public class LocationsController : BaseController
     private static readonly TimeSpan NeighborhoodsTtl = TimeSpan.FromHours(2);
     private static readonly TimeSpan PropOptionsTtl   = TimeSpan.FromMinutes(5);
 
+    // ── Idempotent schema bootstrap ────────────────────────────────────────────
+    // Adds IsVerified + UsageCount columns if they don't exist yet.
+    // DEFAULT TRUE on IsVerified so all pre-existing rows (admin-seeded) become verified.
+    // DEFAULT 0 on UsageCount for all existing rows.
+
+    private static volatile bool _columnsEnsured;
+    private static readonly SemaphoreSlim _columnLock = new(1, 1);
+
+    private async Task EnsureLocationColumnsAsync(CancellationToken ct = default)
+    {
+        if (_columnsEnsured) return;
+
+        await _columnLock.WaitAsync(ct);
+        try
+        {
+            if (_columnsEnsured) return;
+
+            await _db.Database.ExecuteSqlRawAsync("""
+                ALTER TABLE "LocationCities"
+                    ADD COLUMN IF NOT EXISTS "IsVerified"  BOOLEAN NOT NULL DEFAULT TRUE,
+                    ADD COLUMN IF NOT EXISTS "UsageCount"  INTEGER NOT NULL DEFAULT 0;
+
+                ALTER TABLE "LocationNeighborhoods"
+                    ADD COLUMN IF NOT EXISTS "IsVerified"  BOOLEAN NOT NULL DEFAULT TRUE,
+                    ADD COLUMN IF NOT EXISTS "UsageCount"  INTEGER NOT NULL DEFAULT 0;
+
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_LocationCities_Province_NormalizedName"
+                    ON "LocationCities" ("Province", "NormalizedName") WHERE "IsActive" = TRUE;
+
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_LocationNeighborhoods_City_NormalizedName"
+                    ON "LocationNeighborhoods" ("City", "NormalizedName") WHERE "IsActive" = TRUE;
+                """, ct);
+
+            _columnsEnsured = true;
+        }
+        finally
+        {
+            _columnLock.Release();
+        }
+    }
+
     public LocationsController(
         BoiootDbContext        db,
         ILocationMasterService locationService,
@@ -34,6 +75,8 @@ public class LocationsController : BaseController
     [AllowAnonymous]
     public async Task<IActionResult> GetProvinces(CancellationToken ct = default)
     {
+        await EnsureLocationColumnsAsync(ct);
+
         Response.Headers.Append("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
 
         const string key = "loc:provinces";
@@ -61,14 +104,16 @@ public class LocationsController : BaseController
         [FromQuery] bool    includeInactive = false,
         CancellationToken   ct = default)
     {
+        await EnsureLocationColumnsAsync(ct);
+
         Response.Headers.Append("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
 
-        // Only cache the standard active-cities query (no inactive, optional province filter)
+        // Only cache the standard active-cities query (no inactive)
         if (!includeInactive)
         {
             var cacheKey = string.IsNullOrWhiteSpace(province)
-                ? "loc:cities"
-                : $"loc:cities:{province}";
+                ? "loc:cities:v2"
+                : $"loc:cities:v2:{province}";
 
             if (_cache.TryGetValue(cacheKey, out object? hit))
                 return Ok(hit);
@@ -77,9 +122,12 @@ public class LocationsController : BaseController
             if (!string.IsNullOrWhiteSpace(province))
                 query = query.Where(c => c.Province == province);
 
+            // Sort: verified first → then by usage (popular) → then alphabetically
             var cities = await query
-                .OrderBy(c => c.Name)
-                .Select(c => new { c.Id, c.Name, c.Province })
+                .OrderByDescending(c => c.IsVerified)
+                .ThenByDescending(c => c.UsageCount)
+                .ThenBy(c => c.Name)
+                .Select(c => new { c.Id, c.Name, c.Province, c.IsVerified })
                 .ToListAsync(ct);
 
             _cache.Set(cacheKey, cities, CitiesTtl);
@@ -92,8 +140,10 @@ public class LocationsController : BaseController
             rawQuery = rawQuery.Where(c => c.Province == province);
 
         var allCities = await rawQuery
-            .OrderBy(c => c.Name)
-            .Select(c => new { c.Id, c.Name, c.Province })
+            .OrderByDescending(c => c.IsVerified)
+            .ThenByDescending(c => c.UsageCount)
+            .ThenBy(c => c.Name)
+            .Select(c => new { c.Id, c.Name, c.Province, c.IsVerified, c.IsActive })
             .ToListAsync(ct);
 
         return Ok(allCities);
@@ -105,6 +155,8 @@ public class LocationsController : BaseController
         [FromBody] AddCityRequest req,
         CancellationToken ct = default)
     {
+        await EnsureLocationColumnsAsync(ct);
+
         if (string.IsNullOrWhiteSpace(req.Name))
             return BadRequest(new { error = "اسم المدينة مطلوب" });
 
@@ -119,10 +171,7 @@ public class LocationsController : BaseController
             // Invalidate city/province caches on successful creation
             if (result.Status == "created")
             {
-                _cache.Remove("loc:provinces");
-                _cache.Remove("loc:cities");
-                if (!string.IsNullOrWhiteSpace(req.Province))
-                    _cache.Remove($"loc:cities:{req.Province}");
+                InvalidateCityCaches(req.Province);
             }
 
             return Ok(new LocationApiResult(result.Status, result.Item, result.Suggestions));
@@ -142,19 +191,23 @@ public class LocationsController : BaseController
         [FromQuery] bool    includeInactive = false,
         CancellationToken   ct = default)
     {
+        await EnsureLocationColumnsAsync(ct);
+
         Response.Headers.Append("Cache-Control", "public, max-age=300, stale-while-revalidate=60");
 
         if (!includeInactive && !string.IsNullOrWhiteSpace(city))
         {
-            var cacheKey = $"loc:nbrs:{city}";
+            var cacheKey = $"loc:nbrs:v2:{city}";
             if (_cache.TryGetValue(cacheKey, out object? hit))
                 return Ok(hit);
 
             var nbrs = await _db.LocationNeighborhoods
                 .AsNoTracking()
                 .Where(n => n.IsActive && n.City == city)
-                .OrderBy(n => n.Name)
-                .Select(n => new { n.Id, n.Name, n.City })
+                .OrderByDescending(n => n.IsVerified)
+                .ThenByDescending(n => n.UsageCount)
+                .ThenBy(n => n.Name)
+                .Select(n => new { n.Id, n.Name, n.City, n.IsVerified })
                 .ToListAsync(ct);
 
             _cache.Set(cacheKey, nbrs, NeighborhoodsTtl);
@@ -169,8 +222,10 @@ public class LocationsController : BaseController
             query = query.Where(n => n.City == city);
 
         var neighborhoods = await query
-            .OrderBy(n => n.Name)
-            .Select(n => new { n.Id, n.Name, n.City })
+            .OrderByDescending(n => n.IsVerified)
+            .ThenByDescending(n => n.UsageCount)
+            .ThenBy(n => n.Name)
+            .Select(n => new { n.Id, n.Name, n.City, n.IsVerified })
             .ToListAsync(ct);
 
         return Ok(neighborhoods);
@@ -182,6 +237,8 @@ public class LocationsController : BaseController
         [FromBody] AddNeighborhoodRequest req,
         CancellationToken ct = default)
     {
+        await EnsureLocationColumnsAsync(ct);
+
         if (string.IsNullOrWhiteSpace(req.Name))
             return BadRequest(new { error = "اسم الحي مطلوب" });
         if (string.IsNullOrWhiteSpace(req.City))
@@ -195,9 +252,11 @@ public class LocationsController : BaseController
                 req.ForceCreate ?? false,
                 ct);
 
-            // Invalidate neighborhood cache on successful creation
             if (result.Status == "created" && !string.IsNullOrWhiteSpace(req.City))
-                _cache.Remove($"loc:nbrs:{req.City}");
+            {
+                _cache.Remove($"loc:nbrs:v2:{req.City}");
+                _cache.Remove($"loc:nbrs:{req.City}");  // invalidate old key too
+            }
 
             return Ok(new LocationApiResult(result.Status, result.Item, result.Suggestions));
         }
@@ -237,9 +296,11 @@ public class LocationsController : BaseController
 
             var hits = await nbrs
                 .Where(n => n.NormalizedName.Contains(norm) || n.Name.Contains(q))
-                .OrderBy(n => n.NormalizedName)
+                .OrderByDescending(n => n.IsVerified)
+                .ThenByDescending(n => n.UsageCount)
+                .ThenBy(n => n.NormalizedName)
                 .Take(limit)
-                .Select(n => new { n.Id, n.Name, parent = n.City })
+                .Select(n => new { n.Id, n.Name, parent = n.City, n.IsVerified })
                 .ToListAsync(ct);
 
             return Ok(hits);
@@ -255,9 +316,11 @@ public class LocationsController : BaseController
 
             var hits = await cities
                 .Where(c => c.NormalizedName.Contains(norm) || c.Name.Contains(q))
-                .OrderBy(c => c.NormalizedName)
+                .OrderByDescending(c => c.IsVerified)
+                .ThenByDescending(c => c.UsageCount)
+                .ThenBy(c => c.NormalizedName)
                 .Take(limit)
-                .Select(c => new { c.Id, c.Name, parent = c.Province })
+                .Select(c => new { c.Id, c.Name, parent = c.Province, c.IsVerified })
                 .ToListAsync(ct);
 
             return Ok(hits);
@@ -272,6 +335,8 @@ public class LocationsController : BaseController
         [FromBody] InstantCreateLocationRequest req,
         CancellationToken ct = default)
     {
+        await EnsureLocationColumnsAsync(ct);
+
         if (string.IsNullOrWhiteSpace(req.Name))
             return BadRequest(new { error = "الاسم مطلوب" });
 
@@ -287,13 +352,15 @@ public class LocationsController : BaseController
                 var result = await _locationService.AddNeighborhoodAsync(
                     req.Name, req.City!, forceCreate: true, ct);
 
+                _cache.Remove($"loc:nbrs:v2:{req.City}");
                 _cache.Remove($"loc:nbrs:{req.City}");
                 return Ok(new
                 {
-                    id     = result.Item!.Id,
-                    name   = result.Item.Name,
-                    parent = result.Item.ParentName,
-                    status = result.Status,
+                    id         = result.Item!.Id,
+                    name       = result.Item.Name,
+                    parent     = result.Item.ParentName,
+                    status     = result.Status,
+                    isVerified = false,
                 });
             }
             else // city
@@ -304,17 +371,15 @@ public class LocationsController : BaseController
                 var result = await _locationService.AddCityAsync(
                     req.Name, req.Province!, forceCreate: true, ct);
 
-                _cache.Remove("loc:provinces");
-                _cache.Remove("loc:cities");
-                if (!string.IsNullOrWhiteSpace(req.Province))
-                    _cache.Remove($"loc:cities:{req.Province}");
+                InvalidateCityCaches(req.Province);
 
                 return Ok(new
                 {
-                    id     = result.Item!.Id,
-                    name   = result.Item.Name,
-                    parent = result.Item.ParentName,
-                    status = result.Status,
+                    id         = result.Item!.Id,
+                    name       = result.Item.Name,
+                    parent     = result.Item.ParentName,
+                    status     = result.Status,
+                    isVerified = false,
                 });
             }
         }
@@ -322,6 +387,67 @@ public class LocationsController : BaseController
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+
+    // ─── Verify / unverify (admin) ─────────────────────────────────────────────
+
+    [HttpPatch("cities/{id:guid}/verify")]
+    [Authorize(Policy = "Admin")]
+    public async Task<IActionResult> VerifyCity(Guid id, [FromBody] VerifyLocationRequest req, CancellationToken ct = default)
+    {
+        var city = await _db.LocationCities.FindAsync([id], ct);
+        if (city is null) return NotFound();
+
+        city.IsVerified = req.IsVerified;
+        await _db.SaveChangesAsync(ct);
+
+        InvalidateCityCaches(city.Province);
+        return Ok(new { id = city.Id, name = city.Name, isVerified = city.IsVerified });
+    }
+
+    [HttpPatch("neighborhoods/{id:guid}/verify")]
+    [Authorize(Policy = "Admin")]
+    public async Task<IActionResult> VerifyNeighborhood(Guid id, [FromBody] VerifyLocationRequest req, CancellationToken ct = default)
+    {
+        var nbr = await _db.LocationNeighborhoods.FindAsync([id], ct);
+        if (nbr is null) return NotFound();
+
+        nbr.IsVerified = req.IsVerified;
+        await _db.SaveChangesAsync(ct);
+
+        _cache.Remove($"loc:nbrs:v2:{nbr.City}");
+        _cache.Remove($"loc:nbrs:{nbr.City}");
+        return Ok(new { id = nbr.Id, name = nbr.Name, isVerified = nbr.IsVerified });
+    }
+
+    // ─── Usage count bump (called by property-save logic) ──────────────────────
+
+    [HttpPost("cities/bump-usage")]
+    [Authorize]
+    public async Task<IActionResult> BumpCityUsage([FromBody] BumpUsageRequest req, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest();
+        await _db.LocationCities
+            .Where(c => c.IsActive && c.Name == req.Name)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.UsageCount, c => c.UsageCount + 1), ct);
+        InvalidateCityCaches(req.Province);
+        return Ok();
+    }
+
+    [HttpPost("neighborhoods/bump-usage")]
+    [Authorize]
+    public async Task<IActionResult> BumpNeighborhoodUsage([FromBody] BumpUsageRequest req, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(req.Name)) return BadRequest();
+        await _db.LocationNeighborhoods
+            .Where(n => n.IsActive && n.Name == req.Name)
+            .ExecuteUpdateAsync(s => s.SetProperty(n => n.UsageCount, n => n.UsageCount + 1), ct);
+        if (!string.IsNullOrWhiteSpace(req.Province))
+        {
+            _cache.Remove($"loc:nbrs:v2:{req.Province}");
+            _cache.Remove($"loc:nbrs:{req.Province}");
+        }
+        return Ok();
     }
 
     // ─── Location Suggestions ──────────────────────────────────────────────────
@@ -373,7 +499,7 @@ public class LocationsController : BaseController
         return Ok(groups);
     }
 
-    // ─── Property Location Options (derived from actual property data) ──────────
+    // ─── Property Location Options ─────────────────────────────────────────────
 
     [HttpGet("property-options")]
     [AllowAnonymous]
@@ -432,12 +558,28 @@ public class LocationsController : BaseController
         _cache.Set(cacheKey, result, PropOptionsTtl);
         return Ok(result);
     }
+
+    // ─── Private helpers ───────────────────────────────────────────────────────
+
+    private void InvalidateCityCaches(string? province)
+    {
+        _cache.Remove("loc:provinces");
+        _cache.Remove("loc:cities:v2");
+        _cache.Remove("loc:cities");  // invalidate old key too
+        if (!string.IsNullOrWhiteSpace(province))
+        {
+            _cache.Remove($"loc:cities:v2:{province}");
+            _cache.Remove($"loc:cities:{province}");
+        }
+    }
 }
 
 // ─── Request / Response DTOs ───────────────────────────────────────────────────
 
 public record AddCityRequest(string? Name, string? Province, bool? ForceCreate);
 public record AddNeighborhoodRequest(string? Name, string? City, bool? ForceCreate);
+public record VerifyLocationRequest(bool IsVerified);
+public record BumpUsageRequest(string? Name, string? Province);
 
 public record LocationApiResult(
     string                          Status,

@@ -3,19 +3,12 @@
 /**
  * LocationTypeahead — real combobox/autocomplete for city and neighborhood fields.
  *
- * Internal state is split into two distinct concerns:
+ * Sort order from API: verified (admin-seeded) cities first, then user-contributed.
+ * Verified entries show a small ✓ badge; unverified entries show no badge (clean).
+ *
+ * Internal state:
  *   • `selected`  — the committed choice (id + name), set only after user picks or creates
  *   • `query`     — the live text the user is typing during an open session
- *
- * The <input> renders:
- *   • When dropdown is closed  → selected?.name  (committed display value)
- *   • When dropdown is open    → query           (live editable search text)
- *
- * This eliminates any ambiguity between "raw typed text" and "committed selection".
- *
- * External API (unchanged — all callers are compatible):
- *   value:    string               — controlled display name
- *   onChange: (name, id?) => void  — called on commit (select or create)
  */
 
 import { useState, useEffect, useRef, useCallback, useId } from "react";
@@ -25,9 +18,10 @@ import { api } from "@/lib/api";
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface LocationHit {
-  id:     string;
-  name:   string;
-  parent: string;
+  id:          string;
+  name:        string;
+  parent:      string;
+  isVerified?: boolean;
 }
 
 interface Selected {
@@ -89,7 +83,7 @@ export default function LocationTypeahead({
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Sync controlled `value` → selected (only when closed, to avoid fighting live typing)
+  // Sync controlled `value` → selected (only when closed)
   useEffect(() => {
     if (!isOpen) {
       setSelected(value ? { id: selected?.id ?? "", name: value } : null);
@@ -97,7 +91,6 @@ export default function LocationTypeahead({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  // Reset when parent context is cleared
   useEffect(() => {
     if (type === "city" && !province) {
       commitClear();
@@ -112,7 +105,6 @@ export default function LocationTypeahead({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city, type]);
 
-  // Reset active index when results change
   useEffect(() => { setActiveIdx(-1); }, [hits]);
 
   // ── Portal positioning ────────────────────────────────────────────────────────
@@ -181,7 +173,6 @@ export default function LocationTypeahead({
 
   // ── Derived ───────────────────────────────────────────────────────────────────
 
-  // What the <input> renders depends on open/closed state
   const inputDisplayValue = isOpen ? query : (selected?.name ?? "");
 
   const trimmed        = query.trim();
@@ -195,7 +186,6 @@ export default function LocationTypeahead({
 
   function handleFocus() {
     setIsOpen(true);
-    // Pre-fill query with current selection so user can refine or replace
     const pre = selected?.name ?? "";
     setQuery(pre);
     if (pre) doSearch(pre);
@@ -209,7 +199,6 @@ export default function LocationTypeahead({
     setIsOpen(true);
 
     if (!v.trim()) {
-      // User cleared the field — decommit the selection
       setSelected(null);
       onChange("", undefined);
       setHits([]);
@@ -218,14 +207,12 @@ export default function LocationTypeahead({
     }
   }
 
-  // Called when user picks an existing hit
   function commitSelect(hit: LocationHit) {
     setSelected({ id: hit.id, name: hit.name });
     closeDropdown();
     onChange(hit.name, hit.id);
   }
 
-  // Called when user picks the "➕ إنشاء" row
   async function handleCreate() {
     if (creatingRef.current) return;
     const name = trimmed;
@@ -322,27 +309,61 @@ export default function LocationTypeahead({
           key={hit.id}
           role="option"
           aria-selected={idx === activeIdx}
-          // onMouseDown + preventDefault keeps focus on <input> while also firing the selection
           onMouseDown={(e) => { e.preventDefault(); commitSelect(hit); }}
           style={{
-            padding:      "0.6rem 0.9rem",
-            cursor:       "pointer",
-            background:   idx === activeIdx ? "#f0fdf4" : "#fff",
-            borderBottom: "1px solid #f3f4f6",
-            display:      "flex",
+            padding:        "0.6rem 0.9rem",
+            cursor:         "pointer",
+            background:     idx === activeIdx ? "#f0fdf4" : "#fff",
+            borderBottom:   "1px solid #f3f4f6",
+            display:        "flex",
             justifyContent: "space-between",
-            alignItems:   "center",
-            gap:          "0.5rem",
+            alignItems:     "center",
+            gap:            "0.5rem",
           }}
         >
-          <span style={{ fontWeight: 600, color: "#111", fontSize: "0.9rem" }}>{hit.name}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", minWidth: 0 }}>
+            <span style={{ fontWeight: 600, color: "#111", fontSize: "0.9rem" }}>{hit.name}</span>
+            {hit.isVerified === true && (
+              <span
+                title="مدينة رسمية"
+                style={{
+                  display:        "inline-flex",
+                  alignItems:     "center",
+                  justifyContent: "center",
+                  width:          "16px",
+                  height:         "16px",
+                  borderRadius:   "50%",
+                  background:     "#dcfce7",
+                  color:          "#166534",
+                  fontSize:       "0.65rem",
+                  fontWeight:     800,
+                  flexShrink:     0,
+                }}
+              >
+                ✓
+              </span>
+            )}
+            {hit.isVerified === false && (
+              <span
+                title="مضافة من المستخدمين"
+                style={{
+                  fontSize:   "0.72rem",
+                  color:      "#9ca3af",
+                  fontWeight: 500,
+                  flexShrink: 0,
+                }}
+              >
+                (مستخدم)
+              </span>
+            )}
+          </div>
           {hit.parent && (
-            <span style={{ fontSize: "0.78rem", color: "#9ca3af" }}>{hit.parent}</span>
+            <span style={{ fontSize: "0.78rem", color: "#9ca3af", flexShrink: 0 }}>{hit.parent}</span>
           )}
         </div>
       ))}
 
-      {/* ── "➕ إنشاء" row — shown when no exact match, switches to spinner ── */}
+      {/* ── "➕ إنشاء" row ─────────────────────────────────────────────────── */}
       {(showCreateRow || creating) && (
         <div
           role="option"
@@ -364,14 +385,14 @@ export default function LocationTypeahead({
           {creating ? (
             <>
               <span style={{
-                display:           "inline-block",
-                width:             13,
-                height:            13,
-                border:            "2px solid #15803d",
-                borderTopColor:    "transparent",
-                borderRadius:      "50%",
-                animation:         "spin 0.7s linear infinite",
-                flexShrink:        0,
+                display:        "inline-block",
+                width:          13,
+                height:         13,
+                border:         "2px solid #15803d",
+                borderTopColor: "transparent",
+                borderRadius:   "50%",
+                animation:      "spin 0.7s linear infinite",
+                flexShrink:     0,
               }} />
               جارٍ الإنشاء...
             </>

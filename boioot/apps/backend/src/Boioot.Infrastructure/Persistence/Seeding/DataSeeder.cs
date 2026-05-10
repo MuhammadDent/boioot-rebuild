@@ -220,6 +220,7 @@ public class DataSeeder
                     Name           = name,
                     NormalizedName = ArabicNormalizer.Normalize(name),
                     Province       = province,
+                    IsVerified     = true,   // admin-seeded cities are always verified
                 });
                 added++;
             }

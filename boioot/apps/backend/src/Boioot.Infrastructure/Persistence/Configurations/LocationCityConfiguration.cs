@@ -13,7 +13,9 @@ public class LocationCityConfiguration : IEntityTypeConfiguration<LocationCity>
         builder.Property(c => c.NormalizedName).IsRequired().HasMaxLength(200).HasDefaultValue("");
         builder.Property(c => c.Province).HasMaxLength(200).HasDefaultValue("");
         builder.Property(c => c.IsActive).IsRequired().HasDefaultValue(true);
-        // Unique index (Province, NormalizedName) is enforced via raw SQL in Program.cs
+        builder.Property(c => c.IsVerified).IsRequired().HasDefaultValue(false);
+        builder.Property(c => c.UsageCount).IsRequired().HasDefaultValue(0);
+        // Unique index (Province, NormalizedName) is enforced via raw SQL in LocationsController
         // to work on both fresh and migrated databases.
     }
 }

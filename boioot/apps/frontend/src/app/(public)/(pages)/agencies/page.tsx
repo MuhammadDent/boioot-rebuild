@@ -5,9 +5,8 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import AgencyCard, { type AgencyListItem } from "@/components/agencies/AgencyCard";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import SectionDisabled from "@/components/ui/SectionDisabled";
-import { PROVINCE_NAMES, citiesForProvince } from "@/lib/syria-provinces";
 
-// ── Filter form ───────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface FilterForm {
   province:   string;
@@ -19,8 +18,6 @@ interface FilterForm {
 
 const EMPTY_FILTERS: FilterForm = { province: "", city: "", type: "", isVerified: "", isFeatured: "" };
 
-// ── API response ──────────────────────────────────────────────────────────────
-
 interface AgenciesPagedResult {
   items:      AgencyListItem[];
   page:       number;
@@ -29,6 +26,14 @@ interface AgenciesPagedResult {
   totalPages: number;
 }
 
+interface CityOption {
+  id:         string;
+  name:       string;
+  isVerified?: boolean;
+}
+
+// ── Fetch helpers ─────────────────────────────────────────────────────────────
+
 async function fetchAgencies(params: Record<string, string>): Promise<AgenciesPagedResult> {
   const qs = new URLSearchParams(
     Object.fromEntries(Object.entries(params).filter(([, v]) => v !== ""))
@@ -36,6 +41,24 @@ async function fetchAgencies(params: Record<string, string>): Promise<AgenciesPa
   const res = await fetch(`/api/agencies${qs ? `?${qs}` : ""}`, { cache: "no-store" });
   if (!res.ok) throw new Error("فشل تحميل البيانات");
   return res.json();
+}
+
+// Fetch provinces from the locations API (DB-driven, not hardcoded)
+async function fetchProvinces(): Promise<string[]> {
+  try {
+    const res = await fetch("/api/locations/provinces", { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
+}
+
+// Fetch cities for a province from the locations API (verified-first order)
+async function fetchCitiesForProvince(province: string): Promise<CityOption[]> {
+  try {
+    const res = await fetch(`/api/locations/cities?province=${encodeURIComponent(province)}`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
 }
 
 // ── Skeleton grid ─────────────────────────────────────────────────────────────
@@ -129,18 +152,38 @@ function AgenciesContent() {
     isVerified: isVerifiedParam, isFeatured: isFeaturedParam,
   });
 
-  const [agencies,   setAgencies]   = useState<AgencyListItem[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState("");
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [agencies,       setAgencies]       = useState<AgencyListItem[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState("");
+  const [totalCount,     setTotalCount]     = useState(0);
+  const [totalPages,     setTotalPages]     = useState(1);
+
+  // DB-driven province and city lists (no hardcoded values)
+  const [provinces,      setProvinces]      = useState<string[]>([]);
+  const [provinceCities, setProvinceCities] = useState<CityOption[]>([]);
+  const [citiesLoading,  setCitiesLoading]  = useState(false);
+
+  // Load provinces once on mount
+  useEffect(() => {
+    fetchProvinces().then(setProvinces);
+  }, []);
 
   // Sync form when URL changes
   useEffect(() => {
     setForm({ province: provinceParam, city: cityParam, type: typeParam, isVerified: isVerifiedParam, isFeatured: isFeaturedParam });
   }, [provinceParam, cityParam, typeParam, isVerifiedParam, isFeaturedParam]);
 
-  // Fetch agencies — results still driven by what exists in the DB
+  // Load cities from API whenever province filter changes (verified-first order)
+  useEffect(() => {
+    setProvinceCities([]);
+    if (!provinceParam) return;
+    setCitiesLoading(true);
+    fetchCitiesForProvince(provinceParam)
+      .then(setProvinceCities)
+      .finally(() => setCitiesLoading(false));
+  }, [provinceParam]);
+
+  // Fetch agencies
   useEffect(() => {
     setLoading(true);
     setError("");
@@ -158,19 +201,15 @@ function AgenciesContent() {
       .finally(() => setLoading(false));
   }, [provinceParam, cityParam, typeParam, isVerifiedParam, isFeaturedParam, pageParam]);
 
-  // Section guard (after mount to avoid hydration mismatch)
+  // Section guard
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   if (mounted && !settingsLoading && !settings.sectionAgenciesEnabled) {
     return <SectionDisabled />;
   }
 
-  // Cities for the selected province come from the static list
-  const currentProvinceCities = provinceParam ? citiesForProvince(provinceParam) : [];
-
   function pushFilter(patch: Partial<FilterForm>) {
     const next = { ...form, ...patch };
-    // When province changes, reset city
     if (patch.province !== undefined && patch.province !== form.province) {
       next.city = "";
     }
@@ -194,7 +233,6 @@ function AgenciesContent() {
   }
 
   const isFiltered  = !!(provinceParam || cityParam || typeParam || isVerifiedParam || isFeaturedParam);
-  // True when only the province filter is active (no city/type/verified/featured)
   const provinceOnly = !!(provinceParam && !cityParam && !typeParam && !isVerifiedParam && !isFeaturedParam);
 
   return (
@@ -222,7 +260,7 @@ function AgenciesContent() {
         display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-end",
       }}>
 
-        {/* Province — always shows all 14 Syrian governorates */}
+        {/* Province — DB-driven list */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", flex: "1 1 140px" }}>
           <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>المحافظة</label>
           <select
@@ -232,13 +270,13 @@ function AgenciesContent() {
             onChange={e => pushFilter({ province: e.target.value })}
           >
             <option value="">كل المحافظات</option>
-            {PROVINCE_NAMES.map(p => (
+            {provinces.map(p => (
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
         </div>
 
-        {/* City — shows static cities of selected province, disabled when no province */}
+        {/* City — DB-driven, verified first, shows (مستخدم) for user-added */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", flex: "1 1 140px" }}>
           <label style={{ fontSize: "0.78rem", color: "#64748b", fontWeight: 600 }}>المدينة</label>
           <select
@@ -246,11 +284,15 @@ function AgenciesContent() {
             style={selectStyle}
             value={form.city}
             onChange={e => pushFilter({ city: e.target.value })}
-            disabled={!provinceParam}
+            disabled={!provinceParam || citiesLoading}
           >
-            <option value="">{provinceParam ? "كل المدن" : "اختر محافظة أولاً"}</option>
-            {currentProvinceCities.map(c => (
-              <option key={c} value={c}>{c}</option>
+            <option value="">
+              {citiesLoading ? "جاري التحميل..." : (provinceParam ? "كل المدن" : "اختر محافظة أولاً")}
+            </option>
+            {provinceCities.map(c => (
+              <option key={c.id} value={c.name}>
+                {c.isVerified === false ? `${c.name} ✦` : c.name}
+              </option>
             ))}
           </select>
         </div>

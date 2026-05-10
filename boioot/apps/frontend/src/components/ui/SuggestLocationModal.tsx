@@ -28,7 +28,7 @@ export default function SuggestLocationModal({ open, type, parentId, onClose }: 
   }, [open]);
 
   const label = type === "city" ? "مدينة" : "حي";
-  const title = type === "city" ? "اقتراح مدينة جديدة" : "اقتراح حي جديد";
+  const title = type === "city" ? "إضافة مدينة جديدة" : "إضافة حي جديد";
 
   async function handleSubmit() {
     const trimmed = name.trim();
@@ -43,7 +43,7 @@ export default function SuggestLocationModal({ open, type, parentId, onClose }: 
       });
       setSuccess(true);
     } catch {
-      setError("تعذّر إرسال الاقتراح — حاول مجدداً");
+      setError("تعذّر الإرسال — حاول مجدداً");
     } finally {
       setSaving(false);
     }
@@ -100,7 +100,7 @@ export default function SuggestLocationModal({ open, type, parentId, onClose }: 
                 textAlign: "center",
               }}
             >
-              ✅ تم إرسال الاقتراح للمراجعة — شكراً لمساهمتك!
+              ✅ تمت الإضافة بنجاح — ستظهر في القوائم فوراً!
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
@@ -124,7 +124,8 @@ export default function SuggestLocationModal({ open, type, parentId, onClose }: 
         ) : (
           <>
             <p style={{ margin: 0, fontSize: "0.86rem", color: "#555" }}>
-              اكتب اسم {label === "مدينة" ? "المدينة" : "الحي"} المقترح. سيراجعه الفريق وإضافته في حال الموافقة.
+              اكتب اسم {label === "مدينة" ? "المدينة" : "الحي"} الجديد.
+              ستُضاف مباشرة وتصبح متاحة لجميع المستخدمين فوراً.
             </p>
 
             <input
@@ -167,9 +168,9 @@ export default function SuggestLocationModal({ open, type, parentId, onClose }: 
                 {saving ? (
                   <>
                     <span style={{ display: "inline-block", width: "14px", height: "14px", border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
-                    جارٍ الإرسال...
+                    جارٍ الإضافة...
                   </>
-                ) : "إرسال الاقتراح"}
+                ) : "إضافة"}
               </button>
               <button
                 type="button"

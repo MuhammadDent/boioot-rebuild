@@ -7,8 +7,9 @@ import { api, ApiError } from "@/lib/api";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface LocationOption {
-  id: string;
-  name: string;
+  id:         string;
+  name:       string;
+  isVerified?: boolean;
 }
 
 interface LocationSuggestion {
@@ -75,6 +76,12 @@ const addBtnDisabledStyle: React.CSSProperties = {
   opacity: 0.45,
   cursor: "not-allowed",
 };
+
+// ─── Verified badge helper (for <option> text — no HTML allowed) ──────────────
+
+function optionLabel(name: string, isVerified?: boolean) {
+  return isVerified === false ? `${name} ✦` : name;
+}
 
 // ─── AddLocationModal ─────────────────────────────────────────────────────────
 
@@ -344,7 +351,7 @@ export function CitySelect({ label, value, onChange, province, required, error, 
   const [addError,  setAddError]  = useState("");
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
 
-  // Load cities whenever province changes
+  // Load cities whenever province changes — returns isVerified per city
   useEffect(() => {
     setCities([]);
     if (!province) return;
@@ -406,8 +413,10 @@ export function CitySelect({ label, value, onChange, province, required, error, 
           value={value}
           onChange={(e) => {
             const name  = e.target.value;
-            const found = cities.find(c => c.name === name);
-            onChange(name, found?.id);
+            // strip the ✦ suffix that was added for unverified entries
+            const clean = name.replace(/ ✦$/, "");
+            const found = cities.find(c => c.name === clean || c.name === name);
+            onChange(found?.name ?? clean, found?.id);
           }}
           disabled={isDisabled || loading}
           style={{ flex: 1, borderColor: error ? "#e53935" : undefined }}
@@ -415,7 +424,11 @@ export function CitySelect({ label, value, onChange, province, required, error, 
           <option value="">
             {loading ? "جاري التحميل..." : (province ? "اختر مدينة..." : "اختر المحافظة أولاً")}
           </option>
-          {cities.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+          {cities.map((c) => (
+            <option key={c.id} value={c.name}>
+              {optionLabel(c.name, c.isVerified)}
+            </option>
+          ))}
         </select>
         <button
           type="button"
@@ -445,9 +458,6 @@ export function CitySelect({ label, value, onChange, province, required, error, 
 }
 
 // ─── NeighborhoodSelect ───────────────────────────────────────────────────────
-// value prop  = neighborhoodId (the selected neighborhood's ID, or "")
-// city prop   = cityName (used to call /locations/neighborhoods?city=cityName)
-// onChange    = (name, id?) — passes both for callers that need either
 
 export function NeighborhoodSelect({ label, value, onChange, city, disabled }: NeighborhoodSelectProps) {
   const [neighborhoods, setNeighborhoods] = useState<LocationOption[]>([]);
@@ -458,7 +468,7 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
   const [addError,      setAddError]      = useState("");
   const [suggestions,   setSuggestions]   = useState<LocationSuggestion[]>([]);
 
-  // 1) Load neighborhoods whenever city (name) changes; clear list on city reset
+  // Load neighborhoods whenever city changes
   useEffect(() => {
     setNeighborhoods([]);
     if (!city) return;
@@ -469,7 +479,6 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
       .finally(() => setLoading(false));
   }, [city]);
 
-  // Background refresh (cache-busted) used after create to sync with server
   function refreshNeighborhoods() {
     if (!city) return;
     api.get<LocationOption[]>(`/locations/neighborhoods?city=${encodeURIComponent(city)}&_t=${Date.now()}`)
@@ -491,17 +500,13 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
         const finalName = result.item?.name ?? name;
         const finalId   = result.item?.id   ?? "";
 
-        // 6) Append to list immediately so the new option exists before onChange fires
         setNeighborhoods(prev => {
           const already = prev.some(n => n.id === finalId);
-          return already ? prev : [...prev, { id: finalId, name: finalName }];
+          return already ? prev : [...prev, { id: finalId, name: finalName, isVerified: false }];
         });
 
-        // Select the new neighborhood right away
         onChange(finalName, finalId);
         closeModal();
-
-        // Background refresh to sync any server-side name normalisation
         refreshNeighborhoods();
       } else if (result.status === "similar") {
         setSuggestions(result.suggestions ?? []);
@@ -512,7 +517,6 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
   }, [newName, city, onChange]);
 
   async function handleUseSuggestion(s: LocationSuggestion) {
-    // Append suggestion to list immediately so it's selectable
     setNeighborhoods(prev => {
       const already = prev.some(n => n.id === s.id);
       return already ? prev : [...prev, { id: s.id, name: s.name }];
@@ -524,12 +528,9 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
 
   const isDisabled = disabled || !city;
 
-  // 3) Map selectedNeighborhoodId → object.
-  // Supports callers that pass either an id or a name as `value` (backwards-compatible).
   const selectedNeighborhood =
     neighborhoods.find(n => n.id === value) ??
     neighborhoods.find(n => n.name === value);
-  // Always drive the <select> with the canonical id (so option value={n.id} matches)
   const resolvedSelectValue = selectedNeighborhood?.id ?? "";
 
   return (
@@ -540,7 +541,6 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
           className="form-input"
           value={resolvedSelectValue}
           onChange={(e) => {
-            // 3) Find object by id, pass (name, id) to caller
             const selectedId = e.target.value;
             const found = neighborhoods.find(n => n.id === selectedId);
             onChange(found?.name ?? selectedId, found?.id);
@@ -551,9 +551,10 @@ export function NeighborhoodSelect({ label, value, onChange, city, disabled }: N
           <option value="">
             {loading ? "جاري التحميل..." : (city ? "اختر حياً..." : "اختر المدينة أولاً")}
           </option>
-          {/* 4) Display name; option value is the ID */}
           {neighborhoods.map((n) => (
-            <option key={n.id} value={n.id}>{n.name}</option>
+            <option key={n.id} value={n.id}>
+              {optionLabel(n.name, n.isVerified)}
+            </option>
           ))}
         </select>
         <button
