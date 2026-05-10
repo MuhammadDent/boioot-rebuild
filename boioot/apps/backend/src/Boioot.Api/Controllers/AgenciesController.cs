@@ -315,16 +315,38 @@ public class AgenciesController : BaseController
         var agencyIds  = rawItems.Select(i => i.Id).ToList();
         var ratingsMap = await GetRatingAggregatesAsync(agencyIds, ct);
 
-        // Step 3: build final DTOs
+        // Step 3: load province_wide coverage summaries for these users
+        var agencyGuids = agencyIds
+            .Select(id => Guid.TryParse(id, out var g) ? (Guid?)g : null)
+            .Where(g => g.HasValue)
+            .Select(g => g!.Value)
+            .ToList();
+
+        var provinceCoverages = await _ctx.Set<global::Boioot.Domain.Entities.UserCoverage>()
+            .AsNoTracking()
+            .Where(uc => agencyGuids.Contains(uc.UserId)
+                      && uc.CoverageType == "province_wide"
+                      && uc.Province != null)
+            .Select(uc => new { UserId = uc.UserId.ToString(), uc.Province })
+            .ToListAsync(ct);
+
+        var coverageMap = provinceCoverages
+            .GroupBy(x => x.UserId)
+            .ToDictionary(
+                g => g.Key,
+                g => string.Join("، ", g.Select(x => $"{x.Province} - كل المدن")));
+
+        // Step 4: build final DTOs
         var items = rawItems.Select(x =>
         {
             var (avg, count) = ratingsMap.GetValueOrDefault(x.Id, (0m, 0));
+            var coverage     = coverageMap.GetValueOrDefault(x.Id);
             return new AgencyListItemDto(
                 x.Id, x.FullName, x.Role, x.RoleLabel,
                 x.City, x.Province, x.Bio, x.LogoUrl,
                 x.IsVerified, x.VerificationStatus, x.VerificationBadge,
                 x.IsFeatured, x.SortOrder, x.ListingCount,
-                avg, count);
+                avg, count, coverage);
         }).ToList();
 
         return Ok(new AgenciesPagedResult(

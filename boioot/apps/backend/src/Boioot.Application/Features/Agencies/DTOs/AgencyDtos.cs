@@ -21,7 +21,10 @@ public record AgencyListItemDto(
     int     ListingCount,
     // ── Ratings (aggregated from AgencyRatings table) ─────────────────────────
     decimal AverageRating,
-    int     RatingsCount);
+    int     RatingsCount,
+    // ── Coverage summary (province_wide entries only) ─────────────────────────
+    // e.g. "درعا - كل المدن" or "درعا - كل المدن، حمص - كل المدن"
+    string? CoverageSummary);
 
 // ── Public detail ─────────────────────────────────────────────────────────────
 

@@ -22,6 +22,8 @@ export interface AgencyListItem {
   listingCount:       number;
   averageRating:      number;
   ratingsCount:       number;
+  // province_wide coverage summary e.g. "درعا - كل المدن"
+  coverageSummary:    string | null;
 }
 
 interface Props {
@@ -182,6 +184,24 @@ export default function AgencyCard({ agency }: Props) {
         </span>
         <span>🏠 {agency.listingCount} إعلان</span>
       </div>
+
+      {/* Province-wide coverage badge */}
+      {agency.coverageSummary && (
+        <div style={{
+          display:      "flex",
+          alignItems:   "center",
+          gap:          "0.35rem",
+          fontSize:     "0.79rem",
+          color:        "#6b21a8",
+          background:   "#fdf4ff",
+          border:       "1px solid #e9d5ff",
+          borderRadius: 8,
+          padding:      "0.3rem 0.65rem",
+        }}>
+          <span>🏙</span>
+          <span>يغطي: {agency.coverageSummary}</span>
+        </div>
+      )}
 
       {/* Bio */}
       {agency.bio && (

@@ -9,6 +9,7 @@ import SuggestLocationModal from "@/components/ui/SuggestLocationModal";
 
 const SUGGEST_CITY = "__suggest_city__";
 const SUGGEST_NBR  = "__suggest_nbr__";
+const ALL_CITIES   = "__all_cities__";
 
 interface LocationCity         { id: string; name: string; province: string; }
 interface LocationNeighborhood { id: string; name: string; city: string; }
@@ -17,8 +18,6 @@ const COVERAGE_TYPES = [
   { value: "city_wide", label: "تغطية المدينة كاملة" },
   { value: "custom",    label: "حي محدد فقط" },
 ];
-
-const PROPERTY_TYPE_LABELS: Record<string, string> = {};
 
 function formatDate(iso: string): string {
   try {
@@ -29,6 +28,22 @@ function formatDate(iso: string): string {
 }
 
 function CoverageTypeBadge({ type }: { type: string }) {
+  if (type === "province_wide") {
+    return (
+      <span style={{
+        display: "inline-block",
+        padding: "2px 10px",
+        borderRadius: 20,
+        fontSize: "0.72rem",
+        fontWeight: 600,
+        background: "#fdf4ff",
+        color: "#7e22ce",
+        border: "1px solid #e9d5ff",
+      }}>
+        كل المحافظة
+      </span>
+    );
+  }
   const isCity = type === "city_wide";
   return (
     <span style={{
@@ -44,6 +59,16 @@ function CoverageTypeBadge({ type }: { type: string }) {
       {isCity ? "مدينة كاملة" : "حي محدد"}
     </span>
   );
+}
+
+function coverageLabel(item: CoverageItem): string {
+  if (item.coverageType === "province_wide") {
+    return `محافظة ${item.province ?? ""} — كل المدن`;
+  }
+  if (item.neighborhoodName) {
+    return `${item.cityName} — ${item.neighborhoodName}`;
+  }
+  return item.cityName;
 }
 
 export default function CoveragePage() {
@@ -69,6 +94,8 @@ export default function CoveragePage() {
   const [addSuccess, setAddSuccess] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
+
+  const isProvinceWide = cityId === ALL_CITIES;
 
   const load = useCallback(async () => {
     setFetching(true);
@@ -109,7 +136,7 @@ export default function CoveragePage() {
   useEffect(() => {
     setNeighborhoodId("");
     setNeighborhoods([]);
-    if (!cityId) return;
+    if (!cityId || cityId === ALL_CITIES) return;
     const selected = cities.find(c => c.id === cityId);
     if (!selected) return;
     setNeighborhoodsLoading(true);
@@ -127,6 +154,27 @@ export default function CoveragePage() {
     e.preventDefault();
     setAddError("");
     setAddSuccess("");
+
+    if (isProvinceWide) {
+      if (!province) { setAddError("يرجى اختيار المحافظة"); return; }
+      setAdding(true);
+      try {
+        const newItem = await coverageApi.add({
+          coverageType: "province_wide",
+          province,
+        });
+        setItems(prev => [newItem, ...prev]);
+        setAddSuccess("تمت إضافة تغطية كاملة للمحافظة بنجاح");
+        setProvince(""); setCityId(""); setNeighborhoodId("");
+        setCoverageType("city_wide");
+      } catch (e) {
+        setAddError(normalizeError(e));
+      } finally {
+        setAdding(false);
+      }
+      return;
+    }
+
     if (!cityId) { setAddError("يرجى اختيار المدينة"); return; }
     if (coverageType === "custom" && !neighborhoodId) {
       setAddError("يرجى اختيار الحي عند اختيار تغطية حي محدد"); return;
@@ -163,6 +211,8 @@ export default function CoveragePage() {
   }
 
   if (isLoading || !user) return null;
+
+  const submitDisabled = adding || (!cityId && !isProvinceWide) || (isProvinceWide && !province);
 
   return (
     <div dir="rtl" style={{ minHeight: "100vh", backgroundColor: "#f8fafc" }}>
@@ -218,7 +268,7 @@ export default function CoveragePage() {
               </select>
             </div>
 
-            {/* City */}
+            {/* City — includes "كل المدن" as first option after province is chosen */}
             <div>
               <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#374151", marginBottom: 4 }}>
                 المدينة {citiesLoading && <span style={{ fontWeight: 400, color: "#9ca3af" }}>جاري التحميل...</span>}
@@ -234,49 +284,75 @@ export default function CoveragePage() {
                 style={{ width: "100%" }}
               >
                 <option value="">— اختر المدينة —</option>
+                {/* "كل المدن" is always first when a province is selected */}
+                {province && (
+                  <option value={ALL_CITIES}>🏙 كل المدن</option>
+                )}
                 {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 {province && <option value={SUGGEST_CITY}>💡 اقترح مدينة جديدة...</option>}
               </select>
             </div>
 
-            {/* Coverage type */}
-            <div>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-                نوع التغطية
-              </label>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
-                {COVERAGE_TYPES.map(ct => (
-                  <label key={ct.value} style={{
-                    flex: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    padding: "0.6rem 0.85rem",
-                    borderRadius: 8,
-                    border: `2px solid ${coverageType === ct.value ? "#16a34a" : "#e2e8f0"}`,
-                    background: coverageType === ct.value ? "#f0fdf4" : "#fff",
-                    cursor: "pointer",
-                    fontSize: "0.85rem",
-                    fontWeight: coverageType === ct.value ? 600 : 400,
-                    color: coverageType === ct.value ? "#166534" : "#374151",
-                    transition: "all 0.15s",
-                  }}>
-                    <input
-                      type="radio"
-                      name="coverageType"
-                      value={ct.value}
-                      checked={coverageType === ct.value}
-                      onChange={() => setCoverageType(ct.value as "city_wide" | "custom")}
-                      style={{ margin: 0 }}
-                    />
-                    {ct.label}
-                  </label>
-                ))}
+            {/* Province-wide notice */}
+            {isProvinceWide && (
+              <div style={{
+                background: "#fdf4ff",
+                border: "1px solid #e9d5ff",
+                borderRadius: 8,
+                padding: "0.65rem 0.85rem",
+                fontSize: "0.83rem",
+                color: "#6b21a8",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "0.5rem",
+              }}>
+                <span style={{ flexShrink: 0 }}>🏙</span>
+                <span>
+                  سيتم تسجيل تغطية <strong>كاملة لمحافظة {province}</strong>. ستستقبل جميع الطلبات المطابقة من أي مدينة داخل هذه المحافظة.
+                </span>
               </div>
-            </div>
+            )}
 
-            {/* Neighborhood (only when custom) */}
-            {coverageType === "custom" && (
+            {/* Coverage type — hidden for province_wide */}
+            {!isProvinceWide && (
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+                  نوع التغطية
+                </label>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  {COVERAGE_TYPES.map(ct => (
+                    <label key={ct.value} style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.6rem 0.85rem",
+                      borderRadius: 8,
+                      border: `2px solid ${coverageType === ct.value ? "#16a34a" : "#e2e8f0"}`,
+                      background: coverageType === ct.value ? "#f0fdf4" : "#fff",
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                      fontWeight: coverageType === ct.value ? 600 : 400,
+                      color: coverageType === ct.value ? "#166534" : "#374151",
+                      transition: "all 0.15s",
+                    }}>
+                      <input
+                        type="radio"
+                        name="coverageType"
+                        value={ct.value}
+                        checked={coverageType === ct.value}
+                        onChange={() => setCoverageType(ct.value as "city_wide" | "custom")}
+                        style={{ margin: 0 }}
+                      />
+                      {ct.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Neighborhood (only when custom and not province_wide) */}
+            {!isProvinceWide && coverageType === "custom" && (
               <div>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#374151", marginBottom: 4 }}>
                   الحي {neighborhoodsLoading && <span style={{ fontWeight: 400, color: "#9ca3af" }}>جاري التحميل...</span>}
@@ -303,17 +379,17 @@ export default function CoveragePage() {
 
             <button
               type="submit"
-              disabled={adding || !cityId}
+              disabled={submitDisabled}
               style={{
                 alignSelf: "flex-start",
                 padding: "0.55rem 1.25rem",
                 borderRadius: 8,
-                background: adding || !cityId ? "#86efac" : "#16a34a",
+                background: submitDisabled ? "#86efac" : "#16a34a",
                 color: "#fff",
                 border: "none",
                 fontWeight: 700,
                 fontSize: "0.88rem",
-                cursor: adding || !cityId ? "not-allowed" : "pointer",
+                cursor: submitDisabled ? "not-allowed" : "pointer",
               }}
             >
               {adding ? "جارٍ الإضافة..." : "+ إضافة منطقة"}
@@ -385,17 +461,20 @@ export default function CoveragePage() {
                     gap: "0.75rem",
                     padding: "0.85rem 1.25rem",
                     borderBottom: idx < items.length - 1 ? "1px solid #f1f5f9" : "none",
+                    background: item.coverageType === "province_wide" ? "#fdf4ff" : "#fff",
                   }}
                 >
                   {/* Location icon */}
                   <div style={{
                     width: 36, height: 36,
                     borderRadius: "50%",
-                    background: "#f0fdf4",
+                    background: item.coverageType === "province_wide" ? "#f5d0fe" : "#f0fdf4",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0,
                   }}>
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+                      stroke={item.coverageType === "province_wide" ? "#7e22ce" : "#16a34a"}
+                      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
                       <circle cx="12" cy="9" r="2.5"/>
                     </svg>
@@ -405,10 +484,7 @@ export default function CoveragePage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                       <span style={{ fontWeight: 600, fontSize: "0.9rem", color: "#111827" }}>
-                        {item.cityName}
-                        {item.neighborhoodName && (
-                          <span style={{ fontWeight: 400, color: "#6b7280" }}> — {item.neighborhoodName}</span>
-                        )}
+                        {coverageLabel(item)}
                       </span>
                       <CoverageTypeBadge type={item.coverageType} />
                     </div>

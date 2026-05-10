@@ -9,7 +9,7 @@ namespace Boioot.Infrastructure.Features.Matching;
 /// Core matching engine: finds users whose UserCoverage overlaps with a BuyerRequest.
 /// Fast path: when BuyerRequest.CityId is set, uses ID-based joins (O(1) lookup).
 /// Fallback: when CityId is null (old requests), normalizes City string → resolves to Guid.
-/// Scoring: custom + neighborhood = 100, city_wide = 60.
+/// Scoring: custom + neighborhood = 100, city_wide = 60, province_wide = 50.
 /// </summary>
 public class RequestMatchingService : IRequestMatchingService
 {
@@ -72,25 +72,45 @@ public class RequestMatchingService : IRequestMatchingService
                 .FirstOrDefaultAsync(ct);
         }
 
-        // ── 3. Query UserCoverages that match the city ────────────────────────
+        // ── 3. Resolve Province of the request's city (for province_wide match) ─
+        var cityProvince = await _db.LocationCities
+            .AsNoTracking()
+            .Where(c => c.Id == cityId)
+            .Select(c => (string?)c.Province)
+            .FirstOrDefaultAsync(ct);
+
+        // ── 4. Query UserCoverages that match ─────────────────────────────────
+        // Include: city_wide/custom where CityId matches
+        //        + province_wide where Province matches the request city's province
         var coverages = await _db.Set<global::Boioot.Domain.Entities.UserCoverage>()
             .AsNoTracking()
             .Include(uc => uc.User)
             .Include(uc => uc.City)
             .Include(uc => uc.Neighborhood)
-            .Where(uc => uc.CityId == cityId
-                      && uc.UserId != request.UserId) // exclude the requester themselves
+            .Where(uc =>
+                uc.UserId != request.UserId
+                && (
+                    (uc.CoverageType != "province_wide" && uc.CityId == cityId)
+                    || (uc.CoverageType == "province_wide"
+                        && cityProvince != null
+                        && uc.Province == cityProvince)
+                ))
             .ToListAsync(ct);
 
         if (coverages.Count == 0)
             return [];
 
-        // ── 4. Score and build results ────────────────────────────────────────
+        // ── 5. Score and build results ────────────────────────────────────────
         var scored = new List<(int score, global::Boioot.Domain.Entities.UserCoverage uc)>();
 
         foreach (var uc in coverages)
         {
-            if (uc.CoverageType == "city_wide")
+            if (uc.CoverageType == "province_wide")
+            {
+                // Province-wide: least specific — receives requests from any city in the province
+                scored.Add((50, uc));
+            }
+            else if (uc.CoverageType == "city_wide")
             {
                 scored.Add((60, uc));
             }
@@ -103,7 +123,7 @@ public class RequestMatchingService : IRequestMatchingService
             }
         }
 
-        // ── 5. Deduplicate by UserId (keep highest score per user) ─────────────
+        // ── 6. Deduplicate by UserId (keep highest score per user) ─────────────
         var byUser = scored
             .GroupBy(x => x.uc.UserId)
             .Select(g => g.OrderByDescending(x => x.score).First())
@@ -111,13 +131,15 @@ public class RequestMatchingService : IRequestMatchingService
             .ThenBy(x => x.uc.CreatedAt)
             .ToList();
 
-        // ── 6. Map to DTOs ────────────────────────────────────────────────────
+        // ── 7. Map to DTOs ────────────────────────────────────────────────────
         return byUser.Select(x =>
         {
             var (score, uc) = x;
             var reason = score == 100
                 ? $"يغطي {uc.City?.Name ?? ""} — {uc.Neighborhood?.Name ?? ""}"
-                : $"يغطي كامل {uc.City?.Name ?? ""}";
+                : uc.CoverageType == "province_wide"
+                    ? $"يغطي كامل محافظة {uc.Province ?? ""}"
+                    : $"يغطي كامل {uc.City?.Name ?? ""}";
 
             return new MatchResultDto
             {
@@ -127,7 +149,9 @@ public class RequestMatchingService : IRequestMatchingService
                 MatchScore       = score,
                 MatchReason      = reason,
                 CoverageType     = uc.CoverageType,
-                CityName         = uc.City?.Name ?? "",
+                CityName         = uc.CoverageType == "province_wide"
+                                       ? $"{uc.Province ?? ""} - كل المدن"
+                                       : uc.City?.Name ?? "",
                 NeighborhoodName = uc.Neighborhood?.Name,
             };
         }).ToList();

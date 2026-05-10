@@ -20,12 +20,23 @@ public class CoverageController : BaseController
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Ensure Province column exists and CityId is nullable (idempotent).
+    // ─────────────────────────────────────────────────────────────────────────
+    private Task EnsureColumnsAsync(CancellationToken ct) =>
+        _db.Database.ExecuteSqlRawAsync(@"
+            ALTER TABLE ""UserCoverages"" ADD COLUMN IF NOT EXISTS ""Province"" TEXT;
+            ALTER TABLE ""UserCoverages"" ALTER COLUMN ""CityId"" DROP NOT NULL;
+        ", ct);
+
+    // ─────────────────────────────────────────────────────────────────────────
     // GET /api/coverage
     // Returns the calling user's registered coverage areas.
     // ─────────────────────────────────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> GetMyCoverage(CancellationToken ct)
     {
+        await EnsureColumnsAsync(ct);
+
         var userId = GetUserId();
 
         var items = await _db.Set<UserCoverage>()
@@ -38,7 +49,10 @@ public class CoverageController : BaseController
             {
                 Id               = uc.Id,
                 CityId           = uc.CityId,
-                CityName         = uc.City.Name,
+                CityName         = uc.CoverageType == "province_wide"
+                                       ? "كل المدن"
+                                       : uc.City != null ? uc.City.Name : "",
+                Province         = uc.Province,
                 NeighborhoodId   = uc.NeighborhoodId,
                 NeighborhoodName = uc.Neighborhood != null ? uc.Neighborhood.Name : null,
                 CoverageType     = uc.CoverageType,
@@ -58,14 +72,59 @@ public class CoverageController : BaseController
         [FromBody] AddCoverageDto dto,
         CancellationToken ct)
     {
+        await EnsureColumnsAsync(ct);
+
         var userId = GetUserId();
 
-        // Validate city exists
+        // ── province_wide: covers all cities in a province ────────────────────
+        if (dto.CoverageType == "province_wide")
+        {
+            if (string.IsNullOrWhiteSpace(dto.Province))
+                throw new BoiootException("يرجى تحديد المحافظة عند اختيار تغطية كاملة للمحافظة", 400);
+
+            var province = dto.Province.Trim();
+
+            var exists = await _db.Set<UserCoverage>()
+                .AnyAsync(uc =>
+                    uc.UserId       == userId
+                 && uc.CoverageType == "province_wide"
+                 && uc.Province     == province, ct);
+
+            if (exists)
+                throw new BoiootException("منطقة التغطية هذه مسجّلة مسبقاً", 409);
+
+            var entry = new UserCoverage
+            {
+                UserId       = userId,
+                CityId       = null,
+                Province     = province,
+                CoverageType = "province_wide",
+                CreatedAt    = DateTime.UtcNow,
+                UpdatedAt    = DateTime.UtcNow,
+            };
+
+            _db.Set<UserCoverage>().Add(entry);
+            await _db.SaveChangesAsync(ct);
+
+            return Ok(new CoverageItemDto
+            {
+                Id           = entry.Id,
+                CityId       = null,
+                CityName     = "كل المدن",
+                Province     = province,
+                CoverageType = "province_wide",
+                AddedAt      = entry.CreatedAt,
+            });
+        }
+
+        // ── city_wide / custom: requires a valid CityId ───────────────────────
+        if (!dto.CityId.HasValue)
+            throw new BoiootException("يرجى تحديد المدينة", 400);
+
         var city = await _db.LocationCities
-            .FirstOrDefaultAsync(c => c.Id == dto.CityId && c.IsActive, ct)
+            .FirstOrDefaultAsync(c => c.Id == dto.CityId.Value && c.IsActive, ct)
             ?? throw new BoiootException("المدينة غير موجودة", 404);
 
-        // Validate neighborhood if custom coverage
         LocationNeighborhood? neighborhood = null;
         if (dto.CoverageType == "custom")
         {
@@ -77,18 +136,17 @@ public class CoverageController : BaseController
                 ?? throw new BoiootException("الحي غير موجود", 404);
         }
 
-        // Prevent duplicates
-        var exists = await _db.Set<UserCoverage>()
+        var dup = await _db.Set<UserCoverage>()
             .AnyAsync(uc =>
-                uc.UserId == userId
-             && uc.CityId == dto.CityId
-             && uc.CoverageType == dto.CoverageType
+                uc.UserId        == userId
+             && uc.CityId        == dto.CityId
+             && uc.CoverageType  == dto.CoverageType
              && uc.NeighborhoodId == dto.NeighborhoodId, ct);
 
-        if (exists)
+        if (dup)
             throw new BoiootException("منطقة التغطية هذه مسجّلة مسبقاً", 409);
 
-        var entry = new UserCoverage
+        var cityEntry = new UserCoverage
         {
             UserId         = userId,
             CityId         = dto.CityId,
@@ -98,18 +156,19 @@ public class CoverageController : BaseController
             UpdatedAt      = DateTime.UtcNow,
         };
 
-        _db.Set<UserCoverage>().Add(entry);
+        _db.Set<UserCoverage>().Add(cityEntry);
         await _db.SaveChangesAsync(ct);
 
         return Ok(new CoverageItemDto
         {
-            Id               = entry.Id,
-            CityId           = entry.CityId,
+            Id               = cityEntry.Id,
+            CityId           = cityEntry.CityId,
             CityName         = city.Name,
-            NeighborhoodId   = entry.NeighborhoodId,
+            Province         = null,
+            NeighborhoodId   = cityEntry.NeighborhoodId,
             NeighborhoodName = neighborhood?.Name,
-            CoverageType     = entry.CoverageType,
-            AddedAt          = entry.CreatedAt,
+            CoverageType     = cityEntry.CoverageType,
+            AddedAt          = cityEntry.CreatedAt,
         });
     }
 

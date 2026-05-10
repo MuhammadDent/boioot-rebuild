@@ -2,18 +2,20 @@ import { api } from "@/lib/api";
 
 export interface CoverageItem {
   id: string;
-  cityId: string;
+  cityId: string | null;
   cityName: string;
+  province: string | null;
   neighborhoodId: string | null;
   neighborhoodName: string | null;
-  coverageType: "city_wide" | "custom";
+  coverageType: "city_wide" | "custom" | "province_wide";
   addedAt: string;
 }
 
 export interface AddCoverageRequest {
-  cityId: string;
+  cityId?: string;
+  province?: string;
   neighborhoodId?: string;
-  coverageType: "city_wide" | "custom";
+  coverageType: "city_wide" | "custom" | "province_wide";
 }
 
 export const coverageApi = {
