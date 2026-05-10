@@ -48,8 +48,13 @@ function fetchCities(): Promise<string[]> {
 }
 
 export function useCities() {
-  const [cities, setCities] = useState<string[]>(() => _cachedCities ?? []);
-  const [loading, setLoading] = useState(() => _cachedCities === null);
+  // Always initialise to [] — never use the module-level cache as the initial
+  // useState value. The cache may be populated on the server (Node.js module
+  // re-use between SSR requests) while the browser client always starts fresh,
+  // which causes a server/client HTML mismatch (hydration error).
+  // The cache is still used inside useEffect (client-only) to skip the fetch.
+  const [cities, setCities] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (_cachedCities !== null) {

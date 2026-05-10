@@ -44,8 +44,10 @@ function fetchOptions(): Promise<RawOptions> {
  * Client-side filtering is applied based on the selected province and city.
  */
 export function usePropertyLocations(selectedProvince?: string, selectedCity?: string) {
-  const [raw, setRaw] = useState<RawOptions>(() => _cached ?? _EMPTY);
-  const [loading, setLoading] = useState(() => _cached === null);
+  // Always initialise to _EMPTY — same reason as useCities: module-level cache
+  // may be non-null on the server but null on the client, causing hydration mismatch.
+  const [raw, setRaw] = useState<RawOptions>(_EMPTY);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (_cached) { setRaw(_cached); setLoading(false); return; }

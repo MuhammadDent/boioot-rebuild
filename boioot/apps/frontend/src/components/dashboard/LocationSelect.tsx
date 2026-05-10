@@ -116,7 +116,9 @@ function AddLocationModal({
 }: AddLocationModalProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const hasSuggestions = suggestions.length > 0;
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 60);
   }, [open]);
@@ -245,7 +247,7 @@ function AddLocationModal({
     </div>
   );
 
-  if (typeof window === "undefined") return null;
+  if (!mounted) return null;
   return createPortal(modal, document.body);
 }
 

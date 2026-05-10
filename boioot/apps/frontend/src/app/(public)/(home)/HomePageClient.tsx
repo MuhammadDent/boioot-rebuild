@@ -102,6 +102,8 @@ const EMPTY_FILTERS: FilterState = {
 export default function HomePageClient({ initialHeroImage }: { initialHeroImage: string }) {
   const { isAuthenticated } = useAuth();
   const { cities } = useCities();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // ── CMS hero slide ──────────────────────────────────────────────────────────
   const heroTitle    = useContent("home.hero.title",          "ابحث عن منزل أحلامك في سوريا");
@@ -633,7 +635,7 @@ export default function HomePageClient({ initialHeroImage }: { initialHeroImage:
               style={selectStyle}
             >
               <option value="">الكل</option>
-              {cities.map((c, i) => <option key={`city-${i}-${c}`} value={c}>{c}</option>)}
+              {mounted && cities.map((c, i) => <option key={`city-${i}-${c}`} value={c}>{c}</option>)}
             </select>
           </FilterSection>
 
@@ -647,7 +649,7 @@ export default function HomePageClient({ initialHeroImage }: { initialHeroImage:
               style={{ ...selectStyle, opacity: draft.city ? 1 : 0.5 }}
             >
               <option value="">الكل</option>
-              {neighborhoods.map((n, i) => <option key={`nbhd-${i}-${n}`} value={n}>{n}</option>)}
+              {mounted && neighborhoods.map((n, i) => <option key={`nbhd-${i}-${n}`} value={n}>{n}</option>)}
             </select>
             {!draft.city && (
               <p style={{ fontSize: "0.78rem", color: "var(--color-text-muted)", marginTop: "0.25rem" }}>يرجى اختيار المدينة أولاً</p>

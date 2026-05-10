@@ -16,8 +16,10 @@ export default function SuggestLocationModal({ open, type, parentId, onClose }: 
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     if (open) {
       setName("");
@@ -194,6 +196,6 @@ export default function SuggestLocationModal({ open, type, parentId, onClose }: 
     </div>
   );
 
-  if (typeof window === "undefined") return null;
+  if (!mounted) return null;
   return createPortal(modal, document.body);
 }
