@@ -293,6 +293,7 @@ export default function AdminNotificationBell() {
               top: "calc(100% + 8px)",
               insetInlineEnd: 0,
               width: 340,
+              maxWidth: "calc(100vw - 32px)",
               maxHeight: 480,
               backgroundColor: "#1e293b",
               border: "1px solid rgba(255,255,255,0.1)",

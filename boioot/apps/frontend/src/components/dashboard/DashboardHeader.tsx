@@ -81,6 +81,7 @@ export default function DashboardHeader({ onMenuToggle }: Props) {
         {canPostAd && (
           <Link
             href="/post-ad"
+            className="dash-hdr__add-btn"
             style={{
               display: "flex",
               alignItems: "center",
@@ -97,14 +98,14 @@ export default function DashboardHeader({ onMenuToggle }: Props) {
             }}
           >
             <Ic size={14} d={<><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>} />
-            أضف إعلان
+            <span className="dash-hdr__add-text">أضف إعلان</span>
           </Link>
         )}
 
         {/* Back to site */}
         <Link
           href="/"
-          className="dash-hdr__icon-btn"
+          className="dash-hdr__icon-btn dash-hdr__icon-btn--secondary"
           title="العودة للموقع"
         >
           <Ic

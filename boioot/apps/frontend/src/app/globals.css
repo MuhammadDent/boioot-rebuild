@@ -444,3 +444,57 @@ a {
     left: 10px;
   }
 }
+
+/* ── Customer dashboard: prevent header overflow on narrow phones ── */
+@media (max-width: 420px) {
+  .dash-hdr {
+    gap: 0.35rem;
+    padding-inline: 0.6rem;
+  }
+  .dash-hdr__actions {
+    gap: 0.25rem;
+  }
+}
+
+/* ── Admin content area: clamp inline-padded page divs on mobile ── */
+@media (max-width: 768px) {
+  /* Admin page.tsx wraps content in a div with inline padding ~1.4rem.
+     Ensure it never causes horizontal scroll inside the shell. */
+  .dash-shell__content > div {
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Tighten the inline-padded admin page container */
+  .dash-shell__content > div[style] {
+    padding-inline: 0.75rem !important;
+  }
+}
+
+/* ── Admin breadcrumb: tighten padding on small screens ── */
+@media (max-width: 480px) {
+  .admin-layout nav {
+    padding-inline: 0.75rem !important;
+    font-size: 0.78rem;
+  }
+}
+
+/* ── Prevent long Arabic strings from causing overflow ── */
+@media (max-width: 768px) {
+  .admin-layout *,
+  .dash-shell__content * {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  /* But keep table cells and buttons from wrapping aggressively */
+  .admin-layout td,
+  .admin-layout th,
+  .admin-layout button,
+  .admin-layout a {
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+}

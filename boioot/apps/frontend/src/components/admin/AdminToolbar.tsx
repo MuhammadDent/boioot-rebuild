@@ -41,6 +41,23 @@ export default function AdminToolbar() {
   const initial = user?.fullName?.trim().charAt(0).toUpperCase() ?? "م";
 
   return (
+    <>
+    <style>{`
+      .admin-tb-badge     { display: inline-block; }
+      .admin-tb-title     { display: inline-block; }
+      .admin-tb-site-text { display: inline; }
+      .admin-tb-username  { display: inline-block; }
+      @media (max-width: 640px) {
+        .admin-tb-title { display: none !important; }
+      }
+      @media (max-width: 480px) {
+        .admin-tb-badge     { display: none !important; }
+        .admin-tb-site-text { display: none !important; }
+      }
+      @media (max-width: 380px) {
+        .admin-tb-username { display: none !important; }
+      }
+    `}</style>
     <header
       style={{
         position: "sticky",
@@ -56,6 +73,7 @@ export default function AdminToolbar() {
         paddingInlineEnd: "1rem",
         gap: "0.75rem",
         flexShrink: 0,
+        overflow: "hidden",
       }}
     >
       {/* Logo */}
@@ -78,6 +96,7 @@ export default function AdminToolbar() {
 
       {/* Backoffice badge */}
       <span
+        className="admin-tb-badge"
         style={{
           fontSize: "0.65rem",
           fontWeight: 700,
@@ -88,6 +107,7 @@ export default function AdminToolbar() {
           letterSpacing: "0.06em",
           textTransform: "uppercase",
           border: "1px solid rgba(255,255,255,0.08)",
+          flexShrink: 0,
         }}
       >
         Backoffice
@@ -95,11 +115,17 @@ export default function AdminToolbar() {
 
       {/* Admin dashboard title */}
       <span
+        className="admin-tb-title"
         style={{
           fontSize: "0.78rem",
           fontWeight: 600,
           color: "#94a3b8",
           letterSpacing: "-0.01em",
+          flexShrink: 1,
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
       >
         لوحة التحكم (الإدارة)
@@ -173,6 +199,7 @@ export default function AdminToolbar() {
           borderRadius: 6,
           border: "1px solid rgba(255,255,255,0.1)",
           transition: "color 0.15s, border-color 0.15s",
+          flexShrink: 0,
         }}
         onMouseEnter={e => {
           (e.currentTarget as HTMLAnchorElement).style.color = "#e2e8f0";
@@ -197,7 +224,7 @@ export default function AdminToolbar() {
           <polyline points="15 3 21 3 21 9" />
           <line x1="10" y1="14" x2="21" y2="3" />
         </svg>
-        عرض الموقع
+        <span className="admin-tb-site-text">عرض الموقع</span>
       </a>
 
       {/* User menu */}
@@ -245,7 +272,7 @@ export default function AdminToolbar() {
           >
             {initial}
           </div>
-          <span style={{ maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span className="admin-tb-username" style={{ maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {user?.fullName ?? "مدير"}
           </span>
           <svg
@@ -428,5 +455,6 @@ export default function AdminToolbar() {
         )}
       </div>
     </header>
+    </>
   );
 }
