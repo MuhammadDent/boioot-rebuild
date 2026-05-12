@@ -330,7 +330,7 @@ export default function AdminNotificationBell() {
               top: panelPos.top,
               left: panelPos.left,
               width: panelPos.width,
-              maxHeight: 480,
+              maxHeight: "min(70vh, 560px)",
               backgroundColor: "#1e293b",
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: 12,
@@ -403,7 +403,7 @@ export default function AdminNotificationBell() {
             </div>
 
             {/* List */}
-            <div style={{ flex: 1, overflowY: "auto" }}>
+            <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
               {isLoading ? (
                 <div
                   style={{
@@ -437,7 +437,8 @@ export default function AdminNotificationBell() {
                       style={{
                         display: "flex",
                         gap: 10,
-                        padding: "12px 16px",
+                        padding: "14px 16px",
+                        minHeight: 52,
                         cursor: "pointer",
                         borderBottom: "1px solid rgba(255,255,255,0.04)",
                         background:

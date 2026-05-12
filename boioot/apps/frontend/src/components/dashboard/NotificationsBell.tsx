@@ -162,28 +162,29 @@ export default function NotificationsBell() {
         top:   dropdownPos.top,
         left:  dropdownPos.left,
         width: dropdownPos.width,
-        maxHeight: "480px",
+        maxHeight: "min(70vh, 560px)",
         overflowY: "auto",
         background: "#fff",
         border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+        borderRadius: "14px",
+        boxShadow: "0 12px 40px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.06)",
         zIndex: 9999,
         display: "flex",
         flexDirection: "column",
+        animation: "notif-slide-in 0.18s cubic-bezier(0.16,1,0.3,1) both",
       }}
     >
       <div
         style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "12px 16px", borderBottom: "1px solid #f3f4f6",
+          padding: "14px 16px", borderBottom: "1px solid #f3f4f6",
           position: "sticky", top: 0, background: "#fff", zIndex: 1,
         }}
       >
-        <span style={{ fontWeight: 700, fontSize: "14px", color: "#111827" }}>
+        <span style={{ fontWeight: 700, fontSize: "15px", color: "#111827" }}>
           الإشعارات
           {unread > 0 && (
-            <span style={{ marginRight: "6px", background: "#ef4444", color: "#fff", fontSize: "11px", fontWeight: 700, borderRadius: "999px", padding: "1px 6px" }}>
+            <span style={{ marginRight: "6px", background: "#ef4444", color: "#fff", fontSize: "11px", fontWeight: 700, borderRadius: "999px", padding: "2px 7px" }}>
               {unread}
             </span>
           )}
@@ -191,7 +192,7 @@ export default function NotificationsBell() {
         {unread > 0 && (
           <button
             type="button" onClick={handleMarkAll} disabled={markingAll}
-            style={{ background: "none", border: "none", color: "#16a34a", fontSize: "12px", fontWeight: 600, cursor: "pointer", padding: "2px 4px" }}
+            style={{ background: "none", border: "none", color: "#16a34a", fontSize: "13px", fontWeight: 600, cursor: "pointer", padding: "10px 8px", minHeight: 44, display: "flex", alignItems: "center" }}
           >
             {markingAll ? "..." : "تعليم الكل كمقروء"}
           </button>
@@ -230,7 +231,7 @@ export default function NotificationsBell() {
         <Link
           href="/notifications"
           onClick={() => setOpen(false)}
-          style={{ fontSize: "12px", fontWeight: 600, color: "#16a34a", textDecoration: "none" }}
+          style={{ fontSize: "13px", fontWeight: 600, color: "#16a34a", textDecoration: "none", display: "inline-block", padding: "8px 12px", minHeight: 44, lineHeight: "28px" }}
         >
           عرض كل الإشعارات
         </Link>
