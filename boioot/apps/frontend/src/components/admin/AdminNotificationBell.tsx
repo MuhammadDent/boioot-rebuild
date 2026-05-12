@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAdminNotifications } from "@/context/AdminNotificationsContext";
 import type { NotificationItem } from "@/features/notifications/api";
@@ -168,7 +169,13 @@ export default function AdminNotificationBell() {
   const [open, setOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  type PanelPos = { top: number; left: number; width: number };
+  const [panelPos, setPanelPos] = useState<PanelPos | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   // Close on outside click
   useEffect(() => {
@@ -181,6 +188,30 @@ export default function AdminNotificationBell() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  const computePanelPos = useCallback((): PanelPos | null => {
+    if (!buttonRef.current) return null;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const MARGIN = 12;
+    const dropW = Math.min(340, vw - MARGIN * 2);
+    let left = rect.right - dropW;
+    left = Math.max(MARGIN, left);
+    left = Math.min(vw - dropW - MARGIN, left);
+    return { top: rect.bottom + 8, left, width: dropW };
+  }, []);
+
+  // Recompute position on resize/scroll when open
+  useEffect(() => {
+    if (!open) return;
+    const refresh = () => setPanelPos(computePanelPos());
+    window.addEventListener("resize", refresh);
+    window.addEventListener("scroll", refresh, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener("resize", refresh);
+      window.removeEventListener("scroll", refresh, { capture: true });
+    };
+  }, [open, computePanelPos]);
 
   const handleNotificationClick = useCallback(
     (notification: NotificationItem) => {
@@ -218,11 +249,16 @@ export default function AdminNotificationBell() {
         }
       `}</style>
 
-      <div ref={panelRef} style={{ position: "relative" }}>
+      <div style={{ position: "relative" }}>
         {/* ── Bell button ── */}
         <button
+          ref={buttonRef}
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => {
+            const next = !open;
+            if (next) setPanelPos(computePanelPos());
+            setOpen(next);
+          }}
           aria-label="الإشعارات"
           title="الإشعارات"
           style={{
@@ -285,15 +321,15 @@ export default function AdminNotificationBell() {
           )}
         </button>
 
-        {/* ── Dropdown panel ── */}
-        {open && (
+        {/* ── Dropdown panel (portal → position:fixed, immune to ancestor overflow) ── */}
+        {mounted && open && panelPos && createPortal(
           <div
+            ref={panelRef}
             style={{
-              position: "absolute",
-              top: "calc(100% + 8px)",
-              insetInlineEnd: 0,
-              width: 340,
-              maxWidth: "calc(100vw - 32px)",
+              position: "fixed",
+              top: panelPos.top,
+              left: panelPos.left,
+              width: panelPos.width,
               maxHeight: 480,
               backgroundColor: "#1e293b",
               border: "1px solid rgba(255,255,255,0.1)",
@@ -522,7 +558,8 @@ export default function AdminNotificationBell() {
                 عرض الكل
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </>

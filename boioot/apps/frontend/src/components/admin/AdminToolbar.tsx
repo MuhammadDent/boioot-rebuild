@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { messagingApi } from "@/features/dashboard/messages/api";
@@ -11,8 +12,15 @@ export default function AdminToolbar() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  type MenuPos = { top: number; left: number; minWidth: number };
+  const [menuPos, setMenuPos] = useState<MenuPos | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -25,13 +33,25 @@ export default function AdminToolbar() {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
+      const insideButton   = menuRef.current?.contains(e.target as Node);
+      const insideDropdown = menuDropdownRef.current?.contains(e.target as Node);
+      if (!insideButton && !insideDropdown) setMenuOpen(false);
     }
     if (menuOpen) document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [menuOpen]);
+
+  const computeMenuPos = useCallback((): MenuPos | null => {
+    if (!menuBtnRef.current) return null;
+    const rect = menuBtnRef.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const MIN_W = 180;
+    // In RTL the button is at the left side of the screen; anchor dropdown to button's left edge
+    let left = rect.left;
+    left = Math.min(left, vw - MIN_W - 12);
+    left = Math.max(12, left);
+    return { top: rect.bottom + 6, left, minWidth: MIN_W };
+  }, []);
 
   function handleLogout() {
     logout();
@@ -73,7 +93,6 @@ export default function AdminToolbar() {
         paddingInlineEnd: "1rem",
         gap: "0.75rem",
         flexShrink: 0,
-        overflow: "hidden",
       }}
     >
       {/* Logo */}
@@ -230,7 +249,12 @@ export default function AdminToolbar() {
       {/* User menu */}
       <div ref={menuRef} style={{ position: "relative" }}>
         <button
-          onClick={() => setMenuOpen(o => !o)}
+          ref={menuBtnRef}
+          onClick={() => {
+            const next = !menuOpen;
+            if (next) setMenuPos(computeMenuPos());
+            setMenuOpen(next);
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -290,20 +314,22 @@ export default function AdminToolbar() {
           </svg>
         </button>
 
-        {/* Dropdown */}
-        {menuOpen && (
+        {/* Dropdown — rendered via portal so no ancestor overflow can clip it */}
+        {mounted && menuOpen && menuPos && createPortal(
           <div
+            ref={menuDropdownRef}
             style={{
-              position: "absolute",
-              top: "calc(100% + 6px)",
-              insetInlineEnd: 0,
-              minWidth: 180,
+              position: "fixed",
+              top: menuPos.top,
+              left: menuPos.left,
+              minWidth: menuPos.minWidth,
               backgroundColor: "#1e293b",
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: 10,
               boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
               overflow: "hidden",
-              zIndex: 400,
+              zIndex: 9999,
+              direction: "rtl",
             }}
           >
             {/* User info header */}
@@ -451,7 +477,8 @@ export default function AdminToolbar() {
               </svg>
               تسجيل الخروج
             </button>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </header>

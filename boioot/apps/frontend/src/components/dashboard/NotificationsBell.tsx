@@ -42,7 +42,7 @@ export default function NotificationsBell() {
   const buttonRef   = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  type DropdownPos = { top: number; right: number };
+  type DropdownPos = { top: number; left: number; width: number };
   const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
@@ -91,10 +91,14 @@ export default function NotificationsBell() {
   const computePos = useCallback((): DropdownPos | null => {
     if (!buttonRef.current) return null;
     const rect = buttonRef.current.getBoundingClientRect();
-    return {
-      top:   rect.bottom + 8,
-      right: window.innerWidth - rect.right,
-    };
+    const vw = window.innerWidth;
+    const MARGIN = 12;
+    const dropW = Math.min(340, vw - MARGIN * 2);
+    // Anchor right edge of dropdown to right edge of button, then clamp within viewport
+    let left = rect.right - dropW;
+    left = Math.max(MARGIN, left);
+    left = Math.min(vw - dropW - MARGIN, left);
+    return { top: rect.bottom + 8, left, width: dropW };
   }, []);
 
   const handleToggle = () => {
@@ -156,8 +160,8 @@ export default function NotificationsBell() {
       style={{
         position: "fixed",
         top:   dropdownPos.top,
-        right: dropdownPos.right,
-        width: "340px",
+        left:  dropdownPos.left,
+        width: dropdownPos.width,
         maxHeight: "480px",
         overflowY: "auto",
         background: "#fff",
