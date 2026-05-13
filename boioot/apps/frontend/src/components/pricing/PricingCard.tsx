@@ -254,7 +254,7 @@ export default function PricingCard({
           <>
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.35rem" }}>
               <span style={{ fontSize: "2.2rem", fontWeight: 900, color: "var(--color-text-primary)", lineHeight: 1 }}>
-                {entry?.priceAmount.toLocaleString("ar-SY")}
+                {(entry?.priceAmount ?? 0).toLocaleString("ar-SY")}
               </span>
               <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "var(--color-text-secondary)" }}>
                 {entry?.currencyCode}

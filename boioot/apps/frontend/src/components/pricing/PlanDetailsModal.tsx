@@ -255,7 +255,7 @@ export default function PlanDetailsModal({
                         )}
                       </p>
                       <p style={{ margin: "0.15rem 0 0", fontSize: "0.88rem", fontWeight: 800, color: isActive ? "#059669" : "#64748b" }}>
-                        {entry.priceAmount === 0 ? "مجاني" : `${entry.priceAmount.toLocaleString("ar-SY")} ${entry.currencyCode}`}
+                        {(entry.priceAmount ?? 0) === 0 ? "مجاني" : `${(entry.priceAmount ?? 0).toLocaleString("ar-SY")} ${entry.currencyCode}`}
                       </p>
                     </button>
                   );
@@ -276,7 +276,7 @@ export default function PlanDetailsModal({
               }}>
                 <div>
                   <p style={{ margin: 0, fontSize: "1.9rem", fontWeight: 900, color: isFree ? "#059669" : "#1a2e1a", lineHeight: 1 }}>
-                    {isFree ? "مجاني" : `${activePricing.priceAmount.toLocaleString("ar-SY")}`}
+                    {isFree ? "مجاني" : `${(activePricing.priceAmount ?? 0).toLocaleString("ar-SY")}`}
                   </p>
                   {!isFree && (
                     <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#64748b" }}>
@@ -288,9 +288,9 @@ export default function PlanDetailsModal({
                   <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b", fontWeight: 600 }}>
                     {isOneTime ? "دفعة واحدة" : `/ ${CYCLE_LABEL[activePricing.billingCycle] ?? activePricing.billingCycle}`}
                   </p>
-                  {!isOneTime && cycle === "Yearly" && activePricing.priceAmount > 0 && (
+                  {!isOneTime && cycle === "Yearly" && (activePricing.priceAmount ?? 0) > 0 && (
                     <p style={{ margin: "0.2rem 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
-                      ≈ {Math.round(activePricing.priceAmount / 12).toLocaleString("ar-SY")} {activePricing.currencyCode} / شهر
+                      ≈ {Math.round((activePricing.priceAmount ?? 0) / 12).toLocaleString("ar-SY")} {activePricing.currencyCode} / شهر
                     </p>
                   )}
                 </div>

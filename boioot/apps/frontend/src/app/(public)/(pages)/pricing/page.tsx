@@ -331,16 +331,20 @@ export default function PricingPage() {
     ? Math.round(
         visiblePlans
           .map((p) => {
-            const m = p.pricing.find((x) => x.billingCycle === "Monthly");
-            const y = p.pricing.find((x) => x.billingCycle === "Yearly");
-            if (!m || !y || m.priceAmount === 0) return 0;
-            return Math.round((1 - y.priceAmount / 12 / m.priceAmount) * 100);
+            const pricing = p.pricing ?? [];
+            const m = pricing.find((x) => x.billingCycle === "Monthly");
+            const y = pricing.find((x) => x.billingCycle === "Yearly");
+            const mAmt = m?.priceAmount ?? 0;
+            const yAmt = y?.priceAmount ?? 0;
+            if (!m || !y || mAmt === 0) return 0;
+            return Math.round((1 - yAmt / 12 / mAmt) * 100);
           })
           .filter(Boolean)
           .reduce((a, b) => a + b, 0) /
           (visiblePlans.filter((p) => {
-            const m = p.pricing.find((x) => x.billingCycle === "Monthly");
-            return m && m.priceAmount > 0;
+            const pricing = p.pricing ?? [];
+            const m = pricing.find((x) => x.billingCycle === "Monthly");
+            return m && (m.priceAmount ?? 0) > 0;
           }).length || 1)
       )
     : 17;

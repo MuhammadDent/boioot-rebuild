@@ -6,6 +6,36 @@ import type { PublicPricingItem } from "./types";
  * never null — production may return null instead of [] for plans with
  * no limits/features/pricing entries.
  */
+function normalizePricingEntry(raw: unknown) {
+  const e = (raw ?? {}) as Record<string, unknown>;
+  return {
+    pricingId:    String(e.pricingId ?? ""),
+    billingCycle: (e.billingCycle as string) || "Monthly",
+    priceAmount:  Number(e.priceAmount ?? 0),
+    currencyCode: String(e.currencyCode ?? "SYP"),
+  };
+}
+
+function normalizeLimitItem(raw: unknown) {
+  const l = (raw ?? {}) as Record<string, unknown>;
+  return {
+    key:   String(l.key ?? ""),
+    name:  String(l.name ?? ""),
+    value: Number(l.value ?? 0),
+    unit:  (l.unit as string | null) ?? null,
+  };
+}
+
+function normalizeFeatureItem(raw: unknown) {
+  const f = (raw ?? {}) as Record<string, unknown>;
+  return {
+    key:          String(f.key ?? ""),
+    name:         String(f.name ?? ""),
+    isEnabled:    Boolean(f.isEnabled ?? false),
+    featureGroup: (f.featureGroup as string | null) ?? null,
+  };
+}
+
 function normalizePlan(raw: unknown): PublicPricingItem {
   const p = (raw ?? {}) as Record<string, unknown>;
   return {
@@ -21,9 +51,9 @@ function normalizePlan(raw: unknown): PublicPricingItem {
     isRecommended:         Boolean(p.isRecommended ?? false),
     planCategory:          (p.planCategory as string | null) ?? null,
     planBillingType:       String(p.planBillingType ?? "recurring"),
-    pricing:               Array.isArray(p.pricing)  ? p.pricing  : [],
-    limits:                Array.isArray(p.limits)   ? p.limits   : [],
-    features:              Array.isArray(p.features) ? p.features : [],
+    pricing:  Array.isArray(p.pricing)  ? p.pricing.filter(Boolean).map(normalizePricingEntry)  : [],
+    limits:   Array.isArray(p.limits)   ? p.limits.filter(Boolean).map(normalizeLimitItem)      : [],
+    features: Array.isArray(p.features) ? p.features.filter(Boolean).map(normalizeFeatureItem)  : [],
   } as PublicPricingItem;
 }
 
