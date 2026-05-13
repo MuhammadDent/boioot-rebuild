@@ -1,3 +1,4 @@
+import { api } from "@/lib/api";
 import { apiConfig } from "@/lib/api-config";
 import type {
   StaticPagePublic,
@@ -17,53 +18,28 @@ export const staticPagesApi = {
   },
 
   async getFooterLinks(): Promise<FooterLink[]> {
-    const res = await fetch(`${base}/public/pages/footer-links`, { cache: "no-store" });
-    if (!res.ok) return [];
-    return res.json();
-  },
-
-  async adminGetAll(): Promise<StaticPageAdmin[]> {
-    const res = await fetch(`${base}/admin/pages`, { credentials: "include" });
-    if (!res.ok) throw new Error("فشل في تحميل الصفحات");
-    return res.json();
-  },
-
-  async adminCreate(payload: UpsertStaticPagePayload): Promise<StaticPageAdmin> {
-    const res = await fetch(`${base}/admin/pages`, {
-      method:      "POST",
-      credentials: "include",
-      headers:     { "Content-Type": "application/json" },
-      body:        JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error((err as { message?: string }).message ?? "فشل الإنشاء");
+    try {
+      const res = await fetch(`${base}/public/pages/footer-links`, { cache: "no-store" });
+      if (!res.ok) return [];
+      return res.json();
+    } catch {
+      return [];
     }
-    return res.json();
   },
 
-  async adminUpdate(id: string, payload: UpsertStaticPagePayload): Promise<StaticPageAdmin> {
-    const res = await fetch(`${base}/admin/pages/${id}`, {
-      method:      "PUT",
-      credentials: "include",
-      headers:     { "Content-Type": "application/json" },
-      body:        JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error((err as { message?: string }).message ?? "فشل التحديث");
-    }
-    return res.json();
+  adminGetAll(): Promise<StaticPageAdmin[]> {
+    return api.get<StaticPageAdmin[]>("/admin/pages");
   },
 
-  async adminDelete(id: string): Promise<void> {
-    const res = await fetch(`${base}/admin/pages/${id}`, {
-      method:      "DELETE",
-      credentials: "include",
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error((err as { message?: string }).message ?? "فشل الحذف");
-    }
+  adminCreate(payload: UpsertStaticPagePayload): Promise<StaticPageAdmin> {
+    return api.post<StaticPageAdmin>("/admin/pages", payload);
+  },
+
+  adminUpdate(id: string, payload: UpsertStaticPagePayload): Promise<StaticPageAdmin> {
+    return api.put<StaticPageAdmin>(`/admin/pages/${id}`, payload);
+  },
+
+  adminDelete(id: string): Promise<void> {
+    return api.delete<void>(`/admin/pages/${id}`);
   },
 };
