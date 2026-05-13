@@ -487,9 +487,10 @@ const SIDEBAR_CONFIG: Record<string, SidebarGroup[]> = {
       icon: I.blog,
       permission: "blog.view",
       items: [
-        { href: "/dashboard/admin/blog",              label: "المقالات",    icon: I.blog,   permission: "blog.view"           },
-        { href: "/dashboard/admin/blog/categories",   label: "التصنيفات",   icon: I.folder, permission: "blog.view"           },
-        { href: "/dashboard/admin/blog/seo-settings", label: "إعدادات SEO", icon: I.search, permission: "seo.settings.manage" },
+        { href: "/dashboard/admin/blog",              label: "المقالات",       icon: I.blog,     permission: "blog.view"           },
+        { href: "/dashboard/admin/blog/categories",   label: "التصنيفات",      icon: I.folder,   permission: "blog.view"           },
+        { href: "/dashboard/admin/blog/seo-settings", label: "إعدادات SEO",    icon: I.search,   permission: "seo.settings.manage" },
+        { href: "/dashboard/admin/pages",             label: "إدارة الصفحات",  icon: I.list,     permission: "settings.manage"     },
       ],
     },
     {

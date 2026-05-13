@@ -106,14 +106,26 @@ const SECTIONS = [
     label:       "قسم المكاتب والوسطاء",
     description: "عرض صفحة المكاتب والوسطاء العقاريين وروابطها في القائمة الرئيسية",
   },
+  {
+    key:         "pricingPageVisible" as keyof SiteSettingsPayload,
+    label:       "صفحة الأسعار والباقات",
+    description: "السماح للزوار بالوصول إلى صفحة عرض الأسعار والباقات",
+  },
+  {
+    key:         "subscriptionsPageVisible" as keyof SiteSettingsPayload,
+    label:       "صفحة اشتراكاتي",
+    description: "السماح للمستخدمين بالوصول إلى صفحة إدارة اشتراكاتهم",
+  },
 ] as const;
 
 const DEFAULT_FORM: SiteSettingsPayload = {
-  sectionProjectsEnabled:  true,
-  sectionRequestsEnabled:  true,
-  sectionDailyRentEnabled: true,
-  sectionBlogEnabled:      true,
-  sectionAgenciesEnabled:  true,
+  sectionProjectsEnabled:   true,
+  sectionRequestsEnabled:   true,
+  sectionDailyRentEnabled:  true,
+  sectionBlogEnabled:       true,
+  sectionAgenciesEnabled:   true,
+  pricingPageVisible:       true,
+  subscriptionsPageVisible: true,
 };
 
 export default function AdminSiteSettingsPage() {

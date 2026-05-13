@@ -8,6 +8,7 @@ import type { UpgradeIntentResponse } from "@/features/subscription/types";
 import { pricingApi } from "@/features/pricing/api";
 import { subscriptionApi } from "@/features/subscription/api";
 import { useAuth } from "@/context/AuthContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { normalizeError } from "@/lib/api";
 import {
   getAudienceTypeForUser,
@@ -224,8 +225,35 @@ function PlansGrid({ plans, cycle, currentSubscription, onUpgradeIntent, isLoadi
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+function PricingLockedPage() {
+  return (
+    <div style={{ maxWidth: 560, margin: "5rem auto", padding: "2rem 1.5rem", textAlign: "center" }}>
+      <div style={{ fontSize: "3.5rem", marginBottom: "1.25rem" }}>🔒</div>
+      <h1 style={{ fontSize: "1.6rem", fontWeight: 900, color: "var(--color-text-primary)", margin: "0 0 0.75rem" }}>
+        صفحة الأسعار غير متاحة حالياً
+      </h1>
+      <p style={{ color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: "2rem" }}>
+        تم إيقاف صفحة الأسعار والباقات مؤقتاً من قبل الإدارة.
+        يرجى التواصل معنا للاستفسار عن الباقات المتاحة.
+      </p>
+      <Link
+        href="/contact"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: "0.5rem",
+          padding: "0.7rem 1.8rem", borderRadius: "var(--radius-md)",
+          background: "var(--color-primary)", color: "#fff",
+          fontWeight: 700, textDecoration: "none", fontSize: "0.97rem",
+        }}
+      >
+        تواصل معنا
+      </Link>
+    </div>
+  );
+}
+
 export default function PricingPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { settings, isLoading: settingsLoading }    = useSiteSettings();
 
   const [plans,         setPlans]         = useState<PublicPricingItem[]>([]);
   const [plansLoading,  setPlansLoading]  = useState(true);
@@ -325,6 +353,8 @@ export default function PricingPage() {
   };
 
   const showBanner = !bannerDismissed && currentSub !== null && currentSub.priceAmount === 0;
+
+  if (!settingsLoading && !settings.pricingPageVisible) return <PricingLockedPage />;
 
   return (
     <main style={{ background: "var(--color-background)" }}>

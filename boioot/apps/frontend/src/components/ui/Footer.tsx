@@ -5,6 +5,8 @@ import Link from "next/link";
 import FooterCTASection from "@/components/sections/FooterCTASection";
 import { useContent } from "@/context/ContentContext";
 import { loadPageSections, PAGE_SECTIONS_DEFAULTS } from "@/lib/page-sections";
+import { staticPagesApi } from "@/features/pages/api";
+import type { FooterLink } from "@/features/pages/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ICONS (inline SVG — no external dependency)
@@ -106,7 +108,7 @@ function IconLinkedIn() {
 interface NavLink { href: string; label: string; disabled?: boolean; }
 interface NavColumn { heading: string; links: NavLink[]; }
 
-const NAV_COLUMNS: NavColumn[] = [
+const STATIC_NAV_COLUMNS: NavColumn[] = [
   {
     heading: "العقارات",
     links: [
@@ -125,23 +127,44 @@ const NAV_COLUMNS: NavColumn[] = [
       { href: "/pricing",  label: "الأسعار والباقات" },
     ],
   },
+];
+
+const FALLBACK_DYNAMIC_COLUMNS: NavColumn[] = [
   {
     heading: "الدعم",
     links: [
-      { href: "#", label: "من نحن",            disabled: true },
-      { href: "#", label: "تواصل معنا",         disabled: true },
-      { href: "#", label: "الأسئلة الشائعة",   disabled: true },
+      { href: "/about",   label: "من نحن" },
+      { href: "/contact", label: "تواصل معنا" },
+      { href: "/faq",     label: "الأسئلة الشائعة" },
     ],
   },
   {
     heading: "السياسات",
     links: [
-      { href: "#", label: "سياسة الخصوصية",    disabled: true },
-      { href: "#", label: "الشروط والأحكام",   disabled: true },
-      { href: "#", label: "سياسة الاستخدام",   disabled: true },
+      { href: "/privacy-policy", label: "سياسة الخصوصية" },
+      { href: "/terms",          label: "الشروط والأحكام" },
+      { href: "/usage-policy",   label: "سياسة الاستخدام" },
     ],
   },
 ];
+
+const SECTION_HEADINGS: Record<string, string> = {
+  support: "الدعم",
+  policy:  "السياسات",
+};
+
+function buildDynamicColumns(links: FooterLink[]): NavColumn[] {
+  const grouped: Record<string, FooterLink[]> = {};
+  for (const link of links) {
+    const section = link.footerSection ?? "other";
+    if (!grouped[section]) grouped[section] = [];
+    grouped[section].push(link);
+  }
+  return Object.entries(grouped).map(([section, items]) => ({
+    heading: SECTION_HEADINGS[section] ?? section,
+    links:   items.map(item => ({ href: `/${item.slug}`, label: item.titleAr })),
+  }));
+}
 
 const ABOUT_CHECKS = [
   "تحقق من صحة الإعلانات قبل النشر",
@@ -172,11 +195,24 @@ export default function Footer() {
   // showFooter flag — initialize true (matches SSR default) then sync from store.
   // Using true as initial state avoids hydration mismatch (SSR always sees defaults).
   const [showFooter, setShowFooter] = useState(PAGE_SECTIONS_DEFAULTS.showFooter);
+  const [dynamicColumns, setDynamicColumns] = useState<NavColumn[]>(FALLBACK_DYNAMIC_COLUMNS);
 
   useEffect(() => {
     const cfg = loadPageSections();
     setShowFooter(cfg.showFooter);
   }, []);
+
+  useEffect(() => {
+    staticPagesApi.getFooterLinks()
+      .then(links => {
+        if (links.length > 0) {
+          setDynamicColumns(buildDynamicColumns(links));
+        }
+      })
+      .catch(() => { /* keep fallback */ });
+  }, []);
+
+  const navColumns = [...STATIC_NAV_COLUMNS, ...dynamicColumns];
 
   const footerAboutText = useContent(
     "footer.aboutText",
@@ -221,7 +257,7 @@ export default function Footer() {
 
           {/* Nav columns */}
           <nav className="footer2__nav-grid" aria-label="روابط الموقع">
-            {NAV_COLUMNS.map(col => (
+            {navColumns.map(col => (
               <div key={col.heading} className="footer2__col">
                 <p className="footer2__col-heading">{col.heading}</p>
                 <ul className="footer2__col-list" role="list">

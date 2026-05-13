@@ -34,11 +34,13 @@ export async function GET() {
   } catch (err) {
     console.error("[settings/public] proxy error:", err);
     return NextResponse.json({
-      sectionProjectsEnabled:  true,
-      sectionRequestsEnabled:  true,
-      sectionDailyRentEnabled: true,
-      sectionBlogEnabled:      true,
-      sectionAgenciesEnabled:  true,
+      sectionProjectsEnabled:   true,
+      sectionRequestsEnabled:   true,
+      sectionDailyRentEnabled:  true,
+      sectionBlogEnabled:       true,
+      sectionAgenciesEnabled:   true,
+      pricingPageVisible:       true,
+      subscriptionsPageVisible: true,
     });
   }
 }

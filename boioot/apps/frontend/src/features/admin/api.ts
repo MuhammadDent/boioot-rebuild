@@ -1,11 +1,13 @@
 import { api } from "@/lib/api";
 
 export interface SiteSettingsPayload {
-  sectionProjectsEnabled:  boolean;
-  sectionRequestsEnabled:  boolean;
-  sectionDailyRentEnabled: boolean;
-  sectionBlogEnabled:      boolean;
-  sectionAgenciesEnabled:  boolean;
+  sectionProjectsEnabled:   boolean;
+  sectionRequestsEnabled:   boolean;
+  sectionDailyRentEnabled:  boolean;
+  sectionBlogEnabled:       boolean;
+  sectionAgenciesEnabled:   boolean;
+  pricingPageVisible:       boolean;
+  subscriptionsPageVisible: boolean;
 }
 
 import type {

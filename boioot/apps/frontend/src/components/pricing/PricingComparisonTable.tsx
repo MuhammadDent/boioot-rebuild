@@ -84,7 +84,7 @@ export default function PricingComparisonTable({ plans, currentSubscription }: P
     for (const feat of plan.features ?? []) {
       if (!seenFeatureKeys.has(feat.key)) {
         seenFeatureKeys.add(feat.key);
-        featureRows.push({ key: feat.key, label: feat.name, icon: FEATURE_ICONS[feat.key] ?? feat.icon ?? "✦" });
+        featureRows.push({ key: feat.key, label: feat.name, icon: FEATURE_ICONS[feat.key] ?? "✦" });
       }
     }
   }
@@ -232,7 +232,7 @@ export default function PricingComparisonTable({ plans, currentSubscription }: P
                 </td>
 
                 {plans.map(plan => {
-                  const limitItem = plan.limits.find(l => l.key === row.key);
+                  const limitItem = (plan.limits ?? []).find(l => l.key === row.key);
                   const { text, color, weight } = formatLimit(
                     limitItem ? Number(limitItem.value) : undefined
                   );
@@ -306,7 +306,7 @@ export default function PricingComparisonTable({ plans, currentSubscription }: P
                 </td>
 
                 {plans.map(plan => {
-                  const feat = plan.features.find(f => f.key === row.key);
+                  const feat = (plan.features ?? []).find(f => f.key === row.key);
                   return (
                     <td
                       key={plan.planId}

@@ -12,11 +12,13 @@ import { apiConfig } from "@/lib/api-config";
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface SiteSettings {
-  sectionProjectsEnabled:  boolean;
-  sectionRequestsEnabled:  boolean;
-  sectionDailyRentEnabled: boolean;
-  sectionBlogEnabled:      boolean;
-  sectionAgenciesEnabled:  boolean;
+  sectionProjectsEnabled:   boolean;
+  sectionRequestsEnabled:   boolean;
+  sectionDailyRentEnabled:  boolean;
+  sectionBlogEnabled:       boolean;
+  sectionAgenciesEnabled:   boolean;
+  pricingPageVisible:       boolean;
+  subscriptionsPageVisible: boolean;
 }
 
 interface SiteSettingsContextValue {
@@ -29,11 +31,13 @@ interface SiteSettingsContextValue {
 // ── Defaults — all sections enabled so nothing disappears on error ─────────────
 
 export const DEFAULT_SETTINGS: SiteSettings = {
-  sectionProjectsEnabled:  true,
-  sectionRequestsEnabled:  true,
-  sectionDailyRentEnabled: true,
-  sectionBlogEnabled:      true,
-  sectionAgenciesEnabled:  true,
+  sectionProjectsEnabled:   true,
+  sectionRequestsEnabled:   true,
+  sectionDailyRentEnabled:  true,
+  sectionBlogEnabled:       true,
+  sectionAgenciesEnabled:   true,
+  pricingPageVisible:       true,
+  subscriptionsPageVisible: true,
 };
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -74,7 +78,7 @@ export function SiteSettingsProvider({
   const load = async () => {
     try {
       const data = await fetchSettings();
-      setSettings(data);
+      setSettings({ ...DEFAULT_SETTINGS, ...data });
     } catch {
       // Keep current value — sections remain visible on error
     } finally {

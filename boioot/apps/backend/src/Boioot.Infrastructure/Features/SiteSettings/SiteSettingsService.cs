@@ -14,11 +14,13 @@ public sealed class SiteSettingsService : ISiteSettingsService
 
     private static readonly Dictionary<string, string> DefaultValues = new()
     {
-        ["section_projects_enabled"]   = "true",
-        ["section_requests_enabled"]   = "true",
-        ["section_daily_rent_enabled"] = "true",
-        ["section_blog_enabled"]       = "true",
-        ["section_agencies_enabled"]   = "true",
+        ["section_projects_enabled"]    = "true",
+        ["section_requests_enabled"]    = "true",
+        ["section_daily_rent_enabled"]  = "true",
+        ["section_blog_enabled"]        = "true",
+        ["section_agencies_enabled"]    = "true",
+        ["pricing_page_visible"]        = "true",
+        ["subscriptions_page_visible"]  = "true",
     };
 
     public SiteSettingsService(BoiootDbContext ctx, ILogger<SiteSettingsService> logger)
@@ -55,6 +57,8 @@ public sealed class SiteSettingsService : ISiteSettingsService
             ["section_daily_rent_enabled"] = dto.SectionDailyRentEnabled  ? "true" : "false",
             ["section_blog_enabled"]       = dto.SectionBlogEnabled        ? "true" : "false",
             ["section_agencies_enabled"]   = dto.SectionAgenciesEnabled    ? "true" : "false",
+            ["pricing_page_visible"]       = dto.PricingPageVisible        ? "true" : "false",
+            ["subscriptions_page_visible"] = dto.SubscriptionsPageVisible  ? "true" : "false",
         };
 
         var existing = await _ctx.AppSettings
@@ -78,11 +82,6 @@ public sealed class SiteSettingsService : ISiteSettingsService
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Creates the AppSettings table if it does not yet exist (idempotent).
-    /// Handles environments where the EF migration has not been applied.
-    /// Schema: only Key + Value — no Description column.
-    /// </summary>
     private async Task EnsureTableAsync(CancellationToken ct)
     {
         await _ctx.Database.ExecuteSqlRawAsync(@"
@@ -127,10 +126,12 @@ public sealed class SiteSettingsService : ISiteSettingsService
         }
 
         return new SiteSettingsDto(
-            SectionProjectsEnabled:  Get("section_projects_enabled"),
-            SectionRequestsEnabled:  Get("section_requests_enabled"),
-            SectionDailyRentEnabled: Get("section_daily_rent_enabled"),
-            SectionBlogEnabled:      Get("section_blog_enabled"),
-            SectionAgenciesEnabled:  Get("section_agencies_enabled"));
+            SectionProjectsEnabled:   Get("section_projects_enabled"),
+            SectionRequestsEnabled:   Get("section_requests_enabled"),
+            SectionDailyRentEnabled:  Get("section_daily_rent_enabled"),
+            SectionBlogEnabled:       Get("section_blog_enabled"),
+            SectionAgenciesEnabled:   Get("section_agencies_enabled"),
+            PricingPageVisible:       Get("pricing_page_visible"),
+            SubscriptionsPageVisible: Get("subscriptions_page_visible"));
     }
 }

@@ -12,7 +12,9 @@ using Boioot.Application.Features.Auth.Interfaces;
 using Boioot.Application.Features.Bookings.Interfaces;
 using Boioot.Application.Features.Blog.Interfaces;
 using Boioot.Application.Features.Content.Interfaces;
+using Boioot.Application.Features.Pages.Interfaces;
 using Boioot.Application.Features.SiteSettings.Interfaces;
+using Boioot.Infrastructure.Features.Pages;
 using Boioot.Infrastructure.Features.SiteSettings;
 using Boioot.Application.Features.Locations.Interfaces;
 using Boioot.Application.Features.Onboarding.Interfaces;
@@ -149,6 +151,7 @@ public static class ServiceCollectionExtensions
                            Boioot.Infrastructure.Features.Email.LoggingEmailService>();
         services.AddScoped<ISiteContentService, SiteContentService>();
         services.AddScoped<ISiteSettingsService, SiteSettingsService>();
+        services.AddScoped<IStaticPageService, StaticPageService>();
         services.AddScoped<IVerificationRequestService, VerificationRequestService>();
 
         // ── Ratings & Reviews ────────────────────────────────────────────────

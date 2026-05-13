@@ -9,4 +9,6 @@ public record SiteSettingsDto(
     bool SectionRequestsEnabled,
     bool SectionDailyRentEnabled,
     bool SectionBlogEnabled,
-    bool SectionAgenciesEnabled);
+    bool SectionAgenciesEnabled,
+    bool PricingPageVisible,
+    bool SubscriptionsPageVisible);

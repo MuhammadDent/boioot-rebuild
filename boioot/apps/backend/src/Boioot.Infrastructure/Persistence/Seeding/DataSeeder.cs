@@ -33,6 +33,112 @@ public class DataSeeder
         await SeedPropertyAmenitiesAsync();
         await SeedOfficeTestUserAsync();
         await SeedMasterDataAsync();
+        await SeedStaticPagesAsync();
+        await SeedAppSettingsAsync();
+    }
+
+    // ── Static pages ──────────────────────────────────────────────────────────
+
+    private async Task SeedStaticPagesAsync()
+    {
+        // Ensure table exists (migration may not have run yet)
+        await _context.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS ""StaticPages"" (
+                ""Id""                  character varying(36)  NOT NULL,
+                ""Slug""                VARCHAR(100)  NOT NULL,
+                ""TitleAr""             VARCHAR(200)  NOT NULL,
+                ""ContentAr""           TEXT          NULL,
+                ""MetaDescriptionAr""   VARCHAR(500)  NULL,
+                ""IsActive""            BOOLEAN       NOT NULL DEFAULT TRUE,
+                ""ShowInFooter""        BOOLEAN       NOT NULL DEFAULT FALSE,
+                ""FooterSection""       VARCHAR(50)   NULL,
+                ""SortOrder""           INTEGER       NOT NULL DEFAULT 0,
+                ""IsSystem""            BOOLEAN       NOT NULL DEFAULT FALSE,
+                ""CreatedAt""           TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+                ""UpdatedAt""           TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+                CONSTRAINT ""PK_StaticPages"" PRIMARY KEY (""Id"")
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_StaticPages_Slug"" ON ""StaticPages"" (""Slug"");
+        ");
+
+        if (await _context.StaticPages.AnyAsync()) return;
+
+        var now   = DateTime.UtcNow;
+        var pages = new List<Boioot.Domain.Entities.StaticPage>
+        {
+            new() {
+                Id = Guid.NewGuid(), Slug = "privacy-policy",
+                TitleAr = "سياسة الخصوصية",
+                ContentAr = "<p>هذه الصفحة قيد الإعداد. سيتم نشر سياسة الخصوصية قريباً.</p>",
+                MetaDescriptionAr = "سياسة الخصوصية لمنصة بيوت",
+                IsActive = true, ShowInFooter = true, FooterSection = "policy", SortOrder = 1,
+                IsSystem = true, CreatedAt = now, UpdatedAt = now,
+            },
+            new() {
+                Id = Guid.NewGuid(), Slug = "terms",
+                TitleAr = "الشروط والأحكام",
+                ContentAr = "<p>هذه الصفحة قيد الإعداد. سيتم نشر الشروط والأحكام قريباً.</p>",
+                MetaDescriptionAr = "الشروط والأحكام لمنصة بيوت",
+                IsActive = true, ShowInFooter = true, FooterSection = "policy", SortOrder = 2,
+                IsSystem = true, CreatedAt = now, UpdatedAt = now,
+            },
+            new() {
+                Id = Guid.NewGuid(), Slug = "usage-policy",
+                TitleAr = "سياسة الاستخدام",
+                ContentAr = "<p>هذه الصفحة قيد الإعداد. سيتم نشر سياسة الاستخدام قريباً.</p>",
+                MetaDescriptionAr = "سياسة الاستخدام لمنصة بيوت",
+                IsActive = true, ShowInFooter = true, FooterSection = "policy", SortOrder = 3,
+                IsSystem = true, CreatedAt = now, UpdatedAt = now,
+            },
+            new() {
+                Id = Guid.NewGuid(), Slug = "about",
+                TitleAr = "من نحن",
+                ContentAr = "<p>بيوت — منصة عقارية متكاملة لشراء وبيع وتأجير العقارات في سوريا.</p>",
+                MetaDescriptionAr = "تعرّف على منصة بيوت العقارية",
+                IsActive = true, ShowInFooter = true, FooterSection = "support", SortOrder = 1,
+                IsSystem = true, CreatedAt = now, UpdatedAt = now,
+            },
+            new() {
+                Id = Guid.NewGuid(), Slug = "contact",
+                TitleAr = "تواصل معنا",
+                ContentAr = "<p>للتواصل مع فريق دعم بيوت يرجى التواصل عبر البريد الإلكتروني.</p>",
+                MetaDescriptionAr = "تواصل مع فريق دعم بيوت",
+                IsActive = true, ShowInFooter = true, FooterSection = "support", SortOrder = 2,
+                IsSystem = true, CreatedAt = now, UpdatedAt = now,
+            },
+            new() {
+                Id = Guid.NewGuid(), Slug = "faq",
+                TitleAr = "الأسئلة الشائعة",
+                ContentAr = "<p>هذه الصفحة قيد الإعداد. ستجد هنا إجابات لأكثر الأسئلة شيوعاً.</p>",
+                MetaDescriptionAr = "الأسئلة الشائعة عن منصة بيوت",
+                IsActive = true, ShowInFooter = true, FooterSection = "support", SortOrder = 3,
+                IsSystem = true, CreatedAt = now, UpdatedAt = now,
+            },
+        };
+
+        _context.StaticPages.AddRange(pages);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("[seed] Seeded {Count} static pages", pages.Count);
+    }
+
+    // ── App settings defaults ─────────────────────────────────────────────────
+
+    private async Task SeedAppSettingsAsync()
+    {
+        var keys = new Dictionary<string, string>
+        {
+            ["pricing_page_visible"]       = "true",
+            ["subscriptions_page_visible"] = "true",
+        };
+
+        foreach (var (key, value) in keys)
+        {
+            var exists = await _context.AppSettings.AnyAsync(s => s.Key == key);
+            if (!exists)
+                _context.AppSettings.Add(new Boioot.Domain.Entities.AppSetting { Key = key, Value = value });
+        }
+
+        await _context.SaveChangesAsync();
     }
 
     private async Task SeedPropertyAmenitiesAsync()

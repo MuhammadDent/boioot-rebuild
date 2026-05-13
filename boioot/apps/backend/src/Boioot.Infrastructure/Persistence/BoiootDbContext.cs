@@ -92,6 +92,9 @@ public class BoiootDbContext : DbContext
     // ── Site feature toggles ───────────────────────────────────────────────────
     public DbSet<AppSetting>     AppSettings     => Set<AppSetting>();
 
+    // ── Static pages (CMS) ────────────────────────────────────────────────────
+    public DbSet<StaticPage>     StaticPages     => Set<StaticPage>();
+
     // ── Agency profiles (Broker / Office users) ────────────────────────────────
     public DbSet<AgencyProfile>  AgencyProfiles  => Set<AgencyProfile>();
 
