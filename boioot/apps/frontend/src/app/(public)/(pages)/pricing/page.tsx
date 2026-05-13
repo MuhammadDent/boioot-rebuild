@@ -82,7 +82,7 @@ function UpgradeBanner({
   onDismiss: () => void;
   onScrollToPlans: () => void;
 }) {
-  const isFreePlan = currentSub.priceAmount === 0;
+  const isFreePlan = (currentSub?.priceAmount ?? 0) === 0;
 
   if (!isFreePlan) return null;
 
@@ -357,7 +357,7 @@ export default function PricingPage() {
     onViewDetails:       setDetailPlan,
   };
 
-  const showBanner = !bannerDismissed && currentSub !== null && currentSub.priceAmount === 0;
+  const showBanner = !bannerDismissed && currentSub !== null && (currentSub?.priceAmount ?? 0) === 0;
 
   if (!settingsLoading && !settings.pricingPageVisible) return <PricingLockedPage />;
 

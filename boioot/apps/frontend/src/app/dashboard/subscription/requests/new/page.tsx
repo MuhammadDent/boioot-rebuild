@@ -399,7 +399,7 @@ export default function NewRequestPage() {
                       {firstPricing ? (
                         <>
                           <p style={{ margin: 0, fontWeight: 800, fontSize: "0.95rem", color: "#059669" }}>
-                            {formatAmount(firstPricing.priceAmount, firstPricing.currencyCode)}
+                            {formatAmount(firstPricing.priceAmount ?? 0, firstPricing.currencyCode)}
                           </p>
                           <p style={{ margin: 0, fontSize: "0.72rem", color: "#94a3b8" }}>
                             {BILLING_CYCLE_AR[firstPricing.billingCycle] ?? firstPricing.billingCycle}
@@ -437,7 +437,7 @@ export default function NewRequestPage() {
                   >
                     {BILLING_CYCLE_AR[pr.billingCycle] ?? pr.billingCycle}
                     {" · "}
-                    {formatAmount(pr.priceAmount, pr.currencyCode)}
+                    {formatAmount(pr.priceAmount ?? 0, pr.currencyCode)}
                   </button>
                 ))}
               </div>

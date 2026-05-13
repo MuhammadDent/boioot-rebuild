@@ -811,10 +811,10 @@ export default function SubscriptionPage() {
                 </span>
               </div>
             </div>
-            {sub.priceAmount > 0 && (
+            {(sub?.priceAmount ?? 0) > 0 && (
               <div style={{ textAlign: "left" }}>
                 <p style={{ margin: 0, fontSize: "1.5rem", fontWeight: 900, color: tierColor, lineHeight: 1 }}>
-                  {sub.priceAmount.toLocaleString("ar-SY")}
+                  {(sub?.priceAmount ?? 0).toLocaleString("ar-SY")}
                 </p>
                 <p style={{ margin: "0.15rem 0 0", fontSize: "0.72rem", color: "#94a3b8" }}>
                   {sub.currencyCode} / {sub.billingCycle === "Monthly" ? "شهرياً" : "سنوياً"}

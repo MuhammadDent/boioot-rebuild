@@ -61,10 +61,10 @@ export default function PlanDetailsModal({
   const monthlyEntry = safePricing.find(p => p.billingCycle === "Monthly");
   const yearlyEntry  = safePricing.find(p => p.billingCycle === "Yearly");
   const saving       = monthlyEntry && yearlyEntry
-    ? yearlySaving(monthlyEntry.priceAmount, yearlyEntry.priceAmount)
+    ? yearlySaving(monthlyEntry.priceAmount ?? 0, yearlyEntry.priceAmount ?? 0)
     : 0;
 
-  const isFree     = activePricing ? activePricing.priceAmount === 0 : true;
+  const isFree     = activePricing ? (activePricing.priceAmount ?? 0) === 0 : true;
   const audienceAr = plan.audienceType
     ? (AUDIENCE_TYPE_LABEL[plan.audienceType.toLowerCase()] ?? plan.audienceType)
     : null;

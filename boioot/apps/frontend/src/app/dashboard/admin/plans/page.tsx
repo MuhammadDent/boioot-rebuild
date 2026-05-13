@@ -537,7 +537,7 @@ interface PricingRowProps {
 
 function PricingRow({ entry, planId, planBillingType, onUpdated, onDeleted }: PricingRowProps) {
   const [editing, setEditing]     = useState(false);
-  const [price, setPrice]         = useState(String(entry.priceAmount));
+  const [price, setPrice]         = useState(String(entry.priceAmount ?? 0));
   const [currency, setCurrency]   = useState(entry.currencyCode);
   const [cycle, setCycle]         = useState(entry.billingCycle);
   const [isActive, setIsActive]   = useState(entry.isActive);
@@ -579,7 +579,7 @@ function PricingRow({ entry, planId, planBillingType, onUpdated, onDeleted }: Pr
     return (
       <div style={{ padding: "0.75rem 1rem", borderRadius: 8, background: "var(--color-bg-secondary, #f9fafb)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{formatPrice(entry.priceAmount, entry.currencyCode)}</span>
+          <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{formatPrice(entry.priceAmount ?? 0, entry.currencyCode)}</span>
           <span className="badge badge-gray">{cycleLabel}</span>
           {entry.isActive ? <span className="badge badge-green">نشط</span> : <span className="badge badge-red">معطل</span>}
           {entry.isPublic ? <span className="badge badge-blue">عام</span> : <span className="badge badge-gray">خاص</span>}

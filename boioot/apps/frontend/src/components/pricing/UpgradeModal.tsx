@@ -181,7 +181,7 @@ export default function UpgradeModal({ intent, pricingId, onClose }: UpgradeModa
 
   const icon  = REASON_ICONS[intent.reason]  ?? "📋";
   const color = REASON_COLORS[intent.reason] ?? "var(--color-primary)";
-  const isFree = intent.priceAmount === 0;
+  const isFree = (intent?.priceAmount ?? 0) === 0;
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -279,7 +279,7 @@ export default function UpgradeModal({ intent, pricingId, onClose }: UpgradeModa
                 }}>
                   <span style={{ color: "var(--color-text-secondary)" }}>السعر المستحق</span>
                   <span style={{ fontWeight: 800, color, fontSize: "1.05rem" }}>
-                    {intent.priceAmount.toLocaleString("ar-SY")} {intent.currencyCode}
+                    {(intent?.priceAmount ?? 0).toLocaleString("ar-SY")} {intent.currencyCode}
                     <span style={{
                       fontWeight: 400, fontSize: "0.8rem",
                       color: "var(--color-text-muted)", marginRight: "0.3rem",

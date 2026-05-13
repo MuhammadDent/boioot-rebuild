@@ -253,7 +253,7 @@ function PlanCard({
           {pricing ? (
             <>
               <p style={{ margin: 0, fontSize: "2rem", fontWeight: 900, color: tierColor, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                {formatAmount(pricing.priceAmount, pricing.currencyCode)}
+                {formatAmount(pricing.priceAmount ?? 0, pricing.currencyCode)}
               </p>
               <p style={{ margin: "0.3rem 0 0", fontSize: "0.75rem", color: "#94a3b8", fontWeight: 500 }}>
                 {isOneTimePlan ? "دفعة واحدة — بدون تجديد تلقائي" : `/ ${BILLING_CYCLE_LABELS[cycle] ?? cycle}`}
@@ -522,7 +522,7 @@ function CheckoutModal({
             {plan.displayNameAr}
           </p>
           <p style={{ margin: "0.4rem 0 0", fontSize: "1.2rem", fontWeight: 900, color: "#059669" }}>
-            {formatAmount(selectedPricing.priceAmount, selectedPricing.currencyCode)}
+            {formatAmount(selectedPricing.priceAmount ?? 0, selectedPricing.currencyCode)}
             <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "#64748b", marginRight: "0.35rem" }}>
               {plan.planBillingType === "one_time_fixed_term"
                 ? "دفعة واحدة"
@@ -561,7 +561,7 @@ function CheckoutModal({
                     {BILLING_CYCLE_LABELS[p.billingCycle] ?? p.billingCycle}
                   </p>
                   <p style={{ margin: "0.2rem 0 0", fontSize: "0.82rem", fontWeight: 800, color: "#059669" }}>
-                    {formatAmount(p.priceAmount, p.currencyCode)}
+                    {formatAmount(p.priceAmount ?? 0, p.currencyCode)}
                   </p>
                 </button>
               ))}

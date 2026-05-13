@@ -669,9 +669,9 @@ export default function AdminSubscriptionsPage() {
                       {/* Plan */}
                       <td style={{ padding: "0.85rem 1rem" }}>
                         <div style={{ fontWeight: 600, color: "#1e293b" }}>{sub.planName}</div>
-                        {sub.billingCycle && sub.priceAmount > 0 && (
+                        {sub.billingCycle && (sub?.priceAmount ?? 0) > 0 && (
                           <div style={{ fontSize: "0.75rem", color: "#059669", marginTop: 2 }}>
-                            {sub.priceAmount.toLocaleString("ar-SY")} {sub.currencyCode}
+                            {(sub?.priceAmount ?? 0).toLocaleString("ar-SY")} {sub.currencyCode}
                             {" / "}{sub.billingCycle === "Monthly" ? "شهري" : sub.billingCycle === "Yearly" ? "سنوي" : sub.billingCycle}
                           </div>
                         )}

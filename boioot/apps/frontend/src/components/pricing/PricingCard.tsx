@@ -30,7 +30,7 @@ function resolveCta(
     : pricing.find((p) => p.billingCycle === cycle);
   if (!entry) return { kind: "start", pricingId: null };
 
-  const isFree = entry.priceAmount === 0;
+  const isFree = (entry.priceAmount ?? 0) === 0;
 
   if (!sub) {
     return { kind: isFree ? "free_start" : "no_auth", pricingId: entry.pricingId };
@@ -106,7 +106,7 @@ export default function PricingCard({
   const yearlyEntry  = safePricing.find((p) => p.billingCycle === "Yearly");
 
   const saving = monthlyEntry && yearlyEntry
-    ? yearlySaving(monthlyEntry.priceAmount, yearlyEntry.priceAmount)
+    ? yearlySaving(monthlyEntry.priceAmount ?? 0, yearlyEntry.priceAmount ?? 0)
     : 0;
 
   const isFree     = entry?.priceAmount === 0;
@@ -287,7 +287,7 @@ export default function PricingCard({
 
                   {cycle === "Yearly" && yearlyEntry && (
                     <span style={{ fontSize: "0.76rem", color: "var(--color-text-muted)" }}>
-                      ({Math.round(yearlyEntry.priceAmount / 12).toLocaleString("ar-SY")} {yearlyEntry.currencyCode} / شهر)
+                      ({Math.round((yearlyEntry.priceAmount ?? 0) / 12).toLocaleString("ar-SY")} {yearlyEntry.currencyCode} / شهر)
                     </span>
                   )}
 
