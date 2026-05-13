@@ -20,6 +20,7 @@ import PricingCard from "@/components/pricing/PricingCard";
 import PricingComparisonTable from "@/components/pricing/PricingComparisonTable";
 import UpgradeModal from "@/components/pricing/UpgradeModal";
 import PlanDetailsModal from "@/components/pricing/PlanDetailsModal";
+import { PricingErrorBoundary } from "@/components/pricing/PricingErrorBoundary";
 
 // ── Plans skeleton (shown while public plans API loads) ───────────────────────
 
@@ -357,6 +358,7 @@ export default function PricingPage() {
   if (!settingsLoading && !settings.pricingPageVisible) return <PricingLockedPage />;
 
   return (
+    <PricingErrorBoundary>
     <main style={{ background: "var(--color-background)" }}>
 
       {/* ── Hero ── */}
@@ -527,5 +529,6 @@ export default function PricingPage() {
         />
       )}
     </main>
+    </PricingErrorBoundary>
   );
 }

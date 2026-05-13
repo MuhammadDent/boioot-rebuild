@@ -40,10 +40,14 @@ export default function PlanDetailsModal({
   onClose,
   onChoose,
 }: PlanDetailsModalProps) {
-  const hasMonthly = plan.pricing.some(p => p.billingCycle === "Monthly");
-  const hasYearly  = plan.pricing.some(p => p.billingCycle === "Yearly");
+  const safePricing  = plan.pricing  ?? [];
+  const safeLimits   = plan.limits   ?? [];
+  const safeFeatures = plan.features ?? [];
+
+  const hasMonthly = safePricing.some(p => p.billingCycle === "Monthly");
+  const hasYearly  = safePricing.some(p => p.billingCycle === "Yearly");
   const isOneTime  = plan.planBillingType === "one_time_fixed_term"
-    || plan.pricing.every(p => p.billingCycle === "OneTime");
+    || (safePricing.length > 0 && safePricing.every(p => p.billingCycle === "OneTime"));
 
   const initialCycle: "Monthly" | "Yearly" =
     defaultCycle ?? (hasMonthly ? "Monthly" : "Yearly");
@@ -51,11 +55,11 @@ export default function PlanDetailsModal({
   const [cycle, setCycle] = useState<"Monthly" | "Yearly">(initialCycle);
 
   const activePricing: PublicPricingEntry | undefined = isOneTime
-    ? plan.pricing[0]
-    : (plan.pricing.find(p => p.billingCycle === cycle) ?? plan.pricing[0]);
+    ? safePricing[0]
+    : (safePricing.find(p => p.billingCycle === cycle) ?? safePricing[0]);
 
-  const monthlyEntry = plan.pricing.find(p => p.billingCycle === "Monthly");
-  const yearlyEntry  = plan.pricing.find(p => p.billingCycle === "Yearly");
+  const monthlyEntry = safePricing.find(p => p.billingCycle === "Monthly");
+  const yearlyEntry  = safePricing.find(p => p.billingCycle === "Yearly");
   const saving       = monthlyEntry && yearlyEntry
     ? yearlySaving(monthlyEntry.priceAmount, yearlyEntry.priceAmount)
     : 0;
@@ -65,8 +69,8 @@ export default function PlanDetailsModal({
     ? (AUDIENCE_TYPE_LABEL[plan.audienceType.toLowerCase()] ?? plan.audienceType)
     : null;
 
-  const enabledFeatures  = plan.features.filter(f => f.isEnabled);
-  const disabledFeatures = plan.features.filter(f => !f.isEnabled);
+  const enabledFeatures  = safeFeatures.filter(f => f.isEnabled);
+  const disabledFeatures = safeFeatures.filter(f => !f.isEnabled);
 
   function handleChoose() {
     if (!activePricing || !onChoose) return;
@@ -215,7 +219,7 @@ export default function PlanDetailsModal({
               }}>
                 {(["Monthly", "Yearly"] as const).map(c => {
                   const isActive = cycle === c;
-                  const entry = plan.pricing.find(p => p.billingCycle === c);
+                  const entry = safePricing.find(p => p.billingCycle === c);
                   if (!entry) return null;
                   return (
                     <button
@@ -295,13 +299,13 @@ export default function PlanDetailsModal({
           </div>
 
           {/* ── Limits ── */}
-          {plan.limits.length > 0 && (
+          {safeLimits.length > 0 && (
             <div>
               <p style={{ margin: "0 0 0.65rem", fontSize: "0.78rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 الحدود والإمكانيات
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-                {plan.limits.map(l => {
+                {safeLimits.map(l => {
                   const label      = LIMIT_LABELS[l.key] ?? l.name;
                   const icon       = LIMIT_ICONS[l.key] ?? "•";
                   const formatted  = formatLimitValue(l.value, l.unit);
@@ -349,7 +353,7 @@ export default function PlanDetailsModal({
           )}
 
           {/* ── Features ── */}
-          {plan.features.length > 0 && (
+          {safeFeatures.length > 0 && (
             <div>
               <p style={{ margin: "0 0 0.65rem", fontSize: "0.78rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 الميزات

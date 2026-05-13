@@ -22,12 +22,12 @@ function resolveCta(
   cycle: BillingCycle,
   sub: CurrentSubscriptionResponse | null
 ): { kind: CtaKind; pricingId: string | null } {
-  // For one-time plans, use the first pricing entry regardless of toggle cycle
+  const pricing = plan.pricing ?? [];
   const isOneTimePlan = plan.planBillingType === "one_time_fixed_term"
-    || plan.pricing.every((p) => p.billingCycle === "OneTime");
+    || (pricing.length > 0 && pricing.every((p) => p.billingCycle === "OneTime"));
   const entry = isOneTimePlan
-    ? plan.pricing.find((p) => p.billingCycle === "OneTime") ?? plan.pricing[0]
-    : plan.pricing.find((p) => p.billingCycle === cycle);
+    ? pricing.find((p) => p.billingCycle === "OneTime") ?? pricing[0]
+    : pricing.find((p) => p.billingCycle === cycle);
   if (!entry) return { kind: "start", pricingId: null };
 
   const isFree = entry.priceAmount === 0;
@@ -87,19 +87,23 @@ export default function PricingCard({
   const isCurrent  = kind === "current";
   const isUpgrade  = kind === "upgrade";
 
-  const oneTimeEntry = plan.pricing.find((p) => p.billingCycle === "OneTime");
+  const safePricing  = plan.pricing  ?? [];
+  const safeLimits   = plan.limits   ?? [];
+  const safeFeatures = plan.features ?? [];
+
+  const oneTimeEntry = safePricing.find((p) => p.billingCycle === "OneTime");
   const isOneTimePlan = plan.planBillingType === "one_time_fixed_term"
-    || plan.pricing.every((p) => p.billingCycle === "OneTime");
+    || (safePricing.length > 0 && safePricing.every((p) => p.billingCycle === "OneTime"));
 
   // For one-time plans, always show the OneTime entry regardless of toggle cycle
   const entry = isOneTimePlan
-    ? oneTimeEntry ?? plan.pricing[0]
-    : plan.pricing.find((p) => p.billingCycle === cycle)
-        ?? plan.pricing.find((p) => p.billingCycle === "Monthly")
-        ?? plan.pricing[0];
+    ? oneTimeEntry ?? safePricing[0]
+    : safePricing.find((p) => p.billingCycle === cycle)
+        ?? safePricing.find((p) => p.billingCycle === "Monthly")
+        ?? safePricing[0];
 
-  const monthlyEntry = plan.pricing.find((p) => p.billingCycle === "Monthly");
-  const yearlyEntry  = plan.pricing.find((p) => p.billingCycle === "Yearly");
+  const monthlyEntry = safePricing.find((p) => p.billingCycle === "Monthly");
+  const yearlyEntry  = safePricing.find((p) => p.billingCycle === "Yearly");
 
   const saving = monthlyEntry && yearlyEntry
     ? yearlySaving(monthlyEntry.priceAmount, yearlyEntry.priceAmount)
@@ -321,22 +325,22 @@ export default function PricingCard({
       </div>
 
       {/* ── Limits ── */}
-      {plan.limits.length > 0 && (
+      {safeLimits.length > 0 && (
         <div>
           <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 0.55rem" }}>
             الحدود
           </p>
-          <LimitList limits={plan.limits} />
+          <LimitList limits={safeLimits} />
         </div>
       )}
 
       {/* ── Features ── */}
-      {plan.features.length > 0 && (
+      {safeFeatures.length > 0 && (
         <div>
           <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 0.55rem" }}>
             الميزات
           </p>
-          <FeatureList features={plan.features} />
+          <FeatureList features={safeFeatures} />
         </div>
       )}
 
