@@ -215,6 +215,22 @@ export const adminApi = {
     return api.patch(`/buyer-requests/admin/${id}/status`, { status });
   },
 
+  /** PATCH /api/buyer-requests/admin/{id}/published — toggle IsPublished */
+  adminSetBuyerRequestPublished(id: string, isPublished: boolean): Promise<void> {
+    return api.patch(`/buyer-requests/admin/${id}/published`, { isPublished });
+  },
+
+  /** PUT /api/buyer-requests/admin/{id} — edit content (title, description, city…) */
+  adminUpdateBuyerRequest(id: string, data: {
+    title: string;
+    description: string;
+    propertyType: string;
+    city?: string;
+    neighborhood?: string;
+  }): Promise<void> {
+    return api.put(`/buyer-requests/admin/${id}`, data);
+  },
+
   /** POST /api/buyer-requests/admin/{id}/respond — admin posts a reply comment */
   adminRespondToBuyerRequest(id: string, content: string): Promise<unknown> {
     return api.post(`/buyer-requests/admin/${id}/respond`, { content });

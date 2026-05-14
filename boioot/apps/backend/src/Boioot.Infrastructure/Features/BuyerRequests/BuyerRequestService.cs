@@ -315,6 +315,33 @@ public class BuyerRequestService : IBuyerRequestService
         await _context.SaveChangesAsync(ct);
     }
 
+    public async Task AdminSetPublishedAsync(Guid id, bool isPublished, CancellationToken ct = default)
+    {
+        var entity = await _context.BuyerRequests
+            .FirstOrDefaultAsync(r => r.Id == id, ct)
+            ?? throw new BoiootException("الطلب غير موجود", 404);
+
+        entity.IsPublished = isPublished;
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task AdminUpdateAsync(Guid id, AdminUpdateBuyerRequestDto dto, CancellationToken ct = default)
+    {
+        var entity = await _context.BuyerRequests
+            .FirstOrDefaultAsync(r => r.Id == id, ct)
+            ?? throw new BoiootException("الطلب غير موجود", 404);
+
+        if (string.IsNullOrWhiteSpace(dto.Title))
+            throw new BoiootException("العنوان مطلوب", 400);
+
+        entity.Title        = dto.Title.Trim();
+        entity.Description  = dto.Description?.Trim() ?? entity.Description;
+        entity.PropertyType = dto.PropertyType?.Trim() ?? entity.PropertyType;
+        entity.City         = dto.City?.Trim();
+        entity.Neighborhood = dto.Neighborhood?.Trim();
+        await _context.SaveChangesAsync(ct);
+    }
+
     public async Task<BuyerRequestCommentResponse> AdminRespondAsync(
         Guid adminUserId, Guid requestId, string content, CancellationToken ct = default)
     {

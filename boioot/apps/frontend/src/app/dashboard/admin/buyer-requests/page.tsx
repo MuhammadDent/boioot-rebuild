@@ -10,6 +10,162 @@ import { adminApi } from "@/features/admin/api";
 import { RefBadge } from "@/features/admin/RefBadge";
 import type { PagedResult } from "@/types";
 
+// ─── Edit modal ───────────────────────────────────────────────────────────────
+const PROPERTY_TYPE_OPTS: { value: string; label: string }[] = [
+  { value: "Apartment", label: "شقة سكنية" },
+  { value: "Villa",     label: "فيلا" },
+  { value: "Office",    label: "مكتب" },
+  { value: "Shop",      label: "محل تجاري" },
+  { value: "Land",      label: "أرض" },
+  { value: "Building",  label: "بناء كامل" },
+];
+
+interface EditForm {
+  title: string;
+  description: string;
+  propertyType: string;
+  city: string;
+  neighborhood: string;
+}
+
+function EditRequestModal({
+  request,
+  onClose,
+  onSaved,
+}: {
+  request: BuyerRequest;
+  onClose: () => void;
+  onSaved: (updated: Partial<BuyerRequest>) => void;
+}) {
+  const [form, setForm] = useState<EditForm>({
+    title:        request.title,
+    description:  request.description,
+    propertyType: request.propertyType,
+    city:         request.city ?? "",
+    neighborhood: request.neighborhood ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
+
+  async function handleSave() {
+    if (!form.title.trim()) { setError("العنوان مطلوب"); return; }
+    setSaving(true); setError("");
+    try {
+      await adminApi.adminUpdateBuyerRequest(request.id, {
+        title:        form.title.trim(),
+        description:  form.description.trim(),
+        propertyType: form.propertyType,
+        city:         form.city.trim() || undefined,
+        neighborhood: form.neighborhood.trim() || undefined,
+      });
+      onSaved({
+        title:        form.title.trim(),
+        description:  form.description.trim(),
+        propertyType: form.propertyType,
+        city:         form.city.trim() || undefined,
+        neighborhood: form.neighborhood.trim() || undefined,
+      });
+    } catch (e) {
+      setError(normalizeError(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const overlayStyle: React.CSSProperties = {
+    position: "fixed", inset: 0, zIndex: 1200,
+    backgroundColor: "rgba(15,23,42,0.6)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    padding: "1rem",
+  };
+
+  const sheetStyle: React.CSSProperties = {
+    backgroundColor: "#fff", borderRadius: 16,
+    width: "100%", maxWidth: 520,
+    boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+    padding: "1.5rem",
+    direction: "rtl",
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "0.5rem 0.75rem", borderRadius: 8,
+    border: "1px solid #e2e8f0", fontSize: "0.88rem",
+    fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+  };
+
+  return (
+    <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={sheetStyle}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>تعديل الطلب</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer", color: "#94a3b8" }}>✕</button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+          <div>
+            <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", display: "block", marginBottom: "0.3rem" }}>العنوان *</label>
+            <input style={inputStyle} value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} />
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", display: "block", marginBottom: "0.3rem" }}>نوع العقار</label>
+            <select style={inputStyle} value={form.propertyType} onChange={e => setForm(p => ({ ...p, propertyType: e.target.value }))}>
+              {PROPERTY_TYPE_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
+            <div>
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", display: "block", marginBottom: "0.3rem" }}>المدينة</label>
+              <input style={inputStyle} value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} placeholder="دمشق" />
+            </div>
+            <div>
+              <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", display: "block", marginBottom: "0.3rem" }}>الحي</label>
+              <input style={inputStyle} value={form.neighborhood} onChange={e => setForm(p => ({ ...p, neighborhood: e.target.value }))} placeholder="المزة" />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#64748b", display: "block", marginBottom: "0.3rem" }}>الوصف</label>
+            <textarea
+              style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
+              value={form.description}
+              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        {error && <p style={{ color: "#dc2626", fontSize: "0.82rem", margin: "0.75rem 0 0" }}>{error}</p>}
+
+        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.25rem" }}>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              flex: 1, padding: "0.55rem", borderRadius: 8, border: "none",
+              backgroundColor: "var(--color-primary, #0f766e)", color: "#fff",
+              fontWeight: 700, fontSize: "0.88rem", cursor: saving ? "not-allowed" : "pointer",
+              fontFamily: "inherit", opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saving ? "جارٍ الحفظ..." : "حفظ التغييرات"}
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "0.55rem 1.25rem", borderRadius: 8, border: "1px solid #e2e8f0",
+              backgroundColor: "#f8fafc", color: "#475569",
+              fontWeight: 600, fontSize: "0.88rem", cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface BuyerRequest {
   id: string;
   referenceNumber?: string | null;
@@ -69,6 +225,8 @@ export default function AdminBuyerRequestsPage() {
   const [searchInput, setSearchInput] = useState("");
   const [deletingId,  setDeletingId]  = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const [editingRequest,     setEditingRequest]     = useState<BuyerRequest | null>(null);
+  const [togglingPublishedId, setTogglingPublishedId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -102,6 +260,24 @@ export default function AdminBuyerRequestsPage() {
   }
 
   const [settingStatusId, setSettingStatusId] = useState<string | null>(null);
+
+  async function handleTogglePublished(r: BuyerRequest) {
+    setTogglingPublishedId(r.id);
+    setDeleteError("");
+    try {
+      await adminApi.adminSetBuyerRequestPublished(r.id, !r.isPublished);
+      setRequests(prev => prev.map(x => x.id === r.id ? { ...x, isPublished: !r.isPublished } : x));
+    } catch (err) {
+      setDeleteError(normalizeError(err));
+    } finally {
+      setTogglingPublishedId(null);
+    }
+  }
+
+  function handleEditSaved(id: string, updated: Partial<BuyerRequest>) {
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, ...updated } : r));
+    setEditingRequest(null);
+  }
 
   async function handleDelete(id: string) {
     if (!confirm("هل أنت متأكد من حذف هذا الطلب؟ سيُحذف مع جميع تعليقاته.")) return;
@@ -218,7 +394,7 @@ export default function AdminBuyerRequestsPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
           <thead>
             <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-              {["رقم المرجع", "الطلب", "النوع", "الموقع", "الناشر", "الحالة", "التعليقات", "التاريخ", ""].map((h, i) => (
+              {["رقم المرجع", "الطلب", "النوع", "الموقع", "الناشر", "الحالة", "النشر", "التعليقات", "التاريخ", ""].map((h, i) => (
                 <th key={i} style={{
                   padding: "0.7rem 0.9rem", textAlign: "right",
                   fontWeight: 700, color: "#475569", fontSize: "0.78rem",
@@ -232,14 +408,14 @@ export default function AdminBuyerRequestsPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
+                <td colSpan={10} style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
                   جارٍ التحميل...
                 </td>
               </tr>
             )}
             {!loading && requests.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
+                <td colSpan={10} style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
                   {search ? "لا توجد نتائج لهذا البحث" : "لا توجد طلبات بعد"}
                 </td>
               </tr>
@@ -306,6 +482,25 @@ export default function AdminBuyerRequestsPage() {
                     })()}
                   </td>
 
+                  {/* isPublished toggle */}
+                  <td style={{ padding: "0.75rem 0.9rem", whiteSpace: "nowrap", textAlign: "center" }}>
+                    <button
+                      onClick={() => handleTogglePublished(r)}
+                      disabled={togglingPublishedId === r.id}
+                      title={r.isPublished ? "إخفاء من العموم" : "نشر للعموم"}
+                      style={{
+                        padding: "0.25rem 0.6rem", borderRadius: 20, border: "none",
+                        backgroundColor: r.isPublished ? "#dcfce7" : "#f1f5f9",
+                        color: r.isPublished ? "#15803d" : "#64748b",
+                        fontSize: "0.73rem", fontWeight: 700,
+                        cursor: togglingPublishedId === r.id ? "not-allowed" : "pointer",
+                        fontFamily: "inherit", opacity: togglingPublishedId === r.id ? 0.6 : 1,
+                      }}
+                    >
+                      {togglingPublishedId === r.id ? "..." : r.isPublished ? "منشور" : "مخفي"}
+                    </button>
+                  </td>
+
                   {/* Comments count */}
                   <td style={{ padding: "0.75rem 0.9rem", textAlign: "center", color: "#64748b" }}>
                     <span style={{
@@ -341,6 +536,18 @@ export default function AdminBuyerRequestsPage() {
                       >
                         عرض
                       </Link>
+                      {/* Edit button */}
+                      <button
+                        onClick={() => setEditingRequest(r)}
+                        style={{
+                          padding: "0.3rem 0.65rem", borderRadius: 6,
+                          backgroundColor: "#f5f3ff", color: "#7c3aed",
+                          border: "none", fontWeight: 700, fontSize: "0.74rem",
+                          cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                        }}
+                      >
+                        تعديل
+                      </button>
                       {/* Status quick-change buttons */}
                       {(["Open", "Closed", "Reviewed"] as const).map(s => {
                         const cfg = STATUS_CONFIG[s];
@@ -390,6 +597,15 @@ export default function AdminBuyerRequestsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Edit modal */}
+      {editingRequest && (
+        <EditRequestModal
+          request={editingRequest}
+          onClose={() => setEditingRequest(null)}
+          onSaved={(updated) => handleEditSaved(editingRequest.id, updated)}
+        />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

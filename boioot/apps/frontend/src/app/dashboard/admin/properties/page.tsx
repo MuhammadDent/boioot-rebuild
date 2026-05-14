@@ -99,8 +99,23 @@ function Inp({
 }
 
 // ─── PropertyCard ─────────────────────────────────────────────────────────────
-function PropertyCard({ property, onClick }: { property: PropertyResponse; onClick: () => void }) {
+function PropertyCard({
+  property,
+  onClick,
+  onEdit,
+  onToggleStatus,
+  onDelete,
+  actionLoading,
+}: {
+  property: PropertyResponse;
+  onClick: () => void;
+  onEdit: () => void;
+  onToggleStatus: () => void;
+  onDelete: () => void;
+  actionLoading: boolean;
+}) {
   const thumb = property.images?.find(i => i.isPrimary) ?? property.images?.[0];
+  const canToggle = property.status === "Available" || property.status === "Inactive";
   return (
     <div
       onClick={onClick}
@@ -167,6 +182,56 @@ function PropertyCard({ property, onClick }: { property: PropertyResponse; onCli
         fontWeight: 800, color: "var(--color-primary)",
       }}>
         {formatPrice(property.price, property.currency)}
+      </div>
+
+      {/* Quick action buttons — stopPropagation so card click (open modal) is not triggered */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ display: "flex", gap: "0.3rem", flexShrink: 0, alignItems: "center" }}
+      >
+        <button
+          onClick={onEdit}
+          disabled={actionLoading}
+          title="تعديل العقار"
+          style={{
+            padding: "0.3rem 0.6rem", borderRadius: 7, border: "1px solid #dbeafe",
+            backgroundColor: "#eff6ff", color: "#1d4ed8",
+            fontSize: "0.74rem", fontWeight: 700, cursor: actionLoading ? "not-allowed" : "pointer",
+            fontFamily: "inherit", whiteSpace: "nowrap",
+          }}
+        >
+          تعديل
+        </button>
+        {canToggle && (
+          <button
+            onClick={onToggleStatus}
+            disabled={actionLoading}
+            title={property.status === "Available" ? "تعطيل العقار" : "تفعيل العقار"}
+            style={{
+              padding: "0.3rem 0.6rem", borderRadius: 7,
+              border: property.status === "Available" ? "1px solid #fde68a" : "1px solid #bbf7d0",
+              backgroundColor: property.status === "Available" ? "#fefce8" : "#f0fdf4",
+              color: property.status === "Available" ? "#a16207" : "#15803d",
+              fontSize: "0.74rem", fontWeight: 700, cursor: actionLoading ? "not-allowed" : "pointer",
+              fontFamily: "inherit", whiteSpace: "nowrap",
+            }}
+          >
+            {property.status === "Available" ? "تعطيل" : "تفعيل"}
+          </button>
+        )}
+        <button
+          onClick={() => { if (window.confirm(`هل أنت متأكد من حذف "${property.title}"؟`)) onDelete(); }}
+          disabled={actionLoading}
+          title="حذف العقار"
+          style={{
+            padding: "0.3rem 0.6rem", borderRadius: 7, border: "1px solid #fecaca",
+            backgroundColor: "#fef2f2", color: "#ef4444",
+            fontSize: "0.74rem", fontWeight: 700, cursor: actionLoading ? "not-allowed" : "pointer",
+            fontFamily: "inherit", whiteSpace: "nowrap",
+          }}
+        >
+          حذف
+        </button>
       </div>
     </div>
   );
@@ -520,7 +585,15 @@ export default function AdminPropertiesPage() {
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
               {paginated.map(p => (
-                <PropertyCard key={p.id} property={p} onClick={() => setSelected(p)} />
+                <PropertyCard
+                  key={p.id}
+                  property={p}
+                  onClick={() => setSelected(p)}
+                  onEdit={() => router.push(`/dashboard/admin/properties/${p.id}/edit`)}
+                  onToggleStatus={() => handleStatusChange(p.id, p.status === "Available" ? "Inactive" : "Available")}
+                  onDelete={() => handleDelete(p.id)}
+                  actionLoading={actionLoading}
+                />
               ))}
             </div>
 

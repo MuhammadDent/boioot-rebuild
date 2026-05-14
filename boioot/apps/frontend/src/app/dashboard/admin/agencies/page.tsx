@@ -7,6 +7,7 @@ import { InlineBanner } from "@/components/dashboard/InlineBanner";
 import { LoadingRow } from "@/components/dashboard/LoadingRow";
 import { useAuth } from "@/context/AuthContext";
 import { normalizeError } from "@/lib/api";
+import { adminApi } from "@/features/admin/api";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -432,6 +433,17 @@ export default function AdminAgenciesPage() {
     showNotice(`تم تحديث توثيق "${updated.fullName}" — الحالة: ${VERIFICATION_STATUS_LABELS[updated.verificationStatus] ?? updated.verificationStatus}`);
   }
 
+  async function handleToggleActive(agency: AdminAgency) {
+    const newActive = !agency.isActive;
+    try {
+      await adminApi.updateUserStatus(agency.id, newActive);
+      setAgencies(prev => prev.map(a => a.id === agency.id ? { ...a, isActive: newActive } : a));
+      showNotice(`تم ${newActive ? "تفعيل" : "تعطيل"} حساب "${agency.fullName}"`);
+    } catch (e) {
+      showNotice(`خطأ: ${normalizeError(e)}`);
+    }
+  }
+
   const filterParams = { type: filterType, isVisible: filterIsVisible, isVerified: filterIsVerified };
 
   return (
@@ -453,26 +465,6 @@ export default function AdminAgenciesPage() {
 
         {/* Notice */}
         {notice && <InlineBanner type="success" message={notice} />}
-
-        {/* Edit profile panel */}
-        {editAgency && token && (
-          <EditPanel
-            agency={editAgency}
-            token={token}
-            onClose={() => setEditAgency(null)}
-            onSaved={handleProfileSaved}
-          />
-        )}
-
-        {/* Verification panel */}
-        {verifAgency && token && (
-          <VerificationPanel
-            agency={verifAgency}
-            token={token}
-            onClose={() => setVerifAgency(null)}
-            onSaved={handleVerificationSaved}
-          />
-        )}
 
         {/* Filters */}
         <div className="form-card" style={{ marginBottom: "1.25rem" }}>
@@ -530,96 +522,149 @@ export default function AdminAgenciesPage() {
             {agencies.map(a => {
               const vsColors = VERIFICATION_STATUS_COLORS[a.verificationStatus] ?? { bg: "#f1f5f9", color: "#64748b" };
               return (
-                <div
-                  key={a.id}
-                  style={{
-                    background: "var(--color-bg-primary, #fff)",
-                    border: "1px solid #e2e8f0", borderRadius: 10,
-                    padding: "1rem 1.25rem", display: "flex",
-                    alignItems: "center", gap: "1rem", flexWrap: "wrap",
-                  }}
-                >
-                  {/* Avatar */}
-                  <div style={{
-                    width: 44, height: 44, borderRadius: 10, flexShrink: 0,
-                    background: "#e8f5e9", display: "flex", alignItems: "center",
-                    justifyContent: "center", overflow: "hidden", border: "1px solid #e2e8f0",
-                  }}>
-                    {a.logoUrl ? (
-                      <img src={a.logoUrl} alt={a.fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <span style={{ fontWeight: 700, color: "#0f766e" }}>{a.fullName[0]}</span>
-                    )}
-                  </div>
+                <div key={a.id}>
+                  {/* ── Agency row ── */}
+                  <div
+                    style={{
+                      background: "var(--color-bg-primary, #fff)",
+                      border: a.isActive ? "1px solid #e2e8f0" : "1px solid #fecaca",
+                      borderRadius: (editAgency?.id === a.id || verifAgency?.id === a.id) ? "10px 10px 0 0" : 10,
+                      padding: "1rem 1.25rem", display: "flex",
+                      alignItems: "center", gap: "1rem", flexWrap: "wrap",
+                      opacity: a.isActive ? 1 : 0.75,
+                    }}
+                  >
+                    {/* Avatar */}
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                      background: "#e8f5e9", display: "flex", alignItems: "center",
+                      justifyContent: "center", overflow: "hidden", border: "1px solid #e2e8f0",
+                    }}>
+                      {a.logoUrl ? (
+                        <img src={a.logoUrl} alt={a.fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <span style={{ fontWeight: 700, color: "#0f766e" }}>{a.fullName[0]}</span>
+                      )}
+                    </div>
 
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 140 }}>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: "0.92rem", color: "#0f172a" }}>
-                      {a.fullName}
-                    </p>
-                    <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748b" }}>
-                      {a.email} {a.city ? `· ${a.city}` : ""}
-                    </p>
-                  </div>
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 140 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: "0.92rem", color: "#0f172a" }}>
+                        {a.fullName}
+                      </p>
+                      <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748b" }}>
+                        {a.email} {a.city ? `· ${a.city}` : ""}
+                      </p>
+                    </div>
 
-                  {/* Badges */}
-                  <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-                    <span style={{
-                      fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "999px",
-                      background: a.role === "Broker" ? "#eff6ff" : "#f0fdf4",
-                      color: a.role === "Broker" ? "#1d4ed8" : "#15803d", fontWeight: 600,
-                    }}>
-                      {a.roleLabel}
-                    </span>
-                    <span style={{
-                      fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "999px",
-                      background: a.isVisible ? "#dcfce7" : "#fee2e2",
-                      color: a.isVisible ? "#15803d" : "#dc2626", fontWeight: 600,
-                    }}>
-                      {a.isVisible ? "ظاهر" : "مخفي"}
-                    </span>
-                    {/* Verification status — derived from VerificationStatus, never from bool alone */}
-                    <span style={{
-                      fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "999px",
-                      background: vsColors.bg, color: vsColors.color, fontWeight: 600,
-                    }}>
-                      {a.verificationBadge || VERIFICATION_STATUS_LABELS[a.verificationStatus] || a.verificationStatus}
-                    </span>
-                    {a.isFeatured && (
+                    {/* Badges */}
+                    <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
                       <span style={{
                         fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "999px",
-                        background: "#0f766e", color: "#fff", fontWeight: 600,
+                        background: a.role === "Broker" ? "#eff6ff" : "#f0fdf4",
+                        color: a.role === "Broker" ? "#1d4ed8" : "#15803d", fontWeight: 600,
                       }}>
-                        مميز ⭐
+                        {a.roleLabel}
                       </span>
-                    )}
-                    <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                      {a.listingCount} إعلان
-                    </span>
+                      <span style={{
+                        fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "999px",
+                        background: a.isVisible ? "#dcfce7" : "#fee2e2",
+                        color: a.isVisible ? "#15803d" : "#dc2626", fontWeight: 600,
+                      }}>
+                        {a.isVisible ? "ظاهر" : "مخفي"}
+                      </span>
+                      {/* isActive badge */}
+                      <span style={{
+                        fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "999px",
+                        background: a.isActive ? "#f0fdf4" : "#fef2f2",
+                        color: a.isActive ? "#15803d" : "#dc2626", fontWeight: 600,
+                      }}>
+                        {a.isActive ? "حساب نشط" : "حساب معطّل"}
+                      </span>
+                      {/* Verification status */}
+                      <span style={{
+                        fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "999px",
+                        background: vsColors.bg, color: vsColors.color, fontWeight: 600,
+                      }}>
+                        {a.verificationBadge || VERIFICATION_STATUS_LABELS[a.verificationStatus] || a.verificationStatus}
+                      </span>
+                      {a.isFeatured && (
+                        <span style={{
+                          fontSize: "0.72rem", padding: "0.15rem 0.5rem", borderRadius: "999px",
+                          background: "#0f766e", color: "#fff", fontWeight: 600,
+                        }}>
+                          مميز ⭐
+                        </span>
+                      )}
+                      <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                        {a.listingCount} إعلان
+                      </span>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div style={{ display: "flex", gap: "0.4rem", flexShrink: 0, flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => { setVerifAgency(null); setEditAgency(editAgency?.id === a.id ? null : a); }}
+                        className="btn"
+                        style={{
+                          padding: "0.4rem 0.9rem", fontSize: "0.82rem",
+                          background: editAgency?.id === a.id ? "#0f766e" : undefined,
+                          color: editAgency?.id === a.id ? "#fff" : undefined,
+                        }}
+                      >
+                        تعديل الملف
+                      </button>
+                      <button
+                        onClick={() => { setEditAgency(null); setVerifAgency(verifAgency?.id === a.id ? null : a); }}
+                        className="btn"
+                        style={{
+                          padding: "0.4rem 0.9rem", fontSize: "0.82rem",
+                          background: verifAgency?.id === a.id ? "#0f766e" : a.isVerified ? "#dcfce7" : "#f1f5f9",
+                          color: verifAgency?.id === a.id ? "#fff" : a.isVerified ? "#15803d" : "#0f172a",
+                          border: `1px solid ${verifAgency?.id === a.id ? "#0f766e" : a.isVerified ? "#86efac" : "#e2e8f0"}`,
+                        }}
+                      >
+                        التوثيق
+                      </button>
+                      {/* Toggle isActive */}
+                      <button
+                        onClick={() => handleToggleActive(a)}
+                        className="btn"
+                        style={{
+                          padding: "0.4rem 0.9rem", fontSize: "0.82rem",
+                          background: a.isActive ? "#fef2f2" : "#f0fdf4",
+                          color: a.isActive ? "#dc2626" : "#15803d",
+                          border: `1px solid ${a.isActive ? "#fecaca" : "#bbf7d0"}`,
+                        }}
+                      >
+                        {a.isActive ? "تعطيل الحساب" : "تفعيل الحساب"}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Action buttons */}
-                  <div style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
-                    <button
-                      onClick={() => { setVerifAgency(null); setEditAgency(a); }}
-                      className="btn"
-                      style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem" }}
-                    >
-                      تعديل الملف
-                    </button>
-                    <button
-                      onClick={() => { setEditAgency(null); setVerifAgency(a); }}
-                      className="btn"
-                      style={{
-                        padding: "0.4rem 0.9rem", fontSize: "0.82rem",
-                        background: a.isVerified ? "#dcfce7" : "#f1f5f9",
-                        color: a.isVerified ? "#15803d" : "#0f172a",
-                        border: `1px solid ${a.isVerified ? "#86efac" : "#e2e8f0"}`,
-                      }}
-                    >
-                      التوثيق
-                    </button>
-                  </div>
+                  {/* ── Inline Edit Profile Panel ── */}
+                  {editAgency?.id === a.id && token && (
+                    <div style={{ borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
+                      <EditPanel
+                        agency={editAgency}
+                        token={token}
+                        onClose={() => setEditAgency(null)}
+                        onSaved={handleProfileSaved}
+                      />
+                    </div>
+                  )}
+
+                  {/* ── Inline Verification Panel ── */}
+                  {verifAgency?.id === a.id && token && (
+                    <div style={{ borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
+                      <VerificationPanel
+                        agency={verifAgency}
+                        token={token}
+                        onClose={() => setVerifAgency(null)}
+                        onSaved={handleVerificationSaved}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}

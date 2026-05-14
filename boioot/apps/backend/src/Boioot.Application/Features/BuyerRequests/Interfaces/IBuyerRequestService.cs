@@ -14,6 +14,10 @@ public interface IBuyerRequestService
     Task AdminDeleteAsync(Guid id, CancellationToken ct = default);
     /// <summary>Admin: set request status (Open | Closed | Reviewed).</summary>
     Task AdminSetStatusAsync(Guid id, string status, CancellationToken ct = default);
+    /// <summary>Admin: toggle IsPublished (show/hide from public listing).</summary>
+    Task AdminSetPublishedAsync(Guid id, bool isPublished, CancellationToken ct = default);
+    /// <summary>Admin: update request content (title, description, city, neighborhood, propertyType).</summary>
+    Task AdminUpdateAsync(Guid id, AdminUpdateBuyerRequestDto dto, CancellationToken ct = default);
     /// <summary>Admin: post a comment reply to a buyer request on behalf of admin.</summary>
     Task<BuyerRequestCommentResponse> AdminRespondAsync(Guid adminUserId, Guid requestId, string content, CancellationToken ct = default);
 

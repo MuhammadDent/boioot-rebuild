@@ -46,6 +46,24 @@ public class BuyerRequestsController : BaseController
         return NoContent();
     }
 
+    [HttpPatch("admin/{id:guid}/published")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AdminSetPublished(
+        Guid id, [FromBody] SetBuyerRequestPublishedRequest request, CancellationToken ct)
+    {
+        await _service.AdminSetPublishedAsync(id, request.IsPublished, ct);
+        return NoContent();
+    }
+
+    [HttpPut("admin/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AdminUpdate(
+        Guid id, [FromBody] AdminUpdateBuyerRequestBody body, CancellationToken ct)
+    {
+        await _service.AdminUpdateAsync(id, new(body.Title, body.Description, body.PropertyType, body.City, body.Neighborhood), ct);
+        return NoContent();
+    }
+
     [HttpPost("admin/{id:guid}/respond")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AdminRespond(
@@ -137,4 +155,12 @@ public class BuyerRequestsController : BaseController
 }
 
 public record SetBuyerRequestStatusRequest(string Status);
+public record SetBuyerRequestPublishedRequest(bool IsPublished);
+public record AdminUpdateBuyerRequestBody(
+    string Title,
+    string Description,
+    string PropertyType,
+    string? City,
+    string? Neighborhood
+);
 public record AdminRespondRequest(string Content);
