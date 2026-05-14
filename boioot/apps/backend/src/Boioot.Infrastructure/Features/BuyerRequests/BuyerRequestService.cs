@@ -36,6 +36,13 @@ public class BuyerRequestService : IBuyerRequestService
     public async Task<BuyerRequestResponse> CreateAsync(
         Guid userId, CreateBuyerRequestDto dto, CancellationToken ct = default)
     {
+        var creatingUser = await _context.Users
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.IsActive })
+            .FirstOrDefaultAsync(ct);
+        if (creatingUser == null || !creatingUser.IsActive)
+            throw new BoiootException("الحساب غير مفعّل. لا يمكنك إرسال طلبات.", 403);
+
         var refNumber = await ReferenceGenerator.NextAsync(
             _context.BuyerRequests.Select(r => r.ReferenceNumber), "MRK", ct);
 

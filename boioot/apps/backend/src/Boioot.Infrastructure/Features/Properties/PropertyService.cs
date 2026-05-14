@@ -238,6 +238,16 @@ public class PropertyService : IPropertyService
     public async Task<PropertyResponse> CreateAsync(
         Guid userId, string userRole, CreatePropertyRequest request, CancellationToken ct = default)
     {
+        if (userRole != RoleNames.Admin)
+        {
+            var creator = await _context.Users
+                .Where(u => u.Id == userId)
+                .Select(u => new { u.IsActive })
+                .FirstOrDefaultAsync(ct);
+            if (creator == null || !creator.IsActive)
+                throw new BoiootException("الحساب غير مفعّل. لا يمكنك إنشاء إعلانات.", 403);
+        }
+
         Guid companyId;
 
         if (request.CompanyId.HasValue)
