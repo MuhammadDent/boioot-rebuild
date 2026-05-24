@@ -364,7 +364,7 @@ public class DataSeeder
         "properties.view", "properties.create", "properties.edit", "properties.delete",
         "projects.view",   "projects.create",   "projects.edit",   "projects.delete",
         "agents.view",     "agents.manage",
-        "users.view",      "users.edit",         "users.disable",
+        "users.view",      "users.edit",         "users.disable",   "users.delete",
         "staff.view",      "staff.create",        "staff.edit",      "staff.disable",
         "roles.view",      "roles.manage",
         "companies.view",  "companies.edit",

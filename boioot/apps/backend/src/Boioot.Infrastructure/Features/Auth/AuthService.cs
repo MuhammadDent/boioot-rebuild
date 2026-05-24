@@ -200,13 +200,21 @@ public class AuthService : IAuthService
     {
         var emailLower = request.Email.ToLowerInvariant();
 
+        // Use IgnoreQueryFilters so deleted users are found (needed to return specific error)
         var user = await _context.Users
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Email == emailLower, ct);
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
             _logger.LogWarning("Failed login attempt: {Email}", emailLower);
             throw new BoiootException("بيانات الدخول غير صحيحة", 401);
+        }
+
+        if (user.IsDeleted)
+        {
+            _logger.LogWarning("Login attempt on deleted account: {Email}", emailLower);
+            throw new BoiootException("هذا الحساب محذوف. يرجى التواصل مع الدعم", 403);
         }
 
         if (!user.IsActive)

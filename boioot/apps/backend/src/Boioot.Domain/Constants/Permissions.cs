@@ -11,6 +11,7 @@ public static class Permissions
     public const string UsersView    = "users.view";
     public const string UsersEdit    = "users.edit";
     public const string UsersDisable = "users.disable";
+    public const string UsersDelete  = "users.delete";
 
     // ── Staff ─────────────────────────────────────────────────────────────────
     public const string StaffView    = "staff.view";
@@ -78,7 +79,7 @@ public static class Permissions
     public static readonly IReadOnlyList<string> All = new[]
     {
         DashboardView,
-        UsersView, UsersEdit, UsersDisable,
+        UsersView, UsersEdit, UsersDisable, UsersDelete,
         StaffView, StaffCreate, StaffEdit, StaffDisable,
         RolesView, RolesManage,
         PropertiesView, PropertiesCreate, PropertiesEdit, PropertiesDelete,

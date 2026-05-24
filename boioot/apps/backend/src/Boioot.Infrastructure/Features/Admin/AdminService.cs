@@ -42,6 +42,7 @@ public class AdminService : IAdminService
         int pageSize,
         UserRole? role,
         bool? isActive,
+        bool? isDeleted,
         string? search,
         DateTime? createdAfter,
         DateTime? createdBefore,
@@ -69,6 +70,10 @@ public class AdminService : IAdminService
 
         if (isActive.HasValue)
             query = query.Where(u => u.IsActive == isActive.Value);
+
+        // isDeleted filter: null = show all (admin can see everything), true = deleted only, false = non-deleted only
+        if (isDeleted.HasValue)
+            query = query.Where(u => u.IsDeleted == isDeleted.Value);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -1985,6 +1990,73 @@ public class AdminService : IAdminService
         RejectionReason            = user.RejectionReason,
         ReferenceNumber            = user.ReferenceNumber,
     };
+
+    // ── Soft Delete / Restore ─────────────────────────────────────────────────
+
+    public async Task SoftDeleteUserAsync(
+        Guid adminUserId, Guid targetUserId, CancellationToken ct = default)
+    {
+        if (adminUserId == targetUserId)
+            throw new BoiootException("لا يمكنك حذف حسابك الحالي", 400);
+
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
+            ?? throw new BoiootException("المستخدم غير موجود", 404);
+
+        if (user.IsDeleted)
+            throw new BoiootException("الحساب محذوف بالفعل", 400);
+
+        if (user.Role == UserRole.Admin)
+        {
+            var remainingAdmins = await _context.Users
+                .IgnoreQueryFilters()
+                .CountAsync(u => u.Role == UserRole.Admin && !u.IsDeleted && u.Id != targetUserId, ct);
+            if (remainingAdmins == 0)
+                throw new BoiootException("لا يمكن حذف آخر حساب أدمن في النظام", 400);
+        }
+
+        user.IsDeleted = true;
+        user.IsActive  = false;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Admin {AdminId} soft-deleted user {TargetId} ({Email})",
+            adminUserId, targetUserId, user.Email);
+    }
+
+    public async Task<AdminUserResponse> RestoreUserAsync(
+        Guid adminUserId, Guid targetUserId, CancellationToken ct = default)
+    {
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == targetUserId && u.IsDeleted, ct)
+            ?? throw new BoiootException("المستخدم غير موجود أو ليس محذوفاً", 404);
+
+        user.IsDeleted = false;
+        user.IsActive  = true;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Admin {AdminId} restored user {TargetId} ({Email})",
+            adminUserId, targetUserId, user.Email);
+
+        return new AdminUserResponse
+        {
+            Id              = user.Id,
+            FullName        = user.FullName,
+            Email           = user.Email,
+            Phone           = user.Phone,
+            ProfileImageUrl = user.ProfileImageUrl,
+            Role            = user.Role.ToString(),
+            IsActive        = user.IsActive,
+            IsDeleted       = user.IsDeleted,
+            CreatedAt       = user.CreatedAt,
+            UpdatedAt       = user.UpdatedAt,
+        };
+    }
 
     private class UserTagRowFull
     {

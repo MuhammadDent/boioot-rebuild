@@ -14,12 +14,17 @@ public interface IAdminService
         int pageSize,
         UserRole? role,
         bool? isActive,
+        bool? isDeleted,
         string? search,
         DateTime? createdAfter,
         DateTime? createdBefore,
         DateTime? lastLoginAfter,
         string? tag,
         CancellationToken ct = default);
+
+    Task SoftDeleteUserAsync(Guid adminUserId, Guid targetUserId, CancellationToken ct = default);
+
+    Task<AdminUserResponse> RestoreUserAsync(Guid adminUserId, Guid targetUserId, CancellationToken ct = default);
 
     Task<AdminUserResponse> GetAdminUserAsync(Guid userId, CancellationToken ct = default);
 

@@ -37,6 +37,8 @@ export interface AdminUsersParams {
   /** Admin | CompanyOwner | Agent | User — empty string means "all" */
   role?: string;
   isActive?: boolean;
+  /** true = deleted only, false = non-deleted only, undefined = non-deleted (default) */
+  isDeleted?: boolean;
   search?: string;
   createdAfter?: string;
   createdBefore?: string;
@@ -99,12 +101,21 @@ export const adminApi = {
     const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     if (params.role)                     qs.set("role", params.role);
     if (params.isActive !== undefined)   qs.set("isActive", String(params.isActive));
+    if (params.isDeleted !== undefined)  qs.set("isDeleted", String(params.isDeleted));
     if (params.search)                   qs.set("search", params.search);
     if (params.createdAfter)             qs.set("createdAfter", params.createdAfter);
     if (params.createdBefore)            qs.set("createdBefore", params.createdBefore);
     if (params.lastLoginAfter)           qs.set("lastLoginAfter", params.lastLoginAfter);
     if (params.tag)                      qs.set("tag", params.tag);
     return api.get(`/admin/users?${qs}`);
+  },
+
+  deleteUser(userId: string): Promise<void> {
+    return api.delete(`/admin/users/${userId}`);
+  },
+
+  restoreUser(userId: string): Promise<AdminUserResponse> {
+    return api.post(`/admin/users/${userId}/restore`, {});
   },
 
   getUserAnalytics(): Promise<import("@/types").UserAnalyticsResponse> {

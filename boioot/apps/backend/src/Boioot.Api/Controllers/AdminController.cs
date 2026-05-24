@@ -40,6 +40,7 @@ public class AdminController : BaseController
         [FromQuery] int pageSize = 20,
         [FromQuery] UserRole? role = null,
         [FromQuery] bool? isActive = null,
+        [FromQuery] bool? isDeleted = null,
         [FromQuery] string? search = null,
         [FromQuery] DateTime? createdAfter = null,
         [FromQuery] DateTime? createdBefore = null,
@@ -48,9 +49,29 @@ public class AdminController : BaseController
         CancellationToken ct = default)
     {
         var result = await _admin.GetUsersAsync(
-            page, pageSize, role, isActive,
+            page, pageSize, role, isActive, isDeleted,
             search, createdAfter, createdBefore, lastLoginAfter, tag,
             ct);
+        return Ok(result);
+    }
+
+    [HttpDelete("users/{userId:guid}")]
+    [RequirePermission(Permissions.UsersDelete)]
+    public async Task<IActionResult> SoftDeleteUser(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        await _admin.SoftDeleteUserAsync(GetUserId(), userId, ct);
+        return NoContent();
+    }
+
+    [HttpPost("users/{userId:guid}/restore")]
+    [RequirePermission(Permissions.UsersDelete)]
+    public async Task<IActionResult> RestoreUser(
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var result = await _admin.RestoreUserAsync(GetUserId(), userId, ct);
         return Ok(result);
     }
 

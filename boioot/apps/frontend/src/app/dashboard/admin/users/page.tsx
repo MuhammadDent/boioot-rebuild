@@ -65,18 +65,20 @@ export default function AdminUsersPage() {
   const [editUser, setEditUser]         = useState<AdminUserResponse | null>(null);
   const [verifyUser, setVerifyUser]     = useState<AdminUserResponse | null>(null);
   const [showCreate, setShowCreate]     = useState(false);
+  const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<AdminUserResponse | null>(null);
 
   // ── Filters ───────────────────────────────────────────────────────────────
   const [activeRoleTab, setActiveRoleTab]         = useState(initialRole);
   const [pendingRole, setPendingRole]             = useState(initialRole);
   const [pendingIsActive, setPendingIsActive]     = useState("");
+  const [pendingIsDeleted, setPendingIsDeleted]   = useState("false");
   const [pendingSearch, setPendingSearch]         = useState("");
   const [pendingCreatedAfter, setPendingCreatedAfter]   = useState("");
   const [pendingCreatedBefore, setPendingCreatedBefore] = useState("");
   const [pendingLastLogin, setPendingLastLogin]   = useState("");
   const [showFilters, setShowFilters]             = useState(true);
 
-  const appliedFiltersRef = useRef<AdminUsersParams>({});
+  const appliedFiltersRef = useRef<AdminUsersParams>({ isDeleted: false });
 
   // ── Load data ─────────────────────────────────────────────────────────────
 
@@ -98,7 +100,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      load(1, {});
+      load(1, { isDeleted: false });
       rbacApi.getRoles()
         .then(data => setRoles(data))
         .catch(() => {});
@@ -123,6 +125,7 @@ export default function AdminUsersPage() {
     const p: AdminUsersParams = {};
     if (pendingRole)            p.role          = pendingRole;
     if (pendingIsActive !== "") p.isActive       = pendingIsActive === "true";
+    if (pendingIsDeleted !== "") p.isDeleted     = pendingIsDeleted === "true";
     if (pendingSearch.trim())   p.search         = pendingSearch.trim();
     if (pendingCreatedAfter)    p.createdAfter   = pendingCreatedAfter;
     if (pendingCreatedBefore)   p.createdBefore  = pendingCreatedBefore;
@@ -140,11 +143,13 @@ export default function AdminUsersPage() {
 
   function handleReset() {
     setPendingRole(""); setPendingIsActive(""); setPendingSearch("");
+    setPendingIsDeleted("false");
     setPendingCreatedAfter(""); setPendingCreatedBefore(""); setPendingLastLogin("");
     setActiveRoleTab("");
-    appliedFiltersRef.current = {};
+    const resetParams: AdminUsersParams = { isDeleted: false };
+    appliedFiltersRef.current = resetParams;
     setActionError("");
-    load(1, {});
+    load(1, resetParams);
   }
 
   function handleRoleTabClick(role: string) {
@@ -284,6 +289,48 @@ export default function AdminUsersPage() {
     setTimeout(() => setActionNotice(""), 4000);
   }
 
+  function handleDeleteUser(u: AdminUserResponse) {
+    if (actionLoading) return;
+    if (u.id === user!.id) {
+      showNotice("⚠ لا يمكنك حذف حسابك الحالي");
+      return;
+    }
+    setConfirmDeleteTarget(u);
+  }
+
+  async function confirmDelete() {
+    if (!confirmDeleteTarget || actionLoading) return;
+    const target = confirmDeleteTarget;
+    setConfirmDeleteTarget(null);
+    setActionLoading(`delete-${target.id}`);
+    setActionError("");
+    try {
+      await adminApi.deleteUser(target.id);
+      setUsers(prev => prev.filter(u => u.id !== target.id));
+      setTotalCount(c => c - 1);
+      showNotice(`تم حذف المستخدم "${target.fullName}" بنجاح`);
+    } catch (e) {
+      setActionError(normalizeError(e));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRestoreUser(targetId: string, fullName: string) {
+    if (actionLoading) return;
+    setActionLoading(`restore-${targetId}`);
+    setActionError("");
+    try {
+      const updated = await adminApi.restoreUser(targetId);
+      setUsers(prev => prev.map(u => u.id === targetId ? { ...u, ...updated } : u));
+      showNotice(`تم استعادة المستخدم "${fullName}" بنجاح`);
+    } catch (e) {
+      setActionError(normalizeError(e));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -354,6 +401,15 @@ export default function AdminUsersPage() {
             actionLoading={actionLoading}
             onSave={handleVerificationSave}
             onClose={() => setVerifyUser(null)}
+          />
+        )}
+
+        {/* ── Confirm Delete dialog ── */}
+        {confirmDeleteTarget && (
+          <ConfirmDeleteDialog
+            userData={confirmDeleteTarget}
+            onConfirm={confirmDelete}
+            onCancel={() => setConfirmDeleteTarget(null)}
           />
         )}
 
@@ -482,6 +538,20 @@ export default function AdminUsersPage() {
                 </select>
               </div>
 
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: "1 1 150px" }}>
+                <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>الحساب</label>
+                <select
+                  className="form-input"
+                  style={{ padding: "0.45rem 0.75rem" }}
+                  value={pendingIsDeleted}
+                  onChange={e => setPendingIsDeleted(e.target.value)}
+                >
+                  <option value="">الكل (شامل المحذوفين)</option>
+                  <option value="false">غير المحذوفين</option>
+                  <option value="true">المحذوفون فقط</option>
+                </select>
+              </div>
+
               <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", flex: "1 1 140px" }}>
                 <label style={{ fontSize: "0.78rem", color: "var(--color-text-secondary)" }}>الدور</label>
                 <select
@@ -569,6 +639,8 @@ export default function AdminUsersPage() {
                 onOpenVerify={() => openVerify(u)}
                 onView={() => openView(u)}
                 onEdit={() => openEdit(u)}
+                onDelete={() => handleDeleteUser(u)}
+                onRestore={() => handleRestoreUser(u.id, u.fullName)}
               />
             ))}
           </div>
@@ -599,6 +671,8 @@ function UserRow({
   onOpenVerify,
   onView,
   onEdit,
+  onDelete,
+  onRestore,
 }: {
   userData: AdminUserResponse;
   isSelf: boolean;
@@ -607,6 +681,8 @@ function UserRow({
   onOpenVerify: () => void;
   onView: () => void;
   onEdit: () => void;
+  onDelete: () => void;
+  onRestore: () => void;
 }) {
   const isActive = activeId === u.id;
   const badgeClass = ROLE_BADGE[u.role] ?? "badge badge-gray";
@@ -679,27 +755,56 @@ function UserRow({
 
         {/* ── Actions ── */}
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", flexShrink: 0 }}>
-          <button
-            className="btn"
-            style={{ padding: "0.4rem 0.85rem", fontSize: "0.82rem" }}
-            onClick={onView}
-          >
-            تفاصيل
-          </button>
-          <button
-            className="btn"
-            style={{ padding: "0.4rem 0.85rem", fontSize: "0.82rem" }}
-            onClick={onEdit}
-          >
-            تعديل
-          </button>
-          <button
-            className="btn btn-primary"
-            style={{ padding: "0.4rem 0.85rem", fontSize: "0.82rem" }}
-            onClick={onOpenVerify}
-          >
-            التوثيق
-          </button>
+          {!u.isDeleted && (
+            <>
+              <button
+                className="btn"
+                style={{ padding: "0.4rem 0.85rem", fontSize: "0.82rem" }}
+                onClick={onView}
+              >
+                تفاصيل
+              </button>
+              <button
+                className="btn"
+                style={{ padding: "0.4rem 0.85rem", fontSize: "0.82rem" }}
+                onClick={onEdit}
+              >
+                تعديل
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ padding: "0.4rem 0.85rem", fontSize: "0.82rem" }}
+                onClick={onOpenVerify}
+              >
+                التوثيق
+              </button>
+            </>
+          )}
+          {u.isDeleted ? (
+            <button
+              className="btn"
+              style={{
+                padding: "0.4rem 0.85rem", fontSize: "0.82rem",
+                backgroundColor: "#f0fdf4", borderColor: "#86efac", color: "#15803d",
+              }}
+              disabled={actionLoading === `restore-${u.id}`}
+              onClick={onRestore}
+            >
+              {actionLoading === `restore-${u.id}` ? "..." : "استعادة"}
+            </button>
+          ) : !isSelf && (
+            <button
+              className="btn"
+              style={{
+                padding: "0.4rem 0.85rem", fontSize: "0.82rem",
+                backgroundColor: "#fef2f2", borderColor: "#fecaca", color: "#b91c1c",
+              }}
+              disabled={!!actionLoading}
+              onClick={onDelete}
+            >
+              {actionLoading === `delete-${u.id}` ? "..." : "حذف"}
+            </button>
+          )}
         </div>
 
       </div>
@@ -1178,6 +1283,98 @@ function StatPill({ label, value, color }: { label: string; value?: number; colo
       <span style={{ fontSize: "0.72rem", color: "var(--color-text-secondary)", marginTop: "0.1rem" }}>
         {label}
       </span>
+    </div>
+  );
+}
+
+// ─── Confirm Delete Dialog ────────────────────────────────────────────────────
+
+function ConfirmDeleteDialog({
+  userData: u,
+  onConfirm,
+  onCancel,
+}: {
+  userData: AdminUserResponse;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "1rem",
+    }}>
+      <div style={{
+        backgroundColor: "var(--color-bg-primary, #fff)",
+        borderRadius: 12, padding: "2rem",
+        maxWidth: 480, width: "100%",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+        border: "2px solid #fecaca",
+        direction: "rtl",
+      }}>
+        <div style={{ marginBottom: "1.5rem" }}>
+          <h3 style={{
+            margin: "0 0 0.5rem",
+            fontSize: "1.15rem", fontWeight: 700,
+            color: "#b91c1c",
+          }}>
+            تأكيد حذف الحساب
+          </h3>
+          <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--color-text-secondary)" }}>
+            أنت على وشك حذف الحساب التالي:
+          </p>
+        </div>
+
+        <div style={{
+          background: "#fef2f2", borderRadius: 8,
+          padding: "1rem 1.25rem", marginBottom: "1.25rem",
+          border: "1px solid #fecaca",
+        }}>
+          <p style={{ margin: "0 0 0.35rem", fontWeight: 700, fontSize: "1rem", color: "var(--color-text-primary)" }}>
+            {u.fullName}
+          </p>
+          <p style={{ margin: "0 0 0.2rem", fontSize: "0.85rem", color: "var(--color-text-secondary)" }} dir="ltr">
+            {u.email}
+          </p>
+          <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>
+            {ROLE_LABELS[u.role] ?? u.role}
+          </p>
+        </div>
+
+        <div style={{
+          background: "#fffbeb", borderRadius: 8,
+          padding: "0.85rem 1rem", marginBottom: "1.5rem",
+          border: "1px solid #fde68a",
+          fontSize: "0.85rem", color: "#92400e",
+          lineHeight: 1.6,
+        }}>
+          ⚠ سيؤدي هذا الإجراء إلى إخفاء الحساب من النظام وتعطيل تسجيل الدخول.
+          لن تُحذف البيانات المرتبطة (العقارات، الطلبات، المحادثات).
+          يمكن استعادة الحساب لاحقاً من خلال فلتر "المحذوفون".
+        </div>
+
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+          <button
+            className="btn"
+            style={{ padding: "0.55rem 1.25rem", fontSize: "0.9rem" }}
+            onClick={onCancel}
+          >
+            إلغاء
+          </button>
+          <button
+            className="btn"
+            style={{
+              padding: "0.55rem 1.25rem", fontSize: "0.9rem",
+              backgroundColor: "#dc2626", borderColor: "#dc2626",
+              color: "#fff", fontWeight: 600,
+            }}
+            onClick={onConfirm}
+          >
+            تأكيد الحذف
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
