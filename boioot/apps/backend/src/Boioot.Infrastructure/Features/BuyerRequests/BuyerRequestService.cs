@@ -77,7 +77,10 @@ public class BuyerRequestService : IBuyerRequestService
 
     public async Task<BuyerRequestResponse> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        // Project: load only FullName from User, not the full entity
+        // Project the FK only, not the User navigation. `r.User != null ? ... : ""`
+        // compiles to an INNER JOIN on Users (with the soft-delete query filter), so
+        // a request whose author was soft-deleted/removed would yield null here and
+        // wrongly 404. Resolve the author name via a separate filtered-out lookup.
         var row = await _context.BuyerRequests
             .AsNoTracking()
             .Where(r => r.Id == id)
@@ -85,11 +88,16 @@ public class BuyerRequestService : IBuyerRequestService
             {
                 r.Id, r.Title, r.PropertyType, r.Description, r.City,
                 r.Neighborhood, r.IsPublished, r.Status, r.UserId,
-                r.CreatedAt, r.UpdatedAt,
-                UserName = r.User != null ? r.User.FullName : ""
+                r.CreatedAt, r.UpdatedAt
             })
             .FirstOrDefaultAsync(ct)
             ?? throw new BoiootException("الطلب غير موجود", 404);
+
+        var userName = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.Id == row.UserId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync(ct) ?? "";
 
         var commentsCount = await _context.BuyerRequestComments
             .CountAsync(c => c.BuyerRequestId == id, ct);
@@ -105,7 +113,7 @@ public class BuyerRequestService : IBuyerRequestService
             IsPublished   = row.IsPublished,
             Status        = row.Status,
             UserId        = row.UserId,
-            UserName      = row.UserName,
+            UserName      = userName,
             CommentsCount = commentsCount,
             CreatedAt     = row.CreatedAt,
             UpdatedAt     = row.UpdatedAt,
@@ -134,8 +142,7 @@ public class BuyerRequestService : IBuyerRequestService
             {
                 r.Id, r.Title, r.PropertyType, r.Description, r.City,
                 r.Neighborhood, r.IsPublished, r.Status, r.UserId,
-                r.CreatedAt, r.UpdatedAt,
-                UserName = r.User != null ? r.User.FullName : ""
+                r.CreatedAt, r.UpdatedAt
             })
             .ToListAsync(ct);
 
@@ -145,6 +152,15 @@ public class BuyerRequestService : IBuyerRequestService
             .GroupBy(c => c.BuyerRequestId)
             .Select(g => new { Id = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.Id, g => g.Count, ct);
+
+        // Resolve author names via a separate keyed lookup (IgnoreQueryFilters) so
+        // requests whose author was soft-deleted are not dropped by an INNER JOIN.
+        var userIds = rows.Select(r => r.UserId).Distinct().ToList();
+        var userNames = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, ct);
 
         return new PagedResult<BuyerRequestResponse>(
             rows.Select(r => new BuyerRequestResponse
@@ -158,7 +174,7 @@ public class BuyerRequestService : IBuyerRequestService
                 IsPublished   = r.IsPublished,
                 Status        = r.Status,
                 UserId        = r.UserId,
-                UserName      = r.UserName,
+                UserName      = userNames.GetValueOrDefault(r.UserId, ""),
                 CommentsCount = commentCounts.GetValueOrDefault(r.Id, 0),
                 CreatedAt     = r.CreatedAt,
                 UpdatedAt     = r.UpdatedAt,
@@ -265,8 +281,7 @@ public class BuyerRequestService : IBuyerRequestService
             {
                 r.Id, r.Title, r.PropertyType, r.Description, r.City,
                 r.Neighborhood, r.IsPublished, r.Status, r.UserId,
-                r.CreatedAt, r.UpdatedAt,
-                UserName = r.User != null ? r.User.FullName : ""
+                r.CreatedAt, r.UpdatedAt
             })
             .ToListAsync(ct);
 
@@ -276,6 +291,16 @@ public class BuyerRequestService : IBuyerRequestService
             .GroupBy(c => c.BuyerRequestId)
             .Select(g => new { Id = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.Id, g => g.Count, ct);
+
+        // Resolve author names via a separate keyed lookup (IgnoreQueryFilters) so
+        // the admin listing still shows requests whose author was soft-deleted
+        // (an INNER JOIN on the filtered Users would otherwise drop those rows).
+        var userIds = rows.Select(r => r.UserId).Distinct().ToList();
+        var userNames = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, ct);
 
         return new PagedResult<BuyerRequestResponse>(
             rows.Select(r => new BuyerRequestResponse
@@ -289,7 +314,7 @@ public class BuyerRequestService : IBuyerRequestService
                 IsPublished   = r.IsPublished,
                 Status        = r.Status,
                 UserId        = r.UserId,
-                UserName      = r.UserName,
+                UserName      = userNames.GetValueOrDefault(r.UserId, ""),
                 CommentsCount = commentCounts.GetValueOrDefault(r.Id, 0),
                 CreatedAt     = r.CreatedAt,
                 UpdatedAt     = r.UpdatedAt,
