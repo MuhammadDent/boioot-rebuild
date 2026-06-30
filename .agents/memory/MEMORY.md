@@ -1,1 +1,2 @@
 - [Replit preview / .replit config](replit-preview-config.md) — frontend served via legacy webview workflow (not artifact); stale [[artifacts]] entries are inert & unremovable; .replit edits blocked.
+- [Deployment log retention](deployment-log-retention.md) — blank Publishing>Logs page = build logs aged out of retention (0 lines on old success+fail builds), not corruption; diagnosis steps inside.
