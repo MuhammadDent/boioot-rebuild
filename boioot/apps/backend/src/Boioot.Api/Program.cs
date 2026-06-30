@@ -324,6 +324,20 @@ app.UseExceptionHandler(errorApp =>
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogError(error, "Unhandled exception on {Method} {Path}",
                 context.Request.Method, context.Request.Path);
+
+            // ── TEMP DIAGNOSTIC (remove once production schema drift is resolved) ──
+            // Surfaces the concrete exception type + message + inner exception on a
+            // single grep-friendly line so the real cause is visible in deploy logs
+            // (e.g. Npgsql 42703 "column ... does not exist" / 42P01 "relation ...
+            // does not exist" from missing tables/columns in the production DB).
+            logger.LogError(
+                "[TEMP-DIAG] {Method} {Path} -> {ExceptionType}: {Message} | inner: {Inner}",
+                context.Request.Method,
+                context.Request.Path,
+                error?.GetType().FullName,
+                error?.Message,
+                error?.InnerException?.Message ?? "(none)");
+
             await context.Response.WriteAsJsonAsync(new { error = "حدث خطأ داخلي في الخادم" });
         }
     });

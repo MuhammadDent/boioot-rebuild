@@ -1,2 +1,3 @@
-- [React 19 style tag hoisting](react19-style-hoisting.md) — bare `<style>` in client component JSX causes hydration error; move to CSS file or use dangerouslySetInnerHTML.
-- [Preview artifact-router routing](preview-artifact-router-routing.md) — preview blanks/"artifact error" but port 3000 is 200: dev domain returns Express 404 (stale router route) → restart the webview workflow.
+- [Prod schema drift & publish flow](boioot-prod-schema-drift.md) — prod DB lags dev because startup stamps migration IDs as applied without running them; fix prod schema gaps via re-publish, never prod/startup DDL.
+- [EF required-nav projection drops rows](ef-required-nav-inner-join.md) — `x.Nav != null ? x.Nav.Prop : default` over a required nav compiles to INNER JOIN (+ nav's global filter) and silently drops principal rows; use a separate keyed lookup.
+- [Boioot DB tooling](boioot-db-tooling.md) — DATABASE_URL holds literal HOST/PORT placeholders; use PG* vars for dev psql, executeSql({environment:'production'}) read-only for prod.

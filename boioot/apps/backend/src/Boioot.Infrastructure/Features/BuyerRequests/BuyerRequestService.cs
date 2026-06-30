@@ -188,12 +188,26 @@ public class BuyerRequestService : IBuyerRequestService
             {
                 r.Id, r.Title, r.PropertyType, r.Description, r.City,
                 r.Neighborhood, r.IsPublished, r.Status, r.UserId,
-                r.CreatedAt, r.UpdatedAt,
-                UserName = r.User != null ? r.User.FullName : ""
+                r.CreatedAt, r.UpdatedAt
             })
             .ToListAsync(ct);
 
         var ids = rows.Select(r => r.Id).ToList();
+
+        // Resolve author names via a separate keyed lookup instead of a navigation
+        // join. EF translates `r.User != null ? r.User.FullName : ""` into an INNER
+        // JOIN on Users (User is a required relationship, and the Users global query
+        // filter adds `WHERE NOT IsDeleted`), which silently drops published requests
+        // whose author was soft-deleted or removed — the list then reports a non-zero
+        // total but returns no items. A separate lookup keeps every published request
+        // visible; IgnoreQueryFilters lets a soft-deleted author's name still resolve.
+        var userIds = rows.Select(r => r.UserId).Distinct().ToList();
+        var userNames = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, ct);
+
         var commentCounts = await _context.BuyerRequestComments
             .Where(c => ids.Contains(c.BuyerRequestId))
             .GroupBy(c => c.BuyerRequestId)
@@ -212,7 +226,7 @@ public class BuyerRequestService : IBuyerRequestService
                 IsPublished   = r.IsPublished,
                 Status        = r.Status,
                 UserId        = r.UserId,
-                UserName      = r.UserName,
+                UserName      = userNames.GetValueOrDefault(r.UserId, ""),
                 CommentsCount = commentCounts.GetValueOrDefault(r.Id, 0),
                 CreatedAt     = r.CreatedAt,
                 UpdatedAt     = r.UpdatedAt,
