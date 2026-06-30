@@ -1,1 +1,2 @@
 - [React 19 style tag hoisting](react19-style-hoisting.md) — bare `<style>` in client component JSX causes hydration error; move to CSS file or use dangerouslySetInnerHTML.
+- [Preview artifact-router routing](preview-artifact-router-routing.md) — preview blanks/"artifact error" but port 3000 is 200: dev domain returns Express 404 (stale router route) → restart the webview workflow.
