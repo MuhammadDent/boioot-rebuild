@@ -1,3 +1,1 @@
-- [Prod schema drift & publish flow](boioot-prod-schema-drift.md) — prod DB lags dev because startup stamps migration IDs as applied without running them; fix prod schema gaps via re-publish, never prod/startup DDL.
-- [EF required-nav projection drops rows](ef-required-nav-inner-join.md) — `x.Nav != null ? x.Nav.Prop : default` over a required nav compiles to INNER JOIN (+ nav's global filter) and silently drops principal rows; use a separate keyed lookup.
-- [Boioot DB tooling](boioot-db-tooling.md) — DATABASE_URL holds literal HOST/PORT placeholders; use PG* vars for dev psql, executeSql({environment:'production'}) read-only for prod.
+- [Replit preview / .replit config](replit-preview-config.md) — frontend served via legacy webview workflow (not artifact); stale [[artifacts]] entries are inert & unremovable; .replit edits blocked.
