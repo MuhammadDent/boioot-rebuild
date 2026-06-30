@@ -1,0 +1,1 @@
+- [React 19 style tag hoisting](react19-style-hoisting.md) — bare `<style>` in client component JSX causes hydration error; move to CSS file or use dangerouslySetInnerHTML.

@@ -757,7 +757,6 @@ export default function HomePageClient({ initialHeroImage }: { initialHeroImage:
         </div>
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
