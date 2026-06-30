@@ -24,6 +24,9 @@ export default async function IntegrationBody(): Promise<JSX.Element | null> {
   const nodes: JSX.Element[] = [];
 
   // ── Google Tag Manager noscript ────────────────────────────────────────────
+  // Use dangerouslySetInnerHTML instead of React children: browsers with JS
+  // enabled parse <noscript> content as raw text, not DOM elements, which
+  // causes a React hydration mismatch if children are React elements.
   const gtmApi = integrations.find((i) => i.key === "google-tag-manager");
   const gtmId =
     (gtmApi?.config.containerId &&
@@ -35,14 +38,12 @@ export default async function IntegrationBody(): Promise<JSX.Element | null> {
 
   if (gtmId && gtmId.startsWith("GTM-")) {
     nodes.push(
-      <noscript key="gtm-noscript">
-        <iframe
-          src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
-          height="0"
-          width="0"
-          style={{ display: "none", visibility: "hidden" }}
-        />
-      </noscript>
+      <noscript
+        key="gtm-noscript"
+        dangerouslySetInnerHTML={{
+          __html: `<iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}" height="0" width="0" style="display:none;visibility:hidden"></iframe>`,
+        }}
+      />
     );
   }
 
@@ -51,16 +52,12 @@ export default async function IntegrationBody(): Promise<JSX.Element | null> {
   const metaPixelId = meta?.config.pixelId;
   if (metaPixelId) {
     nodes.push(
-      <noscript key="meta-pixel-noscript">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          height="1"
-          width="1"
-          style={{ display: "none" }}
-          src={`https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1`}
-          alt=""
-        />
-      </noscript>
+      <noscript
+        key="meta-pixel-noscript"
+        dangerouslySetInnerHTML={{
+          __html: `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1" alt="" />`,
+        }}
+      />
     );
   }
 
