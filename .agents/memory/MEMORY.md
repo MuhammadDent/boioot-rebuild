@@ -1,1 +1,2 @@
 - [Reference-number generation](reference-number-generation.md) — PREFIX-YEAR-NNNNNN refs come from per-(prefix,year) PG sequences via nextval; never COUNT/MAX to allocate (soft-deletes cause 23505). DB changes are idempotent raw-SQL patches in DatabaseStartupService, not EF migrations.
+- [Deployment build model](boioot-deployment-build.md) — prod is .NET-only (no Node proxy/entry.cjs); build-prod.sh publishes to out/, .replit runs the DLL. Local build gotchas inside.
