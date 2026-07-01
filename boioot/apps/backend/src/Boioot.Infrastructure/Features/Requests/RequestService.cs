@@ -60,7 +60,7 @@ public class RequestService : IRequestService
         }
 
         var refNumber = await ReferenceGenerator.NextAsync(
-            _context.Requests.Select(r => r.ReferenceNumber), "CNT", ct);
+            _context, _context.Requests.Select(r => r.ReferenceNumber), "CNT", ct);
 
         var entity = new Request
         {

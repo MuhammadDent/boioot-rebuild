@@ -31,7 +31,7 @@ public class SpecialRequestService : ISpecialRequestService
     {
         var code = await GenerateCodeAsync(ct);
         var refNumber = await ReferenceGenerator.NextAsync(
-            _context.SpecialRequests.Select(r => r.ReferenceNumber), "REQ", ct);
+            _context, _context.SpecialRequests.Select(r => r.ReferenceNumber), "REQ", ct);
 
         var entity = new SpecialRequest
         {

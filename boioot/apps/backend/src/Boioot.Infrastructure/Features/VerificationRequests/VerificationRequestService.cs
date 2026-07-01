@@ -41,7 +41,7 @@ public class VerificationRequestService : IVerificationRequestService
             throw new BoiootException("نوع التوثيق غير صالح", 400);
 
         var refNumber = await ReferenceGenerator.NextAsync(
-            _context.Set<VerificationRequest>().Select(v => v.ReferenceNumber), "VER", ct);
+            _context, _context.Set<VerificationRequest>().Select(v => v.ReferenceNumber), "VER", ct);
 
         var request = new VerificationRequest
         {

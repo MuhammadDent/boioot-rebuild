@@ -56,7 +56,7 @@ public class AuthService : IAuthService
 
         var userCode = await GenerateUserCodeAsync(role, ct);
         var referenceNumber = await ReferenceGenerator.NextAsync(
-            _context.Users.Select(u => u.ReferenceNumber), "USR", ct);
+            _context, _context.Users.Select(u => u.ReferenceNumber), "USR", ct);
 
         var user = new User
         {
@@ -182,13 +182,43 @@ public class AuthService : IAuthService
                 emailLower, role);
         }
 
-        await _context.SaveChangesAsync(ct);
+        // Persist. The reference number is allocated atomically from a PostgreSQL
+        // sequence (see ReferenceGenerator), so duplicate-key collisions on
+        // "IX_Users_ReferenceNumber" should not occur. The retry below is a
+        // defensive fallback only — NOT the primary mechanism.
+        const int maxSaveAttempts = 3;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await _context.SaveChangesAsync(ct);
+                break;
+            }
+            catch (DbUpdateException ex)
+                when (attempt < maxSaveAttempts && IsReferenceNumberConflict(ex))
+            {
+                _logger.LogWarning(
+                    "ReferenceNumber collision on register (attempt {Attempt}/{Max}); regenerating and retrying. {Msg}",
+                    attempt, maxSaveAttempts, ex.Message);
+
+                user.ReferenceNumber = await ReferenceGenerator.NextAsync(
+                    _context, _context.Users.Select(u => u.ReferenceNumber), "USR", ct);
+            }
+        }
 
         _logger.LogInformation("New user registered: {Email} | Role: {Role}", emailLower, user.Role);
 
         // Register issues a refresh token with rememberMe=false
         return await BuildAuthResponseAsync(user, rememberMe: false, ipAddress: null, userAgent: null, ct);
     }
+
+    /// <summary>
+    /// True when the failure is a unique-constraint violation (PostgreSQL 23505)
+    /// on a ReferenceNumber index — the only case the register save-retry handles.
+    /// </summary>
+    private static bool IsReferenceNumberConflict(DbUpdateException ex)
+        => ex.InnerException is Npgsql.PostgresException { SqlState: "23505" } pg
+           && (pg.ConstraintName?.Contains("ReferenceNumber", StringComparison.OrdinalIgnoreCase) ?? false);
 
     // ── Login ─────────────────────────────────────────────────────────────────
 

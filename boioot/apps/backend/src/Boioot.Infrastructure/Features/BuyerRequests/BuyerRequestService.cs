@@ -44,7 +44,7 @@ public class BuyerRequestService : IBuyerRequestService
             throw new BoiootException("الحساب غير مفعّل. لا يمكنك إرسال طلبات.", 403);
 
         var refNumber = await ReferenceGenerator.NextAsync(
-            _context.BuyerRequests.Select(r => r.ReferenceNumber), "MRK", ct);
+            _context, _context.BuyerRequests.Select(r => r.ReferenceNumber), "MRK", ct);
 
         var entity = new BuyerRequest
         {

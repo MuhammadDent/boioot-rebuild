@@ -939,6 +939,54 @@ public sealed class DatabaseStartupService
             _log.LogWarning("[schema-patch] ReferenceNumber patch failed (non-critical): {Msg}", ex.Message);
         }
 
+        // ── Reference-number sequences (atomic allocation; fixes 23505) ───────
+        // Each (prefix, year) gets a dedicated PostgreSQL sequence, seeded from
+        // the current maximum existing suffix + 1. ReferenceGenerator reads these
+        // via nextval() so numbers never collide after soft-deletes or under
+        // concurrency. Idempotent: only creates a sequence that does not exist,
+        // so it never resets a live sequence backwards.
+        try
+        {
+            var refYear = DateTime.UtcNow.Year;
+            var refEntities = new (string Prefix, string Table)[]
+            {
+                ("USR", "Users"),
+                ("VER", "VerificationRequests"),
+                ("CNT", "Requests"),
+                ("MRK", "BuyerRequests"),
+                ("REQ", "SpecialRequests"),
+            };
+
+            foreach (var (prefix, table) in refEntities)
+            {
+                var seq  = $"ref_{prefix.ToLowerInvariant()}_{refYear}";
+                var like = $"{prefix}-{refYear}-%";
+                var rx   = $"^{prefix}-{refYear}-([0-9]+)$";
+
+                var sql = $$"""
+                    DO $$
+                    DECLARE v_start bigint;
+                    BEGIN
+                        IF to_regclass('"{{seq}}"') IS NULL THEN
+                            SELECT COALESCE(MAX(SUBSTRING("ReferenceNumber" FROM '{{rx}}')::bigint), 0) + 1
+                              INTO v_start
+                              FROM "{{table}}"
+                              WHERE "ReferenceNumber" LIKE '{{like}}';
+                            EXECUTE format('CREATE SEQUENCE IF NOT EXISTS "{{seq}}" START WITH %s MINVALUE 1', v_start);
+                        END IF;
+                    END $$;
+                    """;
+
+                await _db.Database.ExecuteSqlRawAsync(sql, ct);
+            }
+
+            _log.LogInformation("[schema-patch] Reference-number sequences ensured for {Year}.", refYear);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning("[schema-patch] Reference-number sequence patch failed (non-critical): {Msg}", ex.Message);
+        }
+
         // ── Dual-currency prices for Plans (PriceSyp / PriceUsd) ─────────────
         try
         {

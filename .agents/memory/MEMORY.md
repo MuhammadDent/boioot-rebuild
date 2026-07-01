@@ -1,2 +1,1 @@
-- [Replit preview / .replit config](replit-preview-config.md) — frontend served via legacy webview workflow (not artifact); edit `.replit` only via `verifyAndReplaceDotReplit` (direct write/bash blocked); refresh preview via `configureWorkflow`.
-- [Deployment log retention](deployment-log-retention.md) — blank Publishing>Logs page = build logs aged out of retention (0 lines on old success+fail builds), not corruption; diagnosis steps inside.
+- [Reference-number generation](reference-number-generation.md) — PREFIX-YEAR-NNNNNN refs come from per-(prefix,year) PG sequences via nextval; never COUNT/MAX to allocate (soft-deletes cause 23505). DB changes are idempotent raw-SQL patches in DatabaseStartupService, not EF migrations.
