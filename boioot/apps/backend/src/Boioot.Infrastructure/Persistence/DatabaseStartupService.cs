@@ -102,17 +102,22 @@ public sealed class DatabaseStartupService
         else if (!await MigrationsHistoryHasRowsAsync(ct) && await UsersTableExistsAsync(ct))
         {
             // __EFMigrationsHistory table EXISTS but is EMPTY while the schema
-            // is already present (e.g. the schema was copied to this database
-            // by an external tool — such as Replit's publish-time schema diff —
+            // is already present (e.g. the table structure was copied to this
+            // database by an external tool — such as a publish-time schema sync —
             // which copies table structures but not data rows).
-            // Without this, MigrateAsync() below considers EVERY migration
-            // pending, replays InitialSchema, and dies with
+            // Without intervention, MigrateAsync() below considers EVERY
+            // migration pending, replays InitialSchema, and dies with
             // "42P07: relation already exists" — aborting the entire startup
             // init so the idempotent schema patches and seeding never run.
+            //
+            // SELECTIVE BASELINE: a history row is written ONLY for migrations
+            // whose sentinel schema objects are verified to exist. Migrations
+            // whose objects are missing (or that are fully idempotent) are left
+            // pending so MigrateAsync() genuinely applies them.
             _log.LogInformation(
                 "PostgreSQL __EFMigrationsHistory exists but is empty while schema " +
-                "is present — marking all migrations as applied.");
-            await InjectAllMigrationIdsAsync(ct);
+                "is present — baselining verified migrations only.");
+            await BaselineVerifiedMigrationsAsync(ct);
         }
 
         // Has history → apply any pending migrations (Day 12+ migrations are
@@ -480,6 +485,144 @@ public sealed class DatabaseStartupService
         finally
         {
             await _db.Database.CloseConnectionAsync();
+        }
+    }
+
+    /// <summary>
+    /// Proof-gated migration-history baseline for PostgreSQL.
+    /// For each known migration, a history row is inserted ONLY if its sentinel
+    /// schema object(s) verifiably exist in the database. Migrations whose
+    /// sentinels are missing — and any migration without an entry here
+    /// (including all fully-idempotent IF NOT EXISTS migrations) — are left
+    /// pending so MigrateAsync() genuinely applies them.
+    /// Never drops, recreates, or alters any object; INSERTs are ON CONFLICT DO NOTHING.
+    /// </summary>
+    private async Task BaselineVerifiedMigrationsAsync(CancellationToken ct)
+    {
+        // MigrationId → SQL returning true iff the FULL object footprint that
+        // migration creates already exists (i.e. the migration is provably applied).
+        var sentinels = new (string MigrationId, string ExistsSql)[]
+        {
+            // InitialSchema creates exactly these 42 tables — require ALL of them.
+            ("20260323121520_InitialSchema", """
+                SELECT COUNT(*) = 42 FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name IN (
+                    'Accounts','AccountUsers','Agents','BlogCategories','BlogPostCategories',
+                    'BlogPosts','BlogSeoSettings','BuyerRequestComments','BuyerRequests','Companies',
+                    'Conversations','Favorites','FeatureDefinitions','Invoices','LimitDefinitions',
+                    'LocationCities','LocationNeighborhoods','Messages','Notifications','OwnershipTypeConfigs',
+                    'PaymentProofs','Permissions','PlanFeatures','PlanLimits','PlanPricings',
+                    'Plans','ProjectImages','Projects','Properties','PropertyAmenities',
+                    'PropertyAmenitySelections','PropertyImages','PropertyListingTypes','PropertyTypeConfigs','Requests',
+                    'Reviews','RolePermissions','Roles','SubscriptionPaymentRequests','Subscriptions',
+                    'UserRoles','Users')
+                """),
+            // InitialCreate adds exactly two Notifications indexes.
+            ("20260323125029_InitialCreate", """
+                SELECT COUNT(*) = 2 FROM pg_indexes
+                WHERE schemaname = 'public'
+                  AND indexname IN ('IX_Notifications_CreatedAt','IX_Notifications_UserId_IsRead')
+                """),
+            // Creates UserRefreshTokens + 2 indexes.
+            ("20260325141612_AddUserRefreshTokens", """
+                SELECT EXISTS (SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'public' AND table_name = 'UserRefreshTokens')
+                   AND (SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public'
+                        AND indexname IN ('IX_UserRefreshTokens_TokenHash','IX_UserRefreshTokens_UserId')) = 2
+                """),
+            // Creates SiteContents + unique index on Key.
+            ("20260325153221_AddSiteContent", """
+                SELECT EXISTS (SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'public' AND table_name = 'SiteContents')
+                   AND EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+                        AND indexname = 'IX_SiteContents_Key')
+                """),
+            // Creates SubscriptionHistories + 2 indexes.
+            ("20260325170000_AddSubscriptionHistory", """
+                SELECT EXISTS (SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'public' AND table_name = 'SubscriptionHistories')
+                   AND (SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public'
+                        AND indexname IN ('IX_SubscriptionHistories_SubscriptionId','IX_SubscriptionHistories_CreatedAtUtc')) = 2
+                """),
+            // Creates UserImages + index on UserId.
+            ("20260415120000_AddUserImages", """
+                SELECT EXISTS (SELECT 1 FROM information_schema.tables
+                        WHERE table_schema = 'public' AND table_name = 'UserImages')
+                   AND EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+                        AND indexname = 'IX_UserImages_UserId')
+                """),
+            // Adds UserImageId to PropertyImages AND ProjectImages + 2 indexes + 2 FKs.
+            ("20260415140000_AddUserImageFKToListingImages", """
+                SELECT (SELECT COUNT(*) FROM information_schema.columns
+                        WHERE table_schema = 'public' AND column_name = 'UserImageId'
+                          AND table_name IN ('PropertyImages','ProjectImages')) = 2
+                   AND (SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public'
+                        AND indexname IN ('IX_PropertyImages_UserImageId','IX_ProjectImages_UserImageId')) = 2
+                   AND (SELECT COUNT(*) FROM pg_constraint
+                        WHERE conname IN ('FK_PropertyImages_UserImages_UserImageId','FK_ProjectImages_UserImages_UserImageId')) = 2
+                """),
+            // Adds 3 columns to UserImages + IsCover to PropertyImages AND ProjectImages.
+            ("20260415160000_EnhanceUserImages", """
+                SELECT (SELECT COUNT(*) FROM information_schema.columns
+                        WHERE table_schema = 'public' AND table_name = 'UserImages'
+                          AND column_name IN ('OriginalFileName','MimeType','SizeBytes')) = 3
+                   AND (SELECT COUNT(*) FROM information_schema.columns
+                        WHERE table_schema = 'public' AND column_name = 'IsCover'
+                          AND table_name IN ('PropertyImages','ProjectImages')) = 2
+                """),
+            // Adds ThumbnailUrl + ThumbnailFileKey to UserImages.
+            ("20260415200000_AddUserImageThumbnail", """
+                SELECT (SELECT COUNT(*) FROM information_schema.columns
+                        WHERE table_schema = 'public' AND table_name = 'UserImages'
+                          AND column_name IN ('ThumbnailUrl','ThumbnailFileKey')) = 2
+                """),
+            // 20260504120000_AddAppSettings, 20260505100000_ExpandAgencyProfile
+            // and 20260513000000_AddStaticPages are intentionally OMITTED:
+            // their Up() bodies are fully idempotent (IF NOT EXISTS), so they
+            // are safe to run as normal pending migrations.
+        };
+
+        foreach (var (migrationId, existsSql) in sentinels)
+        {
+            bool verified;
+            try
+            {
+                await using var cmd = _db.Database.GetDbConnection().CreateCommand();
+                await _db.Database.OpenConnectionAsync(ct);
+                cmd.CommandText = existsSql;
+                verified = (bool)(await cmd.ExecuteScalarAsync(ct) ?? false);
+            }
+            catch (Exception ex)
+            {
+                // A failed sentinel check must never abort bootstrap. Treat as
+                // NOT verified → the migration stays pending (safe default:
+                // MigrateAsync will attempt it for real).
+                _log.LogWarning(
+                    "[baseline] Sentinel check failed for {Id} — leaving pending: {Msg}",
+                    migrationId, ex.Message);
+                verified = false;
+            }
+            finally
+            {
+                await _db.Database.CloseConnectionAsync();
+            }
+
+            if (verified)
+            {
+                string insert = $"""
+                    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                    VALUES ('{migrationId}', '{EfProductVersion}')
+                    ON CONFLICT ("MigrationId") DO NOTHING
+                    """;
+                await _db.Database.ExecuteSqlRawAsync(insert, ct);
+                _log.LogInformation(
+                    "[baseline] Verified schema objects exist — marked as applied: {Id}", migrationId);
+            }
+            else
+            {
+                _log.LogInformation(
+                    "[baseline] Schema objects MISSING — left pending for MigrateAsync: {Id}", migrationId);
+            }
         }
     }
 
