@@ -99,6 +99,21 @@ public sealed class DatabaseStartupService
                 _log.LogInformation("PostgreSQL database ready.");
             }
         }
+        else if (!await MigrationsHistoryHasRowsAsync(ct) && await UsersTableExistsAsync(ct))
+        {
+            // __EFMigrationsHistory table EXISTS but is EMPTY while the schema
+            // is already present (e.g. the schema was copied to this database
+            // by an external tool — such as Replit's publish-time schema diff —
+            // which copies table structures but not data rows).
+            // Without this, MigrateAsync() below considers EVERY migration
+            // pending, replays InitialSchema, and dies with
+            // "42P07: relation already exists" — aborting the entire startup
+            // init so the idempotent schema patches and seeding never run.
+            _log.LogInformation(
+                "PostgreSQL __EFMigrationsHistory exists but is empty while schema " +
+                "is present — marking all migrations as applied.");
+            await InjectAllMigrationIdsAsync(ct);
+        }
 
         // Has history → apply any pending migrations (Day 12+ migrations are
         // authored to be PostgreSQL-compatible from the start).
@@ -461,6 +476,30 @@ public sealed class DatabaseStartupService
         catch
         {
             return false;
+        }
+        finally
+        {
+            await _db.Database.CloseConnectionAsync();
+        }
+    }
+
+    private async Task<bool> MigrationsHistoryHasRowsAsync(CancellationToken ct)
+    {
+        try
+        {
+            await using var cmd = _db.Database.GetDbConnection().CreateCommand();
+            await _db.Database.OpenConnectionAsync(ct);
+            cmd.CommandText = IsSqlite || IsPostgres
+                ? "SELECT COUNT(*) FROM \"__EFMigrationsHistory\""
+                : "SELECT COUNT(*) FROM __EFMigrationsHistory";
+            var result = await cmd.ExecuteScalarAsync(ct);
+            return Convert.ToInt64(result) > 0;
+        }
+        catch
+        {
+            // If the count itself fails, be conservative: report "has rows" so
+            // we fall through to the normal MigrateAsync path unchanged.
+            return true;
         }
         finally
         {
