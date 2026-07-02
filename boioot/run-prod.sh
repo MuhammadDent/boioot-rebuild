@@ -24,7 +24,12 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "[run-prod] Starting .NET API on internal port ${API_PORT}..."
-PORT="$API_PORT" dotnet "$WORKSPACE_DIR/out/Boioot.Api.dll" &
+# --contentroot MUST point at the publish directory so ASP.NET Core loads
+# out/appsettings.json (Database:Provider=PostgreSQL, Jwt, AdminSeed, ...).
+# Without it the content root is the CWD, appsettings.json is not found, and
+# the API silently falls back to SQLite → every query 500s in production.
+PORT="$API_PORT" dotnet "$WORKSPACE_DIR/out/Boioot.Api.dll" \
+  --contentroot "$WORKSPACE_DIR/out" &
 API_PID=$!
 
 # Bounded, non-fatal wait for the API port so proxied routes work as soon as
