@@ -3,8 +3,8 @@ modules = ["nodejs-24", "dotnet-8.0", "python-3.11", "postgresql-16"]
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "dotnet /home/runner/workspace/out/Boioot.Api.dll --urls http://0.0.0.0:$PORT"]
-build = ["sh", "-c", "bash boioot/apps/backend/build-prod.sh"]
+run = ["sh", "-c", "bash boioot/run-prod.sh"]
+build = ["sh", "-c", "bash boioot/build-prod.sh"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
@@ -25,6 +25,10 @@ args = "Boioot Frontend"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Boioot .NET API"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "prod-build"
 
 [[workflows.workflow]]
 name = "Boioot Frontend"
@@ -49,6 +53,17 @@ outputType = "console"
 task = "shell.exec"
 args = "bash boioot/apps/backend/run-api.sh"
 waitForPort = 8080
+
+[[workflows.workflow]]
+name = "prod-build"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash boioot/build-prod.sh"
+
+[workflows.workflow.metadata]
+isValidation = true
 
 [agent]
 stack = "PNPM_WORKSPACE"

@@ -1,18 +1,19 @@
 ---
 name: Boioot production deployment build model
-description: How Boioot is built & run in production (.NET only, no Node proxy) and env gotchas when verifying builds locally
+description: How Boioot is built & run in production (Next.js public + .NET API internal, single deployment) and env gotchas when verifying builds locally
 ---
 
 # Production deployment build model
 
-Production runs the **.NET API only**. There is NO Node/JS proxy layer anymore.
+One Replit autoscale deployment runs BOTH apps: Next.js serves the public site on `$PORT`; the .NET API runs internally on 127.0.0.1:8080. Next's build-time rewrites proxy `/api`, `/uploads`, `/videos`, `/hubs` → `BACKEND_URL` (default localhost:8080).
 
-- Build: `boioot/apps/backend/build-prod.sh` does exactly one thing — `dotnet publish src/Boioot.Api -c Release --no-self-contained -o {workspace}/out`.
-- Run (`.replit` deploy): executes the published DLL directly — `dotnet /home/runner/workspace/out/Boioot.Api.dll --urls http://0.0.0.0:$PORT`.
-- **Obsolete, removed:** any `artifacts/api-server/**` (e.g. `entry.cjs`, `proxy.mjs`) and `run-api-prod.sh`. These were an old Node-proxy startup path and are dead. Do not reintroduce or reference them. A build failure like `cp: cannot stat '.../artifacts/api-server/src/entry.cjs'` means a stale copy step crept back into build-prod.sh.
-- One harmless leftover: a *comment* in dev-only `run-api.sh` mentions `/artifacts/api-server` (explains why `--contentroot` is set so appsettings.json is found). It is not executable and not part of deployment.
+- Build (`boioot/build-prod.sh`): backend publish (`dotnet publish → {workspace}/out`) then frontend `pnpm build`.
+- Run (`boioot/run-prod.sh`): starts dotnet with `PORT=8080` env (Kestrel binds via the PORT env var — `--urls` is ignored), bounded TCP wait, then `next start -p $PORT`; `wait -n` + EXIT trap so either process dying restarts the container.
+- `.replit` `[deployment]` cannot be edited directly — use the `verifyAndReplaceDotReplit` sandbox callback with a temp file INSIDE the workspace.
+- `/out/` is gitignored (publish output contains appsettings secrets — never commit it).
+- Legacy Node proxy (`artifacts/api-server/**`, `entry.cjs`, `proxy.mjs`, `run-api-prod.sh`) is dead — do not reintroduce or reference it. A build failure like `cp: cannot stat '.../entry.cjs'` means a stale copy step crept back in. (A harmless comment in dev-only `run-api.sh` still mentions the old path.)
 
-**Why:** the deploy build once died under `set -e` on a leftover `cp entry.cjs` step even though `dotnet publish` succeeded. Keeping build/run purely .NET avoids resurrecting the dead proxy path.
+**Why:** the deploy build once died under `set -e` on a leftover `cp entry.cjs` step even though `dotnet publish` succeeded; and a deploy that ran only the API on $PORT served just the API health text instead of the website.
 
 # Gotchas verifying .NET builds locally in this container
 
