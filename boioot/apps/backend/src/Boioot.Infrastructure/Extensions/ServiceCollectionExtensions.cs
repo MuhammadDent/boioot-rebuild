@@ -234,8 +234,11 @@ public static class ServiceCollectionExtensions
     // Priority:
     //   1. ConnectionStrings:Postgres in appsettings.json / environment override
     //   2. DATABASE_URL environment variable (Replit / Heroku / Railway format)
-    //      Converts  postgresql://user:pass@host:port/db
-    //      to        Host=host;Port=port;Database=db;Username=user;Password=pass;SSL Mode=Disable
+    //      Converts  postgresql://user:pass@host:port/db?sslmode=require
+    //      to        Host=host;Port=port;Database=db;Username=user;Password=pass;SSL Mode=...
+    //      The sslmode query parameter is honored; when absent, defaults to
+    //      "SSL Mode=Prefer" (negotiate TLS, fall back to plaintext) so the
+    //      same binary works against SSL-required prod DBs AND plaintext dev DBs.
     //   3. Individual PG* env vars (PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD)
     //      Replit always sets these alongside DATABASE_URL — useful as a final fallback.
     private static string ResolvePostgresConnectionString(IConfiguration configuration)
@@ -259,7 +262,7 @@ public static class ServiceCollectionExtensions
                 var user     = Uri.UnescapeDataString(userInfo[0]);
                 var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
 
-                return $"Host={host};Port={port};Database={db};Username={user};Password={password};SSL Mode=Disable";
+                return $"Host={host};Port={port};Database={db};Username={user};Password={password};{ResolveSslSegment(uri.Query)}";
             }
             catch
             {
@@ -275,7 +278,7 @@ public static class ServiceCollectionExtensions
         var pgPassword = Environment.GetEnvironmentVariable("PGPASSWORD") ?? string.Empty;
 
         if (!string.IsNullOrWhiteSpace(pgHost) && !string.IsNullOrWhiteSpace(pgDatabase))
-            return $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword};SSL Mode=Disable";
+            return $"Host={pgHost};Port={pgPort};Database={pgDatabase};Username={pgUser};Password={pgPassword};{ResolveSslSegment(null)}";
 
         // ── DIAGNOSTIC FALLBACK ────────────────────────────────────────────────
         // No connection string found from any source.
@@ -288,5 +291,42 @@ public static class ServiceCollectionExtensions
         Console.WriteLine("[STARTUP][ERROR]   App will start but ALL database operations will fail.");
         Console.WriteLine("[STARTUP][ERROR]   Fix: run `fly secrets set DATABASE_URL=postgresql://user:pass@host/db`");
         return "Host=MISSING;Database=MISSING;Username=MISSING;Password=MISSING";
+    }
+
+    // Maps the libpq-style `sslmode` query parameter of a DATABASE_URL to the
+    // Npgsql "SSL Mode" keyword. Production PostgreSQL (e.g. Replit/Neon)
+    // REJECTS plaintext connections ("28000: connection is insecure"), so
+    // "SSL Mode=Disable" must never be hardcoded. Default is Prefer: try TLS
+    // first, fall back to plaintext for local/dev servers without TLS.
+    // "Trust Server Certificate=true" keeps Require/Prefer working with
+    // managed-database proxies that present non-chain certificates.
+    private static string ResolveSslSegment(string? uriQuery)
+    {
+        var mode = "Prefer";
+        if (!string.IsNullOrWhiteSpace(uriQuery))
+        {
+            var query = uriQuery.TrimStart('?');
+            foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = pair.Split('=', 2);
+                if (kv.Length == 2 && kv[0].Equals("sslmode", StringComparison.OrdinalIgnoreCase))
+                {
+                    mode = Uri.UnescapeDataString(kv[1]).ToLowerInvariant() switch
+                    {
+                        "disable"     => "Disable",
+                        "allow"       => "Allow",
+                        "prefer"      => "Prefer",
+                        "require"     => "Require",
+                        "verify-ca"   => "VerifyCA",
+                        "verify-full" => "VerifyFull",
+                        _             => "Prefer"
+                    };
+                }
+            }
+        }
+
+        return mode is "Disable" or "VerifyCA" or "VerifyFull"
+            ? $"SSL Mode={mode}"
+            : $"SSL Mode={mode};Trust Server Certificate=true";
     }
 }

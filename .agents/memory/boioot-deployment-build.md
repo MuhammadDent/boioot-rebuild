@@ -9,6 +9,7 @@ One Replit autoscale deployment runs BOTH apps: Next.js serves the public site o
 
 - Build (`boioot/build-prod.sh`): backend publish (`dotnet publish → {workspace}/out`) then frontend `pnpm build`.
 - Run (`boioot/run-prod.sh`): starts dotnet with `PORT=8080` env (Kestrel binds via the PORT env var — `--urls` is ignored), bounded TCP wait, then `next start -p $PORT`; `wait -n` + EXIT trap so either process dying restarts the container.
+- Prod Postgres REJECTS plaintext (`28000: connection is insecure`). Never hardcode `SSL Mode=Disable` when building the Npgsql conn string from DATABASE_URL/PG* — honor the `sslmode` URL param, default `SSL Mode=Prefer;Trust Server Certificate=true` (works on plaintext dev helium AND TLS-required prod).
 - The DLL MUST be launched with `--contentroot {workspace}/out`. Without it the content root stays at the script CWD, `out/appsettings.json` is never loaded, `Database:Provider` defaults to SQLite, and every prod DB query 500s (`no such table: Users`) → healthcheck `GET /` 500 and login fails. Same rule as dev `run-api.sh`.
 - `.replit` `[deployment]` cannot be edited directly — use the `verifyAndReplaceDotReplit` sandbox callback with a temp file INSIDE the workspace.
 - `/out/` is gitignored (publish output contains appsettings secrets — never commit it).
