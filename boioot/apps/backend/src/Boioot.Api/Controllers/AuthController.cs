@@ -5,6 +5,7 @@ using Boioot.Application.Features.Auth.DTOs;
 using Boioot.Application.Features.Auth.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Boioot.Api.Controllers;
 
@@ -27,6 +28,7 @@ public class AuthController : ControllerBase
     // ── Register ──────────────────────────────────────────────────────────────
 
     [HttpPost("register")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
     {
         var ip        = GetClientIp();
@@ -42,6 +44,7 @@ public class AuthController : ControllerBase
     // ── Login ─────────────────────────────────────────────────────────────────
 
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
         var ip        = GetClientIp();

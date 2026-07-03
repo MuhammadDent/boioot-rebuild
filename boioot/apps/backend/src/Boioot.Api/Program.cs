@@ -1,6 +1,8 @@
 // trigger backend deploy
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Boioot.Api.Authorization;
 using Boioot.Api.Services;
 using Boioot.Api.Hubs;
@@ -235,6 +237,42 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
+// ── Rate limiting (VA/PT finding #2: Missing Rate Limiting on auth endpoints) ─
+// Named policy "auth" applied ONLY to the anonymous credential endpoints
+// (POST /api/auth/login, POST /api/auth/register) via [EnableRateLimiting].
+// Partitioned per client IP (RemoteIpAddress reflects X-Forwarded-For because
+// UseForwardedHeaders runs first). Fixed window: 5 requests / 5 minutes, no
+// queueing. No global limiter — public browsing/listing APIs are unaffected.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.OnRejected = async (context, ct) =>
+    {
+        var response = context.HttpContext.Response;
+        response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+
+        await response.WriteAsJsonAsync(new
+        {
+            error = "محاولات كثيرة جداً. الرجاء المحاولة مرة أخرى بعد قليل.",
+            code  = "RATE_LIMITED",
+        }, ct);
+    };
+
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window      = TimeSpan.FromMinutes(5),
+                QueueLimit  = 0,
+            }));
+});
+
 var app = builder.Build();
 
 // ── Storage path diagnostics ─────────────────────────────────────────────────
@@ -379,6 +417,10 @@ app.UseExceptionHandler(errorApp =>
 });
 
 app.UseCors();
+
+// ── Rate limiter (after UseRouting + UseCors so 429s carry CORS headers) ─────
+// Only endpoints tagged [EnableRateLimiting("auth")] are limited.
+app.UseRateLimiter();
 
 // ── Static files: default wwwroot ─────────────────────────────────────────────
 app.UseStaticFiles();
