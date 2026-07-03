@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { api, ApiError, NetworkError } from "@/lib/api";
+import { validatePassword } from "@/lib/passwordPolicy";
 import {
   normalizeProfile,
   ROLE_GROUP_COLORS,
@@ -991,8 +992,9 @@ function ProfileSecurityTab({ raw }: { raw: UserProfileResponse }) {
     if (!current.trim()) e.current = "هذا الحقل مطلوب";
     if (!next.trim()) {
       e.next = "هذا الحقل مطلوب";
-    } else if (next.length < 8) {
-      e.next = "يجب أن تكون كلمة المرور 8 أحرف على الأقل";
+    } else {
+      const pwdError = validatePassword(next, raw.email);
+      if (pwdError) e.next = pwdError;
     }
     if (!confirm.trim()) {
       e.confirm = "هذا الحقل مطلوب";

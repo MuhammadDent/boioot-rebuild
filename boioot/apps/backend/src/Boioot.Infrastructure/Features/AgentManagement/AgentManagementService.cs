@@ -1,3 +1,4 @@
+using Boioot.Application.Common;
 using Boioot.Application.Common.Services;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.AgentManagement.DTOs;
@@ -62,6 +63,8 @@ public class AgentManagementService : IAgentManagementService
 
         if (await _context.Users.AnyAsync(u => u.Email == emailLower, ct))
             throw new BoiootException("البريد الإلكتروني مستخدم بالفعل", 409);
+
+        PasswordPolicy.EnsureValid(request.Password, emailLower);
 
         var count = await _context.Users
             .IgnoreQueryFilters()

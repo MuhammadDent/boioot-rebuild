@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { authApi } from "@/features/auth/api";
 import { normalizeError } from "@/lib/api";
+import { validatePassword, PASSWORD_HINT } from "@/lib/passwordPolicy";
 import { EyeIcon } from "@/components/ui/EyeIcon";
 import {
   saveRedirectTarget as _save,
@@ -140,7 +141,8 @@ function RegisterForm({
     const errs: Record<string, string> = {};
     if (fullName.trim().length < 3)   errs.fullName = "الاسم يجب أن لا يقل عن 3 أحرف";
     if (!email.includes("@"))          errs.email    = "البريد الإلكتروني غير صالح";
-    if (password.length < 8)           errs.password = "8 أحرف على الأقل";
+    const pwdError = validatePassword(password, email);
+    if (pwdError)                      errs.password = pwdError;
     if (password !== confirm)          errs.confirm  = "كلمتا المرور غير متطابقتين";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -231,7 +233,7 @@ function RegisterForm({
         <div style={{ position: "relative" }}>
           <input
             type={showPwd ? "text" : "password"}
-            autoComplete="new-password" placeholder="8 أحرف على الأقل"
+            autoComplete="new-password" placeholder={PASSWORD_HINT}
             value={password}
             onChange={e => { setPassword(e.target.value); clearErr("password"); }}
             style={{ ...(errors.password ? INPUT_ERR : INPUT), paddingLeft: "2.4rem" }}

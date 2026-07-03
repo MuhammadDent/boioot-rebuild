@@ -15,7 +15,7 @@ public class RegisterRequest
     public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "كلمة المرور مطلوبة")]
-    [MinLength(8, ErrorMessage = "كلمة المرور يجب أن لا تقل عن 8 أحرف")]
+    [MinLength(10, ErrorMessage = "كلمة المرور يجب أن لا تقل عن 10 أحرف")]
     [MaxLength(100, ErrorMessage = "كلمة المرور يجب أن لا تتجاوز 100 حرف")]
     public string Password { get; set; } = string.Empty;
 

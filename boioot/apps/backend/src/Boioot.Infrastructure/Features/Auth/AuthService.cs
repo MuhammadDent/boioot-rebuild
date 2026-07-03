@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Boioot.Application.Common;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Auth.DTOs;
 using Boioot.Application.Features.Auth.Interfaces;
@@ -42,6 +43,8 @@ public class AuthService : IAuthService
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
         var emailLower = request.Email.ToLowerInvariant();
+
+        PasswordPolicy.EnsureValid(request.Password, emailLower);
 
         var emailExists = await _context.Users
             .AnyAsync(u => u.Email == emailLower, ct);
@@ -498,6 +501,11 @@ public class AuthService : IAuthService
 
             if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
                 throw new BoiootException("كلمة المرور الحالية غير صحيحة", 400);
+
+            var policyEmail = !string.IsNullOrWhiteSpace(request.Email)
+                ? request.Email.Trim().ToLowerInvariant()
+                : user.Email;
+            PasswordPolicy.EnsureValid(request.NewPassword, policyEmail);
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
         }

@@ -3,6 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { api } from "@/lib/api";
+import { validatePassword } from "@/lib/passwordPolicy";
 import Spinner from "@/components/ui/Spinner";
 
 interface AgentSummary {
@@ -79,8 +80,9 @@ export default function AgentsPage() {
       setFormError("الاسم والبريد وكلمة المرور مطلوبة");
       return;
     }
-    if (form.password.length < 8) {
-      setFormError("كلمة المرور يجب أن لا تقل عن 8 أحرف");
+    const pwdError = validatePassword(form.password, form.email);
+    if (pwdError) {
+      setFormError(pwdError);
       return;
     }
 

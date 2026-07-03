@@ -13,6 +13,7 @@ import { EyeIcon } from "@/components/ui/EyeIcon";
 import Spinner from "@/components/ui/Spinner";
 import type { E164Number } from "libphonenumber-js/core";
 import { consumeRedirectTarget } from "@/lib/authRedirect";
+import { validatePassword, PASSWORD_HINT } from "@/lib/passwordPolicy";
 
 type RoleValue = "User" | "Owner" | "Broker" | "CompanyOwner";
 type CompanyTypeValue = "RealEstateOffice" | "DeveloperCompany" | null;
@@ -158,7 +159,8 @@ export default function RegisterPage() {
       errors.companyName = "اسم الكيان التجاري مطلوب";
     }
     if (!form.email.includes("@")) errors.email = "البريد الإلكتروني غير صالح";
-    if (form.password.length < 8) errors.password = "كلمة المرور يجب أن لا تقل عن 8 أحرف";
+    const pwdError = validatePassword(form.password, form.email);
+    if (pwdError) errors.password = pwdError;
     if (form.password !== form.confirmPassword) errors.confirmPassword = "كلمتا المرور غير متطابقتين";
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -386,7 +388,7 @@ export default function RegisterPage() {
                     id="password" name="password"
                     type={showPassword ? "text" : "password"} className="form-input"
                     value={form.password} onChange={handleChange} required
-                    autoComplete="new-password" placeholder="8 أحرف على الأقل"
+                    autoComplete="new-password" placeholder={PASSWORD_HINT}
                   />
                   <button type="button" className="password-toggle"
                     onClick={() => setShowPassword((v) => !v)}

@@ -1,3 +1,4 @@
+using Boioot.Application.Common;
 using Boioot.Application.Common.Models;
 using Boioot.Application.Exceptions;
 using Boioot.Application.Features.Admin.DTOs;
@@ -547,6 +548,8 @@ public class AdminService : IAdminService
             .IgnoreQueryFilters()
             .CountAsync(u => u.Role == UserRole.Agent, ct) + 1;
 
+        PasswordPolicy.EnsureValid(request.Password, emailLower);
+
         var user = new User
         {
             UserCode     = $"AGT-{count:D4}",
@@ -835,6 +838,8 @@ public class AdminService : IAdminService
         var count = await _context.Users
             .IgnoreQueryFilters()
             .CountAsync(u => u.Role == UserRole.Broker, ct) + 1;
+
+        PasswordPolicy.EnsureValid(request.Password, emailLower);
 
         var user = new User
         {
@@ -1144,6 +1149,8 @@ public class AdminService : IAdminService
             if (!codeExists) break;
             candidate++;
         } while (true);
+
+        PasswordPolicy.EnsureValid(request.Password, emailLower);
 
         var user = new User
         {
