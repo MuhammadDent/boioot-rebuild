@@ -37,6 +37,7 @@ builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(int.Parse(port));
     options.Limits.MaxRequestBodySize = 104_857_600; // 100 MB
+    options.AddServerHeader = false; // VA/PT: do not advertise "Server: Kestrel"
 });
 
 builder.Services.AddControllers()
@@ -258,6 +259,40 @@ var app = builder.Build();
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+// ── Security headers (VA/PT finding #1: Missing Security Headers) ────────────
+// Placed immediately after UseForwardedHeaders (so Request.IsHttps reflects the
+// original X-Forwarded-Proto scheme) and before Swagger/Routing so every
+// response — including Swagger, static files, and errors — carries the headers.
+const string ContentSecurityPolicy =
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+    "img-src 'self' data: https:; " +
+    "font-src 'self' data: https://cdn.jsdelivr.net; " +
+    "connect-src 'self' https: wss:; " +
+    "object-src 'none'; " +
+    "base-uri 'self'; " +
+    "frame-ancestors 'none'";
+
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+
+    headers["X-Frame-Options"]         = "DENY";
+    headers["X-Content-Type-Options"]  = "nosniff";
+    headers["Referrer-Policy"]         = "strict-origin-when-cross-origin";
+    headers["Permissions-Policy"]      = "geolocation=(), microphone=(), camera=()";
+    headers["Content-Security-Policy"] = ContentSecurityPolicy;
+
+    // HSTS only over HTTPS (Request.IsHttps honors X-Forwarded-Proto here).
+    if (context.Request.IsHttps)
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload";
+
+    headers.Remove("X-Powered-By");
+
+    await next();
 });
 
 app.UseSwagger();
