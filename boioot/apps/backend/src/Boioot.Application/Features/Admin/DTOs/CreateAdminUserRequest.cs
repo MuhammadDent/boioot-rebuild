@@ -15,7 +15,7 @@ public class CreateAdminUserRequest
     public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "كلمة المرور مطلوبة")]
-    [MinLength(12, ErrorMessage = "كلمة المرور يجب أن لا تقل عن 12 حرفاً")]
+    [MinLength(8, ErrorMessage = "كلمة المرور يجب أن لا تقل عن 8 أحرف")]
     [MaxLength(100)]
     public string Password { get; set; } = string.Empty;
 

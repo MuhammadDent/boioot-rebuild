@@ -44,7 +44,7 @@ public class AuthService : IAuthService
     {
         var emailLower = request.Email.ToLowerInvariant();
 
-        PasswordPolicy.EnsureValid(request.Password, emailLower);
+        PasswordPolicy.EnsureValid(request.Password, PasswordTier.Standard, emailLower);
 
         var emailExists = await _context.Users
             .AnyAsync(u => u.Email == emailLower, ct);
@@ -505,7 +505,7 @@ public class AuthService : IAuthService
             var policyEmail = !string.IsNullOrWhiteSpace(request.Email)
                 ? request.Email.Trim().ToLowerInvariant()
                 : user.Email;
-            PasswordPolicy.EnsureValid(request.NewPassword, policyEmail);
+            PasswordPolicy.EnsureValid(request.NewPassword, PasswordPolicy.TierForRole(user.Role), policyEmail);
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
         }

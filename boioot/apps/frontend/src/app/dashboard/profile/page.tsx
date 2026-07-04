@@ -993,7 +993,7 @@ function ProfileSecurityTab({ raw }: { raw: UserProfileResponse }) {
     if (!next.trim()) {
       e.next = "هذا الحقل مطلوب";
     } else {
-      const pwdError = validatePassword(next, raw.email);
+      const pwdError = validatePassword(next, raw.email, raw.role === "Admin" ? "admin" : "standard");
       if (pwdError) e.next = pwdError;
     }
     if (!confirm.trim()) {

@@ -548,7 +548,7 @@ public class AdminService : IAdminService
             .IgnoreQueryFilters()
             .CountAsync(u => u.Role == UserRole.Agent, ct) + 1;
 
-        PasswordPolicy.EnsureValid(request.Password, emailLower);
+        PasswordPolicy.EnsureValid(request.Password, PasswordTier.Standard, emailLower);
 
         var user = new User
         {
@@ -839,7 +839,7 @@ public class AdminService : IAdminService
             .IgnoreQueryFilters()
             .CountAsync(u => u.Role == UserRole.Broker, ct) + 1;
 
-        PasswordPolicy.EnsureValid(request.Password, emailLower);
+        PasswordPolicy.EnsureValid(request.Password, PasswordTier.Standard, emailLower);
 
         var user = new User
         {
@@ -1150,7 +1150,7 @@ public class AdminService : IAdminService
             candidate++;
         } while (true);
 
-        PasswordPolicy.EnsureValid(request.Password, emailLower);
+        PasswordPolicy.EnsureValid(request.Password, PasswordPolicy.TierForRole(role), emailLower);
 
         var user = new User
         {

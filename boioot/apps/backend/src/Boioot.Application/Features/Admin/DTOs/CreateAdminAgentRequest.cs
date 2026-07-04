@@ -14,7 +14,7 @@ public class CreateAdminAgentRequest
     public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "كلمة المرور مطلوبة")]
-    [MinLength(12, ErrorMessage = "كلمة المرور يجب أن تكون 12 حرفاً على الأقل")]
+    [MinLength(8, ErrorMessage = "كلمة المرور يجب أن تكون 8 أحرف على الأقل")]
     public string Password { get; set; } = string.Empty;
 
     [MaxLength(30)]

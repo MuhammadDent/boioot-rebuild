@@ -64,7 +64,7 @@ public class AgentManagementService : IAgentManagementService
         if (await _context.Users.AnyAsync(u => u.Email == emailLower, ct))
             throw new BoiootException("البريد الإلكتروني مستخدم بالفعل", 409);
 
-        PasswordPolicy.EnsureValid(request.Password, emailLower);
+        PasswordPolicy.EnsureValid(request.Password, PasswordTier.Standard, emailLower);
 
         var count = await _context.Users
             .IgnoreQueryFilters()
