@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // VA/PT: Server Header Information Disclosure — do not advertise the framework
+  // via the "X-Powered-By: Next.js" response header.
+  poweredByHeader: false,
   typescript: {
     ignoreBuildErrors: true,
   },
