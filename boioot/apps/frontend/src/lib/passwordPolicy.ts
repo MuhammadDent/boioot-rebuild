@@ -4,7 +4,7 @@
  * الخادم هو المصدر النهائي للتحقق؛ هذا الملف لعرض أخطاء فورية فقط.
  */
 
-export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MIN_LENGTH = 12;
 
 export const PASSWORD_HINT = `${PASSWORD_MIN_LENGTH} أحرف على الأقل، حرف كبير وصغير ورقم ورمز خاص`;
 

@@ -19,7 +19,7 @@ public class UpdateProfileRequest
     public string? ProfileImageUrl { get; set; }
 
     [MaxLength(100, ErrorMessage = "كلمة المرور الجديدة يجب أن لا تتجاوز 100 حرف")]
-    [MinLength(10, ErrorMessage = "كلمة المرور الجديدة يجب أن لا تقل عن 10 أحرف")]
+    [MinLength(12, ErrorMessage = "كلمة المرور الجديدة يجب أن لا تقل عن 12 حرفاً")]
     public string? NewPassword { get; set; }
 
     public string? CurrentPassword { get; set; }
