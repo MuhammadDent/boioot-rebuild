@@ -2,6 +2,7 @@ using Boioot.Application.Features.SpecialRequests.DTOs;
 using Boioot.Application.Features.SpecialRequests.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Boioot.Api.Controllers;
 
@@ -73,6 +74,7 @@ public class SpecialRequestsController : BaseController
 
     [HttpPost]
     [Authorize]
+    [EnableRateLimiting("content")]
     public async Task<IActionResult> Submit([FromBody] SubmitSpecialRequestDto dto, CancellationToken ct)
     {
         var userId = GetOptionalUserId();

@@ -1,2 +1,3 @@
 - [Reference-number generation](reference-number-generation.md) — PREFIX-YEAR-NNNNNN refs come from per-(prefix,year) PG sequences via nextval; never COUNT/MAX to allocate (soft-deletes cause 23505). DB changes are idempotent raw-SQL patches in DatabaseStartupService, not EF migrations.
 - [Deployment build model](boioot-deployment-build.md) — one deployment runs Next.js on $PORT + .NET API on internal 8080 via boioot/run-prod.sh; Next rewrites proxy /api. Local build gotchas inside.
+- [Rate limiting](rate-limiting.md) — named per-endpoint policies (no global limiter); UseRateLimiter MUST run after UseAuthentication or per-user partitioning silently degrades to IP-only.

@@ -1,4 +1,5 @@
 // trigger backend deploy
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
@@ -237,12 +238,22 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
-// ── Rate limiting (VA/PT finding #2: Missing Rate Limiting on auth endpoints) ─
-// Named policy "auth" applied ONLY to the anonymous credential endpoints
-// (POST /api/auth/login, POST /api/auth/register) via [EnableRateLimiting].
-// Partitioned per client IP (RemoteIpAddress reflects X-Forwarded-For because
-// UseForwardedHeaders runs first). Fixed window: 5 requests / 5 minutes, no
-// queueing. No global limiter — public browsing/listing APIs are unaffected.
+// ── Rate limiting (VA/PT finding #2: Missing Rate Limiting) ──────────────────
+// Named per-group policies applied ONLY to security-sensitive / write-heavy
+// endpoints via [EnableRateLimiting("<name>")]. There is NO global limiter, so
+// public browsing/listing/read APIs are never throttled.
+//
+//   "auth"    – anonymous credential endpoints (login, register). Strict, keyed
+//               per client IP to blunt brute-force: 5 requests / 5 minutes.
+//   "content" – user-generated content (buyer requests, comments, ratings,
+//               contact/support forms). Moderate anti-spam: 15 requests / 1 min.
+//   "upload"  – file upload / upload-URL endpoints. Guards resource exhaustion
+//               while leaving room for a normal listing gallery: 60 / 1 min.
+//
+// "content"/"upload" are keyed by authenticated user id when present, else by
+// client IP. RemoteIpAddress reflects X-Forwarded-For because UseForwardedHeaders
+// runs before UseRateLimiter. All policies share OnRejected → 429 + Retry-After
+// + a friendly Arabic message.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -262,6 +273,15 @@ builder.Services.AddRateLimiter(options =>
         }, ct);
     };
 
+    // Partition by authenticated user id when available, else by client IP.
+    static string UserOrIpPartition(HttpContext http)
+    {
+        var userId = http.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return !string.IsNullOrEmpty(userId)
+            ? "u:" + userId
+            : "ip:" + (http.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+    }
+
     options.AddPolicy("auth", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -269,6 +289,26 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 5,
                 Window      = TimeSpan.FromMinutes(5),
+                QueueLimit  = 0,
+            }));
+
+    options.AddPolicy("content", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: UserOrIpPartition(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 15,
+                Window      = TimeSpan.FromMinutes(1),
+                QueueLimit  = 0,
+            }));
+
+    options.AddPolicy("upload", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: UserOrIpPartition(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window      = TimeSpan.FromMinutes(1),
                 QueueLimit  = 0,
             }));
 });
@@ -418,10 +458,6 @@ app.UseExceptionHandler(errorApp =>
 
 app.UseCors();
 
-// ── Rate limiter (after UseRouting + UseCors so 429s carry CORS headers) ─────
-// Only endpoints tagged [EnableRateLimiting("auth")] are limited.
-app.UseRateLimiter();
-
 // ── Static files: default wwwroot ─────────────────────────────────────────────
 app.UseStaticFiles();
 
@@ -446,6 +482,16 @@ app.UseStaticFiles();
 }
 
 app.UseAuthentication();
+
+// ── Rate limiter ─────────────────────────────────────────────────────────────
+// Placed AFTER UseAuthentication so HttpContext.User is populated: the "content"
+// and "upload" policies partition by authenticated user id (falling back to IP),
+// which only works once authentication has run. Before UseAuthorization so a
+// throttled request short-circuits with 429 without touching endpoint auth.
+// Only endpoints tagged [EnableRateLimiting("auth"|"content"|"upload")] are
+// limited; public read APIs are never throttled.
+app.UseRateLimiter();
+
 app.UseAuthorization();
 
 // ── Debug endpoint: inspect storage paths and uploaded files ─────────────────

@@ -3,6 +3,7 @@ using Boioot.Application.Features.Ratings.DTOs;
 using Boioot.Application.Features.Ratings.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Boioot.Api.Controllers;
 
@@ -24,6 +25,7 @@ public class RatingsController : BaseController
 
     [Authorize]
     [HttpPost("ratings")]
+    [EnableRateLimiting("content")]
     public async Task<IActionResult> Create(
         [FromBody] CreateRatingRequest request,
         CancellationToken ct)

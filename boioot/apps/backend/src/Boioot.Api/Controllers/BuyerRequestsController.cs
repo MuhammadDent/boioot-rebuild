@@ -2,6 +2,7 @@ using Boioot.Application.Features.BuyerRequests.DTOs;
 using Boioot.Application.Features.BuyerRequests.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Boioot.Api.Controllers;
 
@@ -111,6 +112,7 @@ public class BuyerRequestsController : BaseController
 
     [Authorize]
     [HttpPost]
+    [EnableRateLimiting("content")]
     public async Task<IActionResult> Create(
         [FromBody] CreateBuyerRequestDto dto, CancellationToken ct)
     {
@@ -138,6 +140,7 @@ public class BuyerRequestsController : BaseController
 
     [Authorize]
     [HttpPost("{id:guid}/comments")]
+    [EnableRateLimiting("content")]
     public async Task<IActionResult> AddComment(
         Guid id, [FromBody] AddCommentDto dto, CancellationToken ct)
     {

@@ -7,6 +7,7 @@ using Boioot.Domain.Entities;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -95,6 +96,7 @@ public class UploadController : BaseController
     public record PresignedUrlRequest(string FileName, string ContentType);
 
     [HttpPost("/api/uploads/presigned-url")]
+    [EnableRateLimiting("upload")]
     public async Task<IActionResult> GetPresignedUrl(
         [FromBody] PresignedUrlRequest req,
         CancellationToken ct)
@@ -142,6 +144,7 @@ public class UploadController : BaseController
     // ── /api/upload/image ─────────────────────────────────────────────────────
 
     [HttpPost("image")]
+    [EnableRateLimiting("upload")]
     [RequestSizeLimit(10_485_760)]
     public async Task<IActionResult> UploadImage(IFormFile file, CancellationToken ct)
     {
@@ -356,6 +359,7 @@ public class UploadController : BaseController
     /// </summary>
     [HttpPost("special-request-attachment")]
     [AllowAnonymous]
+    [EnableRateLimiting("upload")]
     [RequestSizeLimit(10_485_760)]
     public async Task<IActionResult> UploadSpecialRequestAttachment(IFormFile file, CancellationToken ct)
     {
@@ -401,6 +405,7 @@ public class UploadController : BaseController
     /// Delegates to IFileStorageService — uses R2 when configured, local disk otherwise.
     /// </summary>
     [HttpPost("document")]
+    [EnableRateLimiting("upload")]
     [RequestSizeLimit(10_485_760)]
     public async Task<IActionResult> UploadDocument(IFormFile file, CancellationToken ct)
     {
@@ -456,6 +461,7 @@ public class UploadController : BaseController
     ///      also applies path-traversal and extension allow-listing guards.
     /// </summary>
     [HttpPost("proof")]
+    [EnableRateLimiting("upload")]
     [RequestSizeLimit(5_242_880)] // 5 MB hard ceiling
     public async Task<IActionResult> UploadProof(IFormFile file, CancellationToken ct)
     {
@@ -574,6 +580,7 @@ public class UploadController : BaseController
     // ── /api/upload/video ─────────────────────────────────────────────────────
 
     [HttpPost("video")]
+    [EnableRateLimiting("upload")]
     [RequestSizeLimit(52_428_800)]
     public async Task<IActionResult> UploadVideo(IFormFile file, CancellationToken ct)
     {

@@ -2,6 +2,7 @@ using Boioot.Application.Features.Requests.DTOs;
 using Boioot.Application.Features.Requests.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Boioot.Api.Controllers;
 
@@ -17,6 +18,7 @@ public class RequestsController : BaseController
 
     [HttpPost]
     [AllowAnonymous]
+    [EnableRateLimiting("content")]
     public async Task<IActionResult> Submit([FromBody] SubmitRequestRequest request, CancellationToken ct)
     {
         var result = await _requestService.SubmitAsync(request, GetOptionalUserId(), ct);

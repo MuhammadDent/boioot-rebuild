@@ -4,6 +4,7 @@ using Boioot.Domain.Entities;
 using Boioot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace Boioot.Api.Controllers;
@@ -815,6 +816,7 @@ public class ImagesController : BaseController
     /// CORS note: The R2 bucket must allow PUT from browser origins.
     /// </summary>
     [HttpPost("direct-upload-url")]
+    [EnableRateLimiting("upload")]
     public async Task<IActionResult> RequestDirectUploadUrl(
         [FromBody] DirectUploadUrlRequest req,
         CancellationToken ct)
