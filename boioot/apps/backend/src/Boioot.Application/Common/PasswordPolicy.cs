@@ -4,12 +4,12 @@ namespace Boioot.Application.Common;
 
 /// <summary>
 /// سياسة كلمة المرور القوية — تُطبَّق مركزياً في كل مكان يتم فيه إنشاء أو تغيير كلمة مرور.
-/// الحد الأدنى 10 أحرف + حرف كبير + حرف صغير + رقم + رمز خاص،
+/// الحد الأدنى 12 حرفاً + حرف كبير + حرف صغير + رقم + رمز خاص،
 /// مع رفض كلمات المرور الشائعة الضعيفة وكلمات المرور المحتوية على اسم البريد الإلكتروني.
 /// </summary>
 public static class PasswordPolicy
 {
-    public const int MinLength = 10;
+    public const int MinLength = 12;
 
     private static readonly string[] BlockedTerms =
     {
