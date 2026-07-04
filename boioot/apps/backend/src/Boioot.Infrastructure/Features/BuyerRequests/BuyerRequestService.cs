@@ -1,3 +1,4 @@
+using Boioot.Application.Common;
 using Boioot.Application.Common.Models;
 using Boioot.Infrastructure.Common;
 using Boioot.Application.Exceptions;
@@ -42,6 +43,12 @@ public class BuyerRequestService : IBuyerRequestService
             .FirstOrDefaultAsync(ct);
         if (creatingUser == null || !creatingUser.IsActive)
             throw new BoiootException("الحساب غير مفعّل. لا يمكنك إرسال طلبات.", 403);
+
+        SafeTextGuard.EnsureSafe(dto.Title, "عنوان الطلب");
+        SafeTextGuard.EnsureSafe(dto.Description, "وصف الطلب");
+        SafeTextGuard.EnsureSafe(dto.PropertyType, "فئة العقار");
+        SafeTextGuard.EnsureSafe(dto.City, "المدينة");
+        SafeTextGuard.EnsureSafe(dto.Neighborhood, "الحي");
 
         var refNumber = await ReferenceGenerator.NextAsync(
             _context, _context.BuyerRequests.Select(r => r.ReferenceNumber), "MRK", ct);
@@ -380,6 +387,12 @@ public class BuyerRequestService : IBuyerRequestService
         if (string.IsNullOrWhiteSpace(dto.Title))
             throw new BoiootException("العنوان مطلوب", 400);
 
+        SafeTextGuard.EnsureSafe(dto.Title, "عنوان الطلب");
+        SafeTextGuard.EnsureSafe(dto.Description, "وصف الطلب");
+        SafeTextGuard.EnsureSafe(dto.PropertyType, "فئة العقار");
+        SafeTextGuard.EnsureSafe(dto.City, "المدينة");
+        SafeTextGuard.EnsureSafe(dto.Neighborhood, "الحي");
+
         entity.Title        = dto.Title.Trim();
         entity.Description  = dto.Description?.Trim() ?? entity.Description;
         entity.PropertyType = dto.PropertyType?.Trim() ?? entity.PropertyType;
@@ -393,6 +406,8 @@ public class BuyerRequestService : IBuyerRequestService
     {
         if (string.IsNullOrWhiteSpace(content))
             throw new BoiootException("نص الرد مطلوب ولا يمكن أن يكون فارغاً", 400);
+
+        SafeTextGuard.EnsureSafe(content, "نص الرد");
 
         var exists = await _context.BuyerRequests.AnyAsync(r => r.Id == requestId, ct);
         if (!exists) throw new BoiootException("الطلب غير موجود", 404);
@@ -462,6 +477,8 @@ public class BuyerRequestService : IBuyerRequestService
             .FirstOrDefaultAsync(ct);
 
         if (request is null) throw new BoiootException("الطلب غير موجود", 404);
+
+        SafeTextGuard.EnsureSafe(dto.Content, "نص التعليق");
 
         Guid? parentAuthorId = null;
         if (dto.ParentCommentId.HasValue)
