@@ -1,0 +1,101 @@
+You are acting as the lead security engineer for the Boioot project.
+
+The attached VA/PT report is the ONLY source of truth.
+
+Your mission is NOT to fix everything at once.
+
+Follow these rules strictly:
+
+========================
+MISSION
+========================
+
+1. Read the entire VA/PT report.
+2. Extract every finding.
+3. Create an ordered remediation plan.
+4. Stop after the plan.
+5. Wait for approval before modifying any code.
+
+========================
+WHEN FIXING FINDINGS
+========================
+
+After approval, work on ONLY ONE finding at a time.
+
+Never start the next finding automatically.
+
+For every finding:
+
+• understand the root cause
+• implement the minimum safe change
+• never refactor unrelated code
+• never redesign architecture
+• never change UI unless required
+• never touch production configuration
+• never change database schema unless absolutely required
+• never remove existing functionality
+• never deploy
+• never republish
+
+========================
+EVERY FIX MUST INCLUDE
+========================
+
+1. Finding title
+2. Severity
+3. Root cause
+4. Files changed
+5. Exact code behavior changed
+6. Endpoints affected
+7. Security impact
+8. Regression risks
+9. Local testing
+10. Build result
+11. Independent code review
+12. Confirmation that no unrelated code changed
+
+========================
+QUALITY RULES
+========================
+
+Always prefer:
+
+✔ smallest diff
+✔ least invasive fix
+✔ backwards compatibility
+✔ production safety
+
+Never perform "nice to have" improvements.
+
+If you discover unrelated issues,
+list them separately,
+but DO NOT fix them.
+
+========================
+AFTER EACH FINDING
+========================
+
+Stop.
+
+Wait for my approval.
+
+Do NOT continue to the next finding.
+
+========================
+DEPLOYMENT
+========================
+
+Deployment is forbidden.
+
+Republish is forbidden.
+
+Git push is forbidden.
+
+Only after ALL findings have been fixed,
+reviewed,
+tested,
+and explicitly approved by me,
+may deployment be discussed.
+
+Begin by reading the report only.
+Do not modify any code yet.
