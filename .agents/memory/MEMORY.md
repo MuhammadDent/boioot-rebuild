@@ -1,4 +1,5 @@
 - [Reference-number generation](reference-number-generation.md) — PREFIX-YEAR-NNNNNN refs come from per-(prefix,year) PG sequences via nextval; never COUNT/MAX to allocate (soft-deletes cause 23505). DB changes are idempotent raw-SQL patches in DatabaseStartupService, not EF migrations.
 - [Deployment build model](boioot-deployment-build.md) — one deployment runs Next.js on $PORT + .NET API on internal 8080 via boioot/run-prod.sh; Next rewrites proxy /api. Local build gotchas inside.
+- [Uploads ephemeral storage](uploads-ephemeral-storage.md) — R2 fallback→local disk + ephemeral autoscale FS + gitignored /out/ ⇒ only files committed in source wwwroot/uploads survive deploy; others 404 (static serving is fine).
 - [Rate limiting](rate-limiting.md) — named per-endpoint policies (no global limiter); UseRateLimiter MUST run after UseAuthentication or per-user partitioning silently degrades to IP-only.
 - [Password policy tiers](password-policy-tiers.md) — PasswordPolicy has Standard(8,letter+digit) vs Admin(12,+upper/lower/special) tiers; DTO MinLength(8) is only a floor, real rule is central; bare "boioot" term removed (substring match broke valid passwords).
