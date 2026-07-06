@@ -54,14 +54,25 @@ public sealed class LoginLockoutFilter : IAsyncActionFilter
     }
 
     /// <summary>
-    /// The lockout key is the originating client IP (the same source the "auth"
-    /// rate-limit policy partitions by). <see cref="Microsoft.AspNetCore.Builder.ForwardedHeadersExtensions"/>
-    /// runs earlier in the pipeline, so <c>RemoteIpAddress</c> reflects the real
-    /// client behind the proxy rather than the proxy itself.
+    /// The lockout key is the originating client IP, resolved exactly the same way as
+    /// <c>AuthController.GetClientIp</c>: the left-most <c>X-Forwarded-For</c> entry
+    /// (the real client) when present, falling back to <c>RemoteIpAddress</c>.
+    /// <para>
+    /// This alignment is essential behind the deployment's proxy chain
+    /// (edge → Next.js → API): with the default <c>ForwardLimit</c> the raw
+    /// <c>RemoteIpAddress</c> resolves to an internal proxy address that varies per
+    /// request, which would otherwise scatter each attempt under a different key so the
+    /// failure threshold is never reached and the lockout never trips.
+    /// </para>
     /// </summary>
     private static string BuildKey(ActionExecutingContext context)
     {
-        var ip = context.HttpContext.Connection.RemoteIpAddress?.ToString();
+        var http      = context.HttpContext;
+        var forwarded = http.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        var ip = !string.IsNullOrWhiteSpace(forwarded)
+            ? forwarded.Split(',')[0].Trim()
+            : http.Connection.RemoteIpAddress?.ToString();
+
         return "login:ip:" + (string.IsNullOrEmpty(ip) ? "unknown" : ip);
     }
 

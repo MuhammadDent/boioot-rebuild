@@ -37,10 +37,13 @@ public class LoginLockoutFilterTests
         LoginLockoutFilter filter,
         string ip,
         IActionResult? actionResult,
-        Exception? actionException)
+        Exception? actionException,
+        string? forwardedFor = null)
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Connection.RemoteIpAddress = IPAddress.Parse(ip);
+        if (forwardedFor is not null)
+            httpContext.Request.Headers["X-Forwarded-For"] = forwardedFor;
 
         var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
         var ctx = new ActionExecutingContext(
@@ -145,6 +148,34 @@ public class LoginLockoutFilterTests
         // A single new failure must not lock (counter was reset).
         await RunFailedLoginAsync(filter, Ip);
         Assert.False(store.Check("login:ip:" + Ip).IsLocked);
+    }
+
+    [Fact]
+    public async Task VaryingProxyIp_WithStableForwardedForClient_StillLocksOut()
+    {
+        // Reproduces the production topology: behind the proxy chain (edge → Next.js → API)
+        // the raw RemoteIpAddress differs on every request, but X-Forwarded-For carries the
+        // stable real client IP as its left-most entry. The lockout must key off that client
+        // IP so failures accumulate under one key and the lockout trips.
+        var (store, _) = CreateStore(maxFailed: 3);
+        var filter = CreateFilter(store);
+        const string client = "198.51.100.7";
+        var badCreds = new BoiootException("bad creds", 401);
+
+        await RunAsync(filter, ip: "10.0.0.1", actionResult: null, actionException: badCreds, forwardedFor: client + ", 10.0.0.1");
+        await RunAsync(filter, ip: "10.0.0.2", actionResult: null, actionException: badCreds, forwardedFor: client + ", 10.0.0.2");
+        await RunAsync(filter, ip: "10.0.0.3", actionResult: null, actionException: badCreds, forwardedFor: client + ", 10.0.0.3");
+
+        Assert.True(store.Check("login:ip:" + client).IsLocked);
+
+        // Valid credentials from the same client (still a fresh proxy IP) are rejected with 429,
+        // and authentication never runs.
+        var (authenticationRan, ctx) = await RunAsync(
+            filter, ip: "10.0.0.4", actionResult: new OkObjectResult(new { ok = true }),
+            actionException: null, forwardedFor: client + ", 10.0.0.4");
+
+        Assert.False(authenticationRan);
+        Assert.Equal(StatusCodes.Status429TooManyRequests, Assert.IsType<JsonResult>(ctx.Result).StatusCode);
     }
 
     [Fact]
