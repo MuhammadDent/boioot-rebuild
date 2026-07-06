@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Boioot.Api.Security.LoginLockout;
 using Boioot.Application.Features.Auth.DTOs;
 using Boioot.Application.Features.Auth.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -45,6 +46,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [EnableRateLimiting("auth")]
+    [ServiceFilter(typeof(LoginLockoutFilter))]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
         var ip        = GetClientIp();

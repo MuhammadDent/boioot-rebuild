@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Boioot.Api.Authorization;
+using Boioot.Api.Security.LoginLockout;
 using Boioot.Api.Services;
 using Boioot.Api.Hubs;
 using Microsoft.OpenApi.Models;
@@ -254,6 +255,18 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler
 // client IP. RemoteIpAddress reflects X-Forwarded-For because UseForwardedHeaders
 // runs before UseRateLimiter. All policies share OnRejected → 429 + Retry-After
 // + a friendly Arabic message.
+// ── Login lockout (sticky brute-force lockout, enforced BEFORE authentication) ──
+// Complements the per-IP "auth" rate limiter below: a fixed-window limiter only
+// caps request RATE and resets on window rollover, so a valid password submitted
+// after the window resets would still log in. This sticky lockout, once tripped by
+// repeated failed attempts, rejects EVERY login request (valid or invalid) for the
+// same client until it expires. Enforced via LoginLockoutFilter on the login action.
+builder.Services.Configure<LoginLockoutOptions>(
+    builder.Configuration.GetSection(LoginLockoutOptions.SectionName));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<ILoginLockoutStore, LoginLockoutStore>();
+builder.Services.AddScoped<LoginLockoutFilter>();
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
