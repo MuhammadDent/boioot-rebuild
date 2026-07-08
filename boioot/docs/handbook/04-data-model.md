@@ -97,6 +97,16 @@
 
 ---
 
+## Advantages & limitations of Boioot's choices
+
+| Topic | Advantages 🟢 | Limitations 🟢 |
+|---|---|---|
+| Single `Property` table + discriminator | One pipeline for search/moderation/quotas/media across Sale/Rent/DailyRent | Variant-specific fields all live on one wide row; behavior flags (`IsBookable`) must stay consistent with `ListingType` by code discipline |
+| GUIDv4 keys + `BaseEntity` audit | Coordination-free ID generation; uniform audit fields set in one place | Random GUIDs fragment B-tree indexes at scale (UUIDv7 fixes this); no `DeletedAt/DeletedBy` on soft deletes |
+| Soft delete + global query filters | "Deleted is invisible" by default; history preserved for quotas/moderation | Opt-in per configuration — smaller entities may lack filters; deleted rows still hit unique indexes; filters invisible when debugging |
+| Sequence-backed reference numbers | Concurrency-safe; human-readable; year-scoped | Requires provider-specific setup (PG sequences); numbers gap on rollback (acceptable, but surprises auditors who expect gapless) |
+| JSON-in-TEXT `Features` | Extend entitlements without migrations | Not indexed or type-safe; queried with `LIKE` — both a performance and correctness risk |
+
 ## Lessons learned
 
 1. **Number generation is a concurrency problem, not a formatting problem.** The `COUNT+1` → sequence migration in this codebase is the canonical example.

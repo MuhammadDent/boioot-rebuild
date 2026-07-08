@@ -104,6 +104,15 @@
 
 ---
 
+## Advantages & limitations of Boioot's choices
+
+| Topic | Advantages 🟢 | Limitations 🟢 |
+|---|---|---|
+| 15-min JWT + rotating refresh with family revocation | Stateless request auth; stolen-refresh replay is detected and contained; hashed tokens survive DB leaks | Revocation latency up to 15 min; no reset/verification/MFA around the strong core; rotation has no grace window for lost responses |
+| Permissions as JWT claims | Zero per-request DB lookups; simple `[RequirePermission]` checks | Permission changes wait for token refresh; token size grows with permission count |
+| Pre-auth sticky lockout + named rate limits | Attack traffic never reaches BCrypt/DB; per-user fairness on content limits | In-memory ⇒ per-instance and reset on restart; IP keying punishes NAT'd users sharing an address |
+| Presigned upload + finalize re-encode | API never carries large bodies; EXIF/polyglot stripped by re-encode; ownership re-verified | Two-step flow is more client complexity; local-disk fallback silently breaks on ephemeral hosts if R2 creds absent |
+
 ## Lessons learned
 
 1. **Proxy identity is the root of all abuse-protection correctness** — lockout and rate limiting are only as good as the IP they key on; test them through the real chain.

@@ -110,6 +110,17 @@ Next.js 16 App Router (`boioot/apps/frontend/src/app/`):
 
 ---
 
+## Advantages & limitations of Boioot's choices
+
+| Topic | Advantages 🟢 | Limitations 🟢 |
+|---|---|---|
+| App Router + route groups | Route map mirrors the product; per-audience layouts; metadata/SEO routes built in | Deep admin tree (34 sections) means many small pages to maintain by hand |
+| Custom fetch wrapper (no query lib) | No dependency lock-in; one place for auth/refresh/errors | No cache/dedupe/revalidation — every page refetches; manual loading/error state repetition grows with the app |
+| Context-only state | Simple; matches session-shaped state | Any high-frequency state would re-render whole subtrees; no devtools/time-travel |
+| Split token model (localStorage access + HttpOnly refresh) | Stateless API calls; XSS blast radius capped at 15 min | Access token still JS-readable; weaker than a full BFF cookie model for high-stakes domains |
+| Layout guards (no middleware.ts) | Colocated with the section they protect; simple mental model | Protected shells can flash before redirect; no edge-level enforcement for non-React assets |
+| Hardcoded `lang="ar" dir="rtl"` | Zero i18n complexity; RTL correctness by default | Adding a second locale later requires threading an i18n framework through every page |
+
 ## Lessons learned
 
 1. **RTL-first beats RTL-retrofit.** Boioot never pays the "flip the layout" tax because direction was a day-one constraint.

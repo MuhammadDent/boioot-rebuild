@@ -57,6 +57,13 @@
 
 ---
 
+## Advantages & limitations of this register approach
+
+| Advantages 🔵 | Limitations 🔵 |
+|---|---|
+| Absence becomes explicit, searchable information; priorities are argued, not implied | A register is a snapshot — it silently rots unless re-verified after each major feature |
+| Separates market-appropriate designs (🟢-ok) from real debt, preventing cargo-cult "fixes" | Priority labels reflect today's stage; a stage change (scale-out, second admin, regulation) re-ranks everything |
+
 ## Lessons learned
 
 1. **Gaps cluster around flows, not files** — "auth" looks done because login is sophisticated, but the account *lifecycle* (reset/verify) is absent. Audit by user journey, not by folder.

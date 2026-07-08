@@ -82,6 +82,15 @@ Observability produces no user-visible feature, so it loses every prioritization
 
 ---
 
+## Advantages & limitations of Boioot's choices
+
+| Topic | Advantages 🟢 | Limitations 🟢 |
+|---|---|---|
+| Push-to-deploy (path-filtered) | Near-zero ops; fast iteration for a small team | No quality gates — broken code deploys; drift between workspace and origin/main goes unnoticed |
+| Health-wait startup ordering | Eliminates boot-time connection noise; encodes the real SSR→API dependency | Serializes startup (slower cold boots); a hung API blocks frontend start |
+| Multi-environment scripts (dev/single-box/split prod) | Same codebase runs on three hosting shapes | Three shapes to keep in sync; environment-only bugs (IP handling, caching, ephemeral disk) exist per shape |
+| `ILogger` + `/health` only | Simple; enough for platform health checks | No error tracking, metrics, alerting, or `/version` — incidents are debugged blind |
+
 ## Lessons learned
 
 1. **"Works locally, 404 in prod" has a decision tree**: check deployment freshness (`git branch -vv`, `/version`) *before* touching code — this project converted an intended code rewrite into a one-command diagnosis.

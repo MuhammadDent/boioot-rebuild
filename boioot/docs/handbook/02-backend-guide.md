@@ -143,6 +143,15 @@ The module set is the textbook two-sided-marketplace playbook: supply (listings)
 
 ---
 
+## Advantages & limitations of Boioot's choices
+
+| Topic | Advantages 🟢 | Limitations 🟢 |
+|---|---|---|
+| Single composition root + env-var config | One reviewable wiring file; portable across Fly/Vercel/Replit secrets | No startup validation — a missing setting fails at first use, not at boot; no typed options |
+| Boot-time idempotent SQL patches | Zero-step deploys; multi-provider (PG/SQLite/SQL Server); safe on any instance | No ordered history or down-migrations; patch file grows forever; a failed patch blocks boot; schema truth lives in C#, not in versioned SQL |
+| Thin controllers + fat services | Uniform error/pagination contracts; HTTP-free business logic | Largest services became change bottlenecks; no use-case-level isolation (a vertical-slice strength) |
+| Feature-folder modules | Folder tree documents the product; low coupling between business areas | Shared concerns (entitlements, quotas) cut across folders and must stay centralized by discipline |
+
 ## Lessons learned
 
 1. **Quota semantics need explicit decisions**: Boioot deliberately keeps consumed quota after deletion — otherwise delete/recreate becomes an infinite-listing exploit. The comment in code is the documentation.

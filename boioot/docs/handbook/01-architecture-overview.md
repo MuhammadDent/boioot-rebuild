@@ -126,6 +126,14 @@ Additionally, login brute-force protection is *not* middleware — it is a pre-a
 
 ---
 
+## Advantages & limitations of Boioot's choices
+
+| Topic | Advantages 🟢 | Limitations 🟢 |
+|---|---|---|
+| Proxied two-app topology | Zero browser CORS; one header policy; independent deploy cadence for UI vs API; edge caching for free | More moving parts than a monolith; three proxy hops complicate IP/header handling; drift possible between the two deploy pipelines |
+| Clean Architecture layering | Enforced dependency direction survived growth to 56 controllers; swappable infrastructure (3 DB providers); testable service seams | More projects/ceremony than small apps need; anemic entities push all logic into services, which can grow unbounded (`AdminService.cs` >2000 lines) |
+| In-app middleware pipeline | All cross-cutting policy visible in one file (`Program.cs`); no extra infrastructure | Order-sensitivity is an invisible failure mode; policies don't extend to a second service without duplication |
+
 ## Lessons learned
 
 1. **Middleware order is a real bug source, observed in this project**: `UseRateLimiter` placed before `UseAuthentication` silently degrades per-user partitioning to per-IP — no error, just weaker behavior.

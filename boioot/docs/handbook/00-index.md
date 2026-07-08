@@ -36,7 +36,14 @@ Three labels are used throughout to keep facts separate from advice:
 | 05 | [Security](05-security.md) | Auth, RBAC, rate limiting, lockout, headers, uploads |
 | 06 | [Operations](06-operations.md) | Build, run, deploy, CI/CD, environment gotchas |
 | 07 | [Gaps & Recommendations](07-gaps-and-recommendations.md) | Explicit register of what is NOT implemented |
-| 08 | [Engineering Knowledge Base](08-engineering-knowledge-base.md) | Reusable knowledge for SaaS, Marketplace, ERP, CRM, Healthcare, AI, FinTech, Real Estate |
+| 08 | [Engineering Knowledge Base](08-engineering-knowledge-base.md) | Reusable patterns for SaaS, Marketplace, ERP, CRM, Healthcare, AI, FinTech, Real Estate |
+| 08b | [Engineering Principles](08-engineering-principles.md) | 20 principles, each anchored to verified Boioot evidence |
+| 09 | [Master Engineering Rules](09-master-engineering-rules.md) | The consolidated 44-rule quick-scan rulebook |
+| 10 | [Software Design Patterns](10-software-design-patterns.md) | Patterns present in Boioot (cited) and patterns deliberately absent, with adoption triggers |
+| 11 | [Project Bootstrap Checklist](11-project-bootstrap-checklist.md) | Phase-ordered checklist for starting any production-grade SaaS |
+| 12 | [Future Improvements Roadmap](12-future-improvements-roadmap.md) | 🟡 Sequenced roadmap derived from the chapter-07 gaps register |
+
+Chapters 01–07 additionally contain an **Advantages & limitations** section per chapter, so every chapter covers: existing implementation, why chosen, advantages, limitations, alternatives, when to use, common mistakes, best practices, lessons learned, and a future-project checklist.
 
 ## The system in one paragraph
 
