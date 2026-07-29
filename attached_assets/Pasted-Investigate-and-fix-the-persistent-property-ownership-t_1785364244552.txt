@@ -1,0 +1,83 @@
+Investigate and fix the persistent property ownership type issue in Boioot.
+
+Observed production behavior:
+- When creating or editing a property, the user selects an ownership type.
+- On the property details page, the field still displays Arabic "غير محدد" (Not specified).
+- Example affected property details page shows other saved values correctly, while ownership type is missing.
+
+Work conservatively and trace the value end-to-end before changing code.
+
+Required investigation:
+
+1. Identify the exact frontend field used for ownership type in:
+   - property creation form
+   - property edit form
+
+2. Identify:
+   - field name
+   - request payload property name
+   - TypeScript type/interface
+   - selected value format (id, enum, slug, Arabic text, English text, etc.)
+
+3. Inspect the backend:
+   - request DTO
+   - create command/controller/service
+   - update command/controller/service
+   - entity property
+   - EF Core mapping
+   - database column
+   - response DTO for property details
+
+4. Verify whether the selected value:
+   - is present in the POST/PUT request
+   - reaches the backend
+   - is assigned to the entity
+   - is persisted in PostgreSQL
+   - is returned by the property details API
+
+5. Inspect the property details frontend and confirm it reads the same response property returned by the API.
+
+6. Check for naming mismatches such as:
+   - ownershipType
+   - ownershipTypeId
+   - ownershipStatus
+   - propertyOwnershipType
+   - ownership
+   - tenureType
+
+7. Check for enum/value mismatches, including:
+   - numeric enum vs string
+   - zero/default enum interpreted as unspecified
+   - Arabic label vs backend enum key
+   - null or empty string conversion
+   - incorrect mapping in the details display function
+
+8. Inspect the affected production record if possible and determine whether its ownership value is:
+   - null in the database
+   - default value
+   - correctly stored but incorrectly displayed
+
+Implementation requirements:
+- Fix the true root cause only.
+- Ensure both create and edit flows save the ownership type.
+- Ensure the details API returns it.
+- Ensure the Arabic UI displays the correct localized label.
+- Preserve backward compatibility for older records where the value is genuinely null.
+- Do not perform unrelated refactoring.
+- Do not change database schema unless a schema issue is proven.
+- If a migration is required, explain why before applying it.
+
+Testing requirements:
+- Add or update an automated test for property creation with ownership type.
+- Add or update an automated test for property editing.
+- Verify the details endpoint returns the selected ownership type.
+- Verify the frontend displays the selected Arabic label instead of "غير محدد".
+- Test an old record with null ownership and confirm it still displays "غير محدد".
+
+Before making changes, provide:
+1. Root cause.
+2. Files involved.
+3. Whether existing production records are missing the value or only the UI mapping is wrong.
+4. Exact minimal fix plan.
+
+Do not deploy or push until approval is given.
