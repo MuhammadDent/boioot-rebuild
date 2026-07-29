@@ -13,6 +13,7 @@ import type {
 import {
   PROPERTY_TYPE_LABELS,
   PROPERTY_STATUS_LABELS,
+  OWNERSHIP_OPTIONS,
 } from "@/features/properties/constants";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
@@ -50,6 +51,7 @@ interface FormFields {
   address: string;
   companyId: string;
   isBookable: boolean;
+  ownershipType: string;
 }
 
 type FormErrors = Partial<Record<keyof FormFields, string>>;
@@ -90,6 +92,7 @@ const EMPTY_FIELDS: FormFields = {
   address: "",
   companyId: "",
   isBookable: false,
+  ownershipType: "",
 };
 
 function fromInitial(data: PropertyResponse): FormFields {
@@ -110,6 +113,7 @@ function fromInitial(data: PropertyResponse): FormFields {
     address: data.address ?? "",
     companyId: "",
     isBookable: data.isBookable ?? false,
+    ownershipType: data.ownershipType ?? "",
   };
 }
 
@@ -319,6 +323,12 @@ export default function PropertyForm({
       latitude:  lat  ?? undefined,
       longitude: lng  ?? undefined,
       isBookable: fields.isBookable && fields.listingType === "DailyRent",
+      // Ownership type is optional.
+      // Create: empty → undefined (nothing to save).
+      // Edit: empty string is sent intentionally — backend treats "" as "clear",
+      // so selecting "غير محدد" removes a previously saved value.
+      ownershipType:
+        mode === "edit" ? fields.ownershipType : fields.ownershipType || undefined,
     };
 
     if (mode === "create") {
@@ -433,6 +443,23 @@ export default function PropertyForm({
             )}
           </div>
         </Row>
+
+        <div className="form-group">
+          <label className="form-label">نوع الملكية (اختياري)</label>
+          <select
+            className="form-input"
+            value={fields.ownershipType}
+            onChange={set("ownershipType")}
+            disabled={disabled}
+          >
+            <option value="">غير محدد</option>
+            {OWNERSHIP_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {fields.listingType === "DailyRent" && (
           <div className="form-group">

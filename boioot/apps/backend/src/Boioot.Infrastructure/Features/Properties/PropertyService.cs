@@ -379,6 +379,7 @@ public class PropertyService : IPropertyService
             Longitude = request.Longitude,
             CompanyId = companyId,
             AgentId = request.AgentId,
+            OwnershipType = string.IsNullOrWhiteSpace(request.OwnershipType) ? null : request.OwnershipType.Trim(),
             OwnerId = userId.ToString(),
             Features = request.Features is { Count: > 0 }
                 ? System.Text.Json.JsonSerializer.Serialize(request.Features)
@@ -443,6 +444,11 @@ public class PropertyService : IPropertyService
         property.Latitude = request.Latitude;
         property.Longitude = request.Longitude;
         property.AgentId = request.AgentId;
+
+        // OwnershipType — additive: null = unchanged (older clients), empty = clear
+        if (request.OwnershipType is not null)
+            property.OwnershipType = string.IsNullOrWhiteSpace(request.OwnershipType) ? null : request.OwnershipType.Trim();
+
         // DailyRent listings are bookable by default; non-DailyRent listings are never bookable.
         property.IsBookable = string.Equals(request.ListingType, "DailyRent", StringComparison.OrdinalIgnoreCase);
 

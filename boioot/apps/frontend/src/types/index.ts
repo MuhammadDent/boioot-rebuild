@@ -402,6 +402,8 @@ export interface UpdatePropertyRequest {
   newImages?: string[];
   videoUrl?: string;
   isBookable?: boolean;
+  /** Ownership type key (e.g. "Freehold"). undefined = unchanged; empty string = clear. */
+  ownershipType?: string;
 }
 
 export interface SubmitRequestPayload {

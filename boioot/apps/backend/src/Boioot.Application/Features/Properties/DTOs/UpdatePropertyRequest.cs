@@ -74,5 +74,12 @@ public class UpdatePropertyRequest
     public List<string>? NewImages { get; set; }
 
     public string? VideoUrl { get; set; }
+
+    /// <summary>
+    /// Ownership type key (e.g. "Freehold", "Usufruct"). Additive/optional:
+    /// null = unchanged (older clients that don't send it won't clear existing values),
+    /// empty string = clear.
+    /// </summary>
+    public string? OwnershipType { get; set; }
     public bool IsBookable { get; set; } = false;
 }
