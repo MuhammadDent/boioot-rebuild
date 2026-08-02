@@ -1,0 +1,54 @@
+We need to address two related but separate production issues for Property Ownership Type.
+
+Important current state:
+- The ownership-type frontend edit field is visible in production.
+- Saving an ownership type in production still results in the property details page showing "غير محدد".
+- The previous GitHub Actions deployment to Fly.io failed because the Fly token was invalid.
+- The Fly backend machines were only restarted afterward; restarting machines does not deploy the new backend image.
+- Therefore, first verify whether the production backend actually contains the OwnershipType create/update persistence fix. Do not assume it was deployed.
+
+Task A — Production deployment verification
+1. Compare the currently deployed Fly backend image/version with the latest GitHub main commit containing the OwnershipType changes.
+2. Confirm whether the production backend includes:
+   - OwnershipType in UpdatePropertyRequest.
+   - OwnershipType assignment in PropertyService create mapping.
+   - OwnershipType handling in PropertyService UpdateAsync.
+3. Do not modify production data.
+4. Do not deploy automatically.
+5. Report the exact deployed commit/image and whether the backend fix is absent or present.
+6. If absent, provide the exact safe deployment command/workflow action required after approval.
+
+Task B — Ownership options source-of-truth audit
+Audit all ownership-type option sources used by:
+- Public property creation wizard.
+- Dashboard property edit form.
+- Property filters/search.
+- Property details display.
+- Admin dashboard, if an ownership-type settings module already exists.
+
+Determine:
+1. Whether creation and editing currently use different hardcoded arrays or different APIs.
+2. Whether any existing admin-managed lookup/category system can be reused.
+3. Whether ownership options are already stored in the database.
+4. The exact files, constants, API endpoints and database entities involved.
+
+Target architecture:
+- One database-backed ownership-type lookup managed from the admin dashboard.
+- One public/read API endpoint returning active ordered options.
+- One admin CRUD endpoint for adding, editing, activating, deactivating and ordering options.
+- Creation and editing must consume the same API and the same option codes.
+- Details and filters must map the stored stable code through the same source.
+- Store a stable code/value in Property.OwnershipType, not only a translated display label.
+- Support Arabic and English labels.
+- Existing legacy NULL values must continue to display "غير محدد".
+- No destructive migration and no automatic backfill of old NULL records.
+- Preserve backward compatibility.
+
+For now:
+- Analysis and implementation plan only.
+- Do not code.
+- Do not commit, push or deploy.
+- Clearly separate:
+  A. The production deployment problem.
+  B. The duplicated/mismatched option-source problem.
+- End by requesting approval before implementation.
