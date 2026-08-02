@@ -1,0 +1,138 @@
+Approved. Proceed with implementation, but follow the scope and safeguards below exactly.
+
+Current confirmed state:
+- The OwnershipType frontend field is already visible.
+- The backend persistence fix exists in the latest code but is not deployed to production.
+- Production Fly.io backend is still running the older image.
+- The public creation wizard already loads ownership types from:
+  GET /api/ownership-types
+- The dashboard edit form still uses hardcoded OWNERSHIP_OPTIONS.
+- The property details page still uses hardcoded OWNERSHIP_TYPE_LABELS.
+- A database-backed ownership type system and admin CRUD already exist.
+- The admin-managed database table must become the single authoritative source of truth.
+
+Implement the work in two clearly separated phases.
+
+PHASE A — Complete and verify the ownership-type source-of-truth unification
+
+1. Dashboard edit form
+- Replace the hardcoded OWNERSHIP_OPTIONS source with GET /api/ownership-types.
+- Use the same API response, stable values/codes, ordering, and active-state behavior used by the public creation wizard.
+- Preserve the currently saved ownership value when editing.
+- If the saved value is legacy, inactive, or absent from the current active API list, append it temporarily as a selectable current value so editing does not silently erase it.
+- Preserve the existing semantics:
+  - omitted/null = unchanged during update
+  - empty string = intentionally clear the value
+- Do not silently replace an existing value with the first available option.
+- Show a safe loading state and a clear error state if the options API fails.
+
+2. Property details page
+- Resolve the displayed ownership label from the same database-backed ownership-types API.
+- Do not use the hardcoded ownership label map as the authoritative source.
+- The existing hardcoded map may remain only as a documented fallback for offline/API-failure or legacy resilience.
+- Resolution priority:
+  1. Matching database/API option
+  2. Legacy fallback map
+  3. “غير محدد”
+- Legacy NULL or empty values must continue to display “غير محدد”.
+
+3. Shared frontend data access
+- Reuse or create one shared ownership-types client/hook/service for:
+  - public creation wizard
+  - dashboard edit form
+  - property details display
+- Do not duplicate API-fetching logic or mapping logic across pages.
+- Keep stable ownership codes separate from translated display labels.
+
+4. Admin remains authoritative
+- Do not create a second ownership-type management system.
+- Reuse the existing database table, public endpoint, admin service, admin routes, and admin page.
+- Admin additions, edits, activation/deactivation, and ordering must automatically affect both creation and edit forms.
+- Inactive options must not appear for new selection, but an existing property that already stores an inactive value must remain visible and editable without silent data loss.
+
+5. English labels
+- Do not add LabelEn or any database schema change in this implementation.
+- Keep this task Arabic-only using the existing Label field.
+- Document English label support as a separate future enhancement.
+- No migration and no DatabaseStartupService schema patch for LabelEn now.
+
+6. No seed alignment
+- Do NOT insert or seed SharedOwnership, Waqf, RegisteredDeed, Customary, or any other missing hardcoded options into the database.
+- Do not alter the current admin-managed records automatically.
+- Do not backfill old Property.OwnershipType values.
+- The database/admin configuration is authoritative, not the old hardcoded list.
+
+7. Cleanup
+- Demote OWNERSHIP_OPTIONS and OWNERSHIP_TYPE_LABELS to fallback-only status where still required.
+- Add comments stating they are non-authoritative legacy/offline fallbacks.
+- Remove unused imports and duplicated mappings.
+- Do not perform broad refactoring outside ownership-type handling.
+
+8. Tests
+Add or update focused tests for:
+- Edit form receives active options from the API.
+- Creation and edit use the same ownership values.
+- Existing active value is preselected.
+- Existing inactive/legacy value is preserved and displayed.
+- Empty selection clears the value intentionally.
+- Missing/null value displays “غير محدد”.
+- Details display uses the API label when available.
+- Details display falls back safely if the API fails.
+- Admin-added values are accepted without frontend code changes.
+- No automatic seed/backfill occurs.
+
+Run:
+- relevant backend tests
+- relevant frontend tests
+- frontend type check/build
+- backend build
+
+Do not hide or fix unrelated pre-existing errors. Report them separately.
+
+PHASE B — Production deployment preparation and execution
+
+Before deployment:
+1. Confirm the latest main branch contains the backend persistence fix and the source-of-truth changes.
+2. Show the exact changed files and test results.
+3. Confirm no destructive migration, seed, backfill, or production data mutation is included.
+4. Confirm the Fly app target is:
+   backend-bold-snowflake-8206
+5. Confirm fly.toml and the GitHub Actions workflow target the correct app and backend directory.
+
+Deployment:
+- Do not restart the old machines as a substitute for deployment.
+- Use the existing GitHub Actions deployment workflow with a valid deploy token.
+- Do not print or expose any token.
+- If the GitHub secret must be replaced, stop and tell me the exact safe command to generate a scoped deploy token:
+  fly tokens create deploy -a backend-bold-snowflake-8206
+- Wait for my confirmation that the GitHub secret FLY_API_TOKEN has been updated before triggering deployment.
+- After confirmation, trigger or re-run the backend deployment workflow.
+
+Post-deployment verification:
+- Confirm the Fly release number and deployment timestamp changed.
+- Confirm all production backend machines use the new image.
+- Confirm health checks are passing.
+- Test production safely:
+  1. Edit one test property and select an ownership type managed by admin.
+  2. Save it.
+  3. Reload the edit page and confirm the same value remains selected.
+  4. Open the property details page and confirm the correct Arabic label appears.
+  5. Confirm an admin-added active option appears in both creation and edit forms.
+- Do not modify multiple production records.
+- Do not backfill old records.
+
+Git rules:
+- Do not create a commit until implementation and tests are complete.
+- Then show me:
+  - git status
+  - git diff --stat
+  - proposed commit message
+- Wait for approval before commit, push, or production deployment.
+
+End with a concise report divided into:
+A. Implemented changes
+B. Tests and builds
+C. Unrelated pre-existing issues
+D. Git status
+E. Deployment readiness
+F. Exact approval needed from me

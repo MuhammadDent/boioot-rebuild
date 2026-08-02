@@ -22,9 +22,9 @@ import {
   PROPERTY_STATUS_LABELS,
   FEATURE_LABEL,
   FLOOR_LABELS,
-  getOwnershipTypeLabel,
   formatPrice,
 } from "@/features/properties/constants";
+import { useOwnershipTypes, resolveOwnershipLabel } from "@/features/properties/ownershipTypes";
 import type { PropertyResponse } from "@/types";
 
 
@@ -154,6 +154,9 @@ function IconBtn({
 // Handles all interactive state: favorites, messaging, phone reveal, share.
 
 export default function PropertyDetailClient({ property }: { property: PropertyResponse }) {
+  // Ownership labels come from the same admin-managed source as the forms;
+  // on API failure this falls back to the legacy map, then "غير محدد".
+  const { options: ownershipTypes } = useOwnershipTypes();
   const router = useRouter();
   const { user } = useAuth();
   const { openAuthModal } = useAuthGate();
@@ -698,7 +701,9 @@ export default function PropertyDetailClient({ property }: { property: PropertyR
               {property.hallsCount != null && <DetailRow label="صالات"       value={String(property.hallsCount)} />}
               {property.floor && <DetailRow label="الطابق"       value={FLOOR_LABELS[property.floor] ?? property.floor} />}
               {property.propertyAge != null && <DetailRow label="عمر العقار" value={`${property.propertyAge} سنة`} />}
-              {property.ownershipType && <DetailRow label="نوع الملكية" value={getOwnershipTypeLabel(property.ownershipType)} />}
+              {/* Label resolved from the admin-managed API first, then the
+                  legacy fallback map, then "غير محدد". */}
+              {property.ownershipType && <DetailRow label="نوع الملكية" value={resolveOwnershipLabel(property.ownershipType, ownershipTypes)} />}
               <DetailRow label="المدينة"  value={`${property.province ? property.province + " — " : ""}${property.city}`} />
             </div>
 

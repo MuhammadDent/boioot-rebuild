@@ -106,7 +106,14 @@ export const FLOOR_LABELS: Record<string, string> = {
   Basement:    "الطابق السفلي",
 };
 
-/** Ownership type labels — all known backend enum values mapped to Arabic. */
+/**
+ * NON-AUTHORITATIVE LEGACY FALLBACK — do not treat this map as the source of
+ * truth. The authoritative source for ownership types is the admin-managed
+ * database table exposed via GET /api/ownership-types (see
+ * `features/properties/ownershipTypes.ts`). This map is retained only for
+ * offline/API-failure resilience and for labeling legacy codes that are no
+ * longer in the database.
+ */
 export const OWNERSHIP_TYPE_LABELS: Record<string, string> = {
   Freehold:        "ملكية",
   Usufruct:        "حق انتفاع",
@@ -122,7 +129,9 @@ export const OWNERSHIP_TYPE_LABELS: Record<string, string> = {
 };
 
 /**
- * Returns the Arabic display label for an ownership type value.
+ * NON-AUTHORITATIVE LEGACY FALLBACK — prefer `resolveOwnershipLabel` from
+ * `features/properties/ownershipTypes.ts`, which resolves against the
+ * admin-managed API first. This function only consults the static map above.
  * Falls back to "غير محدد" for any unknown, null, or empty value —
  * never exposes raw backend enum strings to users.
  */
@@ -132,9 +141,11 @@ export function getOwnershipTypeLabel(value: string | null | undefined): string 
 }
 
 /**
- * Canonical hardcoded list of ownership type options for form selects.
- * Always use this list — never use API-fetched ownership types as option values,
- * because the API may return custom/internal strings that break display.
+ * NON-AUTHORITATIVE LEGACY FALLBACK — DO NOT use for form selects.
+ * Form options must come from GET /api/ownership-types via
+ * `useOwnershipTypes()` in `features/properties/ownershipTypes.ts`
+ * (admin-managed, active + ordered). This list is retained only as a
+ * last-resort offline fallback and for tests of legacy behavior.
  */
 export const OWNERSHIP_OPTIONS: { value: string; label: string }[] = [
   { value: "Freehold",        label: "ملكية" },

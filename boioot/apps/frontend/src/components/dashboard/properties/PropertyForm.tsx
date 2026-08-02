@@ -13,8 +13,8 @@ import type {
 import {
   PROPERTY_TYPE_LABELS,
   PROPERTY_STATUS_LABELS,
-  OWNERSHIP_OPTIONS,
 } from "@/features/properties/constants";
+import { useOwnershipTypes, withSavedValue } from "@/features/properties/ownershipTypes";
 import { ProvinceSelect, CitySelect, NeighborhoodSelect } from "@/components/dashboard/LocationSelect";
 import LocationPicker from "@/components/dashboard/properties/LocationPicker";
 import { useFeature } from "@/hooks/useFeature";
@@ -179,6 +179,19 @@ export default function PropertyForm({
   submitLabel,
 }: PropertyFormProps) {
   const videoAllowed = useFeature("video_upload");
+
+  // Ownership types — authoritative admin-managed API (same source as the
+  // public creation wizard). The saved value is appended if legacy/inactive
+  // so it is preserved and never silently replaced.
+  const {
+    options: ownershipOptions,
+    loading: ownershipLoading,
+    error: ownershipError,
+  } = useOwnershipTypes();
+  const ownershipSelectOptions = withSavedValue(
+    ownershipOptions,
+    initialData?.ownershipType
+  );
 
   const [fields, setFields] = useState<FormFields>(
     initialData ? fromInitial(initialData) : EMPTY_FIELDS
@@ -450,15 +463,28 @@ export default function PropertyForm({
             className="form-input"
             value={fields.ownershipType}
             onChange={set("ownershipType")}
-            disabled={disabled}
+            disabled={disabled || ownershipLoading}
           >
             <option value="">غير محدد</option>
-            {OWNERSHIP_OPTIONS.map((o) => (
+            {/* Options come from the admin-managed API (active + ordered).
+                A saved legacy/inactive value is appended so editing never
+                silently erases it. */}
+            {ownershipSelectOptions.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
             ))}
           </select>
+          {ownershipLoading && (
+            <p style={{ margin: "0.3rem 0 0", color: "var(--color-text-secondary)", fontSize: "0.8rem" }}>
+              جارٍ تحميل أنواع الملكية…
+            </p>
+          )}
+          {ownershipError && (
+            <p className="form-error">
+              تعذر تحميل أنواع الملكية — يمكنك المتابعة دون تغيير هذا الحقل.
+            </p>
+          )}
         </div>
 
         {fields.listingType === "DailyRent" && (
